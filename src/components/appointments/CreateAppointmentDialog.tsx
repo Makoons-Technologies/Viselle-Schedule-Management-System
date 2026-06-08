@@ -1,11 +1,17 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { orgApi } from '@/lib/api';
-import { formatDateTime } from '@/lib/utils';
+import { formatDateTime, getDayOfWeekFromIso } from '@/lib/utils';
+import type { RecurringFrequency } from '@/types/api';
+import { RecurringOptionsFields } from '@/components/appointments/RecurringOptionsFields';
+import {
+  isRecurringOptionsValid,
+  recurringIntervalForFrequency,
+} from '@/components/appointments/recurring-options';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -57,6 +63,12 @@ export function CreateAppointmentDialog({
   const queryClient = useQueryClient();
   const today = new Date().toISOString().slice(0, 10);
 
+  const [makeRecurring, setMakeRecurring] = useState(false);
+  const [frequency, setFrequency] = useState<RecurringFrequency>('weekly');
+  const [customInterval, setCustomInterval] = useState('3');
+  const [endDate, setEndDate] = useState('');
+  const [selectedDays, setSelectedDays] = useState<number[]>([]);
+
   const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { date: defaultDate ?? today },
@@ -65,6 +77,7 @@ export function CreateAppointmentDialog({
   const accountId = watch('accountId');
   const serviceId = watch('serviceId');
   const date = watch('date');
+  const startTime = watch('startTime');
 
   const { data: accountsData } = useQuery({
     queryKey: ['accounts', orgId],
@@ -96,9 +109,40 @@ export function CreateAppointmentDialog({
     setValue('startTime', '');
   }, [accountId, serviceId, date, setValue]);
 
+  useEffect(() => {
+    if (!open) return;
+    setMakeRecurring(false);
+    setFrequency('weekly');
+    setCustomInterval('3');
+    setEndDate('');
+    setSelectedDays([]);
+  }, [open]);
+
+  useEffect(() => {
+    if (!makeRecurring) return;
+    if (startTime) {
+      setSelectedDays([getDayOfWeekFromIso(startTime)]);
+      return;
+    }
+    if (date) {
+      const [year, month, day] = date.split('-').map(Number);
+      setSelectedDays([new Date(Date.UTC(year, month - 1, day)).getUTCDay()]);
+    }
+  }, [makeRecurring, startTime, date]);
+
+  const toggleDay = (day: number) => {
+    setSelectedDays((current) => {
+      if (current.includes(day)) {
+        if (current.length === 1) return current;
+        return current.filter((value) => value !== day);
+      }
+      return [...current, day].sort((a, b) => a - b);
+    });
+  };
+
   const mutation = useMutation({
-    mutationFn: (data: FormData) =>
-      orgApi.createAppointment(orgId, {
+    mutationFn: async (data: FormData) => {
+      const created = await orgApi.createAppointment(orgId, {
         accountId: data.accountId,
         serviceId: data.serviceId,
         customer: {
@@ -110,15 +154,41 @@ export function CreateAppointmentDialog({
         startTime: data.startTime,
         timezone: DEFAULT_TIMEZONE,
         appointmentNotes: data.appointmentNotes,
-      }),
-    onSuccess: () => {
-      toast.success('Appointment created');
-      queryClient.invalidateQueries({ queryKey: ['appointments', orgId] });
+      });
+
+      if (makeRecurring) {
+        return orgApi.makeAppointmentRecurring(orgId, created.appointment.id, {
+          frequency,
+          interval: recurringIntervalForFrequency(frequency, customInterval),
+          endDate: endDate || undefined,
+          daysOfWeek: selectedDays,
+        });
+      }
+
+      return { createdAppointments: [created.appointment] };
+    },
+    onSuccess: (result) => {
+      if (makeRecurring) {
+        const total = result.createdAppointments.length;
+        const extra = total - 1;
+        toast.success(
+          extra > 0
+            ? `Recurring series created with ${total} appointments`
+            : 'Appointment created; no additional recurring slots could be booked',
+        );
+        queryClient.invalidateQueries({ queryKey: ['recurring', orgId] });
+      } else {
+        toast.success('Appointment created');
+      }
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
       reset({ date: today });
       onOpenChange(false);
     },
     onError: (err: Error) => toast.error(err.message),
   });
+
+  const recurringValid = !makeRecurring || isRecurringOptionsValid(frequency, customInterval, selectedDays);
+  const canSubmit = !!startTime && recurringValid;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -170,7 +240,7 @@ export function CreateAppointmentDialog({
             <div>
               <Label>Available time slot</Label>
               <Select
-                value={watch('startTime')}
+                value={startTime}
                 onValueChange={(v) => setValue('startTime', v)}
                 disabled={!accountId || !serviceId || !date || slotsLoading}
               >
@@ -197,9 +267,38 @@ export function CreateAppointmentDialog({
             <Label>Notes</Label>
             <Textarea {...register('appointmentNotes')} />
           </div>
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-stone-200 p-3">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 rounded border-stone-300 text-brand-600 focus:ring-brand-500"
+              checked={makeRecurring}
+              onChange={(e) => setMakeRecurring(e.target.checked)}
+            />
+            <span>
+              <span className="block text-sm font-medium text-stone-900">Make recurring</span>
+              <span className="block text-xs text-stone-500">
+                Generate future appointments on a repeating schedule.
+              </span>
+            </span>
+          </label>
+          {makeRecurring && (
+            <RecurringOptionsFields
+              compact
+              frequency={frequency}
+              onFrequencyChange={setFrequency}
+              customInterval={customInterval}
+              onCustomIntervalChange={setCustomInterval}
+              endDate={endDate}
+              onEndDateChange={setEndDate}
+              selectedDays={selectedDays}
+              onToggleDay={toggleDay}
+            />
+          )}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" disabled={mutation.isPending || !watch('startTime')}>Create</Button>
+            <Button type="submit" disabled={mutation.isPending || !canSubmit}>
+              {makeRecurring ? 'Create Series' : 'Create'}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

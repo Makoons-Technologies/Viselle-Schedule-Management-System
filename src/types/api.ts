@@ -170,6 +170,7 @@ export interface RecurringAppointmentRule {
   endDate?: string | null;
   startTime: string;
   timezone: string;
+  daysOfWeek?: number[];
   status: RecurringRuleStatus;
   createdAt: string;
   updatedAt: string;

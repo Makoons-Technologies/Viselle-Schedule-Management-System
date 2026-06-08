@@ -49,6 +49,7 @@ export function WebsiteSettingsSection({ orgId }: WebsiteSettingsSectionProps) {
   const isPlatformOwner = user?.role === 'platform_owner';
   const [originsDraft, setOriginsDraft] = useState<string | null>(null);
   const [revealedApiKey, setRevealedApiKey] = useState<string | null>(null);
+  const [modeOverride, setModeOverride] = useState<WebsiteHostingMode | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['website', orgId, user?.role],
@@ -60,9 +61,13 @@ export function WebsiteSettingsSection({ orgId }: WebsiteSettingsSectionProps) {
     mutationFn: (payload: Parameters<typeof orgApi.updateWebsite>[1]) =>
       isPlatformOwner ? ownerApi.updateWebsite(orgId, payload) : orgApi.updateWebsite(orgId, payload),
     onSuccess: () => {
+      setModeOverride(null);
       queryClient.invalidateQueries({ queryKey: ['website', orgId] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => {
+      setModeOverride(null);
+      toast.error(err.message);
+    },
   });
 
   const regenerateMutation = useMutation({
@@ -81,12 +86,14 @@ export function WebsiteSettingsSection({ orgId }: WebsiteSettingsSectionProps) {
   const website = data?.websiteSettings;
   if (!website || !data) return null;
 
-  const hostingMode = website.hostingMode ?? 'none';
+  const hostingMode = modeOverride ?? website.hostingMode ?? 'none';
   const subdomainPreview = `https://${data.organizationSlug}.${data.subdomainBaseDomain}`;
   const originsText =
     originsDraft ?? (data.apiAccess.allowedOrigins.length > 0 ? data.apiAccess.allowedOrigins.join('\n') : '');
 
   const handleModeChange = (mode: WebsiteHostingMode) => {
+    setModeOverride(mode);
+
     if (mode === 'none') {
       updateMutation.mutate({ hostingMode: 'none' });
       return;
@@ -183,36 +190,48 @@ export function WebsiteSettingsSection({ orgId }: WebsiteSettingsSectionProps) {
               API access for your site
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              {data.apiAccess.apiKeyConfigured ? (
-                <code className="rounded bg-white px-2 py-1 text-sm text-stone-700">
-                  {data.apiAccess.apiKeyPrefix}…
-                </code>
-              ) : (
-                <span className="text-sm text-stone-500">No API key generated yet</span>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => regenerateMutation.mutate()}
-                disabled={regenerateMutation.isPending}
-              >
-                <RefreshCw className="h-4 w-4" />
-                {data.apiAccess.apiKeyConfigured ? 'Regenerate key' : 'Generate key'}
-              </Button>
-            </div>
-
-            {revealedApiKey && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-                <p className="mb-2 text-xs font-medium text-amber-900">Copy your API key now</p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 break-all text-xs text-stone-800">{revealedApiKey}</code>
-                  <Button variant="outline" size="sm" onClick={copyApiKey}>
-                    <Copy className="h-4 w-4" />
-                  </Button>
+            <div className="space-y-2">
+              <Label>API key</Label>
+              <div className="flex flex-wrap items-stretch gap-2">
+                <div
+                  className={cn(
+                    'flex min-h-10 min-w-0 flex-1 items-center rounded-md border border-dashed bg-white px-3 py-2 font-mono text-sm',
+                    data.apiAccess.apiKeyConfigured
+                      ? 'border-stone-300 text-stone-700'
+                      : 'border-stone-300 text-stone-400',
+                  )}
+                >
+                  {revealedApiKey ? (
+                    <span className="break-all">{revealedApiKey}</span>
+                  ) : data.apiAccess.apiKeyConfigured ? (
+                    `${data.apiAccess.apiKeyPrefix}…`
+                  ) : (
+                    'No key generated yet'
+                  )}
                 </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => regenerateMutation.mutate()}
+                  disabled={regenerateMutation.isPending}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  {data.apiAccess.apiKeyConfigured ? 'Regenerate key' : 'Generate key'}
+                </Button>
+                {revealedApiKey && (
+                  <Button variant="outline" size="sm" className="shrink-0" onClick={copyApiKey}>
+                    <Copy className="h-4 w-4" />
+                    Copy
+                  </Button>
+                )}
               </div>
-            )}
+              {revealedApiKey && (
+                <p className="text-xs font-medium text-amber-800">
+                  Copy your API key now — it will not be shown again.
+                </p>
+              )}
+            </div>
 
             <div>
               <Label>Allowed origins (whitelist)</Label>

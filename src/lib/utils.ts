@@ -52,6 +52,29 @@ export function slugify(value: string) {
 
 export const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
+export const WEEKDAY_OPTIONS = [
+  { value: 1, label: 'Mon' },
+  { value: 2, label: 'Tue' },
+  { value: 3, label: 'Wed' },
+  { value: 4, label: 'Thu' },
+  { value: 5, label: 'Fri' },
+  { value: 6, label: 'Sat' },
+  { value: 0, label: 'Sun' },
+] as const;
+
+export function getDayOfWeekFromIso(startTime: string, _timezone?: string): number {
+  const startDate = startTime.slice(0, 10);
+  const [year, month, day] = startDate.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+}
+
+export function formatDaysOfWeek(days: number[]): string {
+  return [...days]
+    .sort((a, b) => a - b)
+    .map((day) => DAY_NAMES[day])
+    .join(', ');
+}
+
 export function daysInRange(startDay: number, endDay: number): number[] {
   if (endDay < startDay) return [];
   return Array.from({ length: endDay - startDay + 1 }, (_, i) => startDay + i);

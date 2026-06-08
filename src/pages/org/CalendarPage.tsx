@@ -40,7 +40,7 @@ export function CalendarPage() {
       map.set(format(day, 'yyyy-MM-dd'), []);
     }
     for (const appt of appointments) {
-      const key = format(new Date(appt.startTime), 'yyyy-MM-dd');
+      const key = appt.startTime.slice(0, 10);
       const list = map.get(key);
       if (list) list.push(appt);
     }

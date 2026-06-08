@@ -129,10 +129,11 @@ export function AppointmentDetailSheet({ appointmentId, orgId, onClose }: Appoin
             </div>
           </div>
         )}
-        {appointmentId && (
+        {appointmentId && data && (
           <MakeRecurringDialog
             orgId={orgId}
             appointmentId={appointmentId}
+            appointmentStartTime={data.appointment.startTime}
             open={recurringOpen}
             onOpenChange={setRecurringOpen}
             onSuccess={() => queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId, 'info'] })}

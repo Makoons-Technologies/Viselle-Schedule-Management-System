@@ -157,7 +157,12 @@ export const orgApi = {
   listAppointments: (orgId: string, params?: Record<string, string>) =>
     apiClient.get<{ appointments: Appointment[] }>(`/organizations/${orgId}/appointments`, { params }).then((r) => r.data),
   createAppointment: (orgId: string, data: CreateAppointmentInput) =>
-    apiClient.post(`/organizations/${orgId}/appointments`, data).then((r) => r.data),
+    apiClient
+      .post<{ appointment: Appointment; customer: Customer; reminders: Reminder[] }>(
+        `/organizations/${orgId}/appointments`,
+        data,
+      )
+      .then((r) => r.data),
   updateAppointment: (orgId: string, appointmentId: string, data: Partial<Appointment>) =>
     apiClient.patch<{ appointment: Appointment }>(`/organizations/${orgId}/appointments/${appointmentId}`, data).then((r) => r.data),
   cancelAppointment: (orgId: string, appointmentId: string, reason?: string) =>
@@ -165,7 +170,7 @@ export const orgApi = {
   makeAppointmentRecurring: (
     orgId: string,
     appointmentId: string,
-    data: { frequency: RecurringFrequency; interval: number; endDate?: string },
+    data: { frequency: RecurringFrequency; interval: number; endDate?: string; daysOfWeek: number[] },
   ) =>
     apiClient
       .post<{
