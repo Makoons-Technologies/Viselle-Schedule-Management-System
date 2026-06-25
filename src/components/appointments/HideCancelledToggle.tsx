@@ -10,7 +10,7 @@ export function HideCancelledToggle({ checked, onCheckedChange }: HideCancelledT
   return (
     <div className="flex items-center gap-2">
       <Switch id="hide-cancelled" checked={checked} onCheckedChange={onCheckedChange} />
-      <Label htmlFor="hide-cancelled" className="cursor-pointer text-sm font-normal text-stone-600">
+      <Label htmlFor="hide-cancelled" className="cursor-pointer text-sm font-normal text-stone-600 dark:text-stone-300">
         Hide cancelled
       </Label>
     </div>

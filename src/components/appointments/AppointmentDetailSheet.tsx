@@ -163,6 +163,19 @@ export function AppointmentDetailSheet({
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const undoCheckInMutation = useMutation({
+    mutationFn: () =>
+      orgApi.undoAppointmentCheckIn(orgId, appointmentId!, {
+        occurrenceDate: isRecurring ? occurrenceDate : undefined,
+      }),
+    onSuccess: () => {
+      toast.success('Check-in undone');
+      queryClient.invalidateQueries({ queryKey: ['appointments', orgId] });
+      queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId, 'info'] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   const sendSmsMutation = useMutation({
 
     mutationFn: () => orgApi.sendReminder(orgId, appointmentId!, 'sms'),
@@ -354,9 +367,19 @@ export function AppointmentDetailSheet({
               )}
 
               {data.appointment.visitStatus === 'arrived' && data.appointment.paymentStatus === 'unpaid' && (
-                <Button size="sm" onClick={() => setCheckoutOpen(true)}>
-                  Checkout
-                </Button>
+                <>
+                  <Button size="sm" onClick={() => setCheckoutOpen(true)}>
+                    Checkout
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => undoCheckInMutation.mutate()}
+                    disabled={undoCheckInMutation.isPending}
+                  >
+                    Undo check-in
+                  </Button>
+                </>
               )}
 
               {data.appointment.visitStatus !== 'cancelled' && (

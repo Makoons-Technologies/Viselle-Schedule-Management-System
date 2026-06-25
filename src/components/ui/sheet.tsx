@@ -42,7 +42,12 @@ export function SheetHeader({ className, ...props }: HTMLAttributes<HTMLDivEleme
 }
 
 export function SheetTitle({ className, ...props }: HTMLAttributes<HTMLHeadingElement>) {
-  return <DialogPrimitive.Title className={cn('text-lg font-semibold', className)} {...props} />;
+  return (
+    <DialogPrimitive.Title
+      className={cn('text-lg font-semibold text-stone-900 dark:text-stone-100', className)}
+      {...props}
+    />
+  );
 }
 
 export function SheetDescription({ className, ...props }: HTMLAttributes<HTMLParagraphElement>) {

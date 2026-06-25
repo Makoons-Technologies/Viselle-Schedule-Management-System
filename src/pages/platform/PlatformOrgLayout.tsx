@@ -23,8 +23,8 @@ export function PlatformOrgLayout() {
       {org && (
         <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-stone-900">{org.name}</h2>
-            <p className="text-sm text-stone-500">Platform administration · /{org.slug}</p>
+            <h2 className="text-lg font-semibold text-stone-900 dark:text-stone-100">{org.name}</h2>
+            <p className="text-sm text-stone-500 dark:text-stone-300">Platform administration · /{org.slug}</p>
           </div>
           <Button variant="outline" size="sm" asChild className="shrink-0">
             <Link to={`/orgs/${org.id}/dashboard`}>

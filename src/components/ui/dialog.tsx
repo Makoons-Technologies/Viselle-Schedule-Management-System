@@ -14,7 +14,7 @@ export const DialogOverlay = forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Overlay
     ref={ref}
-    className={cn('fixed inset-0 z-50 bg-black/40', className)}
+    className={cn('fixed inset-0 z-[60] bg-black/40', className)}
     {...props}
   />
 ));
@@ -29,7 +29,7 @@ export const DialogContent = forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        'fixed left-1/2 top-1/2 z-50 max-h-[min(90dvh,100vh)] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-stone-200 bg-white p-4 shadow-xl sm:p-6 dark:border-stone-800 dark:bg-stone-900',
+        'fixed left-1/2 top-1/2 z-[60] max-h-[min(90dvh,100vh)] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-stone-200 bg-white p-4 shadow-xl sm:p-6 dark:border-stone-800 dark:bg-stone-900',
         className,
       )}
       {...props}
@@ -48,7 +48,7 @@ export function DialogHeader({ className, ...props }: HTMLAttributes<HTMLDivElem
 }
 
 export function DialogTitle({ className, ...props }: HTMLAttributes<HTMLHeadingElement>) {
-  return <DialogPrimitive.Title className={cn('text-lg font-semibold', className)} {...props} />;
+  return <DialogPrimitive.Title className={cn('text-lg font-semibold text-stone-900 dark:text-stone-100', className)} {...props} />;
 }
 
 export function DialogDescription({ className, ...props }: HTMLAttributes<HTMLParagraphElement>) {

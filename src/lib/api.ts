@@ -292,6 +292,13 @@ export const orgApi = {
       })
       .then((r) => r.data),
 
+  undoAppointmentCheckIn: (orgId: string, appointmentId: string, options?: { occurrenceDate?: string }) =>
+    apiClient
+      .post<{ appointment: Appointment }>(`/organizations/${orgId}/appointments/${appointmentId}/undo-check-in`, {
+        occurrenceDate: options?.occurrenceDate,
+      })
+      .then((r) => r.data),
+
   listProducts: (orgId: string, activeOnly = false) =>
     apiClient
       .get<{ products: Product[] }>(`/organizations/${orgId}/products`, { params: { activeOnly } })

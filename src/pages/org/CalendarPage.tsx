@@ -3,6 +3,8 @@ import { addDays, endOfWeek, format, startOfWeek } from 'date-fns';
 import { Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { orgApi } from '@/lib/api';
+import { APPOINTMENT_CALENDAR_LIP_CLASS, APPOINTMENT_CALENDAR_LIP_LABEL } from '@/lib/appointment-status';
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
 import { filterOutCancelled, useHideCancelledAppointments } from '@/hooks/useHideCancelledAppointments';
@@ -112,6 +114,16 @@ export function CalendarPage() {
           </div>
         }
       />
+      <div className="mb-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-stone-600 dark:text-stone-300">
+        {(Object.keys(APPOINTMENT_CALENDAR_LIP_CLASS) as Array<keyof typeof APPOINTMENT_CALENDAR_LIP_CLASS>)
+          .filter((state) => state !== 'cancelled')
+          .map((state) => (
+            <span key={state} className="inline-flex items-center gap-1.5">
+              <span className={cn('h-1.5 w-6 rounded-full', APPOINTMENT_CALENDAR_LIP_CLASS[state])} aria-hidden />
+              {APPOINTMENT_CALENDAR_LIP_LABEL[state]}
+            </span>
+          ))}
+      </div>
       <WeekAppointmentTimeGrid
         days={days}
         appointments={appointments}
@@ -127,6 +139,7 @@ export function CalendarPage() {
               customerName={customerName}
               serviceName={serviceName}
               visitStatus={appt.visitStatus}
+              paymentStatus={appt.paymentStatus}
               isRecurring={
                 !!appt.recurringAppointmentRuleId &&
                 activeRecurringRuleIds.has(appt.recurringAppointmentRuleId)
