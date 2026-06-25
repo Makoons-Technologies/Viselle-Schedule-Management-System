@@ -1,17 +1,38 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
+import { MobileNavProvider, useMobileNav } from '@/context/MobileNavContext';
+import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
+import { MobileSidebar } from '@/components/layout/MobileSidebar';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
 
-export function AppLayout() {
+function AppLayoutContent() {
+  const location = useLocation();
+  const { close } = useMobileNav();
+
+  useEffect(() => {
+    close();
+  }, [location.pathname, close]);
+
   return (
-    <div className="flex h-screen overflow-hidden bg-stone-50">
+    <div className="flex h-[100dvh] overflow-hidden bg-stone-50 dark:bg-stone-950">
       <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <MobileSidebar />
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Topbar />
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 pb-24 sm:p-6 md:pb-6">
           <Outlet />
         </main>
       </div>
+      <MobileBottomNav />
     </div>
+  );
+}
+
+export function AppLayout() {
+  return (
+    <MobileNavProvider>
+      <AppLayoutContent />
+    </MobileNavProvider>
   );
 }

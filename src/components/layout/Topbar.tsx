@@ -1,11 +1,20 @@
-import { LogOut, Palette } from 'lucide-react';
+import { LogOut, Menu, Settings } from 'lucide-react';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
+import { useMobileNav } from '@/context/MobileNavContext';
 import { useOrg } from '@/context/OrgContext';
-import { useTheme } from '@/context/ThemeContext';
-import { ThemePicker } from '@/components/common/ThemePicker';
+import { orgApi } from '@/lib/api';
+import { useOrgId } from '@/hooks/useOrgId';
+import {
+  getPlatformContextFromPath,
+  PLATFORM_CONTEXT,
+} from '@/components/layout/platform-navigation';
+import { isOrgSettingsPath } from '@/components/layout/org-navigation';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import {
   Select,
   SelectContent,
@@ -16,33 +25,85 @@ import {
 
 export function Topbar() {
   const { user, logout } = useAuth();
-  const { organizations, selectedOrgId, setSelectedOrgId, selectedOrg } = useOrg();
-  const { themeId, themes } = useTheme();
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  const { organizations, setSelectedOrgId, selectedOrg } = useOrg();
+  const { setOpen: setMobileNavOpen } = useMobileNav();
   const navigate = useNavigate();
-  const [themeOpen, setThemeOpen] = useState(false);
+  const location = useLocation();
+  const routeOrgId = useOrgId();
 
-  const activeTheme = themes.find((t) => t.id === themeId);
+  const orgIdForQuery =
+    user?.role === 'platform_owner' ? routeOrgId : user?.organizationId ?? routeOrgId;
+
+  const { data: orgData } = useQuery({
+    queryKey: ['organization', orgIdForQuery, user?.role],
+    queryFn: () => orgApi.getOrganization(orgIdForQuery!),
+    enabled: !!orgIdForQuery && user?.role !== 'platform_owner',
+  });
+
+  const contextValue =
+    user?.role === 'platform_owner'
+      ? getPlatformContextFromPath(location.pathname)
+      : null;
+
+  const selectedOrgFromContext =
+    contextValue && contextValue !== PLATFORM_CONTEXT
+      ? organizations.find((o) => o.id === contextValue) ?? selectedOrg
+      : null;
+
+  const businessName =
+    user?.role === 'platform_owner'
+      ? contextValue === PLATFORM_CONTEXT
+        ? 'Viselle Platform'
+        : selectedOrgFromContext?.name
+      : orgData?.organization.name;
+
+  const handleContextChange = (value: string) => {
+    if (value === PLATFORM_CONTEXT) {
+      setSelectedOrgId(null);
+      navigate('/platform/dashboard');
+      return;
+    }
+
+    setSelectedOrgId(value);
+    navigate(`/orgs/${value}/dashboard`);
+  };
+
+  const inOrgSalonContext = location.pathname.startsWith('/orgs/');
+  const orgSettingsPath = routeOrgId ? `/orgs/${routeOrgId}/settings` : null;
+  const showSettingsButton =
+    !!orgSettingsPath &&
+    (user?.role === 'org_owner' || (user?.role === 'platform_owner' && inOrgSalonContext));
+  const onSettingsPage = orgSettingsPath ? isOrgSettingsPath(location.pathname, `/orgs/${routeOrgId}`) : false;
 
   const handleLogout = () => {
+    setLogoutOpen(false);
     logout();
     navigate('/login');
   };
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b border-stone-200 bg-white px-6">
-      <div className="flex items-center gap-4">
-        {user?.role === 'platform_owner' && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-stone-500">Organization:</span>
-            <Select
-              value={selectedOrgId ?? 'none'}
-              onValueChange={(v) => setSelectedOrgId(v === 'none' ? null : v)}
-            >
-              <SelectTrigger className="w-56">
-                <SelectValue placeholder="Select organization" />
+    <>
+    <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-stone-200 bg-white px-3 dark:border-stone-800 dark:bg-stone-900 sm:h-16 sm:px-6">      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-10 w-10 shrink-0 md:hidden"
+          onClick={() => setMobileNavOpen(true)}
+          title="Open menu"
+          aria-label="Open menu"
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+
+        {user?.role === 'platform_owner' ? (
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <Select value={contextValue ?? PLATFORM_CONTEXT} onValueChange={handleContextChange}>
+              <SelectTrigger className="h-10 w-full min-w-0 max-w-[11rem] text-xs sm:max-w-xs sm:text-sm md:max-w-sm">
+                <SelectValue placeholder="Select context" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">None selected</SelectItem>
+                <SelectItem value={PLATFORM_CONTEXT}>Viselle Platform</SelectItem>
                 {organizations.map((org) => (
                   <SelectItem key={org.id} value={org.id}>
                     {org.name}
@@ -50,50 +111,58 @@ export function Topbar() {
                 ))}
               </SelectContent>
             </Select>
-            {selectedOrg && (
-              <span className="text-xs text-stone-400">/{selectedOrg.slug}</span>
+            {selectedOrgFromContext && (
+              <span className="hidden truncate text-xs text-stone-400 lg:inline">
+                /{selectedOrgFromContext.slug}
+              </span>
             )}
+          </div>
+        ) : (
+          <div className="min-w-0 md:hidden">
+            <p className="truncate text-sm font-semibold text-stone-900 dark:text-stone-100">{businessName ?? 'Viselle'}</p>
+            <p className="truncate text-xs capitalize text-stone-500 dark:text-stone-400">{user?.role?.replace('_', ' ')}</p>
           </div>
         )}
       </div>
-      <div className="flex items-center gap-3">
-        <div className="relative">
+
+      <div className="flex shrink-0 items-center gap-1 sm:gap-3">
+        {showSettingsButton ? (
           <Button
             variant="ghost"
-            size="sm"
-            onClick={() => setThemeOpen((open) => !open)}
-            title="Color theme"
-            className="gap-2"
+            size="icon"
+            className={cn('h-10 w-10', onSettingsPage && 'bg-stone-100 text-brand-700 dark:bg-stone-800 dark:text-brand-300')}
+            onClick={() => navigate(orgSettingsPath!)}
+            title="Settings"
+            aria-label="Settings"
           >
-            <Palette className="h-4 w-4" />
-            <span
-              className="h-3 w-3 rounded-full border border-black/10"
-              style={{ backgroundColor: activeTheme?.colors[600] }}
-            />
+            <Settings className="h-4 w-4" />
           </Button>
-          {themeOpen && (
-            <>
-              <button
-                type="button"
-                className="fixed inset-0 z-40 cursor-default"
-                aria-label="Close theme picker"
-                onClick={() => setThemeOpen(false)}
-              />
-              <div className="absolute right-0 z-50 mt-2 w-72 rounded-xl border border-stone-200 bg-white p-3 shadow-lg">
-                <p className="mb-2 text-sm font-medium text-stone-900">Color theme</p>
-                <ThemePicker compact onSelect={() => setThemeOpen(false)} />
-              </div>
-            </>
-          )}
+        ) : null}
+        <div className="hidden text-right md:block">
+          <p className="max-w-[12rem] truncate text-sm font-medium text-stone-900 dark:text-stone-100 lg:max-w-none">{user?.email}</p>
+          <p className="text-xs capitalize text-stone-500 dark:text-stone-400">{user?.role?.replace('_', ' ')}</p>
         </div>
-        <div className="text-right">
-          <p className="text-sm font-medium text-stone-900">{user?.email}</p>
-          <p className="text-xs capitalize text-stone-500">{user?.role?.replace('_', ' ')}</p>
-        </div>
-        <Button variant="ghost" size="icon" onClick={handleLogout} title="Log out">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-10 w-10"
+          onClick={() => setLogoutOpen(true)}
+          title="Log out"
+          aria-label="Log out"
+        >
           <LogOut className="h-4 w-4" />
         </Button>
       </div>
     </header>
+    <ConfirmDialog
+      open={logoutOpen}
+      onOpenChange={setLogoutOpen}
+      title="Log out?"
+      description="You will need to sign in again to access your account."
+      confirmLabel="Log out"
+      destructive
+      onConfirm={handleLogout}
+    />
+    </>
   );
 }

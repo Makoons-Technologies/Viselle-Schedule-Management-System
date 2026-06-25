@@ -12,7 +12,7 @@ Table.displayName = 'Table';
 
 export const TableHeader = forwardRef<HTMLTableSectionElement, HTMLAttributes<HTMLTableSectionElement>>(
   ({ className, ...props }, ref) => (
-    <thead ref={ref} className={cn('border-b border-stone-200', className)} {...props} />
+    <thead ref={ref} className={cn('border-b border-stone-200 dark:border-stone-800', className)} {...props} />
   ),
 );
 TableHeader.displayName = 'TableHeader';
@@ -26,7 +26,7 @@ TableBody.displayName = 'TableBody';
 
 export const TableRow = forwardRef<HTMLTableRowElement, HTMLAttributes<HTMLTableRowElement>>(
   ({ className, ...props }, ref) => (
-    <tr ref={ref} className={cn('border-b border-stone-100 transition-colors hover:bg-stone-50', className)} {...props} />
+    <tr ref={ref} className={cn('border-b border-stone-100 transition-colors hover:bg-stone-50 dark:border-stone-800 dark:hover:bg-stone-800/50', className)} {...props} />
   ),
 );
 TableRow.displayName = 'TableRow';
@@ -35,7 +35,7 @@ export const TableHead = forwardRef<HTMLTableCellElement, ThHTMLAttributes<HTMLT
   ({ className, ...props }, ref) => (
     <th
       ref={ref}
-      className={cn('h-11 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-stone-500', className)}
+      className={cn('h-11 px-2 text-left align-middle text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400 sm:px-4', className)}
       {...props}
     />
   ),
@@ -44,7 +44,7 @@ TableHead.displayName = 'TableHead';
 
 export const TableCell = forwardRef<HTMLTableCellElement, TdHTMLAttributes<HTMLTableCellElement>>(
   ({ className, ...props }, ref) => (
-    <td ref={ref} className={cn('px-4 py-3 align-middle', className)} {...props} />
+    <td ref={ref} className={cn('px-2 py-3 align-middle sm:px-4', className)} {...props} />
   ),
 );
 TableCell.displayName = 'TableCell';

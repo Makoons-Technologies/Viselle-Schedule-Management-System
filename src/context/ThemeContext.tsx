@@ -14,30 +14,65 @@ import {
   THEME_STORAGE_KEY,
   type PlatformThemeId,
 } from '@/lib/themes';
+import {
+  applyResolvedColorMode,
+  COLOR_MODE_STORAGE_KEY,
+  readStoredColorMode,
+  resolveColorMode,
+  subscribeToSystemColorMode,
+  type ColorMode,
+  type ResolvedColorMode,
+} from '@/lib/color-mode';
 
 interface ThemeContextValue {
   themeId: PlatformThemeId;
   setThemeId: (id: PlatformThemeId) => void;
   themes: typeof PLATFORM_THEMES;
+  colorMode: ColorMode;
+  setColorMode: (mode: ColorMode) => void;
+  resolvedColorMode: ResolvedColorMode;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [themeId, setThemeIdState] = useState<PlatformThemeId>(() => readStoredThemeId());
+  const [colorMode, setColorModeState] = useState<ColorMode>(() => readStoredColorMode());
+  const [resolvedColorMode, setResolvedColorMode] = useState<ResolvedColorMode>(() =>
+    resolveColorMode(readStoredColorMode()),
+  );
 
   useEffect(() => {
     applyPlatformTheme(themeId);
     localStorage.setItem(THEME_STORAGE_KEY, themeId);
   }, [themeId]);
 
+  useEffect(() => {
+    localStorage.setItem(COLOR_MODE_STORAGE_KEY, colorMode);
+    const resolved = resolveColorMode(colorMode);
+    setResolvedColorMode(resolved);
+    applyResolvedColorMode(resolved);
+  }, [colorMode]);
+
+  useEffect(() => {
+    if (colorMode !== 'system') return;
+    return subscribeToSystemColorMode((resolved) => {
+      setResolvedColorMode(resolved);
+      applyResolvedColorMode(resolved);
+    });
+  }, [colorMode]);
+
   const setThemeId = useCallback((id: PlatformThemeId) => {
     setThemeIdState(id);
   }, []);
 
+  const setColorMode = useCallback((mode: ColorMode) => {
+    setColorModeState(mode);
+  }, []);
+
   const value = useMemo(
-    () => ({ themeId, setThemeId, themes: PLATFORM_THEMES }),
-    [themeId, setThemeId],
+    () => ({ themeId, setThemeId, themes: PLATFORM_THEMES, colorMode, setColorMode, resolvedColorMode }),
+    [themeId, setThemeId, colorMode, setColorMode, resolvedColorMode],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

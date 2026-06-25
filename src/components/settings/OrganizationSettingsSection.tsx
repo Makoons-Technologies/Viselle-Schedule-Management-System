@@ -7,6 +7,8 @@ import { LoadingState } from '@/components/common/LoadingState';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { helperTextClass } from '@/components/common/Panel';
+import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 
 interface OrganizationSettingsSectionProps {
@@ -67,13 +69,13 @@ export function OrganizationSettingsSection({ orgId }: OrganizationSettingsSecti
         <div>
           <Label>Public booking slug</Label>
           <Input value={org.slug} disabled />
-          <p className="mt-1 text-xs text-stone-500">Contact platform support to change your booking URL slug.</p>
+          <p className={cn('mt-1', helperTextClass)}>Contact platform support to change your booking URL slug.</p>
         </div>
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0 flex-1">
             <Label>Public booking enabled</Label>
-            <p className="text-xs text-stone-500">
-              Allow customers to book online. Also controls hosted subdomain sites and external API access.
+            <p className={helperTextClass}>
+              Allow customers to book online. Enables your free booking page under Booking website.
             </p>
           </div>
           <Switch
@@ -81,7 +83,7 @@ export function OrganizationSettingsSection({ orgId }: OrganizationSettingsSecti
             onCheckedChange={(v) => updateMutation.mutate({ publicBookingEnabled: v })}
           />
         </div>
-        {updateMutation.isPending && <p className="text-xs text-stone-500">Saving…</p>}
+        {updateMutation.isPending && <p className={helperTextClass}>Saving…</p>}
       </CardContent>
     </Card>
   );

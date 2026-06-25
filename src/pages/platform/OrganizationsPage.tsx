@@ -1,12 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ownerApi } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 import { useOrg } from '@/context/OrgContext';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { Panel } from '@/components/common/Panel';
 import { PageHeader } from '@/components/common/PageHeader';
 import { OrganizationStatusBadge, BillingStatusBadge } from '@/components/common/StatusBadge';
 import { LoadingState } from '@/components/common/LoadingState';
@@ -14,14 +16,24 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 export function OrganizationsPage() {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const { setSelectedOrgId } = useOrg();
   const [orgToDeactivate, setOrgToDeactivate] = useState<{ id: string; name: string } | null>(null);
+  const isPlatformOwner = user?.role === 'platform_owner';
 
   const { data, isLoading } = useQuery({
     queryKey: ['owner', 'organizations'],
     queryFn: ownerApi.listOrganizations,
+    enabled: isPlatformOwner,
   });
+
+  if (!isPlatformOwner) {
+    if (user?.role === 'org_owner' && user.organizationId) {
+      return <Navigate to={`/orgs/${user.organizationId}/dashboard`} replace />;
+    }
+    return <Navigate to="/" replace />;
+  }
 
   const deactivateMutation = useMutation({
     mutationFn: (id: string) => ownerApi.deactivateOrganization(id),
@@ -46,7 +58,7 @@ export function OrganizationsPage() {
           </Button>
         }
       />
-      <div className="rounded-xl border border-stone-200 bg-white">
+      <Panel>
         <Table>
           <TableHeader>
             <TableRow>
@@ -82,7 +94,7 @@ export function OrganizationsPage() {
             ))}
           </TableBody>
         </Table>
-      </div>
+      </Panel>
       <ConfirmDialog
         open={!!orgToDeactivate}
         onOpenChange={(open) => !open && setOrgToDeactivate(null)}

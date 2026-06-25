@@ -1,23 +1,33 @@
 import { useQuery } from '@tanstack/react-query';
 import { addDays, endOfWeek, format, startOfWeek } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { orgApi } from '@/lib/api';
-import { formatTime } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
+import { filterOutCancelled, useHideCancelledAppointments } from '@/hooks/useHideCancelledAppointments';
 import { AppointmentDetailSheet } from '@/components/appointments/AppointmentDetailSheet';
 import { CreateAppointmentDialog } from '@/components/appointments/CreateAppointmentDialog';
+import { HideCancelledToggle } from '@/components/appointments/HideCancelledToggle';
+import { ShowAllAppointmentsToggle } from '@/components/appointments/ShowAllAppointmentsToggle';
+import { WeekAppointmentTimeGrid } from '@/components/calendar/WeekAppointmentTimeGrid';
+import { CalendarAppointmentChip } from '@/components/calendar/CalendarAppointmentChip';
+import { WeekCalendarNav } from '@/components/calendar/WeekCalendarNav';
 import { PageHeader } from '@/components/common/PageHeader';
-import { AppointmentStatusBadge } from '@/components/common/StatusBadge';
 import { LoadingState } from '@/components/common/LoadingState';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 
 export function CalendarPage() {
   const orgId = useOrgId();
+  const { user } = useAuth();
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 0 }));
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<{
+    id: string;
+    startTime: string;
+  } | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const { hideCancelled, setHideCancelled } = useHideCancelledAppointments();
 
   const weekEnd = endOfWeek(weekStart, { weekStartsOn: 0 });
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
@@ -30,22 +40,55 @@ export function CalendarPage() {
         endDate: format(weekEnd, 'yyyy-MM-dd'),
       }),
     enabled: !!orgId,
+    staleTime: 0,
   });
 
-  const appointments = data?.appointments ?? [];
+  const { data: customersData } = useQuery({
+    queryKey: ['customers', orgId],
+    queryFn: () => orgApi.listCustomers(orgId),
+    enabled: !!orgId,
+  });
 
-  const byDay = useMemo(() => {
-    const map = new Map<string, typeof appointments>();
-    for (const day of days) {
-      map.set(format(day, 'yyyy-MM-dd'), []);
+  const { data: servicesData } = useQuery({
+    queryKey: ['services', orgId],
+    queryFn: () => orgApi.listServices(orgId),
+    enabled: !!orgId,
+  });
+
+  const { data: recurringData } = useQuery({
+    queryKey: ['recurring', orgId],
+    queryFn: () => orgApi.listRecurring(orgId),
+    enabled: !!orgId,
+  });
+
+  const activeRecurringRuleIds = useMemo(
+    () =>
+      new Set(
+        (recurringData?.recurringAppointmentRules ?? [])
+          .filter((rule) => rule.status === 'active' || rule.status === 'paused')
+          .map((rule) => rule.id),
+      ),
+    [recurringData],
+  );
+
+  const customersById = useMemo(
+    () => Object.fromEntries((customersData?.customers ?? []).map((customer) => [customer.id, customer])),
+    [customersData],
+  );
+
+  const servicesById = useMemo(
+    () => Object.fromEntries((servicesData?.services ?? []).map((service) => [service.id, service])),
+    [servicesData],
+  );
+
+  const appointments = useMemo(() => {
+    let list = data?.appointments ?? [];
+    if (!showAll) {
+      if (!user?.accountId) return [];
+      list = list.filter((appt) => appt.accountId === user.accountId);
     }
-    for (const appt of appointments) {
-      const key = appt.startTime.slice(0, 10);
-      const list = map.get(key);
-      if (list) list.push(appt);
-    }
-    return map;
-  }, [appointments, days]);
+    return filterOutCancelled(list, hideCancelled);
+  }, [data?.appointments, showAll, user?.accountId, hideCancelled]);
 
   if (isLoading) return <LoadingState />;
 
@@ -53,51 +96,58 @@ export function CalendarPage() {
     <div>
       <PageHeader
         title="Calendar"
-        description="Week view of all appointments"
+        description={showAll ? 'Week view of all appointments' : 'Week view of your appointments'}
         actions={
           <Button onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" /> New Appointment</Button>
         }
       />
-      <div className="mb-4 flex items-center justify-between">
-        <Button variant="outline" size="icon" onClick={() => setWeekStart(addDays(weekStart, -7))}>
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        <span className="text-sm font-medium">
-          {format(weekStart, 'MMM d')} – {format(weekEnd, 'MMM d, yyyy')}
-        </span>
-        <Button variant="outline" size="icon" onClick={() => setWeekStart(addDays(weekStart, 7))}>
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      </div>
-      <div className="grid grid-cols-7 gap-2">
-        {days.map((day) => {
-          const key = format(day, 'yyyy-MM-dd');
-          const dayAppts = byDay.get(key) ?? [];
+      <WeekCalendarNav
+        label={`${format(weekStart, 'MMM d')} – ${format(weekEnd, 'MMM d, yyyy')}`}
+        onPrevious={() => setWeekStart(addDays(weekStart, -7))}
+        onNext={() => setWeekStart(addDays(weekStart, 7))}
+        leading={
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <ShowAllAppointmentsToggle checked={showAll} onCheckedChange={setShowAll} />
+            <HideCancelledToggle checked={hideCancelled} onCheckedChange={setHideCancelled} />
+          </div>
+        }
+      />
+      <WeekAppointmentTimeGrid
+        days={days}
+        appointments={appointments}
+        renderAppointment={(appt) => {
+          const customer = customersById[appt.customerId];
+          const customerName = customer
+            ? `${customer.firstName} ${customer.lastName}`.trim()
+            : 'Client';
+          const serviceName = servicesById[appt.serviceId]?.name ?? 'Service';
+
           return (
-            <Card key={key} className="min-h-48">
-              <CardContent className="p-3">
-                <p className="mb-2 text-xs font-semibold text-stone-500">{format(day, 'EEE d')}</p>
-                <div className="space-y-2">
-                  {dayAppts
-                    .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
-                    .map((appt) => (
-                      <button
-                        key={appt.id}
-                        type="button"
-                        onClick={() => setSelectedId(appt.id)}
-                        className="w-full rounded-lg border border-brand-100 bg-brand-50 p-2 text-left text-xs hover:bg-brand-100"
-                      >
-                        <p className="font-medium">{formatTime(appt.startTime)}</p>
-                        <AppointmentStatusBadge status={appt.status} />
-                      </button>
-                    ))}
-                </div>
-              </CardContent>
-            </Card>
+            <CalendarAppointmentChip
+              customerName={customerName}
+              serviceName={serviceName}
+              visitStatus={appt.visitStatus}
+              isRecurring={
+                !!appt.recurringAppointmentRuleId &&
+                activeRecurringRuleIds.has(appt.recurringAppointmentRuleId)
+              }
+              title={
+                appt.recurringAppointmentRuleId &&
+                activeRecurringRuleIds.has(appt.recurringAppointmentRuleId)
+                  ? `${customerName} — ${serviceName} — recurring`
+                  : `${customerName} — ${serviceName}`
+              }
+              onClick={() => setSelectedAppointment({ id: appt.id, startTime: appt.startTime })}
+            />
           );
-        })}
-      </div>
-      <AppointmentDetailSheet appointmentId={selectedId} orgId={orgId} onClose={() => setSelectedId(null)} />
+        }}
+      />
+      <AppointmentDetailSheet
+        appointmentId={selectedAppointment?.id ?? null}
+        occurrenceStartTime={selectedAppointment?.startTime}
+        orgId={orgId}
+        onClose={() => setSelectedAppointment(null)}
+      />
       <CreateAppointmentDialog orgId={orgId} open={createOpen} onOpenChange={setCreateOpen} />
     </div>
   );

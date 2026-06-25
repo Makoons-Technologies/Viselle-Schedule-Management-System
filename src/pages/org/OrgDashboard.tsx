@@ -36,7 +36,7 @@ export function OrgDashboard() {
   if (loadingAppts) return <LoadingState />;
 
   const upcoming = (appointments?.appointments ?? []).filter(
-    (a) => a.status !== 'cancelled' && new Date(a.startTime) > new Date(),
+    (a) => a.visitStatus !== 'cancelled' && new Date(a.startTime) > new Date(),
   ).length;
 
   const stats = [

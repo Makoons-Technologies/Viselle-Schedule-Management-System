@@ -22,8 +22,10 @@ export function ThemePicker({ compact, onSelect }: ThemePickerProps) {
             onSelect?.();
           }}
           className={cn(
-            'relative rounded-lg border p-3 text-left transition-colors hover:border-stone-300',
-            themeId === theme.id ? 'border-brand-500 ring-2 ring-brand-100' : 'border-stone-200 bg-white',
+            'relative rounded-lg border p-3 text-left transition-colors hover:border-stone-300 dark:hover:border-stone-600',
+            themeId === theme.id
+              ? 'border-brand-500 ring-2 ring-brand-100 dark:ring-brand-900'
+              : 'border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900',
           )}
         >
           <div className="mb-2 flex gap-1">
@@ -35,8 +37,8 @@ export function ThemePicker({ compact, onSelect }: ThemePickerProps) {
               />
             ))}
           </div>
-          <p className="text-sm font-medium text-stone-900">{theme.name}</p>
-          {!compact && <p className="mt-0.5 text-xs text-stone-500">{theme.description}</p>}
+          <p className="text-sm font-medium text-stone-900 dark:text-stone-100">{theme.name}</p>
+          {!compact && <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">{theme.description}</p>}
           {themeId === theme.id && (
             <Check className="absolute right-2 top-2 h-4 w-4 text-brand-600" />
           )}

@@ -17,9 +17,9 @@ export function OrgLayout() {
   return (
     <div>
       {selectedOrg && user?.role === 'platform_owner' && (
-        <div className="mb-6">
+        <div className="mb-4 hidden md:mb-6 md:block">
           <h2 className="text-lg font-semibold text-stone-900">{selectedOrg.name}</h2>
-          <p className="text-sm text-stone-500">{selectedOrg.slug}</p>
+          <p className="text-sm text-stone-500">Salon operations · /{selectedOrg.slug}</p>
         </div>
       )}
       <Outlet />

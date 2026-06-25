@@ -1,14 +1,10 @@
 import { Badge } from '@/components/ui/badge';
-import type { AppointmentStatus, BillingStatus, OrganizationStatus } from '@/types/api';
-
-const appointmentVariants: Record<AppointmentStatus, 'default' | 'success' | 'warning' | 'destructive' | 'secondary'> = {
-  scheduled: 'secondary',
-  confirmed: 'success',
-  cancelled: 'destructive',
-  completed: 'default',
-  no_show: 'warning',
-  rescheduled: 'warning',
-};
+import type {
+  BillingStatus,
+  OrganizationStatus,
+  PaymentStatus,
+  VisitStatus,
+} from '@/types/api';
 
 const orgVariants: Record<OrganizationStatus, 'default' | 'success' | 'warning' | 'destructive' | 'secondary'> = {
   active: 'success',
@@ -26,8 +22,41 @@ const billingVariants: Record<BillingStatus, 'default' | 'success' | 'warning' |
   trial: 'default',
 };
 
-export function AppointmentStatusBadge({ status }: { status: AppointmentStatus }) {
-  return <Badge variant={appointmentVariants[status]}>{status.replace('_', ' ')}</Badge>;
+const visitVariants: Record<VisitStatus, 'default' | 'success' | 'warning' | 'destructive' | 'secondary'> = {
+  scheduled: 'secondary',
+  arrived: 'success',
+  missed: 'warning',
+  cancelled: 'destructive',
+};
+
+const paymentVariants: Record<PaymentStatus, 'default' | 'success' | 'warning' | 'destructive' | 'secondary'> = {
+  unpaid: 'secondary',
+  paid: 'success',
+  refunded: 'warning',
+};
+
+export function AppointmentStatusBadge({
+  visitStatus,
+  paymentStatus,
+  recurringAppointmentRuleId,
+  recurringSeriesActive = true,
+}: {
+  visitStatus: VisitStatus;
+  paymentStatus: PaymentStatus;
+  recurringAppointmentRuleId?: string | null;
+  recurringSeriesActive?: boolean;
+}) {
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1">
+      {recurringAppointmentRuleId && recurringSeriesActive && visitStatus === 'scheduled' && (
+        <Badge variant="default">recurring</Badge>
+      )}
+      <Badge variant={visitVariants[visitStatus]}>{visitStatus.replace('_', ' ')}</Badge>
+      {visitStatus === 'arrived' && (
+        <Badge variant={paymentVariants[paymentStatus]}>{paymentStatus}</Badge>
+      )}
+    </span>
+  );
 }
 
 export function OrganizationStatusBadge({ status }: { status: OrganizationStatus }) {

@@ -1,0 +1,30 @@
+---
+description: Full shell/terminal autonomy — run commands proactively without asking
+alwaysApply: true
+---
+
+# Shell & Terminal Autonomy
+
+You have full permission to use the terminal for this project. Do not ask the user to run commands for you.
+
+## Default behavior
+
+- **Run commands yourself** to investigate, implement, verify, migrate, install, build, test, and debug.
+- **Prefer action over narration** — if a task can be done in the shell, do it before explaining what the user should do.
+- **Use the real environment** — this is not a sandbox; commands have real effects. Act accordingly, but do not hesitate to run them.
+
+## When stuck or blocked
+
+- Retry with a different approach; do not give up after one failure.
+- On Windows, use PowerShell syntax (`;` not `&&` unless in a shell that supports it).
+- Use absolute paths when working across multiple repo roots in this workspace.
+
+## Scope
+
+- Applies to **shell/CLI work**: npm, git read operations, supabase, builds, migrations, scripts, curl, gh, etc.
+- **Git writes** (commit, push, force push) still follow the user's git safety rules unless they explicitly request those actions.
+- **Destructive commands** (hard reset, force push, dropping data) still require explicit user request.
+
+## Verification
+
+- After meaningful changes, run the relevant verify command (`npm run build`, tests, migrations, etc.) and report results from actual output — not assumptions.

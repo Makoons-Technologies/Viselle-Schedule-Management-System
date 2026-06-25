@@ -14,15 +14,25 @@ import type {
   Customer,
   LoginResponse,
   Organization,
+  OrgPlanFeatures,
   OrganizationSettings,
+  PlatformStats,
   RecurringAppointmentRule,
   RecurringFrequency,
+  Product,
+  CheckoutLineInput,
+  CheckoutPreview,
+  StripeConnectStatus,
+  VisitStatus,
   Reminder,
   ReminderType,
   ScheduleResponse,
   Service,
+  SubscriptionTier,
+  WebsiteSettings,
   WebsiteSettingsResponse,
   UpdateWebsiteInput,
+  UploadBookingAssetInput,
 } from '@/types/api';
 
 const TOKEN_KEY = 'viselle_auth_token';
@@ -93,6 +103,8 @@ export const authApi = {
 };
 
 export const ownerApi = {
+  getPlatformStats: () =>
+    apiClient.get<{ stats: PlatformStats }>('/owner/stats').then((r) => r.data),
   listOrganizations: () =>
     apiClient.get<{ organizations: Organization[] }>('/owner/organizations').then((r) => r.data),
   createOrganization: (data: CreateOrganizationInput) =>
@@ -110,6 +122,10 @@ export const ownerApi = {
     apiClient.get<{ settings: OrganizationSettings }>(`/owner/organizations/${id}/settings`).then((r) => r.data),
   updateSettings: (id: string, data: Partial<OrganizationSettings>) =>
     apiClient.patch<{ settings: OrganizationSettings }>(`/owner/organizations/${id}/settings`, data).then((r) => r.data),
+  applyTier: (id: string, tier: Exclude<SubscriptionTier, 'custom'>) =>
+    apiClient
+      .post<{ settings: OrganizationSettings }>(`/owner/organizations/${id}/settings/apply-tier`, { tier })
+      .then((r) => r.data),
   getBilling: (id: string) =>
     apiClient.get<{ billing: BillingInfo }>(`/owner/organizations/${id}/billing`).then((r) => r.data),
   updateBilling: (id: string, data: Partial<BillingInfo>) =>
@@ -118,6 +134,13 @@ export const ownerApi = {
     apiClient.get<WebsiteSettingsResponse>(`/owner/organizations/${id}/website`).then((r) => r.data),
   updateWebsite: (id: string, data: UpdateWebsiteInput) =>
     apiClient.patch<WebsiteSettingsResponse>(`/owner/organizations/${id}/website`, data).then((r) => r.data),
+  uploadBookingAsset: (id: string, data: UploadBookingAssetInput) =>
+    apiClient
+      .post<{ url: string; websiteSettings: WebsiteSettings }>(
+        `/owner/organizations/${id}/website/upload-asset`,
+        data,
+      )
+      .then((r) => r.data),
   regenerateWebsiteApiKey: (id: string) =>
     apiClient
       .post<WebsiteSettingsResponse & { apiKey: string }>(`/owner/organizations/${id}/website/regenerate-api-key`)
@@ -127,12 +150,18 @@ export const ownerApi = {
 export const orgApi = {
   getOrganization: (orgId: string) =>
     apiClient.get<{ organization: Organization }>(`/organizations/${orgId}`).then((r) => r.data),
+  getPlan: (orgId: string) =>
+    apiClient.get<{ plan: OrgPlanFeatures }>(`/organizations/${orgId}/plan`).then((r) => r.data),
   updateOrganization: (orgId: string, data: Pick<Partial<Organization>, 'name' | 'publicBookingEnabled'>) =>
     apiClient.patch<{ organization: Organization }>(`/organizations/${orgId}`, data).then((r) => r.data),
   getWebsite: (orgId: string) =>
     apiClient.get<WebsiteSettingsResponse>(`/organizations/${orgId}/website`).then((r) => r.data),
   updateWebsite: (orgId: string, data: UpdateWebsiteInput) =>
     apiClient.patch<WebsiteSettingsResponse>(`/organizations/${orgId}/website`, data).then((r) => r.data),
+  uploadBookingAsset: (orgId: string, data: UploadBookingAssetInput) =>
+    apiClient
+      .post<{ url: string; websiteSettings: WebsiteSettings }>(`/organizations/${orgId}/website/upload-asset`, data)
+      .then((r) => r.data),
   regenerateWebsiteApiKey: (orgId: string) =>
     apiClient
       .post<WebsiteSettingsResponse & { apiKey: string }>(`/organizations/${orgId}/website/regenerate-api-key`)
@@ -165,12 +194,18 @@ export const orgApi = {
       .then((r) => r.data),
   updateAppointment: (orgId: string, appointmentId: string, data: Partial<Appointment>) =>
     apiClient.patch<{ appointment: Appointment }>(`/organizations/${orgId}/appointments/${appointmentId}`, data).then((r) => r.data),
-  cancelAppointment: (orgId: string, appointmentId: string, reason?: string) =>
-    apiClient.patch<{ appointment: Appointment }>(`/organizations/${orgId}/appointments/${appointmentId}/cancel`, { reason }).then((r) => r.data),
+  cancelAppointment: (
+    orgId: string,
+    appointmentId: string,
+    data?: { reason?: string; scope?: 'single' | 'future'; occurrenceDate?: string },
+  ) =>
+    apiClient
+      .patch<{ appointment: Appointment }>(`/organizations/${orgId}/appointments/${appointmentId}/cancel`, data ?? {})
+      .then((r) => r.data),
   makeAppointmentRecurring: (
     orgId: string,
     appointmentId: string,
-    data: { frequency: RecurringFrequency; interval: number; endDate?: string; daysOfWeek: number[] },
+    data: { frequency: RecurringFrequency; interval: number; endDate?: string; daysOfWeek: number[]; dayTimes?: Record<string, string> },
   ) =>
     apiClient
       .post<{
@@ -188,6 +223,14 @@ export const orgApi = {
 
   listCustomers: (orgId: string) =>
     apiClient.get<{ customers: Customer[] }>(`/organizations/${orgId}/customers`).then((r) => r.data),
+  updateCustomer: (
+    orgId: string,
+    customerId: string,
+    data: Partial<Pick<Customer, 'firstName' | 'lastName' | 'email' | 'phone'>>,
+  ) =>
+    apiClient
+      .patch<{ customer: Customer }>(`/organizations/${orgId}/customers/${customerId}`, data)
+      .then((r) => r.data),
 
   listAvailabilityRules: (orgId: string, accountId: string) =>
     apiClient.get<{ availabilityRules: AvailabilityRule[] }>(`/organizations/${orgId}/accounts/${accountId}/availability-rules`).then((r) => r.data),
@@ -210,11 +253,109 @@ export const orgApi = {
 
   listRecurring: (orgId: string) =>
     apiClient.get<{ recurringAppointmentRules: RecurringAppointmentRule[] }>(`/organizations/${orgId}/recurring-appointments`).then((r) => r.data),
+  updateRecurring: (
+    orgId: string,
+    ruleId: string,
+    data: {
+      frequency?: RecurringFrequency;
+      interval?: number;
+      endDate?: string | null;
+      daysOfWeek?: number[];
+      dayTimes?: Record<string, string>;
+      status?: 'active' | 'paused';
+      syncFutureAppointments?: boolean;
+    },
+  ) =>
+    apiClient
+      .patch<{ recurringAppointmentRule: RecurringAppointmentRule; syncedFutureAppointments: number }>(
+        `/organizations/${orgId}/recurring-appointments/${ruleId}`,
+        data,
+      )
+      .then((r) => r.data),
+  deleteRecurring: (orgId: string, ruleId: string) =>
+    apiClient
+      .delete<{ success: boolean; deletedAppointments: number }>(
+        `/organizations/${orgId}/recurring-appointments/${ruleId}`,
+      )
+      .then((r) => r.data),
+
+  updateAppointmentVisitStatus: (
+    orgId: string,
+    appointmentId: string,
+    visitStatus: VisitStatus,
+    options?: { occurrenceDate?: string },
+  ) =>
+    apiClient
+      .patch<{ appointment: Appointment }>(`/organizations/${orgId}/appointments/${appointmentId}/visit-status`, {
+        visitStatus,
+        occurrenceDate: options?.occurrenceDate,
+      })
+      .then((r) => r.data),
+
+  listProducts: (orgId: string, activeOnly = false) =>
+    apiClient
+      .get<{ products: Product[] }>(`/organizations/${orgId}/products`, { params: { activeOnly } })
+      .then((r) => r.data),
+  listLowStockProducts: (orgId: string) =>
+    apiClient.get<{ products: Product[] }>(`/organizations/${orgId}/products/low-stock`).then((r) => r.data),
+  createProduct: (
+    orgId: string,
+    data: {
+      name: string;
+      sku?: string;
+      barcode?: string;
+      description?: string;
+      retailPriceCents: number;
+      costCents?: number;
+      stockQuantity?: number;
+      lowStockThreshold?: number;
+      trackInventory?: boolean;
+    },
+  ) => apiClient.post<{ product: Product }>(`/organizations/${orgId}/products`, data).then((r) => r.data),
+  updateProduct: (orgId: string, productId: string, data: Partial<Product>) =>
+    apiClient.patch<{ product: Product }>(`/organizations/${orgId}/products/${productId}`, data).then((r) => r.data),
+  adjustProductStock: (orgId: string, productId: string, data: { quantityDelta: number; note?: string }) =>
+    apiClient
+      .post<{ product: Product }>(`/organizations/${orgId}/products/${productId}/adjust-stock`, data)
+      .then((r) => r.data),
+  deleteProduct: (orgId: string, productId: string) =>
+    apiClient.delete<{ product: Product }>(`/organizations/${orgId}/products/${productId}`).then((r) => r.data),
+
+  previewCheckout: (orgId: string, appointmentId: string, data: { lines: CheckoutLineInput[]; tipCents: number }) =>
+    apiClient
+      .post<CheckoutPreview>(`/organizations/${orgId}/appointments/${appointmentId}/checkout/preview`, data)
+      .then((r) => r.data),
+  checkoutCash: (orgId: string, appointmentId: string, data: { lines: CheckoutLineInput[]; tipCents: number }) =>
+    apiClient
+      .post(`/organizations/${orgId}/appointments/${appointmentId}/checkout/cash`, data)
+      .then((r) => r.data),
+  checkoutCard: (orgId: string, appointmentId: string, data: { lines: CheckoutLineInput[]; tipCents: number }) =>
+    apiClient
+      .post<{ saleId: string; paymentIntentId: string; clientSecret: string; totalCents: number }>(
+        `/organizations/${orgId}/appointments/${appointmentId}/checkout/card`,
+        data,
+      )
+      .then((r) => r.data),
+
+  getStripeConnectStatus: (orgId: string) =>
+    apiClient.get<StripeConnectStatus>(`/organizations/${orgId}/stripe-connect/status`).then((r) => r.data),
+  startStripeConnectOnboarding: (orgId: string) =>
+    apiClient.post<{ url: string; accountId: string }>(`/organizations/${orgId}/stripe-connect/onboard`).then((r) => r.data),
+  syncStripeConnectStatus: (orgId: string) =>
+    apiClient.post<{ chargesEnabled: boolean; onboardingComplete: boolean }>(`/organizations/${orgId}/stripe-connect/sync`).then((r) => r.data),
+  getTerminalConnectionToken: (orgId: string) =>
+    apiClient.post<{ secret: string }>(`/organizations/${orgId}/stripe-connect/terminal/connection-token`).then((r) => r.data),
+  registerTerminalReader: (orgId: string, data: { registrationCode: string; label?: string }) =>
+    apiClient.post<{ readerId: string; label: string }>(`/organizations/${orgId}/stripe-connect/terminal/register-reader`, data).then((r) => r.data),
 };
 
 export const appointmentApi = {
-  getInfo: (appointmentId: string) =>
-    apiClient.get<AppointmentInfo>(`/appointments/${appointmentId}/info`).then((r) => r.data),
+  getInfo: (appointmentId: string, occurrenceDate?: string) =>
+    apiClient
+      .get<AppointmentInfo>(`/appointments/${appointmentId}/info`, {
+        params: occurrenceDate ? { occurrenceDate } : undefined,
+      })
+      .then((r) => r.data),
 };
 
 export const scheduleApi = {

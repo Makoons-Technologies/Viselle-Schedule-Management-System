@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { orgApi } from '@/lib/api';
-import type { AccountRole } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -17,7 +16,7 @@ const schema = z.object({
   lastName: z.string().min(1),
   email: z.string().email(),
   phone: z.string().optional(),
-  role: z.enum(['org_owner', 'admin', 'staff']),
+  role: z.enum(['admin', 'staff']),
   isBookable: z.boolean(),
 });
 
@@ -52,7 +51,7 @@ export function CreateStaffDialog({ orgId, open, onOpenChange }: CreateStaffDial
       <DialogContent>
         <DialogHeader><DialogTitle>Add Staff Member</DialogTitle></DialogHeader>
         <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div><Label>First name</Label><Input {...register('firstName')} />{errors.firstName && <p className="text-xs text-red-600">Required</p>}</div>
             <div><Label>Last name</Label><Input {...register('lastName')} /></div>
           </div>
@@ -60,12 +59,11 @@ export function CreateStaffDialog({ orgId, open, onOpenChange }: CreateStaffDial
           <div><Label>Phone</Label><Input {...register('phone')} /></div>
           <div>
             <Label>Role</Label>
-            <Select value={watch('role')} onValueChange={(v) => setValue('role', v as AccountRole)}>
+            <Select value={watch('role')} onValueChange={(v) => setValue('role', v as FormData['role'])}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="staff">Staff</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="org_owner">Org Owner</SelectItem>
               </SelectContent>
             </Select>
           </div>

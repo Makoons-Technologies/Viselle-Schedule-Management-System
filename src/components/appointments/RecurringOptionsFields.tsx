@@ -1,8 +1,9 @@
 import { X } from 'lucide-react';
-import { WEEKDAY_OPTIONS, cn } from '@/lib/utils';
+import { DAY_NAMES, WEEKDAY_OPTIONS, cn } from '@/lib/utils';
 import type { RecurringFrequency } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { TimeInput } from '@/components/ui/time-input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RECURRING_FREQUENCY_OPTIONS } from '@/components/appointments/recurring-options';
@@ -16,6 +17,10 @@ interface RecurringOptionsFieldsProps {
   onEndDateChange: (value: string) => void;
   selectedDays: number[];
   onToggleDay: (day: number) => void;
+  dayTimes: Record<number, string>;
+  onDayTimeChange: (day: number, time: string) => void;
+  dayConflicts?: Record<number, string | undefined>;
+  defaultTime?: string;
   compact?: boolean;
 }
 
@@ -28,6 +33,10 @@ export function RecurringOptionsFields({
   onEndDateChange,
   selectedDays,
   onToggleDay,
+  dayTimes,
+  onDayTimeChange,
+  dayConflicts,
+  defaultTime = '09:00',
   compact = false,
 }: RecurringOptionsFieldsProps) {
   return (
@@ -83,9 +92,34 @@ export function RecurringOptionsFields({
           })}
         </div>
         <p className="mt-2 text-xs text-stone-500">
-          Select one or more days. Appointments repeat on these days using the same time as this booking.
+          Select one or more days. New days default to your last set time when that slot is available.
         </p>
       </div>
+      {selectedDays.length > 0 && (
+        <div className="space-y-2">
+          <Label>Time for each day</Label>
+          {[...selectedDays].sort((a, b) => a - b).map((day) => (
+            <div key={day} className="space-y-1">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
+                <span className="text-sm text-stone-600 sm:w-24">
+                  {WEEKDAY_OPTIONS.find((option) => option.value === day)?.label ?? DAY_NAMES[day]}
+                </span>
+                <TimeInput
+                  className={cn(
+                    'w-full max-w-none sm:max-w-40 bg-white',
+                    dayConflicts?.[day] && 'border-amber-500 focus-visible:ring-amber-500',
+                  )}
+                  value={dayTimes[day] ?? defaultTime}
+                  onChange={(time) => onDayTimeChange(day, time)}
+                />
+              </div>
+              {dayConflicts?.[day] && (
+                <p className="text-xs text-amber-700 sm:pl-24">{dayConflicts[day]}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
       <div>
         <Label>End date (optional)</Label>
         <div className="relative mt-1">

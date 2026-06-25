@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-brand-50: #fdf4f8;
   --color-brand-100: #fbe8f2;
@@ -14,11 +16,19 @@
 
 @layer base {
   * {
-    @apply border-stone-200;
+    @apply border-stone-200 dark:border-stone-800;
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
   }
 
   body {
-    @apply bg-stone-50 text-stone-900 antialiased;
+    @apply bg-stone-50 text-stone-900 antialiased dark:bg-stone-950 dark:text-stone-100;
     font-family: var(--font-sans);
   }
 }

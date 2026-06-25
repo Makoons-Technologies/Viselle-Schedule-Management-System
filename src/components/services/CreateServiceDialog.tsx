@@ -59,7 +59,7 @@ export function CreateServiceDialog({ orgId, open, onOpenChange }: CreateService
         <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-4">
           <div><Label>Name</Label><Input {...register('name')} />{errors.name && <p className="text-xs text-red-600">Required</p>}</div>
           <div><Label>Description</Label><Textarea {...register('description')} /></div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div><Label>Duration (minutes)</Label><Input type="number" {...register('durationMinutes', { valueAsNumber: true })} /></div>
             <div>
               <Label>Price ($)</Label>

@@ -1,0 +1,115 @@
+import { useEffect } from 'react';
+import { Calendar, Clock, MessageSquare, Sparkles, Users } from 'lucide-react';
+import { Link, Navigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
+import { MarketingFooter, MarketingHeader } from '@/components/marketing/MarketingLayout';
+import { PricingSection } from '@/components/marketing/PricingSection';
+import { WebsiteOptionsSection } from '@/components/marketing/WebsiteOptionsSection';
+import { Button } from '@/components/ui/button';
+import { getStartedPath } from '@/lib/signup';
+
+const INDUSTRY_FEATURES = [
+  {
+    icon: Calendar,
+    title: 'Clients book while you work',
+    description:
+      'No more phone tag between appointments. Your booking page shows real availability — clients pick a time that works.',
+  },
+  {
+    icon: MessageSquare,
+    title: 'Fewer no-shows',
+    description:
+      'Automatic email and text reminders so clients remember their color, facial, or cut — without you chasing them down.',
+  },
+  {
+    icon: Users,
+    title: 'Built for teams',
+    description:
+      'Each stylist, esthetician, or therapist gets their own schedule. Owners see the whole salon at a glance.',
+  },
+  {
+    icon: Clock,
+    title: 'Recurring clients, handled',
+    description:
+      'Weekly blowouts, monthly facials, standing color appointments — set it once and let the calendar fill itself.',
+  },
+];
+
+export function LandingPage() {
+  const { isAuthenticated, isLoading, user } = useAuth();
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash) {
+      document.querySelector(hash)?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, []);
+
+  if (!isLoading && isAuthenticated && user) {
+    if (user.role === 'platform_owner') return <Navigate to="/platform/dashboard" replace />;
+    if (user.role === 'org_owner') return <Navigate to={`/orgs/${user.organizationId}/dashboard`} replace />;
+    return <Navigate to="/staff/schedule" replace />;
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-brand-50 via-white to-stone-50">
+      <MarketingHeader />
+
+      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+        <div className="mx-auto max-w-3xl text-center">
+          <p className="inline-flex items-center gap-1.5 rounded-full bg-brand-100 px-3 py-1 text-sm font-medium text-brand-800">
+            <Sparkles className="h-4 w-4" />
+            For salons, spas &amp; beauty studios
+          </p>
+          <h1 className="mt-6 text-4xl font-bold tracking-tight text-stone-900 sm:text-5xl">
+            Scheduling that lets you focus on your clients
+          </h1>
+          <p className="mt-6 text-lg leading-relaxed text-stone-600">
+            Viselle helps beauty and wellness businesses manage appointments, staff schedules, and
+            client reminders — without spreadsheets or sticky notes. Run your chair, room, or booth
+            with tools made for this industry.
+          </p>
+          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Button asChild size="lg">
+              <Link to={getStartedPath()}>Get started</Link>
+            </Button>
+            <Button asChild variant="outline" size="lg">
+              <a href="#pricing">See plans &amp; pricing</a>
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-y border-stone-200 bg-white py-16">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-2xl font-bold text-stone-900 sm:text-3xl">
+              What salon owners actually need
+            </h2>
+            <p className="mt-3 text-stone-600">
+              You didn&apos;t open a business to wrestle with software. Viselle keeps the busywork
+              off your plate.
+            </p>
+          </div>
+          <div className="mt-12 grid gap-8 sm:grid-cols-2">
+            {INDUSTRY_FEATURES.map(({ icon: Icon, title, description }) => (
+              <div key={title} className="flex gap-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+                  <Icon className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-stone-900">{title}</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-stone-600">{description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <WebsiteOptionsSection />
+      <PricingSection />
+      <MarketingFooter />
+    </div>
+  );
+}

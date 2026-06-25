@@ -9,13 +9,11 @@ export type AccountStatus = 'active' | 'inactive' | 'deleted';
 
 export type AvailabilityExceptionType = 'available' | 'unavailable' | 'blocked';
 
-export type AppointmentStatus =
-  | 'scheduled'
-  | 'confirmed'
-  | 'cancelled'
-  | 'completed'
-  | 'no_show'
-  | 'rescheduled';
+export type VisitStatus = 'scheduled' | 'arrived' | 'missed' | 'cancelled';
+export type PaymentStatus = 'unpaid' | 'paid' | 'refunded';
+
+/** @deprecated Use visitStatus + paymentStatus */
+export type AppointmentStatus = VisitStatus | PaymentStatus | 'confirmed' | 'completed' | 'no_show' | 'rescheduled';
 
 export type RecurringFrequency = 'weekly' | 'biweekly' | 'monthly' | 'custom';
 export type RecurringRuleStatus = 'active' | 'paused' | 'cancelled';
@@ -25,9 +23,29 @@ export type ReminderStatus = 'pending' | 'sent' | 'failed' | 'cancelled';
 
 export type DeploymentStatus = 'not_started' | 'pending' | 'deployed' | 'failed' | 'disabled';
 
-export type WebsiteHostingMode = 'none' | 'subdomain' | 'external_api';
+export type WebsiteHostingMode = 'none' | 'path' | 'subdomain' | 'external_api';
 
 export type SiteTemplate = 'classic' | 'modern' | 'minimal';
+
+export interface ThemeColorPalette {
+  primary?: string;
+  page?: string;
+  header?: string;
+  headerText?: string;
+  card?: string;
+  text?: string;
+  muted?: string;
+}
+
+export interface BookingBranding {
+  themePalettes?: Partial<Record<SiteTemplate, ThemeColorPalette>>;
+  backgroundImageUrl?: string | null;
+  uiOpacity?: number;
+  logoUrl?: string | null;
+  faviconUrl?: string | null;
+}
+
+export type SubscriptionTier = 'starter' | 'professional' | 'business' | 'custom';
 
 export interface AuthUser {
   id: string;
@@ -58,17 +76,38 @@ export interface Organization {
 export interface OrganizationSettings {
   id: string;
   organizationId: string;
+  subscriptionTier?: SubscriptionTier | null;
   smsRemindersEnabled: boolean;
   emailRemindersEnabled: boolean;
   recurringAppointmentsEnabled: boolean;
   websiteHostingEnabled: boolean;
   externalApiEnabled: boolean;
+  subdomainHostingEnabled: boolean;
   maxStaffAccounts: number;
   maxMonthlyAppointments?: number | null;
   monthlyPriceCents: number;
   internalNotes?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface OrgPlanFeatures {
+  subscriptionTier: SubscriptionTier | null;
+  tierName: string;
+  smsRemindersEnabled: boolean;
+  emailRemindersEnabled: boolean;
+  recurringAppointmentsEnabled: boolean;
+  maxStaffAccounts: number;
+  monthlyPriceCents: number;
+  subdomainHostingEnabled: boolean;
+}
+
+export interface PlatformStats {
+  totalOrganizations: number;
+  activeOrganizations: number;
+  trialOrganizations: number;
+  organizationsByTier: Record<SubscriptionTier, number>;
+  estimatedMrrCents: number;
 }
 
 export interface BillingInfo {
@@ -149,13 +188,56 @@ export interface Appointment {
   customerId: string;
   serviceId: string;
   recurringAppointmentRuleId?: string | null;
-  status: AppointmentStatus;
+  visitStatus: VisitStatus;
+  paymentStatus: PaymentStatus;
   startTime: string;
   endTime: string;
   timezone: string;
   appointmentNotes?: string | null;
+  arrivedAt?: string | null;
+  missedAt?: string | null;
+  paidAt?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Product {
+  id: string;
+  organizationId: string;
+  name: string;
+  sku?: string | null;
+  barcode?: string | null;
+  description?: string | null;
+  retailPriceCents: number;
+  costCents?: number | null;
+  stockQuantity: number;
+  lowStockThreshold?: number | null;
+  trackInventory: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StripeConnectStatus {
+  accountId: string | null;
+  chargesEnabled: boolean;
+  onboardingComplete: boolean;
+}
+
+export interface CheckoutLineInput {
+  lineType: 'service' | 'product' | 'custom';
+  serviceId?: string;
+  productId?: string;
+  description?: string;
+  quantity: number;
+  unitPriceCents?: number;
+}
+
+export interface CheckoutPreview {
+  lines: Array<CheckoutLineInput & { description: string; unitPriceCents: number; lineTotalCents: number }>;
+  subtotalCents: number;
+  tipCents: number;
+  totalCents: number;
 }
 
 export interface RecurringAppointmentRule {
@@ -171,7 +253,9 @@ export interface RecurringAppointmentRule {
   startTime: string;
   timezone: string;
   daysOfWeek?: number[];
+  dayTimes?: Record<string, string>;
   status: RecurringRuleStatus;
+  skippedDates?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -202,6 +286,7 @@ export interface WebsiteSettings {
   deployedSiteUrl?: string | null;
   deploymentStatus: DeploymentStatus;
   lastDeployedAt?: string | null;
+  bookingBranding?: BookingBranding;
   createdAt: string;
   updatedAt: string;
 }
@@ -216,6 +301,9 @@ export interface WebsiteSettingsResponse {
   websiteSettings: WebsiteSettings;
   siteTemplates: SiteTemplateInfo[];
   subdomainBaseDomain: string;
+  pathBookingBaseUrl: string;
+  pathBookingUrl: string;
+  subdomainHostingEnabled: boolean;
   publicApiBaseUrl: string;
   organizationSlug: string;
   publicBookingEnabled: boolean;
@@ -230,6 +318,14 @@ export interface UpdateWebsiteInput {
   hostingMode?: WebsiteHostingMode;
   siteTemplate?: SiteTemplate | null;
   allowedOrigins?: string[];
+  bookingBranding?: BookingBranding;
+}
+
+export interface UploadBookingAssetInput {
+  assetType: 'logo' | 'favicon' | 'background';
+  fileName: string;
+  contentType: string;
+  dataBase64: string;
 }
 
 export interface AvailableSlot {
@@ -269,12 +365,13 @@ export interface ApiErrorBody {
 export interface CreateAppointmentInput {
   accountId: string;
   serviceId: string;
-  customer: {
+  customer?: {
     firstName: string;
     lastName: string;
     email?: string;
     phone?: string;
   };
+  customerId?: string;
   startTime: string;
   timezone: string;
   appointmentNotes?: string;
@@ -299,5 +396,8 @@ export interface CreateServiceInput {
 export interface CreateOrganizationInput {
   name: string;
   slug: string;
-  monthlyPriceCents: number;
+  tier?: Exclude<SubscriptionTier, 'custom'>;
+  monthlyPriceCents?: number;
+  ownerEmail?: string;
+  ownerPassword?: string;
 }

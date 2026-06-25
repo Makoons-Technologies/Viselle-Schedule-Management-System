@@ -1,0 +1,46 @@
+import { ChevronRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { SettingsBackHeader } from '@/components/settings/SettingsBackHeader';
+import { panelClassName } from '@/components/common/Panel';
+import { getOrgSettingsHubGroups } from '@/components/layout/org-navigation';
+import { useAuth } from '@/context/AuthContext';
+import { useOrgId } from '@/hooks/useOrgId';
+import { cn } from '@/lib/utils';
+
+export function SettingsHubPage() {
+  const orgId = useOrgId();
+  const { user } = useAuth();
+  const orgBase = `/orgs/${orgId}`;
+  const showAdmin = user?.role === 'org_owner' || user?.role === 'platform_owner';
+  const groups = getOrgSettingsHubGroups(orgBase, { showAdminSettings: showAdmin });
+
+  return (
+    <div className="mx-auto max-w-lg">
+      <SettingsBackHeader title="Settings" backTo={`${orgBase}/dashboard`} />
+      <div className={cn('overflow-hidden', panelClassName)}>
+        {groups.map((group, groupIndex) => (
+          <div key={groupIndex}>
+            {groupIndex > 0 ? <div className="border-t border-stone-200 dark:border-stone-800" /> : null}
+            <ul>
+              {group.items.map((item, itemIndex) => (
+                <li key={item.to}>
+                  <Link
+                    to={item.to}
+                    className={cn(
+                      'flex min-h-[3.25rem] items-center gap-4 px-4 py-3 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50',
+                      itemIndex < group.items.length - 1 && 'border-b border-stone-100 dark:border-stone-800',
+                    )}
+                  >
+                    <item.icon className="h-5 w-5 shrink-0 text-stone-700 dark:text-stone-300" strokeWidth={1.75} />
+                    <span className="min-w-0 flex-1 text-[0.9375rem] font-medium text-stone-900 dark:text-stone-100">{item.label}</span>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-stone-400 dark:text-stone-500" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

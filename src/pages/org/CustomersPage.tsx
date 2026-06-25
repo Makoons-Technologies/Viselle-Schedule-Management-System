@@ -4,6 +4,7 @@ import { orgApi } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { useOrgId } from '@/hooks/useOrgId';
 import { PageHeader } from '@/components/common/PageHeader';
+import { Panel } from '@/components/common/Panel';
 import { EmptyState } from '@/components/common/EmptyState';
 import { LoadingState } from '@/components/common/LoadingState';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -27,7 +28,7 @@ export function CustomersPage() {
       {customers.length === 0 ? (
         <EmptyState icon={UserCircle} title="No customers yet" description="Customers are created when appointments are booked." />
       ) : (
-        <div className="rounded-xl border border-stone-200 bg-white">
+        <Panel>
           <Table>
             <TableHeader>
               <TableRow>
@@ -48,7 +49,7 @@ export function CustomersPage() {
               ))}
             </TableBody>
           </Table>
-        </div>
+        </Panel>
       )}
     </div>
   );

@@ -5,7 +5,7 @@ import { orgApi } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
 import { useOrgId } from '@/hooks/useOrgId';
 import { CreateServiceDialog } from '@/components/services/CreateServiceDialog';
-import { PageHeader } from '@/components/common/PageHeader';
+import { Panel } from '@/components/common/Panel';
 import { EmptyState } from '@/components/common/EmptyState';
 import { LoadingState } from '@/components/common/LoadingState';
 import { Badge } from '@/components/ui/badge';
@@ -28,15 +28,15 @@ export function ServicesPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Services"
-        description="Manage services offered by your organization"
-        actions={<Button onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" /> Add Service</Button>}
-      />
+      <div className="mb-4 flex justify-end">
+        <Button onClick={() => setCreateOpen(true)}>
+          <Plus className="h-4 w-4" /> Add Service
+        </Button>
+      </div>
       {services.length === 0 ? (
         <EmptyState icon={Scissors} title="No services" action={<Button onClick={() => setCreateOpen(true)}>Add Service</Button>} />
       ) : (
-        <div className="rounded-xl border border-stone-200 bg-white">
+        <Panel>
           <Table>
             <TableHeader>
               <TableRow>
@@ -57,7 +57,7 @@ export function ServicesPage() {
               ))}
             </TableBody>
           </Table>
-        </div>
+        </Panel>
       )}
       <CreateServiceDialog orgId={orgId} open={createOpen} onOpenChange={setCreateOpen} />
     </div>
