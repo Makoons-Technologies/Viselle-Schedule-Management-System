@@ -4,24 +4,24 @@ import { Button } from '@/components/ui/button';
 
 export function MarketingHeader() {
   return (
-    <header className="border-b border-stone-200/80 bg-white/80 backdrop-blur-sm">
+    <header className="border-b border-stone-200/80 bg-white/80 backdrop-blur-sm dark:border-stone-800 dark:bg-stone-950/90">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
         <Link to="/" className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-white">
             <Scissors className="h-5 w-5" />
           </div>
-          <span className="text-xl font-semibold text-brand-800">Viselle</span>
+          <span className="text-xl font-semibold text-brand-700 dark:text-stone-100">Viselle</span>
         </Link>
         <nav className="flex items-center gap-3">
           <a
             href="/#websites"
-            className="hidden text-sm font-medium text-stone-600 hover:text-brand-700 sm:inline"
+            className="hidden text-sm font-medium text-stone-600 hover:text-brand-700 dark:text-stone-300 dark:hover:text-brand-300 sm:inline"
           >
             Booking pages
           </a>
           <a
             href="/#pricing"
-            className="hidden text-sm font-medium text-stone-600 hover:text-brand-700 sm:inline"
+            className="hidden text-sm font-medium text-stone-600 hover:text-brand-700 dark:text-stone-300 dark:hover:text-brand-300 sm:inline"
           >
             Pricing
           </a>

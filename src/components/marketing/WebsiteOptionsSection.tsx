@@ -54,17 +54,17 @@ const WEBSITE_OPTIONS = [
 
 export function WebsiteOptionsSection() {
   return (
-    <section id="websites" className="scroll-mt-20 border-y border-stone-200 bg-stone-50 py-16 sm:py-24">
+    <section id="websites" className="scroll-mt-20 border-y border-stone-200 bg-stone-50 py-16 dark:border-stone-800 dark:bg-stone-900 sm:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-sm font-medium text-brand-800 shadow-sm">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-sm font-medium text-brand-700 shadow-sm dark:bg-stone-800 dark:text-brand-200">
             <Globe className="h-4 w-4" />
             Online booking for clients
           </div>
-          <h2 className="text-3xl font-bold tracking-tight text-stone-900 sm:text-4xl">
+          <h2 className="text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100 sm:text-4xl">
             A booking page comes with your plan
           </h2>
-          <p className="mt-4 text-lg text-stone-600">
+          <p className="mt-4 text-lg text-stone-600 dark:text-stone-300">
             You don&apos;t need a separate website product to start taking appointments online. Every plan
             includes a shareable booking page. Add a hosted subdomain, have us build a custom site, or connect
             your existing website later.
@@ -77,33 +77,33 @@ export function WebsiteOptionsSection() {
               key={option.title}
               className={
                 option.variant === 'addon' || option.variant === 'build'
-                  ? 'border-brand-300 bg-white shadow-sm ring-1 ring-brand-100'
-                  : 'border-stone-200 bg-white'
+                  ? 'border-brand-300 bg-white shadow-sm ring-1 ring-brand-100 dark:border-brand-700 dark:bg-stone-900 dark:ring-brand-900'
+                  : 'border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900'
               }
             >
               <CardHeader className="space-y-3">
                 <span
                   className={
                     option.variant === 'included'
-                      ? 'inline-flex w-fit rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800'
+                      ? 'inline-flex w-fit rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200'
                       : option.variant === 'addon' || option.variant === 'build'
-                        ? 'inline-flex w-fit rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-medium text-brand-800'
-                        : 'inline-flex w-fit rounded-full bg-stone-200 px-2.5 py-0.5 text-xs font-medium text-stone-700'
+                        ? 'inline-flex w-fit rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-900/50 dark:text-brand-200'
+                        : 'inline-flex w-fit rounded-full bg-stone-200 px-2.5 py-0.5 text-xs font-medium text-stone-700 dark:bg-stone-700 dark:text-stone-200'
                   }
                 >
                   {option.badge}
                 </span>
                 <div className="flex items-center gap-2">
-                  <option.icon className="h-5 w-5 text-brand-600" />
+                  <option.icon className="h-5 w-5 text-brand-600 dark:text-brand-400" />
                   <CardTitle className="text-lg">{option.title}</CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-sm leading-relaxed text-stone-600">{option.description}</p>
-                <ul className="space-y-2 text-sm text-stone-700">
+                <p className="text-sm leading-relaxed text-stone-600 dark:text-stone-300">{option.description}</p>
+                <ul className="space-y-2 text-sm text-stone-700 dark:text-stone-300">
                   {option.bullets.map((bullet) => (
                     <li key={bullet} className="flex gap-2">
-                      <span className="text-brand-600">·</span>
+                      <span className="text-brand-600 dark:text-brand-400">·</span>
                       {bullet}
                     </li>
                   ))}

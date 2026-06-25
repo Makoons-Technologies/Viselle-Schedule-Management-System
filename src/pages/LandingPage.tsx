@@ -52,19 +52,19 @@ export function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-brand-50 via-white to-stone-50">
+    <div className="min-h-screen bg-gradient-to-b from-brand-50 via-white to-stone-50 dark:from-stone-950 dark:via-stone-900 dark:to-stone-950">
       <MarketingHeader />
 
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="inline-flex items-center gap-1.5 rounded-full bg-brand-100 px-3 py-1 text-sm font-medium text-brand-800">
+          <p className="inline-flex items-center gap-1.5 rounded-full bg-brand-100 px-3 py-1 text-sm font-medium text-brand-700 dark:bg-brand-900/60 dark:text-brand-200">
             <Sparkles className="h-4 w-4" />
             For salons, spas &amp; beauty studios
           </p>
-          <h1 className="mt-6 text-4xl font-bold tracking-tight text-stone-900 sm:text-5xl">
+          <h1 className="mt-6 text-4xl font-bold tracking-tight text-stone-900 dark:text-stone-100 sm:text-5xl">
             Scheduling that lets you focus on your clients
           </h1>
-          <p className="mt-6 text-lg leading-relaxed text-stone-600">
+          <p className="mt-6 text-lg leading-relaxed text-stone-600 dark:text-stone-300">
             Viselle helps beauty and wellness businesses manage appointments, staff schedules, and
             client reminders — without spreadsheets or sticky notes. Run your chair, room, or booth
             with tools made for this industry.
@@ -80,13 +80,13 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="border-y border-stone-200 bg-white py-16">
+      <section className="border-y border-stone-200 bg-white py-16 dark:border-stone-800 dark:bg-stone-900">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-2xl font-bold text-stone-900 sm:text-3xl">
+            <h2 className="text-2xl font-bold text-stone-900 dark:text-stone-100 sm:text-3xl">
               What salon owners actually need
             </h2>
-            <p className="mt-3 text-stone-600">
+            <p className="mt-3 text-stone-600 dark:text-stone-300">
               You didn&apos;t open a business to wrestle with software. Viselle keeps the busywork
               off your plate.
             </p>
@@ -94,12 +94,12 @@ export function LandingPage() {
           <div className="mt-12 grid gap-8 sm:grid-cols-2">
             {INDUSTRY_FEATURES.map(({ icon: Icon, title, description }) => (
               <div key={title} className="flex gap-4">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-900/50 dark:text-brand-200">
                   <Icon className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-stone-900">{title}</h3>
-                  <p className="mt-1 text-sm leading-relaxed text-stone-600">{description}</p>
+                  <h3 className="font-semibold text-stone-900 dark:text-stone-100">{title}</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-stone-600 dark:text-stone-300">{description}</p>
                 </div>
               </div>
             ))}
