@@ -27,7 +27,8 @@ export interface BookingTheme {
   primaryBtn: string;
   accent: string;
   stickyAction: string;
-  stickyStyle: CSSProperties;
+  stickyFooter: string;
+  stickyFooterStyle: CSSProperties;
   input: string;
   backLink: string;
   mutedText: string;
@@ -48,15 +49,15 @@ export function bookingTheme(
     backgroundColor: palette.header,
     color: palette.headerText,
   };
-  const stickyStyle: CSSProperties = {
-    backgroundColor: hexToRgba(palette.card, Math.min(1, cardOpacity + 0.04)),
+  const stickyFooterStyle: CSSProperties = {
+    backgroundColor: palette.card,
   };
 
   const shared = {
     pageStyle,
     headerStyle,
     cardStyle,
-    stickyStyle,
+    stickyFooterStyle,
     title: 'font-bold text-[var(--booking-text)]',
     label: 'font-semibold uppercase tracking-wider text-[var(--booking-muted)]',
     chipSelected:
@@ -92,6 +93,7 @@ export function bookingTheme(
       choice:
         'border border-[color-mix(in_srgb,var(--booking-text)_25%,white)] bg-white hover:border-[var(--booking-primary)]',
       stickyAction: 'border-t backdrop-blur-sm',
+      stickyFooter: 'rounded-b-lg backdrop-blur-sm',
     };
   }
 
@@ -112,6 +114,7 @@ export function bookingTheme(
       choiceShape: 'rounded-2xl',
       choice: 'border border-stone-200 bg-white shadow-sm hover:border-[var(--booking-primary)] hover:shadow',
       stickyAction: 'border-t border-[color-mix(in_srgb,var(--booking-primary)_15%,white)] backdrop-blur-sm',
+      stickyFooter: 'rounded-b-3xl backdrop-blur-md',
       input:
         'rounded-xl border border-stone-200 bg-white text-[var(--booking-text)] focus:border-[var(--booking-primary)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--booking-primary)_15%,white)]',
       backLink: 'text-[var(--booking-primary)] hover:opacity-80',
@@ -136,6 +139,7 @@ export function bookingTheme(
     choiceShape: 'rounded-xl',
     choice: 'border border-stone-200 bg-white hover:border-[var(--booking-primary)]',
     stickyAction: 'border-t border-stone-100 backdrop-blur-sm',
+    stickyFooter: 'rounded-b-2xl backdrop-blur-sm',
     input:
       'rounded-xl border border-stone-200 bg-white text-[var(--booking-text)] focus:border-[var(--booking-primary)] focus:ring-1 focus:ring-[color-mix(in_srgb,var(--booking-primary)_20%,white)]',
   };
@@ -146,6 +150,7 @@ export function bookingChipClass(selected: boolean, disabled: boolean, theme: Bo
     'flex min-w-[3.25rem] shrink-0 flex-col items-center justify-center border px-3 py-2.5 text-center transition-colors',
     theme.chipShape,
     disabled && theme.chipDisabled,
+    disabled && 'relative overflow-hidden',
     !disabled && !selected && theme.chip,
     !disabled && selected && theme.chipSelected,
     !disabled && 'cursor-pointer',

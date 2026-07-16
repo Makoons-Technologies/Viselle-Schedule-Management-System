@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Trash2, Users } from 'lucide-react';
+import { Clock, Plus, Trash2, Users, Wrench } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { orgApi } from '@/lib/api';
@@ -8,7 +8,9 @@ import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgPlan } from '@/hooks/useOrgPlan';
 import type { Account } from '@/types/api';
 import { CreateStaffDialog } from '@/components/staff/CreateStaffDialog';
+import { StaffAvailabilityDialog } from '@/components/staff/StaffAvailabilityDialog';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { TableIconButton, TableRowActions } from '@/components/common/TableIconButton';
 import { SettingsBackHeader } from '@/components/settings/SettingsBackHeader';
 import { Panel } from '@/components/common/Panel';
 import { EmptyState } from '@/components/common/EmptyState';
@@ -22,8 +24,20 @@ export function StaffPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { plan } = useOrgPlan(orgId);
-  const [createOpen, setCreateOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [removeTarget, setRemoveTarget] = useState<Account | null>(null);
+  const [availabilityTarget, setAvailabilityTarget] = useState<Account | null>(null);
+
+  const openCreate = () => {
+    setEditingAccount(null);
+    setDialogOpen(true);
+  };
+
+  const openEdit = (account: Account) => {
+    setEditingAccount(account);
+    setDialogOpen(true);
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ['accounts', orgId],
@@ -48,6 +62,8 @@ export function StaffPage() {
   const staffLimit = plan?.maxStaffAccounts ?? null;
   const atStaffLimit = staffLimit !== null && activeStaffCount >= staffLimit;
 
+  const canManageLogin = (account: Account) => account.role !== 'org_owner';
+
   const canRemove = (account: Account) =>
     account.role !== 'org_owner' && account.id !== user?.accountId;
 
@@ -57,7 +73,7 @@ export function StaffPage() {
         title="Staff"
         backTo={`/orgs/${orgId}/settings`}
         actions={
-          <Button onClick={() => setCreateOpen(true)} disabled={atStaffLimit}>
+          <Button onClick={openCreate} disabled={atStaffLimit}>
             <Plus className="h-4 w-4" /> Add Staff
           </Button>
         }
@@ -77,7 +93,7 @@ export function StaffPage() {
         </p>
       )}
       {accounts.length === 0 ? (
-        <EmptyState icon={Users} title="No staff members" action={<Button onClick={() => setCreateOpen(true)}>Add Staff</Button>} />
+        <EmptyState icon={Users} title="No staff members" action={<Button onClick={openCreate}>Add Staff</Button>} />
       ) : (
         <Panel>
           <Table>
@@ -88,30 +104,45 @@ export function StaffPage() {
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Bookable</TableHead>
-                <TableHead className="w-[100px]" />
+                <TableHead>Login</TableHead>
+                <TableHead className="w-[116px]" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {accounts.map((a) => (
                 <TableRow key={a.id}>
                   <TableCell className="font-medium">{a.firstName} {a.lastName}</TableCell>
-                  <TableCell className="text-stone-500">{a.email}</TableCell>
+                  <TableCell className="text-stone-500 dark:text-stone-400">{a.email}</TableCell>
                   <TableCell className="capitalize">{a.role.replace('_', ' ')}</TableCell>
                   <TableCell><Badge variant={a.status === 'active' ? 'success' : 'secondary'}>{a.status}</Badge></TableCell>
                   <TableCell>{a.isBookable ? 'Yes' : 'No'}</TableCell>
                   <TableCell>
-                    {canRemove(a) ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-red-700 hover:bg-red-50 hover:text-red-800"
-                        onClick={() => setRemoveTarget(a)}
-                      >
-                        <Trash2 className="h-4 w-4" /> Remove
-                      </Button>
+                    {a.userId ? (
+                      <Badge variant="success">Enabled</Badge>
+                    ) : canManageLogin(a) ? (
+                      <Badge variant="secondary">Not set</Badge>
                     ) : (
                       <span className="text-xs text-stone-400">—</span>
                     )}
+                  </TableCell>
+                  <TableCell>
+                    <TableRowActions>
+                      <TableIconButton
+                        icon={Clock}
+                        label="Manage availability"
+                        onClick={() => setAvailabilityTarget(a)}
+                      />
+                      <TableIconButton icon={Wrench} label="Edit staff member" onClick={() => openEdit(a)} />
+                      {canRemove(a) ? (
+                        <TableIconButton
+                          icon={Trash2}
+                          label="Remove staff member"
+                          variant="ghost"
+                          destructive
+                          onClick={() => setRemoveTarget(a)}
+                        />
+                      ) : null}
+                    </TableRowActions>
                   </TableCell>
                 </TableRow>
               ))}
@@ -119,7 +150,21 @@ export function StaffPage() {
           </Table>
         </Panel>
       )}
-      <CreateStaffDialog orgId={orgId} open={createOpen} onOpenChange={setCreateOpen} />
+      <CreateStaffDialog
+        orgId={orgId}
+        account={editingAccount}
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) setEditingAccount(null);
+        }}
+      />
+      <StaffAvailabilityDialog
+        orgId={orgId}
+        account={availabilityTarget}
+        open={!!availabilityTarget}
+        onOpenChange={(open) => !open && setAvailabilityTarget(null)}
+      />
       <ConfirmDialog
         open={!!removeTarget}
         onOpenChange={(open) => !open && setRemoveTarget(null)}

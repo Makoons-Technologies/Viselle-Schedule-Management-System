@@ -57,16 +57,16 @@ export function GetStartedSuccessPage() {
   }, [sessionId]);
 
   return (
-    <div className="min-h-screen bg-stone-50">
+    <div className="min-h-screen bg-stone-50 dark:bg-stone-950">
       <MarketingHeader />
 
       <div className="mx-auto max-w-lg px-4 py-16 sm:px-6">
-        <Card className="border-stone-200">
+        <Card>
           <CardHeader className="text-center">
             {status === 'loading' || status === 'pending' ? (
               <Loader2 className="mx-auto h-12 w-12 animate-spin text-brand-600" />
             ) : status === 'completed' ? (
-              <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-600" />
+              <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-600 dark:text-emerald-400" />
             ) : null}
             <CardTitle className="mt-4">
               {status === 'completed'
@@ -92,8 +92,8 @@ export function GetStartedSuccessPage() {
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             {email && status === 'completed' && (
-              <p className="text-center text-sm text-stone-600">
-                Sign in as <span className="font-medium text-stone-900">{email}</span>
+              <p className="text-center text-sm text-stone-600 dark:text-stone-300">
+                Sign in as <span className="font-medium text-stone-900 dark:text-stone-100">{email}</span>
               </p>
             )}
             <Button asChild className="w-full">

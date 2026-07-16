@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { bookingChipClass, bookingTheme } from './booking-theme';
+import { BookingChipUnavailableMark } from './BookingChipUnavailableMark';
 import { BookingSectionLabel } from './BookingPublicShell';
 import type { SiteTemplate, BookingBranding } from '@/types/api';
 import { cn } from '@/lib/utils';
@@ -96,9 +97,10 @@ export function BookingDateChips({ dates, selectedDate, onSelectDate, siteTempla
               onClick={() => onSelectDate(date)}
               className={bookingChipClass(selected, disabled, theme)}
             >
+              {disabled && <BookingChipUnavailableMark />}
               <span
                 className={cn(
-                  'text-[10px] font-medium leading-none',
+                  'relative z-[2] text-[10px] font-medium leading-none',
                   disabled ? 'text-[var(--booking-muted)]' : undefined,
                 )}
               >
@@ -106,7 +108,7 @@ export function BookingDateChips({ dates, selectedDate, onSelectDate, siteTempla
               </span>
               <span
                 className={cn(
-                  'mt-1 text-base font-semibold leading-none',
+                  'relative z-[2] mt-1 text-base font-semibold leading-none',
                   disabled ? 'text-[var(--booking-muted)]' : undefined,
                 )}
               >

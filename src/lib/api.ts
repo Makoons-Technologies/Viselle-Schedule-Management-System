@@ -78,7 +78,9 @@ apiClient.interceptors.response.use(
     }
     throw new ApiError(
       'NETWORK_ERROR',
-      error.message || 'Network request failed',
+      error.response?.status === 413
+        ? 'Image must be 2 MB or smaller'
+        : error.message || 'Network request failed',
       error.response?.status ?? 0,
     );
   },
@@ -171,8 +173,21 @@ export const orgApi = {
     apiClient.get<{ accounts: Account[] }>(`/organizations/${orgId}/accounts`).then((r) => r.data),
   createAccount: (orgId: string, data: CreateAccountInput) =>
     apiClient.post<{ account: Account }>(`/organizations/${orgId}/accounts`, data).then((r) => r.data),
-  updateAccount: (orgId: string, accountId: string, data: Partial<CreateAccountInput & { status: string }>) =>
+  updateAccount: (
+    orgId: string,
+    accountId: string,
+    data: Partial<
+      CreateAccountInput & {
+        status: 'active' | 'inactive';
+        password?: string;
+      }
+    >,
+  ) =>
     apiClient.patch<{ account: Account }>(`/organizations/${orgId}/accounts/${accountId}`, data).then((r) => r.data),
+  setAccountPassword: (orgId: string, accountId: string, password: string) =>
+    apiClient
+      .post<{ account: Account }>(`/organizations/${orgId}/accounts/${accountId}/set-password`, { password })
+      .then((r) => r.data),
   deleteAccount: (orgId: string, accountId: string) =>
     apiClient.delete(`/organizations/${orgId}/accounts/${accountId}`).then((r) => r.data),
 

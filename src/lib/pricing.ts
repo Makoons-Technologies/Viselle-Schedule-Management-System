@@ -16,7 +16,7 @@ export const PRICING_TIERS: PricingTier[] = [
     id: 'starter',
     name: 'Starter',
     tagline: 'Solo stylists & small booths',
-    priceMonthly: 29,
+    priceMonthly: 20,
     staffLimit: 'Up to 2 staff',
     features: [
       'Online calendar & appointments',

@@ -1,5 +1,5 @@
 import type { PublicSlot } from '@/lib/public-booking';
-import { appointmentScheduleFromIso, formatTime, slotStartWallClockMs } from '@/lib/utils';
+import { appointmentScheduleFromIso, cn, formatTime, formatTimeRange, slotStartWallClockMs } from '@/lib/utils';
 import type { SiteTemplate, BookingBranding } from '@/types/api';
 import { bookingTimeClass, bookingTheme } from './booking-theme';
 import { BookingSectionLabel } from './BookingPublicShell';
@@ -52,9 +52,9 @@ export function BookingTimeGrid({ date, slots, selectedSlot, onSelectSlot, siteT
               type="button"
               disabled={disabled}
               onClick={() => slot && onSelectSlot(slot)}
-              className={bookingTimeClass(selected, disabled, theme)}
+              className={cn(bookingTimeClass(selected, disabled, theme), 'px-2 py-2.5 text-xs leading-tight sm:text-sm')}
             >
-              {formatTime(iso)}
+              {slot ? formatTimeRange(slot.startTime, slot.endTime) : formatTime(iso)}
             </button>
           );
         })}

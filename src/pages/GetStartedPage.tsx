@@ -45,7 +45,7 @@ const STEPS = [
 function CartSummary({ cart, compact }: { cart: SignupCart | null; compact?: boolean }) {
   if (!cart) {
     return (
-      <div className="text-sm text-stone-500">
+      <div className="text-sm text-stone-500 dark:text-stone-400">
         <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
         Calculating…
       </div>
@@ -57,35 +57,35 @@ function CartSummary({ cart, compact }: { cart: SignupCart | null; compact?: boo
       <ul className="space-y-2">
         {cart.items.map((item) => (
           <li key={item.id} className="flex items-start justify-between gap-3">
-            <span className="text-stone-700">
+            <span className="text-stone-700 dark:text-stone-300">
               {item.name}
               {item.interval === 'month' && item.amountCents > 0 && (
-                <span className="block text-xs text-stone-500">Billed monthly</span>
+                <span className="block text-xs text-stone-500 dark:text-stone-400">Billed monthly</span>
               )}
               {item.interval === 'once' && item.amountCents === 0 && (
-                <span className="block text-xs text-emerald-600">Included</span>
+                <span className="block text-xs text-emerald-600 dark:text-emerald-400">Included</span>
               )}
             </span>
-            <span className="shrink-0 font-medium text-stone-900">
+            <span className="shrink-0 font-medium text-stone-900 dark:text-stone-100">
               {item.priceLabel
                 ? item.priceLabel
                 : item.amountCents === 0
                   ? 'Free'
                   : formatCents(item.amountCents)}
               {!item.priceLabel && item.interval === 'month' && item.amountCents > 0 && (
-                <span className="text-xs text-stone-500">/mo</span>
+                <span className="text-xs text-stone-500 dark:text-stone-400">/mo</span>
               )}
             </span>
           </li>
         ))}
       </ul>
-      <div className="border-t border-stone-200 pt-3">
-        <div className="flex justify-between font-semibold text-stone-900">
+      <div className="border-t border-stone-200 pt-3 dark:border-stone-700">
+        <div className="flex justify-between font-semibold text-stone-900 dark:text-stone-100">
           <span>Due today</span>
           <span>{formatCents(cart.dueTodayCents)}</span>
         </div>
         {cart.monthlyRecurringCents > 0 && (
-          <p className="mt-1 text-xs text-stone-500">
+          <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
             Then {formatCents(cart.monthlyRecurringCents)}/month for your subscription
           </p>
         )}
@@ -291,19 +291,21 @@ export function GetStartedPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-stone-50">
+    <div className="min-h-screen bg-stone-50 dark:bg-stone-950">
       <MarketingHeader />
 
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-stone-900">Get started with Viselle</h1>
-          <p className="mt-2 text-stone-600">
+          <h1 className="text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
+            Get started with Viselle
+          </h1>
+          <p className="mt-2 text-stone-600 dark:text-stone-300">
             Set up your salon or spa in a few steps — plan, website options, and secure checkout.
           </p>
         </div>
 
         {cancelled && (
-          <div className="mx-auto mt-6 max-w-4xl rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <div className="mx-auto mt-6 max-w-4xl rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
             Checkout was cancelled. Your selections are saved — continue when you&apos;re ready.
           </div>
         )}
@@ -322,17 +324,17 @@ export function GetStartedPage() {
                   disabled={index > stepIndex}
                   className={cn(
                     'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors',
-                    active && 'bg-brand-50 font-medium text-brand-900',
-                    done && !active && 'text-stone-700 hover:bg-stone-100',
-                    !done && !active && 'cursor-not-allowed text-stone-400',
+                    active && 'bg-brand-50 font-medium text-brand-900 dark:bg-brand-950/50 dark:text-brand-100',
+                    done && !active && 'text-stone-700 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-900',
+                    !done && !active && 'cursor-not-allowed text-stone-400 dark:text-stone-600',
                   )}
                 >
                   <span
                     className={cn(
                       'flex h-8 w-8 items-center justify-center rounded-full border',
                       active && 'border-brand-600 bg-brand-600 text-white',
-                      done && !active && 'border-brand-600 bg-white text-brand-600',
-                      !done && !active && 'border-stone-200 bg-white text-stone-400',
+                      done && !active && 'border-brand-600 bg-white text-brand-600 dark:bg-stone-900',
+                      !done && !active && 'border-stone-200 bg-white text-stone-400 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-500',
                     )}
                   >
                     {done ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
@@ -343,7 +345,7 @@ export function GetStartedPage() {
             })}
           </nav>
 
-          <Card className="border-stone-200">
+          <Card>
             <CardHeader>
               <CardTitle>{STEPS[stepIndex].label}</CardTitle>
               <CardDescription>
@@ -369,7 +371,7 @@ export function GetStartedPage() {
                   <div className="space-y-2">
                     <Label htmlFor="slug">Booking page URL</Label>
                     <div className="flex items-center gap-2">
-                      <span className="shrink-0 text-sm text-stone-500">{bookingBase}/book/</span>
+                      <span className="shrink-0 text-sm text-stone-500 dark:text-stone-400">{bookingBase}/book/</span>
                       <Input
                         id="slug"
                         value={slug}
@@ -384,9 +386,9 @@ export function GetStartedPage() {
                       <p
                         className={cn(
                           'text-xs',
-                          slugStatus === 'available' && 'text-emerald-600',
-                          slugStatus === 'taken' && 'text-red-600',
-                          slugStatus === 'checking' && 'text-stone-500',
+                          slugStatus === 'available' && 'text-emerald-600 dark:text-emerald-400',
+                          slugStatus === 'taken' && 'text-red-600 dark:text-red-400',
+                          slugStatus === 'checking' && 'text-stone-500 dark:text-stone-400',
                         )}
                       >
                         {slugStatus === 'checking' && 'Checking availability…'}
@@ -422,7 +424,7 @@ export function GetStartedPage() {
                       onChange={(e) => setPassword(e.target.value)}
                       autoComplete="new-password"
                     />
-                    <p className="text-xs text-stone-500">At least 8 characters</p>
+                    <p className="text-xs text-stone-500 dark:text-stone-400">At least 8 characters</p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="confirmPassword">Confirm password</Label>
@@ -447,25 +449,25 @@ export function GetStartedPage() {
                       className={cn(
                         'rounded-lg border p-4 text-left transition-colors',
                         tier === plan.id
-                          ? 'border-brand-500 bg-brand-50 ring-1 ring-brand-200'
-                          : 'border-stone-200 hover:border-stone-300',
+                          ? 'border-brand-500 bg-brand-50 ring-1 ring-brand-200 dark:bg-brand-950/40 dark:ring-brand-800'
+                          : 'border-stone-200 hover:border-stone-300 dark:border-stone-700 dark:hover:border-stone-600',
                       )}
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div>
-                          <p className="font-semibold text-stone-900">{plan.name}</p>
-                          <p className="text-sm text-stone-600">{plan.description}</p>
-                          <p className="mt-1 text-xs font-medium text-brand-700">{plan.staffLimit}</p>
+                          <p className="font-semibold text-stone-900 dark:text-stone-100">{plan.name}</p>
+                          <p className="text-sm text-stone-600 dark:text-stone-300">{plan.description}</p>
+                          <p className="mt-1 text-xs font-medium text-brand-700 dark:text-brand-300">{plan.staffLimit}</p>
                         </div>
-                        <p className="shrink-0 font-semibold text-stone-900">
+                        <p className="shrink-0 font-semibold text-stone-900 dark:text-stone-100">
                           {formatCents(plan.monthlyPriceCents)}
-                          <span className="text-sm font-normal text-stone-500">/mo</span>
+                          <span className="text-sm font-normal text-stone-500 dark:text-stone-400">/mo</span>
                         </p>
                       </div>
-                      <ul className="mt-3 space-y-1 text-sm text-stone-700">
+                      <ul className="mt-3 space-y-1 text-sm text-stone-700 dark:text-stone-300">
                         {plan.features.map((feature) => (
                           <li key={feature} className="flex gap-2">
-                            <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />
+                            <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-600 dark:text-brand-400" />
                             {feature}
                           </li>
                         ))}
@@ -483,10 +485,10 @@ export function GetStartedPage() {
                       className={cn(
                         'flex cursor-pointer gap-3 rounded-lg border p-4 transition-colors',
                         websiteOption === choice.id
-                          ? 'border-brand-500 bg-brand-50 ring-1 ring-brand-200'
+                          ? 'border-brand-500 bg-brand-50 ring-1 ring-brand-200 dark:bg-brand-950/40 dark:ring-brand-800'
                           : choice.highlight
-                            ? 'border-brand-200 bg-brand-50/30 hover:bg-brand-50/50'
-                            : 'border-stone-200 hover:bg-stone-50',
+                            ? 'border-brand-200 bg-brand-50/30 hover:bg-brand-50/50 dark:border-brand-800 dark:bg-brand-950/20 dark:hover:bg-brand-950/30'
+                            : 'border-stone-200 hover:bg-stone-50 dark:border-stone-700 dark:hover:bg-stone-800/50',
                       )}
                     >
                       <input
@@ -497,13 +499,13 @@ export function GetStartedPage() {
                         onChange={() => setWebsiteOption(choice.id)}
                       />
                       <div className="flex-1">
-                        <p className="font-medium text-stone-900">
+                        <p className="font-medium text-stone-900 dark:text-stone-100">
                           {choice.title}
-                          <span className="ml-2 text-sm font-normal text-stone-500">{choice.price}</span>
+                          <span className="ml-2 text-sm font-normal text-stone-500 dark:text-stone-400">{choice.price}</span>
                         </p>
-                        <p className="mt-1 text-sm text-stone-600">{choice.description}</p>
+                        <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">{choice.description}</p>
                         {choice.id === 'custom_website' && (
-                          <p className="mt-2 text-xs text-stone-500">
+                          <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">
                             No charge at checkout — our team will contact you to scope the project. You can use your
                             free booking page in the meantime.
                           </p>
@@ -512,9 +514,9 @@ export function GetStartedPage() {
                     </label>
                   ))}
 
-                  <p className="pt-1 text-sm text-stone-500">
+                  <p className="pt-1 text-sm text-stone-500 dark:text-stone-400">
                     Already have your own site?{' '}
-                    <Link to={contactPath({ interest: 'api' })} className="font-medium text-brand-700 hover:underline">
+                    <Link to={contactPath({ interest: 'api' })} className="font-medium text-brand-700 hover:underline dark:text-brand-300">
                       Contact us about API access
                     </Link>
                     .
@@ -524,9 +526,9 @@ export function GetStartedPage() {
 
               {currentStep === 'checkout' && (
                 <div className="space-y-4">
-                  <div className="rounded-lg border border-stone-200 bg-stone-50 p-4 text-sm text-stone-700">
+                  <div className="rounded-lg border border-stone-200 bg-stone-50 p-4 text-sm text-stone-700 dark:border-stone-700 dark:bg-stone-800/50 dark:text-stone-300">
                     <p>
-                      <span className="font-medium text-stone-900">{businessName}</span> ·{' '}
+                      <span className="font-medium text-stone-900 dark:text-stone-100">{businessName}</span> ·{' '}
                       {bookingBase}/book/{slug}
                     </p>
                     <p className="mt-1">
@@ -534,7 +536,7 @@ export function GetStartedPage() {
                     </p>
                   </div>
                   <CartSummary cart={cart} />
-                  <p className="text-xs text-stone-500">
+                  <p className="text-xs text-stone-500 dark:text-stone-400">
                     You&apos;ll complete payment on Stripe. Your account is created automatically after payment
                     succeeds.
                   </p>
@@ -542,7 +544,7 @@ export function GetStartedPage() {
               )}
 
               {error && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
                   {error}
                   {error.includes('not configured') && (
                     <span>
@@ -556,7 +558,7 @@ export function GetStartedPage() {
                 </div>
               )}
 
-              <div className="flex items-center justify-between border-t border-stone-100 pt-4">
+              <div className="flex items-center justify-between border-t border-stone-100 pt-4 dark:border-stone-800">
                 <Button type="button" variant="ghost" onClick={goBack} disabled={stepIndex === 0 || submitting}>
                   <ChevronLeft className="mr-1 h-4 w-4" />
                   Back
@@ -583,7 +585,7 @@ export function GetStartedPage() {
           </Card>
 
           <aside className="hidden lg:block">
-            <Card className="sticky top-6 border-stone-200">
+            <Card className="sticky top-6">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Your cart</CardTitle>
               </CardHeader>

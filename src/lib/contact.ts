@@ -9,10 +9,10 @@ export type ContactInterest =
 
 export const CONTACT_INTEREST_LABELS: Record<ContactInterest, string> = {
   general: 'General question',
-  'plan-starter': 'Starter plan ($29/mo)',
+  'plan-starter': 'Starter plan ($20/mo)',
   'plan-professional': 'Professional plan ($49/mo)',
   'plan-business': 'Business plan ($99/mo)',
-  subdomain: 'Hosted subdomain & website design',
+  subdomain: 'Hosted subdomain',
   api: 'My website + booking API',
   upgrade: 'Upgrade my current plan',
 };

@@ -282,7 +282,6 @@ export interface WebsiteSettings {
   websiteHostingEnabled: boolean;
   apiKeyPrefix?: string | null;
   allowedOrigins: string[];
-  uploadedZipUrl?: string | null;
   deployedSiteUrl?: string | null;
   deploymentStatus: DeploymentStatus;
   lastDeployedAt?: string | null;
@@ -384,6 +383,7 @@ export interface CreateAccountInput {
   phone?: string;
   role: AccountRole;
   isBookable: boolean;
+  password?: string;
 }
 
 export interface CreateServiceInput {

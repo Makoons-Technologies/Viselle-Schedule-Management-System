@@ -14,7 +14,7 @@ import { BookingStepProgress, BookingSelectionSummary } from '@/components/booki
 import { BookingTimeGrid } from '@/components/booking/BookingTimeGrid';
 import { bookingChoiceClass, bookingTheme } from '@/components/booking/booking-theme';
 import { LoadingState } from '@/components/common/LoadingState';
-import { publicBookingApi } from '@/lib/public-booking';
+import { publicBookingApi, getManageBookingUrl } from '@/lib/public-booking';
 import { centsToDollars, filterFutureAppointmentSlots, formatDateTime, appointmentScheduleFromIso, cn } from '@/lib/utils';
 import type { Service, BookingBranding } from '@/types/api';
 
@@ -22,8 +22,14 @@ const TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 type Step = 'service' | 'provider' | 'schedule' | 'details';
 
-export function PublicBookingPage() {
-  const { slug = '' } = useParams();
+interface PublicBookingPageProps {
+  /** When set (e.g. hosted subdomain), slug comes from hostname instead of /book/:slug. */
+  slugOverride?: string;
+}
+
+export function PublicBookingPage({ slugOverride }: PublicBookingPageProps = {}) {
+  const { slug: routeSlug = '' } = useParams();
+  const slug = slugOverride ?? routeSlug;
   const [step, setStep] = useState<Step>('service');
   const [serviceId, setServiceId] = useState<string | null>(null);
   const [accountId, setAccountId] = useState<string | null>(null);
@@ -32,6 +38,7 @@ export function PublicBookingPage() {
   const [customer, setCustomer] = useState({ firstName: '', lastName: '', email: '', phone: '' });
   const [notes, setNotes] = useState('');
   const [confirmed, setConfirmed] = useState(false);
+  const [managementToken, setManagementToken] = useState<string | null>(null);
 
   const orgQuery = useQuery({
     queryKey: ['public-org', slug],
@@ -87,7 +94,8 @@ export function PublicBookingPage() {
         timezone: TIMEZONE,
         appointmentNotes: notes || undefined,
       }),
-    onSuccess: () => {
+    onSuccess: (data) => {
+      setManagementToken(data.managementToken ?? null);
       setConfirmed(true);
       toast.success('Appointment booked!');
     },
@@ -140,12 +148,34 @@ export function PublicBookingPage() {
     : undefined;
 
   if (confirmed) {
+    const manageUrl =
+      managementToken && slug ? getManageBookingUrl(slug, managementToken) : null;
+
     return (
       <BookingPublicShell businessName={org.name} siteTemplate={siteTemplate} branding={branding}>
         <div className="flex flex-col items-center py-8 text-center">
           <CheckCircle2 className={cn('mb-4 h-14 w-14', theme.accent)} />
           <h1 className="text-xl font-bold text-neutral-900">You&apos;re booked!</h1>
           <p className="mt-2 text-sm text-neutral-600">{formatDateTime(slot!.startTime)}</p>
+          {manageUrl ? (
+            <div className="mt-6 w-full max-w-sm space-y-3">
+              <a
+                href={manageUrl}
+                className={cn(
+                  'block w-full rounded-full py-3.5 text-center text-sm font-semibold transition-colors',
+                  theme.primaryBtn,
+                )}
+              >
+                Manage or cancel appointment
+              </a>
+              <p className={cn('text-xs', theme.mutedText)}>
+                Bookmark this link to reschedule or cancel later.
+              </p>
+              <p className={cn('break-all rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-left text-xs text-stone-600')}>
+                {manageUrl}
+              </p>
+            </div>
+          ) : null}
         </div>
       </BookingPublicShell>
     );
@@ -171,7 +201,7 @@ export function PublicBookingPage() {
         </button>
       )}
 
-      {step !== 'details' && !confirmed && (
+      {!confirmed && (
         <BookingStepProgress step={step} siteTemplate={siteTemplate} branding={branding} />
       )}
 

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, Package, Plus } from 'lucide-react';
+import { AlertTriangle, Package, PackagePlus, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { orgApi } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
@@ -8,6 +8,7 @@ import type { Product } from '@/types/api';
 import { CreateProductDialog } from '@/components/products/CreateProductDialog';
 import { AdjustStockDialog } from '@/components/products/AdjustStockDialog';
 import { Panel } from '@/components/common/Panel';
+import { TableIconButton } from '@/components/common/TableIconButton';
 import { EmptyState } from '@/components/common/EmptyState';
 import { LoadingState } from '@/components/common/LoadingState';
 import { Badge } from '@/components/ui/badge';
@@ -97,9 +98,11 @@ export function ProductsPage() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Button variant="outline" size="sm" onClick={() => setAdjustProduct(p)}>
-                      Adjust stock
-                    </Button>
+                    <TableIconButton
+                      icon={PackagePlus}
+                      label="Adjust stock"
+                      onClick={() => setAdjustProduct(p)}
+                    />
                   </TableCell>
                 </TableRow>
               ))}

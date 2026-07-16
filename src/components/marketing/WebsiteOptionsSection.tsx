@@ -21,8 +21,8 @@ const WEBSITE_OPTIONS = [
     badge: 'Optional add-on',
     title: 'Hosted subdomain',
     description:
-      'Your own address like yourspa.viselle.app with optional custom design. Add it during signup or upgrade later.',
-    bullets: ['Branded subdomain', 'Custom photos & copy available', '$19/mo — add at checkout'],
+      'Your own address like yourspa.viselle.app — the same booking page as your included link, on a branded subdomain.',
+    bullets: ['Branded subdomain URL', 'Same templates & branding as your booking page', '$19/mo — add at checkout'],
     cta: { label: 'Add at signup', to: getStartedPath({ subdomain: true }) },
     variant: 'addon' as const,
   },

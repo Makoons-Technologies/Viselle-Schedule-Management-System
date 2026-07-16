@@ -7,7 +7,9 @@ import { LandingPage } from '@/pages/LandingPage';
 import { ContactPage } from '@/pages/public/ContactPage';
 import { GetStartedPage } from '@/pages/GetStartedPage';
 import { GetStartedSuccessPage } from '@/pages/GetStartedSuccessPage';
-import { PublicBookingPage } from '@/pages/public/PublicBookingPage';import { PlatformDashboard } from '@/pages/platform/PlatformDashboard';
+import { PublicBookingPage } from '@/pages/public/PublicBookingPage';
+import { ManageBookingPage } from '@/pages/public/ManageBookingPage';
+import { PlatformDashboard } from '@/pages/platform/PlatformDashboard';
 import { OrganizationsPage } from '@/pages/platform/OrganizationsPage';
 import { CreateOrganizationPage } from '@/pages/platform/CreateOrganizationPage';
 import { PlatformOrgLayout } from '@/pages/platform/PlatformOrgLayout';
@@ -54,6 +56,7 @@ export const appRoutes = [
   { path: '/get-started/success', element: <GetStartedSuccessPage /> },
   { path: '/website', element: <Navigate to="/#websites" replace /> },
   { path: '/book/:slug', element: <PublicBookingPage /> },
+  { path: '/book/:slug/manage/:token', element: <ManageBookingPage /> },
   { path: '/login', element: <LoginPage /> },
   {
     element: <ProtectedRoute />,

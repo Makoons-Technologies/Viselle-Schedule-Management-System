@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pencil, Repeat, Trash2 } from 'lucide-react';
+import { Repeat, Trash2, Wrench } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { orgApi } from '@/lib/api';
@@ -16,6 +16,7 @@ import {
   upcomingSkippedDatesFromRule,
 } from '@/components/appointments/recurring-options';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { TableIconButton, TableRowActions } from '@/components/common/TableIconButton';
 import { PageHeader } from '@/components/common/PageHeader';
 import { EmptyState } from '@/components/common/EmptyState';
 import { LoadingState } from '@/components/common/LoadingState';
@@ -23,7 +24,6 @@ import { Panel, sectionHeadingClass, sectionMutedClass } from '@/components/comm
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { cn } from '@/lib/utils';
 
 function formatFrequency(rule: RecurringAppointmentRule): string {
   switch (rule.frequency) {
@@ -37,9 +37,6 @@ function formatFrequency(rule: RecurringAppointmentRule): string {
       return `Every ${rule.interval} weeks`;
   }
 }
-
-const deleteButtonClass =
-  'text-red-700 hover:bg-red-50 hover:text-red-800 dark:text-red-400 dark:hover:bg-red-950/40 dark:hover:text-red-300';
 
 function RecurringRuleDetails({ rule }: { rule: RecurringAppointmentRule }) {
   const skippedDates = upcomingSkippedDatesFromRule(rule);
@@ -74,23 +71,17 @@ function RecurringRuleActions({
   compact?: boolean;
 }) {
   return (
-    <div className={cn('flex gap-2', compact ? 'w-full' : 'justify-end')}>
+    <TableRowActions className={compact ? 'w-full' : undefined}>
       {rule.status !== 'cancelled' && (
-        <Button variant="outline" size="sm" className={compact ? 'flex-1' : undefined} onClick={() => onEdit(rule)}>
-          <Pencil className="h-4 w-4" />
-          Edit
-        </Button>
+        <TableIconButton icon={Wrench} label="Edit recurring series" onClick={() => onEdit(rule)} />
       )}
-      <Button
-        variant="outline"
-        size="sm"
-        className={cn(deleteButtonClass, compact ? 'flex-1' : undefined)}
+      <TableIconButton
+        icon={Trash2}
+        label="Delete recurring series"
+        destructive
         onClick={() => onDelete(rule)}
-      >
-        <Trash2 className="h-4 w-4" />
-        Delete
-      </Button>
-    </div>
+      />
+    </TableRowActions>
   );
 }
 

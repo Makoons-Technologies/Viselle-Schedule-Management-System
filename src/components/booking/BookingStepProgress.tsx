@@ -8,10 +8,10 @@ const FLOW_STEPS: { key: BookingFlowStep; label: string }[] = [
   { key: 'service', label: 'Service' },
   { key: 'provider', label: 'Provider' },
   { key: 'schedule', label: 'Time' },
+  { key: 'details', label: 'Details' },
 ];
 
 function stepIndex(step: BookingFlowStep): number {
-  if (step === 'details') return 3;
   return FLOW_STEPS.findIndex((s) => s.key === step);
 }
 
@@ -30,8 +30,8 @@ export function BookingStepProgress({ step, siteTemplate, branding }: BookingSte
       <ol className="flex items-center gap-2">
         {FLOW_STEPS.map((item, index) => {
           const done = index < activeIndex;
-          const active = item.key === step || (step === 'details' && item.key === 'schedule');
-          const upcoming = index > activeIndex && step !== 'details';
+          const active = index === activeIndex;
+          const upcoming = index > activeIndex;
 
           return (
             <li key={item.key} className="flex min-w-0 flex-1 items-center gap-2">
@@ -42,7 +42,6 @@ export function BookingStepProgress({ step, siteTemplate, branding }: BookingSte
                     done && 'bg-[var(--booking-primary)] text-white',
                     active && !done && 'border-2 border-[var(--booking-primary)] text-[var(--booking-primary)]',
                     upcoming && 'border border-stone-200 bg-stone-50 text-stone-400',
-                    done && step === 'details' && item.key === 'schedule' && 'bg-[var(--booking-primary)] text-white',
                   )}
                   aria-current={active ? 'step' : undefined}
                 >

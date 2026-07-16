@@ -66,6 +66,10 @@ export function formatTime(iso: string) {
   });
 }
 
+export function formatTimeRange(startIso: string, endIso: string) {
+  return `${formatTime(startIso)} – ${formatTime(endIso)}`;
+}
+
 export function slugify(value: string) {
   return value
     .toLowerCase()

@@ -140,3 +140,5 @@ export async function readFileAsBase64(file: File): Promise<string> {
 
 export const BOOKING_IMAGE_ACCEPT =
   'image/png,image/jpeg,image/webp,image/svg+xml,image/gif,image/x-icon,image/vnd.microsoft.icon';
+
+export const MAX_BOOKING_ASSET_BYTES = 2 * 1024 * 1024;

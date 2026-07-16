@@ -51,11 +51,11 @@ export function BookingPublicShell({
       {backgroundImage && (
         <>
           <div
-            className="pointer-events-none absolute inset-0 bg-cover bg-center"
+            className="pointer-events-none fixed inset-0 z-0 bg-cover bg-center bg-no-repeat"
             style={{ backgroundImage: `url(${backgroundImage})` }}
             aria-hidden
           />
-          <div className="pointer-events-none absolute inset-0 bg-black/25" aria-hidden />
+          <div className="pointer-events-none fixed inset-0 z-0 bg-black/25" aria-hidden />
         </>
       )}
 
@@ -79,7 +79,7 @@ export function BookingPublicShell({
         )}
 
         <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-4 py-6 sm:py-8">
-          <div className={cn('flex flex-1 flex-col p-5 sm:p-6', theme.card)} style={theme.cardStyle}>
+          <div className={cn('flex flex-1 flex-col overflow-hidden p-5 sm:p-6', theme.card)} style={theme.cardStyle}>
             {children}
           </div>
         </main>
@@ -127,8 +127,6 @@ export function BookingPageTitle({
 
 export function BookingStickyAction({
   children,
-  siteTemplate,
-  branding,
   className,
 }: {
   children: ReactNode;
@@ -136,17 +134,5 @@ export function BookingStickyAction({
   branding?: BookingBranding | null;
   className?: string;
 }) {
-  const theme = bookingTheme(siteTemplate, branding);
-  return (
-    <div
-      className={cn(
-        'sticky bottom-0 -mx-5 mt-auto px-5 pb-0 pt-4 sm:-mx-6 sm:px-6',
-        theme.stickyAction,
-        className,
-      )}
-      style={theme.stickyStyle}
-    >
-      {children}
-    </div>
-  );
+  return <div className={cn('mt-5', className)}>{children}</div>;
 }

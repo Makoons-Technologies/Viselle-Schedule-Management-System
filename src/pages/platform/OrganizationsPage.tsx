@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus } from 'lucide-react';
+import { Ban, Plus, Settings } from 'lucide-react';
 import { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -8,6 +8,7 @@ import { formatDate } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useOrg } from '@/context/OrgContext';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { TableIconButton, TableRowActions } from '@/components/common/TableIconButton';
 import { Panel } from '@/components/common/Panel';
 import { PageHeader } from '@/components/common/PageHeader';
 import { OrganizationStatusBadge, BillingStatusBadge } from '@/components/common/StatusBadge';
@@ -79,16 +80,22 @@ export function OrganizationsPage() {
                 <TableCell><BillingStatusBadge status={org.billingStatus} /></TableCell>
                 <TableCell className="text-stone-500">{formatDate(org.createdAt)}</TableCell>
                 <TableCell>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" asChild>
-                      <Link to={`/orgs/${org.id}/dashboard`} onClick={() => setSelectedOrgId(org.id)}>Manage</Link>
-                    </Button>
+                  <TableRowActions>
+                    <TableIconButton label="Manage organization" asChild>
+                      <Link to={`/orgs/${org.id}/dashboard`} onClick={() => setSelectedOrgId(org.id)}>
+                        <Settings className="h-4 w-4" />
+                      </Link>
+                    </TableIconButton>
                     {org.status === 'active' && (
-                      <Button variant="ghost" size="sm" onClick={() => setOrgToDeactivate({ id: org.id, name: org.name })}>
-                        Deactivate
-                      </Button>
+                      <TableIconButton
+                        icon={Ban}
+                        label="Deactivate organization"
+                        variant="ghost"
+                        destructive
+                        onClick={() => setOrgToDeactivate({ id: org.id, name: org.name })}
+                      />
                     )}
-                  </div>
+                  </TableRowActions>
                 </TableCell>
               </TableRow>
             ))}

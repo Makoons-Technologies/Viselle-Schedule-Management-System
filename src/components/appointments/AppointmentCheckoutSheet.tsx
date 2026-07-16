@@ -128,6 +128,9 @@ export function AppointmentCheckoutSheet({
     setCardProcessing(true);
     setReaderStatus('Starting card payment…');
 
+    let terminal: { disconnectReader: () => Promise<unknown> } | null = null;
+    let connected = false;
+
     try {
       const cardResult = await orgApi.checkoutCard(orgId, appointment.id, { lines, tipCents });
 
@@ -137,10 +140,16 @@ export function AppointmentCheckoutSheet({
         throw new Error('Stripe Terminal failed to load');
       }
 
-      const terminal = StripeTerminal.create({
+      terminal = StripeTerminal.create({
         onFetchConnectionToken: async () => {
           const { secret } = await orgApi.getTerminalConnectionToken(orgId);
           return secret;
+        },
+        onUnexpectedReaderDisconnect: () => {
+          connected = false;
+          toast.error('Card reader disconnected');
+          setCardProcessing(false);
+          setReaderStatus(null);
         },
       });
 
@@ -151,7 +160,11 @@ export function AppointmentCheckoutSheet({
       }
       const readers = discover.discoveredReaders;
       if (!readers?.length) {
-        throw new Error('No readers found. Register a reader in Payments settings.');
+        throw new Error(
+          import.meta.env.DEV
+            ? 'No readers found. Use a simulated reader in dev or register a reader in Settings → Payments.'
+            : 'No card reader found. Register a reader in Settings → Payments.',
+        );
       }
 
       setReaderStatus(`Connecting to ${readers[0].label ?? 'reader'}…`);
@@ -159,6 +172,7 @@ export function AppointmentCheckoutSheet({
       if ('error' in connect) {
         throw new Error(connect.error.message);
       }
+      connected = true;
 
       setReaderStatus('Present card to reader…');
       const collect = await terminal.collectPaymentMethod(cardResult.clientSecret);
@@ -178,6 +192,9 @@ export function AppointmentCheckoutSheet({
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Card payment failed');
     } finally {
+      if (terminal && connected) {
+        await terminal.disconnectReader().catch(() => undefined);
+      }
       setCardProcessing(false);
       setReaderStatus(null);
     }

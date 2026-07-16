@@ -4,9 +4,9 @@ import { useTheme } from '@/context/ThemeContext';
 import type { ColorMode } from '@/lib/color-mode';
 
 const OPTIONS: { id: ColorMode; label: string; description: string; icon: typeof Sun }[] = [
+  { id: 'system', label: 'System', description: 'Match your device settings', icon: Monitor },
   { id: 'light', label: 'Light', description: 'Always use light mode', icon: Sun },
   { id: 'dark', label: 'Dark', description: 'Always use dark mode', icon: Moon },
-  { id: 'system', label: 'System', description: 'Match your device settings', icon: Monitor },
 ];
 
 export function ColorModePicker() {

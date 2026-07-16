@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CreditCard, Loader2, RefreshCw } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { orgApi } from '@/lib/api';
@@ -18,6 +18,7 @@ export function PaymentsSettingsPage() {
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const [readerCode, setReaderCode] = useState('');
+  const autoSyncedRef = useRef(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['stripe-connect', orgId],
@@ -27,7 +28,12 @@ export function PaymentsSettingsPage() {
 
   const syncMutation = useMutation({
     mutationFn: () => orgApi.syncStripeConnectStatus(orgId),
-    onSuccess: () => {
+    onSuccess: (result) => {
+      queryClient.setQueryData(['stripe-connect', orgId], (current: typeof data | undefined) => ({
+        accountId: current?.accountId ?? null,
+        chargesEnabled: result.chargesEnabled,
+        onboardingComplete: result.onboardingComplete,
+      }));
       queryClient.invalidateQueries({ queryKey: ['stripe-connect', orgId] });
       toast.success('Stripe status updated');
     },
@@ -52,15 +58,32 @@ export function PaymentsSettingsPage() {
   });
 
   useEffect(() => {
-    if (searchParams.get('connected') === '1' || searchParams.get('refresh') === '1') {
+    if (!orgId || !data?.accountId || syncMutation.isPending) return;
+
+    const fromStripe =
+      searchParams.get('connected') === '1' || searchParams.get('refresh') === '1';
+    const needsRefresh = data.onboardingComplete && !data.chargesEnabled;
+
+    if ((fromStripe || needsRefresh) && !autoSyncedRef.current) {
+      autoSyncedRef.current = true;
       syncMutation.mutate();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }, [orgId, data?.accountId, data?.chargesEnabled, data?.onboardingComplete, searchParams]);
 
   if (isLoading) return <LoadingState />;
 
   const ready = data?.chargesEnabled && data?.onboardingComplete;
+  const pendingActivation = Boolean(data?.accountId && data.onboardingComplete && !data.chargesEnabled);
+  const needsOnboarding = Boolean(data?.accountId && !data.onboardingComplete);
+
+  const statusLabel = ready
+    ? 'Ready'
+    : pendingActivation
+      ? 'Activating'
+      : needsOnboarding
+        ? 'Onboarding incomplete'
+        : 'Not connected';
 
   return (
     <div className="max-w-xl space-y-8">
@@ -72,18 +95,32 @@ export function PaymentsSettingsPage() {
               Connect your salon&apos;s Stripe account to accept in-person card payments. Funds go directly to your bank.
             </p>
           </div>
-          <Badge variant={ready ? 'success' : 'secondary'}>{ready ? 'Ready' : 'Not connected'}</Badge>
+          <Badge variant={ready ? 'success' : pendingActivation ? 'secondary' : 'secondary'}>
+            {statusLabel}
+          </Badge>
         </div>
+
+        {pendingActivation && (
+          <p className={cn('mb-4 text-sm', sectionMutedClass)}>
+            Stripe onboarding is complete. We&apos;re syncing your account — this usually takes a few seconds.
+          </p>
+        )}
 
         {data?.accountId && (
           <p className="mb-4 text-xs text-stone-400 dark:text-stone-400">Account: {data.accountId}</p>
         )}
 
         <div className="flex flex-wrap gap-2">
-          {!ready && (
+          {needsOnboarding && (
             <Button onClick={() => onboardMutation.mutate()} disabled={onboardMutation.isPending}>
               {onboardMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-              {data?.accountId ? 'Continue onboarding' : 'Connect with Stripe'}
+              Continue onboarding
+            </Button>
+          )}
+          {!ready && !data?.accountId && (
+            <Button onClick={() => onboardMutation.mutate()} disabled={onboardMutation.isPending}>
+              {onboardMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+              Connect with Stripe
             </Button>
           )}
           <Button variant="outline" onClick={() => syncMutation.mutate()} disabled={syncMutation.isPending}>

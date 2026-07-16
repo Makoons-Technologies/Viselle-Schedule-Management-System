@@ -2,11 +2,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ImageIcon, Palette, RotateCcw, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { toast } from 'sonner';
-import { orgApi, ownerApi } from '@/lib/api';
+import { orgApi, ownerApi, ApiError } from '@/lib/api';
 import {
   BOOKING_IMAGE_ACCEPT,
   DEFAULT_THEME_PALETTES,
   DEFAULT_UI_OPACITY,
+  MAX_BOOKING_ASSET_BYTES,
   THEME_PALETTE_FIELDS,
   normalizeBookingBranding,
   readFileAsBase64,
@@ -72,7 +73,6 @@ export function BookingBrandingSection({ orgId, website, siteTemplate }: Booking
       invalidate();
       toast.success('Image uploaded');
     },
-    onError: (err: Error) => toast.error(err.message),
   });
 
   const saveBranding = (patch: BookingBranding) => {
@@ -95,17 +95,32 @@ export function BookingBrandingSection({ orgId, website, siteTemplate }: Booking
   };
 
   const uploadFile = async (assetType: 'logo' | 'favicon' | 'background', file: File) => {
-    if (file.size > 2 * 1024 * 1024) {
+    if (!file.type || !BOOKING_IMAGE_ACCEPT.split(',').includes(file.type)) {
+      toast.error('Use a PNG, JPEG, WebP, SVG, GIF, or ICO image');
+      return;
+    }
+    if (file.size > MAX_BOOKING_ASSET_BYTES) {
       toast.error('Image must be 2 MB or smaller');
       return;
     }
-    const dataBase64 = await readFileAsBase64(file);
-    await uploadMutation.mutateAsync({
-      assetType,
-      fileName: file.name,
-      contentType: file.type,
-      dataBase64,
-    });
+
+    try {
+      const dataBase64 = await readFileAsBase64(file);
+      await uploadMutation.mutateAsync({
+        assetType,
+        fileName: file.name,
+        contentType: file.type,
+        dataBase64,
+      });
+    } catch (err) {
+      const message =
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : 'Upload failed';
+      toast.error(message);
+    }
   };
 
   const removeAsset = (field: 'logoUrl' | 'faviconUrl' | 'backgroundImageUrl') => {
@@ -133,7 +148,7 @@ export function BookingBrandingSection({ orgId, website, siteTemplate }: Booking
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
               <Label>{TEMPLATE_LABELS[siteTemplate]} theme colors</Label>
-              <p className="mt-1 text-xs text-stone-500">
+              <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
                 Customize the color palette for your active page style. Switch styles above to edit
                 Classic, Modern, or Minimal separately.
               </p>
@@ -145,9 +160,9 @@ export function BookingBrandingSection({ orgId, website, siteTemplate }: Booking
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {THEME_PALETTE_FIELDS.map(({ key, label, hint }) => (
-              <div key={key} className="rounded-lg border border-stone-200 bg-stone-50 p-3">
-                <p className="text-sm font-medium text-stone-800">{label}</p>
-                <p className="mb-2 text-xs text-stone-500">{hint}</p>
+              <div key={key} className="rounded-lg border border-stone-200 bg-stone-50 p-3 dark:border-stone-700 dark:bg-stone-800/50">
+                <p className="text-sm font-medium text-stone-800 dark:text-stone-200">{label}</p>
+                <p className="mb-2 text-xs text-stone-500 dark:text-stone-400">{hint}</p>
                 <div className="flex items-center gap-2">
                   <input
                     type="color"
@@ -157,7 +172,7 @@ export function BookingBrandingSection({ orgId, website, siteTemplate }: Booking
                       setLocalPalette((prev) => ({ ...prev, [key]: e.target.value }))
                     }
                     onBlur={(e) => savePaletteField(key, e.target.value)}
-                    className="h-10 w-12 shrink-0 cursor-pointer rounded border border-stone-200 bg-white p-1"
+                    className="h-10 w-12 shrink-0 cursor-pointer rounded border border-stone-200 bg-white p-1 dark:border-stone-600 dark:bg-stone-700"
                     aria-label={`${label} color`}
                   />
                   <Input
@@ -177,7 +192,7 @@ export function BookingBrandingSection({ orgId, website, siteTemplate }: Booking
 
         <div>
           <Label htmlFor="ui-opacity">Booking card transparency ({uiOpacity}%)</Label>
-          <p className="mb-2 text-xs text-stone-500">
+          <p className="mb-2 text-xs text-stone-500 dark:text-stone-400">
             Lower values let more of your background image show through the booking card.
           </p>
           <input
@@ -192,7 +207,7 @@ export function BookingBrandingSection({ orgId, website, siteTemplate }: Booking
             onTouchEnd={handleOpacityCommit}
             className="w-full accent-brand-600"
           />
-          <p className="mt-1 text-xs text-stone-400">Default: {Math.round(DEFAULT_UI_OPACITY * 100)}%</p>
+          <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">Default: {Math.round(DEFAULT_UI_OPACITY * 100)}%</p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
@@ -252,14 +267,14 @@ function AssetField({
   onRemove: () => void;
 }) {
   return (
-    <div className="rounded-lg border border-stone-200 p-3">
-      <p className="text-sm font-medium text-stone-800">{label}</p>
-      <p className="mt-1 text-xs text-stone-500">{description}</p>
-      <div className="mt-3 flex h-20 items-center justify-center overflow-hidden rounded-md border border-dashed border-stone-200 bg-stone-50">
+    <div className="rounded-lg border border-stone-200 p-3 dark:border-stone-700">
+      <p className="text-sm font-medium text-stone-800 dark:text-stone-200">{label}</p>
+      <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">{description}</p>
+      <div className="mt-3 flex h-20 items-center justify-center overflow-hidden rounded-md border border-dashed border-stone-200 bg-stone-50 dark:border-stone-600 dark:bg-stone-800/60">
         {imageUrl ? (
           <img src={imageUrl} alt="" className="max-h-full max-w-full object-contain" />
         ) : (
-          <ImageIcon className="h-6 w-6 text-stone-300" />
+          <ImageIcon className="h-6 w-6 text-stone-300 dark:text-stone-500" />
         )}
       </div>
       <input
