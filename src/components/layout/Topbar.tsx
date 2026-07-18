@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import { LogOut, Menu, Settings } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -24,7 +25,7 @@ import {
 } from '@/components/ui/select';
 
 export function Topbar() {
-  const { user, logout } = useAuth();
+  const { user, logout, memberships, switchOrganization } = useAuth();
   const [logoutOpen, setLogoutOpen] = useState(false);
   const { organizations, setSelectedOrgId, selectedOrg } = useOrg();
   const { setOpen: setMobileNavOpen } = useMobileNav();
@@ -57,6 +58,15 @@ export function Topbar() {
         ? 'Viselle Platform'
         : selectedOrgFromContext?.name
       : orgData?.organization.name;
+
+  const handleStaffOrgChange = async (organizationId: string) => {
+    try {
+      await switchOrganization(organizationId);
+      navigate('/staff/schedule');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not switch organization');
+    }
+  };
 
   const handleContextChange = (value: string) => {
     if (value === PLATFORM_CONTEXT) {
@@ -116,6 +126,21 @@ export function Topbar() {
                 /{selectedOrgFromContext.slug}
               </span>
             )}
+          </div>
+        ) : user?.role === 'staff' && memberships.length > 1 ? (
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <Select value={user.organizationId ?? undefined} onValueChange={handleStaffOrgChange}>
+              <SelectTrigger className="h-10 w-full min-w-0 max-w-[11rem] text-xs sm:max-w-xs sm:text-sm md:max-w-sm">
+                <SelectValue placeholder="Select workplace" />
+              </SelectTrigger>
+              <SelectContent>
+                {memberships.map((membership) => (
+                  <SelectItem key={membership.organizationId} value={membership.organizationId}>
+                    {membership.organizationName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         ) : (
           <div className="min-w-0 md:hidden">

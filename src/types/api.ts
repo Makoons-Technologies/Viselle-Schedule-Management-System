@@ -53,11 +53,20 @@ export interface AuthUser {
   role: UserRole;
   organizationId?: string | null;
   accountId?: string | null;
+  memberships?: StaffMembership[];
+}
+
+export interface StaffMembership {
+  organizationId: string;
+  organizationName: string;
+  accountId: string;
+  accountRole: AccountRole;
 }
 
 export interface LoginResponse {
   token: string;
   user: AuthUser;
+  memberships?: StaffMembership[];
 }
 
 export interface Organization {
@@ -69,6 +78,14 @@ export interface Organization {
   lastPaymentAt?: string | null;
   nextPaymentDueAt?: string | null;
   publicBookingEnabled: boolean;
+  batchCheckoutEnabled: boolean;
+  emailRemindersOptIn: boolean;
+  smsRemindersOptIn: boolean;
+  emailReminderHoursBefore: number;
+  smsReminderHoursBefore: number;
+  city?: string | null;
+  address?: string | null;
+  phone?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -220,6 +237,7 @@ export interface Product {
 
 export interface StripeConnectStatus {
   accountId: string | null;
+  publishableKey: string | null;
   chargesEnabled: boolean;
   onboardingComplete: boolean;
 }
@@ -235,6 +253,24 @@ export interface CheckoutLineInput {
 
 export interface CheckoutPreview {
   lines: Array<CheckoutLineInput & { description: string; unitPriceCents: number; lineTotalCents: number }>;
+  subtotalCents: number;
+  tipCents: number;
+  totalCents: number;
+}
+
+export interface BatchCheckoutAppointmentInput {
+  appointmentId: string;
+  lines: CheckoutLineInput[];
+}
+
+export interface BatchCheckoutPreview {
+  appointments: Array<{
+    appointmentId: string;
+    customerId?: string | null;
+    accountId?: string | null;
+    lines: CheckoutPreview['lines'];
+    subtotalCents: number;
+  }>;
   subtotalCents: number;
   tipCents: number;
   totalCents: number;
@@ -383,7 +419,6 @@ export interface CreateAccountInput {
   phone?: string;
   role: AccountRole;
   isBookable: boolean;
-  password?: string;
 }
 
 export interface CreateServiceInput {

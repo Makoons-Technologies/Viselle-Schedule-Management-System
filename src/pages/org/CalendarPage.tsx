@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { addDays, endOfWeek, format, startOfWeek } from 'date-fns';
-import { Plus } from 'lucide-react';
+import { ListChecks, Plus, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { orgApi } from '@/lib/api';
 import { APPOINTMENT_CALENDAR_LIP_CLASS, APPOINTMENT_CALENDAR_LIP_LABEL } from '@/lib/appointment-status';
@@ -9,6 +9,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
 import { filterOutCancelled, useHideCancelledAppointments } from '@/hooks/useHideCancelledAppointments';
 import { AppointmentDetailSheet } from '@/components/appointments/AppointmentDetailSheet';
+import { BatchCheckoutSheet, type BatchCheckoutItem } from '@/components/appointments/BatchCheckoutSheet';
 import { CreateAppointmentDialog } from '@/components/appointments/CreateAppointmentDialog';
 import { HideCancelledToggle } from '@/components/appointments/HideCancelledToggle';
 import { ShowAllAppointmentsToggle } from '@/components/appointments/ShowAllAppointmentsToggle';
@@ -22,6 +23,7 @@ import { Button } from '@/components/ui/button';
 export function CalendarPage() {
   const orgId = useOrgId();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 0 }));
   const [selectedAppointment, setSelectedAppointment] = useState<{
     id: string;
@@ -29,6 +31,9 @@ export function CalendarPage() {
   } | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [batchSelection, setBatchSelection] = useState<Record<string, BatchCheckoutItem>>({});
+  const [batchCheckoutOpen, setBatchCheckoutOpen] = useState(false);
   const { hideCancelled, setHideCancelled } = useHideCancelledAppointments();
 
   const weekEnd = endOfWeek(weekStart, { weekStartsOn: 0 });
@@ -63,6 +68,14 @@ export function CalendarPage() {
     enabled: !!orgId,
   });
 
+  const { data: orgData } = useQuery({
+    queryKey: ['organization', orgId],
+    queryFn: () => orgApi.getOrganization(orgId),
+    enabled: !!orgId,
+  });
+
+  const batchCheckoutEnabled = orgData?.organization.batchCheckoutEnabled ?? false;
+
   const activeRecurringRuleIds = useMemo(
     () =>
       new Set(
@@ -92,15 +105,53 @@ export function CalendarPage() {
     return filterOutCancelled(list, hideCancelled);
   }, [data?.appointments, showAll, user?.accountId, hideCancelled]);
 
+  const selectedItems = useMemo(() => Object.values(batchSelection), [batchSelection]);
+
+  const toggleBatchSelection = (item: BatchCheckoutItem) => {
+    setBatchSelection((prev) => {
+      const next = { ...prev };
+      if (next[item.appointmentId]) {
+        delete next[item.appointmentId];
+      } else {
+        next[item.appointmentId] = item;
+      }
+      return next;
+    });
+  };
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setBatchSelection({});
+  };
+
   if (isLoading) return <LoadingState />;
 
   return (
     <div>
       <PageHeader
         title="Calendar"
-        description={showAll ? 'Week view of all appointments' : 'Week view of your appointments'}
+        description={
+          selectMode
+            ? 'Select checked-in appointments to check out together'
+            : showAll
+              ? 'Week view of all appointments'
+              : 'Week view of your appointments'
+        }
         actions={
-          <Button onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" /> New Appointment</Button>
+          <div className="flex items-center gap-2">
+            {batchCheckoutEnabled && (
+              selectMode ? (
+                <Button variant="outline" onClick={exitSelectMode}>
+                  <X className="h-4 w-4" /> Cancel selection
+                </Button>
+              ) : (
+                <Button variant="outline" onClick={() => setSelectMode(true)}>
+                  <ListChecks className="h-4 w-4" /> Select
+                </Button>
+              )
+            )}
+            <Button onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" /> New Appointment</Button>
+          </div>
         }
       />
       <WeekCalendarNav
@@ -133,6 +184,7 @@ export function CalendarPage() {
             ? `${customer.firstName} ${customer.lastName}`.trim()
             : 'Client';
           const serviceName = servicesById[appt.serviceId]?.name ?? 'Service';
+          const checkoutEligible = appt.visitStatus === 'arrived' && appt.paymentStatus === 'unpaid';
 
           return (
             <CalendarAppointmentChip
@@ -150,16 +202,64 @@ export function CalendarPage() {
                   ? `${customerName} — ${serviceName} — recurring`
                   : `${customerName} — ${serviceName}`
               }
-              onClick={() => setSelectedAppointment({ id: appt.id, startTime: appt.startTime })}
+              selectMode={selectMode}
+              selected={!!batchSelection[appt.id]}
+              selectable={checkoutEligible}
+              onClick={() =>
+                selectMode
+                  ? toggleBatchSelection({
+                      appointmentId: appt.id,
+                      serviceId: appt.serviceId,
+                      customerName,
+                      serviceName,
+                    })
+                  : setSelectedAppointment({ id: appt.id, startTime: appt.startTime })
+              }
             />
           );
         }}
       />
+      {selectMode && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-white/95 px-4 py-3 backdrop-blur-md dark:border-stone-800 dark:bg-stone-900/95 sm:px-6">
+          <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
+            <p className="text-sm font-medium text-stone-900 dark:text-stone-100">
+              {selectedItems.length} appointment{selectedItems.length === 1 ? '' : 's'} selected
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setBatchSelection({})}
+                disabled={selectedItems.length === 0}
+              >
+                Clear
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => setBatchCheckoutOpen(true)}
+                disabled={selectedItems.length === 0}
+              >
+                Check out ({selectedItems.length})
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       <AppointmentDetailSheet
         appointmentId={selectedAppointment?.id ?? null}
         occurrenceStartTime={selectedAppointment?.startTime}
         orgId={orgId}
         onClose={() => setSelectedAppointment(null)}
+      />
+      <BatchCheckoutSheet
+        orgId={orgId}
+        items={selectedItems}
+        open={batchCheckoutOpen}
+        onOpenChange={setBatchCheckoutOpen}
+        onSuccess={() => {
+          exitSelectMode();
+          queryClient.invalidateQueries({ queryKey: ['appointments', orgId] });
+        }}
       />
       <CreateAppointmentDialog orgId={orgId} open={createOpen} onOpenChange={setCreateOpen} />
     </div>

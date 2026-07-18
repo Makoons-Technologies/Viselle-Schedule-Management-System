@@ -5,6 +5,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { useAuth } from '@/context/AuthContext';
+import { ApiError } from '@/lib/api';
 import { LoadingState } from '@/components/common/LoadingState';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -44,7 +45,11 @@ export function LoginPage() {
       else navigate('/staff/schedule');
       toast.success('Welcome back!');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Login failed');
+      if (err instanceof ApiError && err.code === 'PASSWORD_SETUP_REQUIRED') {
+        toast.error('Check your email for an invite link, or use Forgot password to request a new one.');
+      } else {
+        toast.error(err instanceof Error ? err.message : 'Login failed');
+      }
     } finally {
       setLoading(false);
     }
@@ -72,6 +77,11 @@ export function LoginPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Signing in...' : 'Sign in'}
             </Button>
+            <p className="text-center text-sm text-stone-500">
+              <Link to="/forgot-password" className="text-brand-700 hover:underline">
+                Forgot password?
+              </Link>
+            </p>
             <p className="text-center text-sm text-stone-500">
               <Link to="/" className="text-brand-700 hover:underline">
                 ← Back to home

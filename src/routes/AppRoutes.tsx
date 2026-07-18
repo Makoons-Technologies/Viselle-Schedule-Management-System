@@ -3,6 +3,8 @@ import { useAuth } from '@/context/AuthContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { LoadingState } from '@/components/common/LoadingState';
 import { LoginPage } from '@/pages/LoginPage';
+import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
+import { SetPasswordPage } from '@/pages/SetPasswordPage';
 import { LandingPage } from '@/pages/LandingPage';
 import { ContactPage } from '@/pages/public/ContactPage';
 import { GetStartedPage } from '@/pages/GetStartedPage';
@@ -58,6 +60,8 @@ export const appRoutes = [
   { path: '/book/:slug', element: <PublicBookingPage /> },
   { path: '/book/:slug/manage/:token', element: <ManageBookingPage /> },
   { path: '/login', element: <LoginPage /> },
+  { path: '/forgot-password', element: <ForgotPasswordPage /> },
+  { path: '/set-password', element: <SetPasswordPage /> },
   {
     element: <ProtectedRoute />,
     children: [

@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { orgApi } from '@/lib/api';
 import { useCardCheckout } from '@/hooks/useCardCheckout';
 import { cn, formatCurrency } from '@/lib/utils';
-import type { AppointmentInfo, CheckoutLineInput } from '@/types/api';
+import type { BatchCheckoutAppointmentInput, CheckoutLineInput } from '@/types/api';
 import { CheckoutProductPickerDialog } from '@/components/appointments/CheckoutProductPickerDialog';
 import { KeyedCardForm } from '@/components/appointments/KeyedCardForm';
 import { sectionHeadingClass, sectionMutedClass } from '@/components/common/Panel';
@@ -26,83 +26,54 @@ const TIP_PRESETS = [0.15, 0.18, 0.2];
 type TipSelection = 'none' | 'custom' | (typeof TIP_PRESETS)[number];
 type CheckoutStep = 'items' | 'tip';
 
-const CHECKOUT_STEPS: { id: CheckoutStep; label: string }[] = [
-  { id: 'items', label: 'Order' },
-  { id: 'tip', label: 'Card payment' },
-];
+export interface BatchCheckoutItem {
+  appointmentId: string;
+  serviceId: string;
+  customerName: string;
+  serviceName: string;
+}
 
-interface AppointmentCheckoutSheetProps {
+interface BatchCheckoutSheetProps {
   orgId: string;
-  appointmentInfo: AppointmentInfo | null;
+  items: BatchCheckoutItem[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
 }
 
-function CheckoutStepIndicator({ step }: { step: CheckoutStep }) {
-  const stepIndex = CHECKOUT_STEPS.findIndex((item) => item.id === step);
-
-  return (
-    <div className="flex items-center gap-2">
-      {CHECKOUT_STEPS.map((item, index) => {
-        const active = item.id === step;
-        const done = index < stepIndex;
-        return (
-          <div key={item.id} className="flex min-w-0 items-center gap-2">
-            {index > 0 && <span className="text-stone-300 dark:text-stone-600">/</span>}
-            <span
-              className={cn(
-                'truncate text-xs font-medium sm:text-sm',
-                active && 'text-brand-700 dark:text-brand-300',
-                done && !active && 'text-stone-600 dark:text-stone-300',
-                !done && !active && 'text-stone-400 dark:text-stone-500',
-              )}
-            >
-              {item.label}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-export function AppointmentCheckoutSheet({
-  orgId,
-  appointmentInfo,
-  open,
-  onOpenChange,
-  onSuccess,
-}: AppointmentCheckoutSheetProps) {
+export function BatchCheckoutSheet({ orgId, items, open, onOpenChange, onSuccess }: BatchCheckoutSheetProps) {
   const [step, setStep] = useState<CheckoutStep>('items');
-  const [lines, setLines] = useState<CheckoutLineInput[]>([]);
+  const [productLines, setProductLines] = useState<Record<string, CheckoutLineInput[]>>({});
   const [tipCents, setTipCents] = useState(0);
   const [tipSelection, setTipSelection] = useState<TipSelection>('none');
   const [customTipDollars, setCustomTipDollars] = useState('');
-  const [productPickerOpen, setProductPickerOpen] = useState(false);
+  const [productPickerFor, setProductPickerFor] = useState<string | null>(null);
   const [cashConfirmOpen, setCashConfirmOpen] = useState(false);
   const customTipInputRef = useRef<HTMLInputElement>(null);
 
-  const service = appointmentInfo?.service;
-  const appointment = appointmentInfo?.appointment;
-
   useEffect(() => {
-    if (open && service && appointment?.id) {
+    if (open) {
       setStep('items');
-      setLines([
-        {
-          lineType: 'service',
-          serviceId: appointment.serviceId,
-          quantity: 1,
-        },
-      ]);
+      setProductLines({});
       setTipCents(0);
       setTipSelection('none');
       setCustomTipDollars('');
-      setProductPickerOpen(false);
+      setProductPickerFor(null);
       setCashConfirmOpen(false);
     }
-  }, [open, service, appointment?.id, appointment?.serviceId]);
+  }, [open, items]);
+
+  const batchAppointments: BatchCheckoutAppointmentInput[] = useMemo(
+    () =>
+      items.map((item) => ({
+        appointmentId: item.appointmentId,
+        lines: [
+          { lineType: 'service' as const, serviceId: item.serviceId, quantity: 1 },
+          ...(productLines[item.appointmentId] ?? []),
+        ],
+      })),
+    [items, productLines],
+  );
 
   const { data: productsData } = useQuery({
     queryKey: ['products', orgId, 'checkout'],
@@ -117,10 +88,9 @@ export function AppointmentCheckoutSheet({
   });
 
   const previewQuery = useQuery({
-    queryKey: ['checkout-preview', orgId, appointment?.id, lines],
-    queryFn: () =>
-      orgApi.previewCheckout(orgId, appointment!.id, { lines, tipCents: 0 }),
-    enabled: open && !!appointment && lines.length > 0,
+    queryKey: ['batch-checkout-preview', orgId, batchAppointments],
+    queryFn: () => orgApi.previewBatchCheckout(orgId, { appointments: batchAppointments, tipCents: 0 }),
+    enabled: open && items.length > 0,
   });
 
   const subtotalCents = previewQuery.data?.subtotalCents ?? 0;
@@ -147,7 +117,7 @@ export function AppointmentCheckoutSheet({
   }, []);
 
   const cashMutation = useMutation({
-    mutationFn: () => orgApi.checkoutCash(orgId, appointment!.id, { lines, tipCents: 0 }),
+    mutationFn: () => orgApi.batchCheckoutCash(orgId, { appointments: batchAppointments, tipCents: 0 }),
     onSuccess: () => {
       toast.success('Cash payment recorded');
       setCashConfirmOpen(false);
@@ -157,17 +127,38 @@ export function AppointmentCheckoutSheet({
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const setProductQuantity = useCallback((productId: string, quantity: number) => {
-    setLines((prev) => {
-      const without = prev.filter(
-        (line) => !(line.lineType === 'product' && line.productId === productId),
-      );
-      if (quantity <= 0) return without;
-      return [...without, { lineType: 'product', productId, quantity }];
-    });
-  }, []);
+  const products = productsData?.products ?? [];
 
-  const cardReady = connectStatus?.chargesEnabled && connectStatus?.onboardingComplete;
+  const setProductQuantity = useCallback(
+    (appointmentId: string, productId: string, quantity: number) => {
+      setProductLines((prev) => {
+        const current = prev[appointmentId] ?? [];
+        const without = current.filter((line) => line.productId !== productId);
+        const next = quantity <= 0 ? without : [...without, { lineType: 'product' as const, productId, quantity }];
+        return { ...prev, [appointmentId]: next };
+      });
+    },
+    [],
+  );
+
+  const adjustProductQuantity = useCallback(
+    (appointmentId: string, productId: string, delta: number) => {
+      const current =
+        (productLines[appointmentId] ?? []).find((line) => line.productId === productId)?.quantity ?? 0;
+      const next = current + delta;
+      if (next <= 0) {
+        setProductQuantity(appointmentId, productId, 0);
+        return;
+      }
+      const product = products.find((item) => item.id === productId);
+      if (product?.trackInventory && next > product.stockQuantity) {
+        toast.error(`Only ${product.stockQuantity} in stock`);
+        return;
+      }
+      setProductQuantity(appointmentId, productId, next);
+    },
+    [productLines, products, setProductQuantity],
+  );
 
   const completeCardPayment = useCallback(() => {
     toast.success('Card payment successful');
@@ -175,26 +166,23 @@ export function AppointmentCheckoutSheet({
     onOpenChange(false);
   }, [onSuccess, onOpenChange]);
 
-  const appointmentId = appointment?.id;
-
   const startTerminalCheckout = useCallback(
-    () => orgApi.checkoutCard(orgId, appointmentId!, { lines, tipCents, mode: 'terminal' }),
-    [orgId, appointmentId, lines, tipCents],
+    () => orgApi.batchCheckoutCard(orgId, { appointments: batchAppointments, tipCents, mode: 'terminal' }),
+    [orgId, batchAppointments, tipCents],
   );
 
   const startOnlineCheckout = useCallback(
-    () => orgApi.checkoutCard(orgId, appointmentId!, { lines, tipCents, mode: 'online' }),
-    [orgId, appointmentId, lines, tipCents],
+    () => orgApi.batchCheckoutCard(orgId, { appointments: batchAppointments, tipCents, mode: 'online' }),
+    [orgId, batchAppointments, tipCents],
   );
 
   const confirmPaymentIntent = useCallback(
-    (paymentIntentId: string) =>
-      orgApi.confirmCheckoutCard(orgId, appointmentId!, paymentIntentId),
-    [orgId, appointmentId],
+    (paymentIntentId: string) => orgApi.confirmBatchCheckoutCard(orgId, paymentIntentId),
+    [orgId],
   );
 
   const card = useCardCheckout({
-    active: open && step === 'tip' && !!appointment && !!previewQuery.data,
+    active: open && step === 'tip' && items.length > 0 && !!previewQuery.data,
     orgId,
     startTerminalCheckout,
     startOnlineCheckout,
@@ -203,112 +191,24 @@ export function AppointmentCheckoutSheet({
     onSuccess: completeCardPayment,
   });
 
-  const previewLines = useMemo(() => previewQuery.data?.lines ?? [], [previewQuery.data?.lines]);
-  const products = productsData?.products ?? [];
+  const cardReady = connectStatus?.chargesEnabled && connectStatus?.onboardingComplete;
 
-  const adjustProductQuantity = useCallback(
-    (productId: string, delta: number) => {
-      const current =
-        lines.find((line) => line.lineType === 'product' && line.productId === productId)?.quantity ?? 0;
-      const next = current + delta;
-      if (next <= 0) {
-        setProductQuantity(productId, 0);
-        return;
-      }
-      const product = products.find((item) => item.id === productId);
-      if (product?.trackInventory && next > product.stockQuantity) {
-        toast.error(`Only ${product.stockQuantity} in stock`);
-        return;
-      }
-      setProductQuantity(productId, next);
-    },
-    [lines, products, setProductQuantity],
-  );
+  const previewByAppointmentId = useMemo(() => {
+    const map: Record<string, NonNullable<typeof previewQuery.data>['appointments'][number]> = {};
+    for (const entry of previewQuery.data?.appointments ?? []) {
+      map[entry.appointmentId] = entry;
+    }
+    return map;
+  }, [previewQuery.data]);
 
-  const productQuantities = useMemo(() => {
+  const pickerQuantities = useMemo(() => {
+    if (!productPickerFor) return {};
     const quantities: Record<string, number> = {};
-    for (const line of lines) {
-      if (line.lineType === 'product' && line.productId) {
-        quantities[line.productId] = line.quantity;
-      }
+    for (const line of productLines[productPickerFor] ?? []) {
+      if (line.productId) quantities[line.productId] = line.quantity;
     }
     return quantities;
-  }, [lines]);
-
-  const productLineCount = useMemo(
-    () => Object.values(productQuantities).reduce((sum, qty) => sum + qty, 0),
-    [productQuantities],
-  );
-
-  const customerName = appointmentInfo?.customer
-    ? `${appointmentInfo.customer.firstName} ${appointmentInfo.customer.lastName}`
-    : 'Complete sale';
-
-  const goBack = () => {
-    if (step === 'tip') {
-      setStep('items');
-    }
-  };
-
-  const renderLineItem = (
-    line: (typeof previewLines)[number],
-    options: { editable: boolean },
-  ) => (
-    <div
-      key={
-        line.lineType === 'product'
-          ? `product-${line.productId}`
-          : `service-${line.serviceId ?? line.description}`
-      }
-      className="flex items-center justify-between gap-3 rounded-lg border border-stone-200 bg-white px-3 py-2.5 text-sm dark:border-stone-700 dark:bg-stone-800"
-    >
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-medium text-stone-900 dark:text-stone-100">{line.description}</p>
-        {line.quantity > 1 && (
-          <p className={cn('text-xs', sectionMutedClass)}>
-            {formatCurrency(line.unitPriceCents)} each
-          </p>
-        )}
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
-        {options.editable && line.lineType === 'product' && line.productId ? (
-          <div className="flex items-center gap-1">
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="h-7 w-7"
-              disabled={line.quantity <= 0}
-              onClick={() => adjustProductQuantity(line.productId!, -1)}
-              aria-label={`Remove one ${line.description}`}
-            >
-              <Minus className="h-3.5 w-3.5" />
-            </Button>
-            <span className="w-6 text-center text-sm font-medium tabular-nums">{line.quantity}</span>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="h-7 w-7"
-              disabled={(() => {
-                const product = products.find((item) => item.id === line.productId);
-                return !!product?.trackInventory && line.quantity >= product.stockQuantity;
-              })()}
-              onClick={() => adjustProductQuantity(line.productId!, 1)}
-              aria-label={`Add one ${line.description}`}
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        ) : (
-          <span className="text-sm text-stone-500 dark:text-stone-400">× {line.quantity}</span>
-        )}
-        <span className="min-w-[4rem] text-right font-semibold tabular-nums">
-          {formatCurrency(line.lineTotalCents)}
-        </span>
-      </div>
-    </div>
-  );
+  }, [productPickerFor, productLines]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -321,9 +221,10 @@ export function AppointmentCheckoutSheet({
       >
         <div className="flex h-[100dvh] flex-col text-stone-900 dark:text-stone-100">
           <SheetHeader className="shrink-0 border-b border-stone-200 px-6 py-4 pr-14 dark:border-stone-800">
-            <SheetTitle className="text-xl">Checkout</SheetTitle>
-            <SheetDescription>{customerName}</SheetDescription>
-            <CheckoutStepIndicator step={step} />
+            <SheetTitle className="text-xl">Batch checkout</SheetTitle>
+            <SheetDescription>
+              {items.length} appointment{items.length === 1 ? '' : 's'} · one combined payment
+            </SheetDescription>
           </SheetHeader>
 
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
@@ -335,47 +236,104 @@ export function AppointmentCheckoutSheet({
             )}
 
             {!previewQuery.isLoading && step === 'items' && (
-              <div className="space-y-5">
-                <section>
-                  <h4 className={cn('mb-2', sectionHeadingClass)}>Order</h4>
-                  <p className={cn('mb-3', sectionMutedClass)}>
-                    Review the service and add any retail products for this sale.
-                  </p>
-                  {previewLines.length > 0 ? (
-                    <div className="space-y-2">{previewLines.map((line) => renderLineItem(line, { editable: true }))}</div>
-                  ) : (
-                    <p className={cn('rounded-lg border border-dashed border-stone-200 px-4 py-8 text-center text-sm dark:border-stone-700', sectionMutedClass)}>
-                      No line items yet.
-                    </p>
-                  )}
-                </section>
+              <div className="space-y-6">
+                {items.map((item) => {
+                  const entry = previewByAppointmentId[item.appointmentId];
+                  const appointmentProducts = productLines[item.appointmentId] ?? [];
+                  const productCount = appointmentProducts.reduce((sum, line) => sum + line.quantity, 0);
 
-                <section>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setProductPickerOpen(true)}
-                    disabled={products.length === 0}
-                    className="w-full sm:w-auto"
-                  >
-                    <PackagePlus className="h-4 w-4" />
-                    {productLineCount > 0
-                      ? `Edit products (${productLineCount})`
-                      : 'Add products'}
-                  </Button>
-                  {products.length === 0 && (
-                    <p className={cn('mt-2 text-xs', sectionMutedClass)}>
-                      No active products. Add products in Settings to sell retail at checkout.
-                    </p>
-                  )}
-                </section>
+                  return (
+                    <section
+                      key={item.appointmentId}
+                      className="rounded-xl border border-stone-200 p-4 dark:border-stone-700"
+                    >
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <h4 className={cn('truncate', sectionHeadingClass)}>{item.customerName}</h4>
+                          <p className={cn('truncate text-xs', sectionMutedClass)}>{item.serviceName}</p>
+                        </div>
+                        {entry && (
+                          <span className="shrink-0 text-sm font-semibold tabular-nums">
+                            {formatCurrency(entry.subtotalCents)}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        {(entry?.lines ?? []).map((line) => (
+                          <div
+                            key={line.lineType === 'product' ? `product-${line.productId}` : `service-${line.serviceId ?? line.description}`}
+                            className="flex items-center justify-between gap-3 rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-800"
+                          >
+                            <span className="min-w-0 flex-1 truncate">{line.description}</span>
+                            <div className="flex shrink-0 items-center gap-2">
+                              {line.lineType === 'product' && line.productId ? (
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={() => adjustProductQuantity(item.appointmentId, line.productId!, -1)}
+                                    aria-label={`Remove one ${line.description}`}
+                                  >
+                                    <Minus className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <span className="w-6 text-center text-sm font-medium tabular-nums">{line.quantity}</span>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={() => adjustProductQuantity(item.appointmentId, line.productId!, 1)}
+                                    aria-label={`Add one ${line.description}`}
+                                  >
+                                    <Plus className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <span className={cn('text-sm', sectionMutedClass)}>× {line.quantity}</span>
+                              )}
+                              <span className="min-w-[3.5rem] text-right font-medium tabular-nums">
+                                {formatCurrency(line.lineTotalCents)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="mt-3"
+                        onClick={() => setProductPickerFor(item.appointmentId)}
+                        disabled={products.length === 0}
+                      >
+                        <PackagePlus className="h-4 w-4" />
+                        {productCount > 0 ? `Edit products (${productCount})` : 'Add products'}
+                      </Button>
+                    </section>
+                  );
+                })}
               </div>
             )}
 
             {!previewQuery.isLoading && step === 'tip' && previewQuery.data && (
               <div className="mx-auto max-w-md space-y-6">
                 <section className="rounded-xl border border-stone-200 bg-stone-50 p-4 text-sm dark:border-stone-700 dark:bg-stone-900">
-                  <div className={cn('flex justify-between', sectionMutedClass)}>
+                  {previewQuery.data.appointments.map((entry) => {
+                    const item = items.find((i) => i.appointmentId === entry.appointmentId);
+                    return (
+                      <div key={entry.appointmentId} className={cn('flex justify-between', sectionMutedClass)}>
+                        <span className="truncate">{item?.customerName ?? 'Appointment'}</span>
+                        <span className="tabular-nums text-stone-900 dark:text-stone-100">
+                          {formatCurrency(entry.subtotalCents)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                  <div className={cn('mt-2 flex justify-between border-t border-stone-200 pt-2 dark:border-stone-700', sectionMutedClass)}>
                     <span>Subtotal</span>
                     <span className="tabular-nums text-stone-900 dark:text-stone-100">
                       {formatCurrency(previewQuery.data.subtotalCents)}
@@ -383,9 +341,7 @@ export function AppointmentCheckoutSheet({
                   </div>
                   <div className={cn('mt-2 flex justify-between', sectionMutedClass)}>
                     <span>Tip</span>
-                    <span className="tabular-nums text-stone-900 dark:text-stone-100">
-                      {formatCurrency(tipCents)}
-                    </span>
+                    <span className="tabular-nums text-stone-900 dark:text-stone-100">{formatCurrency(tipCents)}</span>
                   </div>
                   <div className="mt-3 flex justify-between border-t border-stone-200 pt-3 text-lg font-semibold dark:border-stone-700">
                     <span>Total</span>
@@ -505,14 +461,12 @@ export function AppointmentCheckoutSheet({
             )}
           </div>
 
-          {step !== 'tip' && (
-            <footer className="shrink-0 border-t border-stone-200 bg-white px-6 py-4 dark:border-stone-800 dark:bg-stone-900">
+          <footer className="shrink-0 border-t border-stone-200 bg-white px-6 py-4 dark:border-stone-800 dark:bg-stone-900">
+            {step === 'items' ? (
               <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
-                {previewQuery.data && (
-                  <p className="text-sm font-medium tabular-nums text-stone-900 dark:text-stone-100">
-                    Subtotal {formatCurrency(previewQuery.data.subtotalCents)}
-                  </p>
-                )}
+                <p className="text-sm font-medium tabular-nums text-stone-900 dark:text-stone-100">
+                  {previewQuery.data ? `Subtotal ${formatCurrency(previewQuery.data.subtotalCents)}` : ''}
+                </p>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <Button
                     type="button"
@@ -534,26 +488,29 @@ export function AppointmentCheckoutSheet({
                   </Button>
                 </div>
               </div>
-            </footer>
-          )}
-
-          {step === 'tip' && (
-            <footer className="shrink-0 border-t border-stone-200 bg-white px-6 py-4 dark:border-stone-800 dark:bg-stone-900">
-              <Button type="button" variant="ghost" onClick={goBack} className="w-full sm:w-auto">
+            ) : (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setStep('items')}
+                className="w-full sm:w-auto"
+              >
                 <ChevronLeft className="h-4 w-4" />
                 Back to order
               </Button>
-            </footer>
-          )}
+            )}
+          </footer>
         </div>
       </SheetContent>
 
       <CheckoutProductPickerDialog
-        open={productPickerOpen}
-        onOpenChange={setProductPickerOpen}
+        open={productPickerFor !== null}
+        onOpenChange={(open) => !open && setProductPickerFor(null)}
         products={products}
-        quantitiesByProductId={productQuantities}
-        onSetProductQuantity={setProductQuantity}
+        quantitiesByProductId={pickerQuantities}
+        onSetProductQuantity={(productId, quantity) =>
+          productPickerFor && setProductQuantity(productPickerFor, productId, quantity)
+        }
       />
 
       <Dialog open={cashConfirmOpen} onOpenChange={setCashConfirmOpen}>
@@ -561,7 +518,7 @@ export function AppointmentCheckoutSheet({
           <DialogHeader>
             <DialogTitle>Confirm cash payment</DialogTitle>
             <DialogDescription>
-              Mark this sale as paid in cash for{' '}
+              Mark {items.length} appointment{items.length === 1 ? '' : 's'} as paid in cash for{' '}
               <span className="font-semibold text-stone-900 dark:text-stone-100">
                 {formatCurrency(subtotalCents)}
               </span>

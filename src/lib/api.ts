@@ -20,6 +20,8 @@ import type {
   RecurringAppointmentRule,
   RecurringFrequency,
   Product,
+  BatchCheckoutAppointmentInput,
+  BatchCheckoutPreview,
   CheckoutLineInput,
   CheckoutPreview,
   StripeConnectStatus,
@@ -102,6 +104,12 @@ export const authApi = {
   login: (email: string, password: string) =>
     apiClient.post<LoginResponse>('/auth/login', { email, password }).then((r) => r.data),
   me: () => apiClient.get<AuthUser>('/auth/me').then((r) => r.data),
+  setPassword: (token: string, password: string) =>
+    apiClient.post<LoginResponse>('/auth/set-password', { token, password }).then((r) => r.data),
+  forgotPassword: (email: string) =>
+    apiClient.post<{ message: string }>('/auth/forgot-password', { email }).then((r) => r.data),
+  switchOrganization: (organizationId: string) =>
+    apiClient.post<LoginResponse>('/auth/switch-organization', { organizationId }).then((r) => r.data),
 };
 
 export const ownerApi = {
@@ -154,7 +162,7 @@ export const orgApi = {
     apiClient.get<{ organization: Organization }>(`/organizations/${orgId}`).then((r) => r.data),
   getPlan: (orgId: string) =>
     apiClient.get<{ plan: OrgPlanFeatures }>(`/organizations/${orgId}/plan`).then((r) => r.data),
-  updateOrganization: (orgId: string, data: Pick<Partial<Organization>, 'name' | 'publicBookingEnabled'>) =>
+  updateOrganization: (orgId: string, data: Pick<Partial<Organization>, 'name' | 'publicBookingEnabled' | 'batchCheckoutEnabled' | 'emailRemindersOptIn' | 'smsRemindersOptIn' | 'emailReminderHoursBefore' | 'smsReminderHoursBefore' | 'city' | 'address' | 'phone'>) =>
     apiClient.patch<{ organization: Organization }>(`/organizations/${orgId}`, data).then((r) => r.data),
   getWebsite: (orgId: string) =>
     apiClient.get<WebsiteSettingsResponse>(`/organizations/${orgId}/website`).then((r) => r.data),
@@ -176,18 +184,9 @@ export const orgApi = {
   updateAccount: (
     orgId: string,
     accountId: string,
-    data: Partial<
-      CreateAccountInput & {
-        status: 'active' | 'inactive';
-        password?: string;
-      }
-    >,
+    data: Partial<CreateAccountInput & { status: 'active' | 'inactive' }>,
   ) =>
     apiClient.patch<{ account: Account }>(`/organizations/${orgId}/accounts/${accountId}`, data).then((r) => r.data),
-  setAccountPassword: (orgId: string, accountId: string, password: string) =>
-    apiClient
-      .post<{ account: Account }>(`/organizations/${orgId}/accounts/${accountId}/set-password`, { password })
-      .then((r) => r.data),
   deleteAccount: (orgId: string, accountId: string) =>
     apiClient.delete(`/organizations/${orgId}/accounts/${accountId}`).then((r) => r.data),
 
@@ -351,12 +350,57 @@ export const orgApi = {
     apiClient
       .post(`/organizations/${orgId}/appointments/${appointmentId}/checkout/cash`, data)
       .then((r) => r.data),
-  checkoutCard: (orgId: string, appointmentId: string, data: { lines: CheckoutLineInput[]; tipCents: number }) =>
+  checkoutCard: (
+    orgId: string,
+    appointmentId: string,
+    data: { lines: CheckoutLineInput[]; tipCents: number; mode?: 'terminal' | 'online' },
+  ) =>
     apiClient
-      .post<{ saleId: string; paymentIntentId: string; clientSecret: string; totalCents: number }>(
-        `/organizations/${orgId}/appointments/${appointmentId}/checkout/card`,
+      .post<{
+        saleId: string;
+        paymentIntentId: string;
+        clientSecret: string;
+        stripeAccountId: string;
+        totalCents: number;
+      }>(`/organizations/${orgId}/appointments/${appointmentId}/checkout/card`, data)
+      .then((r) => r.data),
+  confirmCheckoutCard: (orgId: string, appointmentId: string, paymentIntentId: string) =>
+    apiClient
+      .post<{ confirmed: true }>(
+        `/organizations/${orgId}/appointments/${appointmentId}/checkout/card/confirm`,
+        { paymentIntentId },
+      )
+      .then((r) => r.data),
+  previewBatchCheckout: (orgId: string, data: { appointments: BatchCheckoutAppointmentInput[]; tipCents: number }) =>
+    apiClient
+      .post<BatchCheckoutPreview>(`/organizations/${orgId}/checkout/batch/preview`, data)
+      .then((r) => r.data),
+  batchCheckoutCash: (orgId: string, data: { appointments: BatchCheckoutAppointmentInput[]; tipCents: number }) =>
+    apiClient
+      .post<{ paymentGroupId: string; saleIds: string[]; totalCents: number }>(
+        `/organizations/${orgId}/checkout/batch/cash`,
         data,
       )
+      .then((r) => r.data),
+  batchCheckoutCard: (
+    orgId: string,
+    data: { appointments: BatchCheckoutAppointmentInput[]; tipCents: number; mode?: 'terminal' | 'online' },
+  ) =>
+    apiClient
+      .post<{
+        paymentGroupId: string;
+        saleIds: string[];
+        paymentIntentId: string;
+        clientSecret: string;
+        stripeAccountId: string;
+        totalCents: number;
+      }>(`/organizations/${orgId}/checkout/batch/card`, data)
+      .then((r) => r.data),
+  confirmBatchCheckoutCard: (orgId: string, paymentIntentId: string) =>
+    apiClient
+      .post<{ confirmed: true }>(`/organizations/${orgId}/checkout/batch/card/confirm`, {
+        paymentIntentId,
+      })
       .then((r) => r.data),
 
   getStripeConnectStatus: (orgId: string) =>

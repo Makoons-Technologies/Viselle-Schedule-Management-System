@@ -22,7 +22,6 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { LoadingState } from '@/components/common/LoadingState';
 import { Panel, sectionHeadingClass, sectionMutedClass } from '@/components/common/Panel';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 function formatFrequency(rule: RecurringAppointmentRule): string {

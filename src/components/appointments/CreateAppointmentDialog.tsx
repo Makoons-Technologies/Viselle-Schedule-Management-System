@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 import { orgApi } from '@/lib/api';
 import {
+  customerContactChanged,
   customerDisplayName,
   findExistingCustomerMatch,
 } from '@/lib/customers';
@@ -286,12 +287,18 @@ export function CreateAppointmentDialog({
       phone: pending.data.phone,
     });
 
-    if (match && match.customer.id !== selectedCustomerId) {
-      setMergeConfirm({
-        customer: match.customer,
-        matchedBy: match.matchedBy,
-        pending,
-      });
+    // Reuse existing customer silently when contact details match.
+    // Only ask to update when the form would change their on-file data.
+    if (match) {
+      if (customerContactChanged(match.customer, pending.data)) {
+        setMergeConfirm({
+          customer: match.customer,
+          matchedBy: match.matchedBy,
+          pending,
+        });
+        return;
+      }
+      submitAppointment(pending, match.customer.id);
       return;
     }
 

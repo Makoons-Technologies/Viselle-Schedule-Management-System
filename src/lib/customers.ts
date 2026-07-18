@@ -66,3 +66,20 @@ export function findExistingCustomerMatch(
 
   return null;
 }
+
+/** True when form contact fields differ from the existing customer record. */
+export function customerContactChanged(
+  customer: Customer,
+  input: { firstName: string; lastName: string; email?: string; phone?: string },
+): boolean {
+  if (customer.firstName.trim() !== input.firstName.trim()) return true;
+  if (customer.lastName.trim() !== input.lastName.trim()) return true;
+
+  const inputEmail = normalizeEmail(input.email ?? '');
+  const existingEmail = customer.email ? normalizeEmail(customer.email) : '';
+  if (inputEmail !== existingEmail) return true;
+
+  const inputPhone = normalizePhone(input.phone ?? '');
+  const existingPhone = customer.phone ? normalizePhone(customer.phone) : '';
+  return inputPhone !== existingPhone;
+}

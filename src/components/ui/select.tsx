@@ -34,7 +34,8 @@ export const SelectContent = forwardRef<
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
-        'relative z-50 max-h-60 min-w-[8rem] overflow-hidden rounded-lg border border-stone-200 bg-white shadow-md dark:border-stone-700 dark:bg-stone-900',
+        // Above Dialog (z-60) / Sheet (z-50) so menus are visible when portaled.
+        'relative z-[70] max-h-60 min-w-[8rem] overflow-hidden rounded-lg border border-stone-200 bg-white shadow-md dark:border-stone-700 dark:bg-stone-900',
         className,
       )}
       position={position}

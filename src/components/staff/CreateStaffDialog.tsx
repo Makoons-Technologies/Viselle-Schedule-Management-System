@@ -13,13 +13,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 
-const passwordField = z
-  .string()
-  .optional()
-  .refine((value) => !value || value.trim().length === 0 || value.trim().length >= 6, {
-    message: 'Password must be at least 6 characters',
-  });
-
 const schema = z.object({
   firstName: z.string().min(1, 'Required'),
   lastName: z.string().min(1, 'Required'),
@@ -28,7 +21,6 @@ const schema = z.object({
   role: z.enum(['admin', 'staff']),
   isBookable: z.boolean(),
   status: z.enum(['active', 'inactive']),
-  password: passwordField,
 });
 
 type FormData = z.infer<typeof schema>;
@@ -61,16 +53,14 @@ export function CreateStaffDialog({ orgId, open, onOpenChange, account }: Create
         role: account.role === 'admin' ? 'admin' : 'staff',
         isBookable: account.isBookable,
         status: account.status === 'inactive' ? 'inactive' : 'active',
-        password: '',
       });
       return;
     }
-    reset({ role: 'staff', isBookable: true, status: 'active', firstName: '', lastName: '', email: '', phone: '', password: '' });
+    reset({ role: 'staff', isBookable: true, status: 'active', firstName: '', lastName: '', email: '', phone: '' });
   }, [open, account, reset]);
 
   const mutation = useMutation({
     mutationFn: (data: FormData) => {
-      const password = data.password?.trim() ? data.password : undefined;
       const payload = {
         firstName: data.firstName,
         lastName: data.lastName,
@@ -78,27 +68,22 @@ export function CreateStaffDialog({ orgId, open, onOpenChange, account }: Create
         phone: data.phone?.trim() || undefined,
         isBookable: data.isBookable,
         ...(isEditing
-          ? {
-              ...(isOrgOwner
-                ? {}
-                : {
-                    role: data.role,
-                    status: data.status,
-                  }),
-              password,
-            }
-          : {
-              role: data.role,
-              password,
-            }),
+          ? isOrgOwner
+            ? {}
+            : { role: data.role, status: data.status }
+          : { role: data.role ?? 'staff' }),
       };
 
       return isEditing
         ? orgApi.updateAccount(orgId, account!.id, payload)
-        : orgApi.createAccount(orgId, payload);
+        : orgApi.createAccount(orgId, { ...payload, role: data.role ?? 'staff' });
     },
     onSuccess: () => {
-      toast.success(isEditing ? 'Staff member updated' : 'Staff member created');
+      toast.success(
+        isEditing
+          ? 'Staff member updated'
+          : 'Staff member created — they will receive an email to set their password',
+      );
       queryClient.invalidateQueries({ queryKey: ['accounts', orgId] });
       onOpenChange(false);
     },
@@ -166,25 +151,16 @@ export function CreateStaffDialog({ orgId, open, onOpenChange, account }: Create
             <Switch checked={watch('isBookable')} onCheckedChange={(v) => setValue('isBookable', v)} />
             <Label>Bookable for appointments</Label>
           </div>
-          {!isOrgOwner && (
-            <div>
-              <Label htmlFor="staff-password">
-                {isEditing ? 'New password (optional)' : 'Login password (optional)'}
-              </Label>
-              <Input
-                id="staff-password"
-                type="password"
-                autoComplete="new-password"
-                placeholder={isEditing && account?.userId ? 'Leave blank to keep current password' : undefined}
-                {...register('password')}
-              />
-              <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
-                {isEditing
-                  ? 'Set or reset their sign-in password. Their login email matches the email above.'
-                  : 'Set a password so they can sign in to view their schedule.'}
-              </p>
-              {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password.message}</p>}
-            </div>
+          {!isEditing && (
+            <p className="text-sm text-stone-500 dark:text-stone-400">
+              An email invite will be sent so they can set their own password and sign in.
+              If they already have a Viselle account, they will be added to this organization.
+            </p>
+          )}
+          {isEditing && !isOrgOwner && (
+            <p className="text-sm text-stone-500 dark:text-stone-400">
+              Staff manage their own password from the sign-in page.
+            </p>
           )}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
