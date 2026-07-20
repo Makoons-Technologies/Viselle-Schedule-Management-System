@@ -128,8 +128,17 @@ export function getManageBookingUrl(slug: string, managementToken: string): stri
 }
 
 export function getBookingPageUrl(slug: string): string {
-  const base = (import.meta.env.VITE_BOOKING_BASE_URL as string | undefined) ?? window.location.origin;
+  const configured = (import.meta.env.VITE_BOOKING_BASE_URL as string | undefined)?.trim();
+  const base = configured || window.location.origin;
   return `${base.replace(/\/$/, '')}/book/${slug}`;
+}
+
+/** Prefer the live app origin when the API still returns a localhost booking URL. */
+export function resolvePathBookingUrl(apiUrl: string | undefined | null, slug: string): string {
+  if (apiUrl && !/localhost|127\.0\.0\.1/i.test(apiUrl)) {
+    return apiUrl.replace(/\/$/, '');
+  }
+  return getBookingPageUrl(slug);
 }
 
 export { getSubdomainBookingUrl } from '@/lib/subdomain-booking';

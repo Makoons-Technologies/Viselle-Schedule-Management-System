@@ -1,5 +1,5 @@
 const SITES_BASE_DOMAIN =
-  (import.meta.env.VITE_SITES_BASE_DOMAIN as string | undefined) ?? 'sites.viselle.app';
+  (import.meta.env.VITE_SITES_BASE_DOMAIN as string | undefined) ?? 'sites.viselle.net';
 
 export function getSitesBaseDomain(): string {
   return SITES_BASE_DOMAIN;

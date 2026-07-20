@@ -89,19 +89,33 @@ export function CreateOrganizationPage() {
                 </SelectContent>
               </Select>
               {selectedTier && (
-                <p className="mt-2 text-xs text-stone-500">{selectedTier.tagline}. {selectedTier.staffLimit}.</p>
+                <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">
+                  {selectedTier.tagline}. {selectedTier.staffLimit}.
+                </p>
               )}
             </div>
-            <div className="rounded-lg border border-stone-200 bg-stone-50 p-4 space-y-3">
-              <p className="text-sm font-medium text-stone-700">Optional org owner login</p>
+            <div className="space-y-3 rounded-lg border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-900">
+              <p className="text-sm font-medium text-stone-700 dark:text-stone-200">Optional org owner login</p>
               <div>
                 <Label>Owner email</Label>
-                <Input type="email" placeholder="owner@salon.com" {...register('ownerEmail')} />
+                <Input
+                  type="email"
+                  autoComplete="off"
+                  placeholder="owner@salon.com"
+                  {...register('ownerEmail')}
+                />
               </div>
               <div>
                 <Label>Owner password</Label>
-                <Input type="text" {...register('ownerPassword')} />
-                <p className="mt-1 text-xs text-stone-500">Leave email blank to skip creating a login.</p>
+                <Input
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="At least 6 characters"
+                  {...register('ownerPassword')}
+                />
+                <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
+                  Leave email blank to skip creating a login.
+                </p>
               </div>
             </div>
             <div className="flex gap-2">

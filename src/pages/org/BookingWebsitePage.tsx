@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { orgApi, ownerApi } from '@/lib/api';
 import { contactPath } from '@/lib/contact';
-import { getBookingPageUrl, getSubdomainBookingUrl } from '@/lib/public-booking';
+import { getSubdomainBookingUrl, resolvePathBookingUrl } from '@/lib/public-booking';
 import { cn, formatDate } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
@@ -72,7 +72,7 @@ export function BookingWebsitePage() {
   const website = data.websiteSettings;
   const branding = normalizeBookingBranding(website.bookingBranding);
   const hostingMode = website.hostingMode ?? 'path';
-  const pathUrl = data.pathBookingUrl || getBookingPageUrl(data.organizationSlug);
+  const pathUrl = resolvePathBookingUrl(data.pathBookingUrl, data.organizationSlug);
   const subdomainUrl = getSubdomainBookingUrl(data.organizationSlug, data.subdomainBaseDomain);
   const liveUrl = hostingMode === 'subdomain' ? subdomainUrl : pathUrl;
 
