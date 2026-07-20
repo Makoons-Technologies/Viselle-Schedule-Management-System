@@ -40,6 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 
 const DEFAULT_TIMEZONE = 'America/New_York';
@@ -354,7 +355,7 @@ export function CreateAppointmentDialog({
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.accountId && <p className="text-xs text-red-600">Required</p>}
+                {errors.accountId && <p className="text-xs text-red-600 dark:text-red-400">Required</p>}
               </div>
               <div>
                 <Label>Service</Label>
@@ -366,7 +367,7 @@ export function CreateAppointmentDialog({
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.serviceId && <p className="text-xs text-red-600">Required</p>}
+                {errors.serviceId && <p className="text-xs text-red-600 dark:text-red-400">Required</p>}
               </div>
             </div>
 
@@ -394,7 +395,7 @@ export function CreateAppointmentDialog({
               <div>
                 <Label>Date</Label>
                 <Input type="date" min={today} {...register('date')} />
-                {errors.date && <p className="text-xs text-red-600">Required</p>}
+                {errors.date && <p className="text-xs text-red-600 dark:text-red-400">Required</p>}
               </div>
               <div>
                 <Label>Available time slot</Label>
@@ -414,9 +415,9 @@ export function CreateAppointmentDialog({
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.startTime && <p className="text-xs text-red-600">Select a time slot</p>}
+                {errors.startTime && <p className="text-xs text-red-600 dark:text-red-400">Select a time slot</p>}
                 {!slotsLoading && accountId && serviceId && date && slots.length === 0 && (
-                  <p className="mt-1 text-xs text-amber-700">
+                  <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
                     No open slots on this date. Try another day or add availability rules for this staff member.
                   </p>
                 )}
@@ -426,23 +427,22 @@ export function CreateAppointmentDialog({
               <Label>Notes</Label>
               <Textarea {...register('appointmentNotes')} />
             </div>
-            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-stone-200 p-3">
-              <input
-                type="checkbox"
-                className="mt-1 h-4 w-4 rounded border-stone-300 text-brand-600 focus:ring-brand-500"
-                checked={makeRecurring}
-                onChange={(e) => setMakeRecurring(e.target.checked)}
-                disabled={plan ? !plan.recurringAppointmentsEnabled : false}
-              />
-              <span>
-                <span className="block text-sm font-medium text-stone-900">Make recurring</span>
-                <span className="block text-xs text-stone-500">
+            <div className="flex items-start justify-between gap-4 rounded-lg border border-stone-200 px-3 py-3 dark:border-stone-700 dark:bg-stone-800/40">
+              <div className="min-w-0 flex-1">
+                <Label>Make recurring</Label>
+                <p className="text-xs text-stone-500 dark:text-stone-400">
                   {plan && !plan.recurringAppointmentsEnabled
                     ? 'Upgrade to Professional or Business to schedule repeating appointments.'
                     : 'Generate future appointments on a repeating schedule.'}
-                </span>
-              </span>
-            </label>
+                </p>
+              </div>
+              <Switch
+                checked={makeRecurring}
+                onCheckedChange={setMakeRecurring}
+                disabled={plan ? !plan.recurringAppointmentsEnabled : false}
+                aria-label="Make recurring"
+              />
+            </div>
             {makeRecurring && plan?.recurringAppointmentsEnabled && (
               <RecurringOptionsFields
                 compact

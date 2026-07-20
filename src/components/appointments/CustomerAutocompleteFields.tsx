@@ -176,20 +176,20 @@ export function CustomerAutocompleteFields({
       </div>
 
       {showSuggestions && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-56 overflow-y-auto rounded-lg border border-stone-200 bg-white py-1 shadow-lg">
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-56 overflow-y-auto rounded-lg border border-stone-200 bg-white py-1 shadow-lg dark:border-stone-700 dark:bg-stone-900">
           {suggestions.map((customer) => (
             <button
               key={customer.id}
               type="button"
               className={cn(
-                'flex w-full flex-col items-start px-3 py-2 text-left text-sm hover:bg-stone-50',
-                selectedCustomerId === customer.id && 'bg-brand-50',
+                'flex w-full flex-col items-start px-3 py-2 text-left text-sm hover:bg-stone-50 dark:hover:bg-stone-800',
+                selectedCustomerId === customer.id && 'bg-brand-50 dark:bg-brand-950',
               )}
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => handleSelect(customer)}
             >
-              <span className="font-medium text-stone-900">{customerDisplayName(customer)}</span>
-              <span className="text-xs text-stone-500">
+              <span className="font-medium text-stone-900 dark:text-stone-100">{customerDisplayName(customer)}</span>
+              <span className="text-xs text-stone-500 dark:text-stone-400">
                 {[customer.email, customer.phone].filter(Boolean).join(' · ') || 'No contact info'}
               </span>
             </button>

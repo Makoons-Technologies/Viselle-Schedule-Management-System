@@ -40,9 +40,9 @@ export function RecurringOptionsFields({
   compact = false,
 }: RecurringOptionsFieldsProps) {
   return (
-    <div className={cn('space-y-4', compact ? 'rounded-lg border border-stone-200 bg-stone-50 p-4' : undefined)}>
+    <div className={cn('space-y-4', compact ? 'rounded-lg border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-800/50' : undefined)}>
       {!compact && (
-        <p className="text-sm text-stone-500">
+        <p className="text-sm text-stone-500 dark:text-stone-400">
           This appointment becomes the first occurrence. Future appointments are generated automatically.
         </p>
       )}
@@ -82,8 +82,8 @@ export function RecurringOptionsFields({
                 className={cn(
                   'min-w-12 rounded-md border px-3 py-2 text-sm font-medium transition-colors',
                   selected
-                    ? 'border-brand-500 bg-brand-50 text-brand-700'
-                    : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300',
+                    ? 'border-brand-500 bg-brand-50 text-brand-700 dark:border-brand-500 dark:bg-brand-950 dark:text-brand-300'
+                    : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300 dark:border-stone-600 dark:bg-stone-900 dark:text-stone-300 dark:hover:border-stone-500',
                 )}
               >
                 {day.label}
@@ -91,7 +91,7 @@ export function RecurringOptionsFields({
             );
           })}
         </div>
-        <p className="mt-2 text-xs text-stone-500">
+        <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">
           Select one or more days. New days default to your last set time when that slot is available.
         </p>
       </div>
@@ -101,12 +101,12 @@ export function RecurringOptionsFields({
           {[...selectedDays].sort((a, b) => a - b).map((day) => (
             <div key={day} className="space-y-1">
               <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
-                <span className="text-sm text-stone-600 sm:w-24">
+                <span className="text-sm text-stone-600 dark:text-stone-300 sm:w-24">
                   {WEEKDAY_OPTIONS.find((option) => option.value === day)?.label ?? DAY_NAMES[day]}
                 </span>
                 <TimeInput
                   className={cn(
-                    'w-full max-w-none sm:max-w-40 bg-white',
+                    'w-full max-w-none bg-white sm:max-w-40 dark:bg-stone-950',
                     dayConflicts?.[day] && 'border-amber-500 focus-visible:ring-amber-500',
                   )}
                   value={dayTimes[day] ?? defaultTime}
@@ -114,7 +114,7 @@ export function RecurringOptionsFields({
                 />
               </div>
               {dayConflicts?.[day] && (
-                <p className="text-xs text-amber-700 sm:pl-24">{dayConflicts[day]}</p>
+                <p className="text-xs text-amber-700 dark:text-amber-400 sm:pl-24">{dayConflicts[day]}</p>
               )}
             </div>
           ))}
