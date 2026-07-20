@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { helperTextClass } from '@/components/common/Panel';
-import { cn } from '@/lib/utils';
+import { cn, slugify } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 
 interface OrganizationSettingsSectionProps {
@@ -18,6 +18,7 @@ interface OrganizationSettingsSectionProps {
 
 type OrgUpdatePayload = {
   name?: string;
+  slug?: string;
   publicBookingEnabled?: boolean;
   batchCheckoutEnabled?: boolean;
   emailRemindersOptIn?: boolean;
@@ -87,8 +88,26 @@ export function OrganizationSettingsSection({ orgId }: OrganizationSettingsSecti
         </div>
         <div>
           <Label>Public booking slug</Label>
-          <Input value={org.slug} disabled />
-          <p className={cn('mt-1', helperTextClass)}>Contact platform support to change your booking URL slug.</p>
+          <Input
+            key={`slug-${org.slug}-${org.updatedAt}`}
+            defaultValue={org.slug}
+            disabled={updateMutation.isPending}
+            onBlur={(e) => {
+              const next = slugify(e.target.value);
+              e.target.value = next;
+              if (!next || next.length < 2) {
+                toast.error('Slug must be at least 2 characters');
+                e.target.value = org.slug;
+                return;
+              }
+              if (next !== org.slug) {
+                updateMutation.mutate({ slug: next });
+              }
+            }}
+          />
+          <p className={cn('mt-1', helperTextClass)}>
+            Booking URL: /book/{org.slug}. Changing this breaks the old link.
+          </p>
         </div>
 
         <div className="space-y-3 border-t border-stone-200 pt-4 dark:border-stone-800">
