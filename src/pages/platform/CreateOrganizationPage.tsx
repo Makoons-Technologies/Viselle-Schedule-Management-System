@@ -20,8 +20,7 @@ const schema = z.object({
   name: z.string().min(1),
   slug: z.string().min(1),
   tier: z.enum(['starter', 'professional', 'business']),
-  ownerEmail: z.string().email().optional().or(z.literal('')),
-  ownerPassword: z.string().min(6).optional().or(z.literal('')),
+  ownerEmail: z.string().email('Enter a valid owner email'),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -31,7 +30,7 @@ export function CreateOrganizationPage() {
   const { setSelectedOrgId } = useOrg();
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { tier: 'professional', ownerEmail: '', ownerPassword: '' },
+    defaultValues: { tier: 'professional', ownerEmail: '' },
   });
 
   const name = watch('name');
@@ -43,11 +42,10 @@ export function CreateOrganizationPage() {
         name: data.name,
         slug: data.slug,
         tier: data.tier,
-        ownerEmail: data.ownerEmail || undefined,
-        ownerPassword: data.ownerPassword || undefined,
+        ownerEmail: data.ownerEmail.trim(),
       }),
     onSuccess: (result) => {
-      toast.success('Organization created');
+      toast.success('Organization created — set-password email sent to the owner');
       setSelectedOrgId(result.organization.id);
       navigate(`/orgs/${result.organization.id}/dashboard`);
     },
@@ -95,7 +93,7 @@ export function CreateOrganizationPage() {
               )}
             </div>
             <div className="space-y-3 rounded-lg border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-900">
-              <p className="text-sm font-medium text-stone-700 dark:text-stone-200">Optional org owner login</p>
+              <p className="text-sm font-medium text-stone-700 dark:text-stone-200">Org owner login</p>
               <div>
                 <Label>Owner email</Label>
                 <Input
@@ -104,17 +102,12 @@ export function CreateOrganizationPage() {
                   placeholder="owner@salon.com"
                   {...register('ownerEmail')}
                 />
-              </div>
-              <div>
-                <Label>Owner password</Label>
-                <Input
-                  type="password"
-                  autoComplete="new-password"
-                  placeholder="At least 6 characters"
-                  {...register('ownerPassword')}
-                />
+                {errors.ownerEmail && (
+                  <p className="mt-1 text-xs text-red-600">{errors.ownerEmail.message}</p>
+                )}
                 <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
-                  Leave email blank to skip creating a login.
+                  We&apos;ll email a link to set their password. Need another login in the same inbox?
+                  Use a plus tag like you+salon@gmail.com.
                 </p>
               </div>
             </div>

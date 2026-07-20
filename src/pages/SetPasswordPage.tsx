@@ -52,6 +52,8 @@ export function SetPasswordPage() {
   }
 
   if (!isLoading && isAuthenticated && user) {
+    if (user.role === 'platform_owner') return <Navigate to="/platform/dashboard" replace />;
+    if (user.role === 'org_owner') return <Navigate to={`/orgs/${user.organizationId}/dashboard`} replace />;
     return <Navigate to="/staff/schedule" replace />;
   }
 
@@ -60,9 +62,11 @@ export function SetPasswordPage() {
   const onSubmit = async (data: FormData) => {
     setSubmitting(true);
     try {
-      await completePasswordSetup(token, data.password);
+      const nextUser = await completePasswordSetup(token, data.password);
       toast.success('Password set. Welcome!');
-      navigate('/staff/schedule');
+      if (nextUser.role === 'platform_owner') navigate('/platform/dashboard');
+      else if (nextUser.role === 'org_owner') navigate(`/orgs/${nextUser.organizationId}/dashboard`);
+      else navigate('/staff/schedule');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not set password');
     } finally {
@@ -75,7 +79,7 @@ export function SetPasswordPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl text-brand-700">Set your password</CardTitle>
-          <CardDescription>Choose a password for your Viselle staff account.</CardDescription>
+          <CardDescription>Choose a password for your Viselle account.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

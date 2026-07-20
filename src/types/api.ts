@@ -433,6 +433,5 @@ export interface CreateOrganizationInput {
   slug: string;
   tier?: Exclude<SubscriptionTier, 'custom'>;
   monthlyPriceCents?: number;
-  ownerEmail?: string;
-  ownerPassword?: string;
+  ownerEmail: string;
 }
