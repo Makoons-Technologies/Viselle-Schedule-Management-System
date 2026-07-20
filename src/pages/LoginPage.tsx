@@ -25,7 +25,7 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { email: 'owner@test.com', password: 'password123' },
+    defaultValues: { email: '', password: '' },
   });
 
   if (!isLoading && isAuthenticated && user) {

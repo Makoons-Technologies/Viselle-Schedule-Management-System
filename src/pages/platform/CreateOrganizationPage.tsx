@@ -31,7 +31,7 @@ export function CreateOrganizationPage() {
   const { setSelectedOrgId } = useOrg();
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { tier: 'professional', ownerEmail: '', ownerPassword: 'password123' },
+    defaultValues: { tier: 'professional', ownerEmail: '', ownerPassword: '' },
   });
 
   const name = watch('name');

@@ -6,6 +6,7 @@ import { LoginPage } from '@/pages/LoginPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
 import { SetPasswordPage } from '@/pages/SetPasswordPage';
 import { LandingPage } from '@/pages/LandingPage';
+import { NotFoundPage } from '@/pages/NotFoundPage';
 import { ContactPage } from '@/pages/public/ContactPage';
 import { GetStartedPage } from '@/pages/GetStartedPage';
 import { GetStartedSuccessPage } from '@/pages/GetStartedSuccessPage';
@@ -146,5 +147,5 @@ export const appRoutes = [
       },
     ],
   },
-  { path: '*', element: <Navigate to="/" replace /> },
+  { path: '*', element: <NotFoundPage /> },
 ];
