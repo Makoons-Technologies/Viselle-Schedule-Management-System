@@ -21,6 +21,7 @@ import {
   recurringIntervalForFrequency,
 } from '@/components/appointments/recurring-options';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { helperTextClass } from '@/components/common/Panel';
 import { useRecurringDaySchedule } from '@/hooks/useRecurringDaySchedule';
 import { useOrgPlan } from '@/hooks/useOrgPlan';
 import { Button } from '@/components/ui/button';
@@ -430,11 +431,13 @@ export function CreateAppointmentDialog({
             <div className="flex items-start justify-between gap-4 rounded-lg border border-stone-200 px-3 py-3 dark:border-stone-700 dark:bg-stone-800/40">
               <div className="min-w-0 flex-1">
                 <Label>Make recurring</Label>
-                <p className="text-xs text-stone-500 dark:text-stone-400">
-                  {plan && !plan.recurringAppointmentsEnabled
-                    ? 'Upgrade to Professional or Business to schedule repeating appointments.'
-                    : 'Generate future appointments on a repeating schedule.'}
-                </p>
+                {!makeRecurring && (
+                  <p className={helperTextClass}>
+                    {plan && !plan.recurringAppointmentsEnabled
+                      ? 'Upgrade to Professional or Business to schedule repeating appointments.'
+                      : 'Generate future appointments on a repeating schedule.'}
+                  </p>
+                )}
               </div>
               <Switch
                 checked={makeRecurring}
@@ -462,7 +465,11 @@ export function CreateAppointmentDialog({
             )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit" disabled={mutation.isPending || !canSubmit}>
+              <Button
+                type="submit"
+                disabled={mutation.isPending || !canSubmit}
+                className="disabled:bg-brand-600/40 disabled:text-white disabled:opacity-100"
+              >
                 {makeRecurring ? 'Create Series' : 'Create'}
               </Button>
             </DialogFooter>

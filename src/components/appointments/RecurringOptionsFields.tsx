@@ -1,6 +1,7 @@
 import { X } from 'lucide-react';
 import { DAY_NAMES, WEEKDAY_OPTIONS, cn } from '@/lib/utils';
 import type { RecurringFrequency } from '@/types/api';
+import { helperTextClass, panelClassName } from '@/components/common/Panel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { TimeInput } from '@/components/ui/time-input';
@@ -40,9 +41,9 @@ export function RecurringOptionsFields({
   compact = false,
 }: RecurringOptionsFieldsProps) {
   return (
-    <div className={cn('space-y-4', compact ? 'rounded-lg border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-800/50' : undefined)}>
+    <div className={cn('space-y-4', compact && cn(panelClassName, 'rounded-lg p-4'))}>
       {!compact && (
-        <p className="text-sm text-stone-500 dark:text-stone-400">
+        <p className={helperTextClass}>
           This appointment becomes the first occurrence. Future appointments are generated automatically.
         </p>
       )}
@@ -82,8 +83,8 @@ export function RecurringOptionsFields({
                 className={cn(
                   'min-w-12 rounded-md border px-3 py-2 text-sm font-medium transition-colors',
                   selected
-                    ? 'border-brand-500 bg-brand-50 text-brand-700 dark:border-brand-500 dark:bg-brand-950 dark:text-brand-300'
-                    : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300 dark:border-stone-600 dark:bg-stone-900 dark:text-stone-300 dark:hover:border-stone-500',
+                    ? 'border-brand-500 bg-brand-50 text-brand-700 dark:border-brand-400 dark:bg-brand-950 dark:text-brand-200'
+                    : 'border-stone-300 bg-stone-100 text-stone-700 hover:border-stone-400 dark:border-stone-600 dark:bg-stone-950 dark:text-stone-200 dark:hover:border-stone-500',
                 )}
               >
                 {day.label}
@@ -91,7 +92,7 @@ export function RecurringOptionsFields({
             );
           })}
         </div>
-        <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">
+        <p className={cn('mt-2', helperTextClass)}>
           Select one or more days. New days default to your last set time when that slot is available.
         </p>
       </div>
@@ -106,7 +107,7 @@ export function RecurringOptionsFields({
                 </span>
                 <TimeInput
                   className={cn(
-                    'w-full max-w-none bg-white sm:max-w-40 dark:bg-stone-950',
+                    'w-full max-w-none sm:max-w-40',
                     dayConflicts?.[day] && 'border-amber-500 focus-visible:ring-amber-500',
                   )}
                   value={dayTimes[day] ?? defaultTime}
@@ -134,7 +135,7 @@ export function RecurringOptionsFields({
               type="button"
               variant="ghost"
               size="sm"
-              className="absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2 p-0 text-stone-500 hover:text-stone-800"
+              className="absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2 p-0 text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200"
               aria-label="Clear end date"
               onClick={() => onEndDateChange('')}
             >
