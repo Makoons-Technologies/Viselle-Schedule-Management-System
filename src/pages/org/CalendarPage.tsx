@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
 import { filterOutCancelled, useHideCancelledAppointments } from '@/hooks/useHideCancelledAppointments';
+import { useStaffPermissions } from '@/hooks/useStaffPermissions';
 import { AppointmentDetailSheet } from '@/components/appointments/AppointmentDetailSheet';
 import { BatchCheckoutSheet, type BatchCheckoutItem } from '@/components/appointments/BatchCheckoutSheet';
 import { CreateAppointmentDialog } from '@/components/appointments/CreateAppointmentDialog';
@@ -23,6 +24,7 @@ import { Button } from '@/components/ui/button';
 export function CalendarPage() {
   const orgId = useOrgId();
   const { user } = useAuth();
+  const { permissions } = useStaffPermissions(orgId);
   const queryClient = useQueryClient();
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 0 }));
   const [selectedAppointment, setSelectedAppointment] = useState<{
@@ -74,7 +76,8 @@ export function CalendarPage() {
     enabled: !!orgId,
   });
 
-  const batchCheckoutEnabled = orgData?.organization.batchCheckoutEnabled ?? false;
+  const batchCheckoutEnabled =
+    (orgData?.organization.batchCheckoutEnabled ?? false) && permissions.canBatchCheckout;
 
   const activeRecurringRuleIds = useMemo(
     () =>
@@ -150,7 +153,9 @@ export function CalendarPage() {
                 </Button>
               )
             )}
-            <Button onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" /> New Appointment</Button>
+            {permissions.canCreateAppointments && (
+              <Button onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" /> New Appointment</Button>
+            )}
           </div>
         }
       />

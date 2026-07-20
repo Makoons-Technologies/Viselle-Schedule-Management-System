@@ -4,6 +4,7 @@ import { SettingsBackHeader } from '@/components/settings/SettingsBackHeader';
 import { panelClassName } from '@/components/common/Panel';
 import { getOrgSettingsHubGroups } from '@/components/layout/org-navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useOrgAdminAccess } from '@/hooks/useOrgAdminAccess';
 import { useOrgId } from '@/hooks/useOrgId';
 import { cn } from '@/lib/utils';
 
@@ -12,7 +13,11 @@ export function SettingsHubPage() {
   const { user } = useAuth();
   const orgBase = `/orgs/${orgId}`;
   const showAdmin = user?.role === 'org_owner' || user?.role === 'platform_owner';
-  const groups = getOrgSettingsHubGroups(orgBase, { showAdminSettings: showAdmin });
+  const showStaffPermissions = useOrgAdminAccess(orgId);
+  const groups = getOrgSettingsHubGroups(orgBase, {
+    showAdminSettings: showAdmin,
+    showStaffPermissions,
+  });
 
   return (
     <div className="mx-auto max-w-lg">

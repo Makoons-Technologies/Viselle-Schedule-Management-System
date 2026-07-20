@@ -9,6 +9,7 @@ import {
   Package,
   Repeat,
   Scissors,
+  Shield,
   Settings,
   Users,
   UserCircle,
@@ -31,13 +32,19 @@ export interface SettingsHubGroup {
 
 export function getOrgSettingsHubGroups(
   orgBase: string,
-  options: { showAdminSettings: boolean },
+  options: { showAdminSettings: boolean; showStaffPermissions?: boolean },
 ): SettingsHubGroup[] {
   const groups: SettingsHubGroup[] = [
     {
       items: [{ label: 'General', to: `${orgBase}/settings/general`, icon: Settings }],
     },
   ];
+
+  if (options.showStaffPermissions) {
+    groups.push({
+      items: [{ label: 'Staff permissions', to: `${orgBase}/settings/staff-permissions`, icon: Shield }],
+    });
+  }
 
   if (options.showAdminSettings) {
     groups.push({

@@ -7,6 +7,24 @@ export type BillingStatus = 'active' | 'past_due' | 'failed' | 'cancelled' | 'tr
 export type AccountRole = 'org_owner' | 'admin' | 'staff';
 export type AccountStatus = 'active' | 'inactive' | 'deleted';
 
+export interface StaffPermissions {
+  canManageOwnSchedule: boolean;
+  canCreateAppointments: boolean;
+  canCancelAppointments: boolean;
+  canManageVisitPayment: boolean;
+  canAddCheckoutProducts: boolean;
+  canBatchCheckout: boolean;
+}
+
+export const DEFAULT_STAFF_PERMISSIONS: StaffPermissions = {
+  canManageOwnSchedule: true,
+  canCreateAppointments: true,
+  canCancelAppointments: true,
+  canManageVisitPayment: true,
+  canAddCheckoutProducts: true,
+  canBatchCheckout: true,
+};
+
 export type AvailabilityExceptionType = 'available' | 'unavailable' | 'blocked';
 
 export type VisitStatus = 'scheduled' | 'arrived' | 'missed' | 'cancelled';
@@ -79,6 +97,12 @@ export interface Organization {
   nextPaymentDueAt?: string | null;
   publicBookingEnabled: boolean;
   batchCheckoutEnabled: boolean;
+  staffCanManageOwnSchedule: boolean;
+  staffCanCreateAppointments: boolean;
+  staffCanCancelAppointments: boolean;
+  staffCanManageVisitPayment: boolean;
+  staffCanAddCheckoutProducts: boolean;
+  staffCanBatchCheckout: boolean;
   emailRemindersOptIn: boolean;
   smsRemindersOptIn: boolean;
   emailReminderHoursBefore: number;

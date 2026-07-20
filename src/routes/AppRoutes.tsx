@@ -34,8 +34,10 @@ import { SettingsDetailLayout } from '@/pages/org/settings/SettingsDetailLayout'
 import { GeneralSettingsPage } from '@/pages/org/settings/GeneralSettingsPage';
 import { OrgSettingsPage } from '@/pages/org/settings/OrgSettingsPage';
 import { PaymentsSettingsPage } from '@/pages/org/settings/PaymentsSettingsPage';
+import { StaffPermissionsSettingsPage } from '@/pages/org/settings/StaffPermissionsSettingsPage';
 import { RecurringPage } from '@/pages/org/RecurringPage';
 import { StaffAppointmentsPage } from '@/pages/staff/StaffAppointmentsPage';
+import { StaffAdminPermissionsPage } from '@/pages/staff/StaffAdminPermissionsPage';
 import { StaffAvailabilityPage } from '@/pages/staff/StaffAvailabilityPage';
 import type { UserRole } from '@/types/api';
 
@@ -125,6 +127,7 @@ export const appRoutes = [
                               { path: 'services', element: <ServicesPage /> },
                               { path: 'products', element: <ProductsPage /> },
                               { path: 'payments', element: <PaymentsSettingsPage /> },
+                              { path: 'staff-permissions', element: <StaffPermissionsSettingsPage /> },
                             ],
                           },
                         ],
@@ -141,6 +144,7 @@ export const appRoutes = [
               { path: '/staff/schedule', element: <MySchedulePage /> },
               { path: '/staff/appointments', element: <StaffAppointmentsPage /> },
               { path: '/staff/availability', element: <StaffAvailabilityPage /> },
+              { path: '/staff/settings/staff-permissions', element: <StaffAdminPermissionsPage /> },
             ],
           },
         ],

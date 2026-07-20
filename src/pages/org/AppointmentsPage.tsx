@@ -11,6 +11,7 @@ import { formatDateTime } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 
 import { useOrgId } from '@/hooks/useOrgId';
+import { useStaffPermissions } from '@/hooks/useStaffPermissions';
 
 import type { Appointment, Account, Customer, Service } from '@/types/api';
 
@@ -160,6 +161,7 @@ function filterAppointments(
 export function AppointmentsPage() {
 
   const orgId = useOrgId();
+  const { permissions } = useStaffPermissions(orgId);
 
   const { user } = useAuth();
 
@@ -308,13 +310,11 @@ export function AppointmentsPage() {
         description="Manage organization appointments"
 
         actions={
-
-          <Button onClick={() => setCreateOpen(true)}>
-
-            <Plus className="h-4 w-4" /> New
-
-          </Button>
-
+          permissions.canCreateAppointments ? (
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="h-4 w-4" /> New
+            </Button>
+          ) : undefined
         }
 
       />
@@ -376,13 +376,9 @@ export function AppointmentsPage() {
           description={empty.description}
 
           action={
-
-            showAll && !search ? (
-
+            showAll && !search && permissions.canCreateAppointments ? (
               <Button onClick={() => setCreateOpen(true)}>Create Appointment</Button>
-
             ) : undefined
-
           }
 
         />

@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 import { Badge } from '@/components/ui/badge';
+import { useStaffPermissions } from '@/hooks/useStaffPermissions';
 
 
 
@@ -55,6 +56,7 @@ export function AppointmentDetailSheet({
 }: AppointmentDetailSheetProps) {
 
   const queryClient = useQueryClient();
+  const { permissions } = useStaffPermissions(orgId);
 
   const [recurringOpen, setRecurringOpen] = useState(false);
 
@@ -346,7 +348,7 @@ export function AppointmentDetailSheet({
             )}
 
             <div className="flex flex-wrap gap-2">
-              {data.appointment.visitStatus === 'scheduled' && (
+              {permissions.canManageVisitPayment && data.appointment.visitStatus === 'scheduled' && (
                 <>
                   <Button
                     size="sm"
@@ -366,7 +368,9 @@ export function AppointmentDetailSheet({
                 </>
               )}
 
-              {data.appointment.visitStatus === 'arrived' && data.appointment.paymentStatus === 'unpaid' && (
+              {permissions.canManageVisitPayment &&
+                data.appointment.visitStatus === 'arrived' &&
+                data.appointment.paymentStatus === 'unpaid' && (
                 <>
                   <Button size="sm" onClick={() => setCheckoutOpen(true)}>
                     Checkout
@@ -383,65 +387,41 @@ export function AppointmentDetailSheet({
               )}
 
               {data.appointment.visitStatus !== 'cancelled' && (
-
                 <>
-
                   {!recurringSeriesActive && (
-
                     <Button variant="outline" size="sm" onClick={() => setRecurringOpen(true)}>
-
                       <Repeat className="h-4 w-4" /> Make Recurring
-
                     </Button>
-
                   )}
 
                   {data.appointment.recurringAppointmentRuleId && recurringRule && recurringSeriesActive && (
-
                     <Button variant="outline" size="sm" onClick={() => setEditRecurringOpen(true)}>
-
                       <Repeat className="h-4 w-4" /> Edit Series
-
                     </Button>
-
                   )}
 
                   {data.appointment.recurringAppointmentRuleId && recurringRule && (
-
                     <Button
-
                       variant="outline"
-
                       size="sm"
-
                       className="text-red-700 hover:bg-red-50 hover:text-red-800"
-
                       onClick={() => setDeleteSeriesOpen(true)}
-
                       disabled={deleteSeriesMutation.isPending}
-
                     >
-
                       Delete Series
-
                     </Button>
-
                   )}
 
                   <Button variant="outline" size="sm" onClick={() => sendSmsMutation.mutate()} disabled={sendSmsMutation.isPending}>
-
                     Send SMS
-
                   </Button>
 
-                  <Button variant="destructive" size="sm" onClick={handleCancelClick} disabled={cancelMutation.isPending}>
-
-                    Cancel
-
-                  </Button>
-
+                  {permissions.canCancelAppointments && (
+                    <Button variant="destructive" size="sm" onClick={handleCancelClick} disabled={cancelMutation.isPending}>
+                      Cancel
+                    </Button>
+                  )}
                 </>
-
               )}
 
               {data.appointment.recurringAppointmentRuleId && recurringSeriesActive && (

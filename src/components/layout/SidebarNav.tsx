@@ -7,6 +7,7 @@ import {
   Clock,
 
   LayoutDashboard,
+  Shield,
 } from 'lucide-react';
 
 import { NavLink, useLocation } from 'react-router-dom';
@@ -18,6 +19,7 @@ import { useOrg } from '@/context/OrgContext';
 import { useOrgPlan } from '@/hooks/useOrgPlan';
 
 import { useOrgId } from '@/hooks/useOrgId';
+import { useOrgAdminAccess } from '@/hooks/useOrgAdminAccess';
 
 import { getOrgNavigation } from '@/components/layout/org-navigation';
 import {
@@ -238,35 +240,34 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
   const location = useLocation();
 
   const showRecurring = plan ? plan.recurringAppointmentsEnabled : true;
+  const canManageStaff = useOrgAdminAccess(effectiveOrgId ?? undefined);
 
   if (!user) return null;
 
 
 
   if (user.role === 'staff') {
+    const staffItems = [
+      { label: 'My Schedule', to: '/staff/schedule', icon: CalendarDays },
+      { label: 'My Appointments', to: '/staff/appointments', icon: Calendar },
+      { label: 'My Availability', to: '/staff/availability', icon: Clock },
+    ];
+
+    if (canManageStaff) {
+      staffItems.push({
+        label: 'Staff permissions',
+        to: '/staff/settings/staff-permissions',
+        icon: Shield,
+      });
+    }
 
     return (
-
       <NavSection
-
         onNavigate={onNavigate}
-
         mobile={mobile}
-
-        items={[
-
-          { label: 'My Schedule', to: '/staff/schedule', icon: CalendarDays },
-
-          { label: 'My Appointments', to: '/staff/appointments', icon: Calendar },
-
-          { label: 'My Availability', to: '/staff/availability', icon: Clock },
-
-        ]}
-
+        items={staffItems}
       />
-
     );
-
   }
 
 

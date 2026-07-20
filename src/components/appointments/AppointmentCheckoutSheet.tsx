@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { orgApi } from '@/lib/api';
 import { useCardCheckout } from '@/hooks/useCardCheckout';
+import { useStaffPermissions } from '@/hooks/useStaffPermissions';
 import { cn, formatCurrency } from '@/lib/utils';
 import type { AppointmentInfo, CheckoutLineInput } from '@/types/api';
 import { CheckoutProductPickerDialog } from '@/components/appointments/CheckoutProductPickerDialog';
@@ -74,6 +75,8 @@ export function AppointmentCheckoutSheet({
   onOpenChange,
   onSuccess,
 }: AppointmentCheckoutSheetProps) {
+  const { permissions } = useStaffPermissions(orgId);
+  const canAddProducts = permissions.canAddCheckoutProducts;
   const [step, setStep] = useState<CheckoutStep>('items');
   const [lines, setLines] = useState<CheckoutLineInput[]>([]);
   const [tipCents, setTipCents] = useState(0);
@@ -342,7 +345,7 @@ export function AppointmentCheckoutSheet({
                     Review the service and add any retail products for this sale.
                   </p>
                   {previewLines.length > 0 ? (
-                    <div className="space-y-2">{previewLines.map((line) => renderLineItem(line, { editable: true }))}</div>
+                    <div className="space-y-2">{previewLines.map((line) => renderLineItem(line, { editable: canAddProducts }))}</div>
                   ) : (
                     <p className={cn('rounded-lg border border-dashed border-stone-200 px-4 py-8 text-center text-sm dark:border-stone-700', sectionMutedClass)}>
                       No line items yet.
@@ -350,6 +353,7 @@ export function AppointmentCheckoutSheet({
                   )}
                 </section>
 
+                {canAddProducts && (
                 <section>
                   <Button
                     type="button"
@@ -369,6 +373,7 @@ export function AppointmentCheckoutSheet({
                     </p>
                   )}
                 </section>
+                )}
               </div>
             )}
 

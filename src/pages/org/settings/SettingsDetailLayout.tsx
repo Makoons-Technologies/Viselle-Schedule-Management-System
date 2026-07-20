@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { SettingsBackHeader } from '@/components/settings/SettingsBackHeader';
 import { useAuth } from '@/context/AuthContext';
+import { useOrgAdminAccess } from '@/hooks/useOrgAdminAccess';
 import { useOrgId } from '@/hooks/useOrgId';
 
 const SETTINGS_TITLES: Record<string, string> = {
@@ -9,6 +10,7 @@ const SETTINGS_TITLES: Record<string, string> = {
   services: 'Services',
   products: 'Products',
   payments: 'Payments',
+  'staff-permissions': 'Staff permissions',
 };
 
 function getSettingsTitle(pathname: string): string {
@@ -20,8 +22,15 @@ export function SettingsDetailLayout() {
   const orgId = useOrgId();
   const { user } = useAuth();
   const location = useLocation();
+  const isStaffPermissions = location.pathname.endsWith('/staff-permissions');
+  const canManageOrg = user?.role === 'org_owner' || user?.role === 'platform_owner';
+  const canAccessStaffPermissions = useOrgAdminAccess(orgId);
 
-  if (user?.role !== 'org_owner' && user?.role !== 'platform_owner') {
+  if (isStaffPermissions) {
+    if (!canAccessStaffPermissions) {
+      return <Navigate to={`/orgs/${orgId}/dashboard`} replace />;
+    }
+  } else if (!canManageOrg) {
     return <Navigate to={`/orgs/${orgId}/dashboard`} replace />;
   }
 

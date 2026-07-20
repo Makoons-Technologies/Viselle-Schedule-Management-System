@@ -17,6 +17,7 @@ import type {
   OrgPlanFeatures,
   OrganizationSettings,
   PlatformStats,
+  StaffPermissions,
   RecurringAppointmentRule,
   RecurringFrequency,
   Product,
@@ -162,6 +163,12 @@ export const orgApi = {
     apiClient.get<{ organization: Organization }>(`/organizations/${orgId}`).then((r) => r.data),
   getPlan: (orgId: string) =>
     apiClient.get<{ plan: OrgPlanFeatures }>(`/organizations/${orgId}/plan`).then((r) => r.data),
+  getStaffPermissions: (orgId: string) =>
+    apiClient.get<{ staffPermissions: StaffPermissions }>(`/organizations/${orgId}/staff-permissions`).then((r) => r.data),
+  updateStaffPermissions: (orgId: string, data: Partial<StaffPermissions>) =>
+    apiClient
+      .patch<{ staffPermissions: StaffPermissions }>(`/organizations/${orgId}/staff-permissions`, data)
+      .then((r) => r.data),
   updateOrganization: (orgId: string, data: Pick<Partial<Organization>, 'name' | 'slug' | 'publicBookingEnabled' | 'batchCheckoutEnabled' | 'emailRemindersOptIn' | 'smsRemindersOptIn' | 'emailReminderHoursBefore' | 'smsReminderHoursBefore' | 'city' | 'address' | 'phone'>) =>
     apiClient.patch<{ organization: Organization }>(`/organizations/${orgId}`, data).then((r) => r.data),
   getWebsite: (orgId: string) =>
