@@ -58,7 +58,7 @@ export function StaffPage() {
   if (isLoading) return <LoadingState />;
 
   const accounts = data?.accounts ?? [];
-  const activeStaffCount = accounts.filter((a) => a.role === 'staff' && a.status === 'active').length;
+  const activeStaffCount = accounts.filter((a) => a.role !== 'org_owner' && a.status === 'active').length;
   const staffLimit = plan?.maxStaffAccounts ?? null;
   const atStaffLimit = staffLimit !== null && activeStaffCount >= staffLimit;
 
