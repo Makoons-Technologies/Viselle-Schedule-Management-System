@@ -6,8 +6,10 @@ import { orgApi } from '@/lib/api';
 import { useCardCheckout } from '@/hooks/useCardCheckout';
 import { cn, formatCurrency } from '@/lib/utils';
 import type { BatchCheckoutAppointmentInput, CheckoutLineInput } from '@/types/api';
+import { CardUnavailableHint } from '@/components/appointments/CardUnavailableHint';
 import { CheckoutProductPickerDialog } from '@/components/appointments/CheckoutProductPickerDialog';
 import { KeyedCardForm } from '@/components/appointments/KeyedCardForm';
+import { isCardCheckoutReady } from '@/lib/stripe-connect-hint';
 import { sectionHeadingClass, sectionMutedClass } from '@/components/common/Panel';
 import { Button } from '@/components/ui/button';
 import {
@@ -191,7 +193,7 @@ export function BatchCheckoutSheet({ orgId, items, open, onOpenChange, onSuccess
     onSuccess: completeCardPayment,
   });
 
-  const cardReady = connectStatus?.chargesEnabled && connectStatus?.onboardingComplete;
+  const cardReady = isCardCheckoutReady(connectStatus);
 
   const previewByAppointmentId = useMemo(() => {
     const map: Record<string, NonNullable<typeof previewQuery.data>['appointments'][number]> = {};
@@ -477,15 +479,23 @@ export function BatchCheckoutSheet({ orgId, items, open, onOpenChange, onSuccess
                     <Banknote className="h-4 w-4" />
                     Pay with cash
                   </Button>
-                  <Button
-                    type="button"
-                    onClick={() => setStep('tip')}
-                    disabled={!previewQuery.data || previewQuery.isLoading || !cardReady}
-                    title={cardReady ? undefined : 'Connect Stripe in Settings → Payments to take card payments'}
-                  >
-                    <CreditCard className="h-4 w-4" />
-                    {cardReady ? 'Pay with card' : 'Card unavailable'}
-                  </Button>
+                  <div className="flex flex-col gap-1.5">
+                    {!cardReady && (
+                      <CardUnavailableHint
+                        orgId={orgId}
+                        connectStatus={connectStatus}
+                        className="text-left sm:max-w-[16rem] sm:text-right"
+                      />
+                    )}
+                    <Button
+                      type="button"
+                      onClick={() => setStep('tip')}
+                      disabled={!previewQuery.data || previewQuery.isLoading || !cardReady}
+                    >
+                      <CreditCard className="h-4 w-4" />
+                      {cardReady ? 'Pay with card' : 'Card unavailable'}
+                    </Button>
+                  </div>
                 </div>
               </div>
             ) : (

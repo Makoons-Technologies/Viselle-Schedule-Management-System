@@ -288,6 +288,7 @@ export function AppointmentDetailSheet({
                 <p>{data.customer ? `${data.customer.firstName} ${data.customer.lastName}` : '—'}</p>
 
                 {data.customer?.email && <p className="text-stone-500">{data.customer.email}</p>}
+                {data.customer?.phone && <p className="text-stone-500">{data.customer.phone}</p>}
 
               </div>
 
@@ -412,7 +413,17 @@ export function AppointmentDetailSheet({
                     </Button>
                   )}
 
-                  <Button variant="outline" size="sm" onClick={() => sendSmsMutation.mutate()} disabled={sendSmsMutation.isPending}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => sendSmsMutation.mutate()}
+                    disabled={sendSmsMutation.isPending || !data.customer?.phone?.trim()}
+                    title={
+                      data.customer?.phone?.trim()
+                        ? undefined
+                        : 'Add a phone number for this customer to send SMS'
+                    }
+                  >
                     Send SMS
                   </Button>
 
