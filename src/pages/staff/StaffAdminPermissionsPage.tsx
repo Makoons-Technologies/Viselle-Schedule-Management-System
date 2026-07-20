@@ -10,12 +10,12 @@ export function StaffAdminPermissionsPage() {
   const canAccess = useOrgAdminAccess(orgId);
 
   if (!canAccess) {
-    return <Navigate to="/staff/schedule" replace />;
+    return <Navigate to={`/orgs/${orgId}/calendar`} replace />;
   }
 
   return (
     <div className="mx-auto max-w-3xl">
-      <SettingsBackHeader title="Staff permissions" backTo="/staff/schedule" />
+      <SettingsBackHeader title="Staff permissions" backTo={`/orgs/${orgId}/calendar`} />
       <StaffPermissionsSection orgId={orgId} />
     </div>
   );

@@ -31,7 +31,7 @@ export function LoginPage() {
   if (!isLoading && isAuthenticated && user) {
     if (user.role === 'platform_owner') return <Navigate to="/platform/dashboard" replace />;
     if (user.role === 'org_owner') return <Navigate to={`/orgs/${user.organizationId}/dashboard`} replace />;
-    return <Navigate to="/staff/schedule" replace />;
+    return <Navigate to={`/orgs/${user.organizationId}/calendar`} replace />;
   }
 
   if (isLoading) return <LoadingState />;
@@ -42,7 +42,7 @@ export function LoginPage() {
       const user = await login(data.email, data.password);
       if (user.role === 'platform_owner') navigate('/platform/dashboard');
       else if (user.role === 'org_owner') navigate(`/orgs/${user.organizationId}/dashboard`);
-      else navigate('/staff/schedule');
+      else navigate(`/orgs/${user.organizationId}/calendar`);
       toast.success('Welcome back!');
     } catch (err) {
       if (err instanceof ApiError && err.code === 'PASSWORD_SETUP_REQUIRED') {

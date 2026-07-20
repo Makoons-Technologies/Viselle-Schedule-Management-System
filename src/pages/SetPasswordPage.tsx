@@ -54,7 +54,7 @@ export function SetPasswordPage() {
   if (!isLoading && isAuthenticated && user) {
     if (user.role === 'platform_owner') return <Navigate to="/platform/dashboard" replace />;
     if (user.role === 'org_owner') return <Navigate to={`/orgs/${user.organizationId}/dashboard`} replace />;
-    return <Navigate to="/staff/schedule" replace />;
+    return <Navigate to={`/orgs/${user.organizationId}/calendar`} replace />;
   }
 
   if (isLoading) return <LoadingState />;
@@ -66,7 +66,7 @@ export function SetPasswordPage() {
       toast.success('Password set. Welcome!');
       if (nextUser.role === 'platform_owner') navigate('/platform/dashboard');
       else if (nextUser.role === 'org_owner') navigate(`/orgs/${nextUser.organizationId}/dashboard`);
-      else navigate('/staff/schedule');
+      else navigate(`/orgs/${nextUser.organizationId}/calendar`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not set password');
     } finally {

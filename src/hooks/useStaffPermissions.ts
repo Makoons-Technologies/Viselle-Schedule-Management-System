@@ -6,20 +6,20 @@ import { useOrgAdminAccess } from '@/hooks/useOrgAdminAccess';
 import { DEFAULT_STAFF_PERMISSIONS, type StaffPermissions } from '@/types/api';
 
 function permissionsFromOrganization(org: {
-  staffCanManageOwnSchedule: boolean;
-  staffCanCreateAppointments: boolean;
-  staffCanCancelAppointments: boolean;
-  staffCanManageVisitPayment: boolean;
-  staffCanAddCheckoutProducts: boolean;
-  staffCanBatchCheckout: boolean;
+  staffCanManageOwnSchedule?: boolean;
+  staffCanCreateAppointments?: boolean;
+  staffCanCancelAppointments?: boolean;
+  staffCanManageVisitPayment?: boolean;
+  staffCanAddCheckoutProducts?: boolean;
+  staffCanBatchCheckout?: boolean;
 }): StaffPermissions {
   return {
-    canManageOwnSchedule: org.staffCanManageOwnSchedule,
-    canCreateAppointments: org.staffCanCreateAppointments,
-    canCancelAppointments: org.staffCanCancelAppointments,
-    canManageVisitPayment: org.staffCanManageVisitPayment,
-    canAddCheckoutProducts: org.staffCanAddCheckoutProducts,
-    canBatchCheckout: org.staffCanBatchCheckout,
+    canManageOwnSchedule: org.staffCanManageOwnSchedule ?? true,
+    canCreateAppointments: org.staffCanCreateAppointments ?? true,
+    canCancelAppointments: org.staffCanCancelAppointments ?? true,
+    canManageVisitPayment: org.staffCanManageVisitPayment ?? true,
+    canAddCheckoutProducts: org.staffCanAddCheckoutProducts ?? true,
+    canBatchCheckout: org.staffCanBatchCheckout ?? true,
   };
 }
 

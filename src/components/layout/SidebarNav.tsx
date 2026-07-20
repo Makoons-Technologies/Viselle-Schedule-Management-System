@@ -1,9 +1,5 @@
 import {
 
-  Calendar,
-
-  CalendarDays,
-
   Clock,
 
   LayoutDashboard,
@@ -247,9 +243,17 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
 
 
   if (user.role === 'staff') {
+    const orgId = user.organizationId;
+    if (!orgId) return null;
+
+    const orgBase = `/orgs/${orgId}`;
+    const orgNav = getOrgNavigation(orgBase, {
+      showAdminSettings: false,
+      showRecurring: false,
+    });
+
     const staffItems = [
-      { label: 'My Schedule', to: '/staff/schedule', icon: CalendarDays },
-      { label: 'My Appointments', to: '/staff/appointments', icon: Calendar },
+      ...orgNav.main,
       { label: 'My Availability', to: '/staff/availability', icon: Clock },
     ];
 
@@ -262,10 +266,11 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
     }
 
     return (
-      <NavSection
+      <NavSectionWithGroups
         onNavigate={onNavigate}
         mobile={mobile}
-        items={staffItems}
+        mainItems={staffItems}
+        settingsItems={orgNav.settings}
       />
     );
   }

@@ -48,7 +48,7 @@ export function LandingPage() {
   if (!isLoading && isAuthenticated && user) {
     if (user.role === 'platform_owner') return <Navigate to="/platform/dashboard" replace />;
     if (user.role === 'org_owner') return <Navigate to={`/orgs/${user.organizationId}/dashboard`} replace />;
-    return <Navigate to="/staff/schedule" replace />;
+    return <Navigate to={`/orgs/${user.organizationId}/calendar`} replace />;
   }
 
   return (

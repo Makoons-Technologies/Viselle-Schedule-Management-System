@@ -62,7 +62,7 @@ export function Topbar() {
   const handleStaffOrgChange = async (organizationId: string) => {
     try {
       await switchOrganization(organizationId);
-      navigate('/staff/schedule');
+      navigate(`/orgs/${organizationId}/calendar`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not switch organization');
     }

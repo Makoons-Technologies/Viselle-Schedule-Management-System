@@ -48,20 +48,31 @@ export function MobileBottomNav() {
   if (!user) return null;
 
   if (user.role === 'staff') {
+    const orgId = user.organizationId;
+    if (!orgId) return null;
+
+    const orgBase = `/orgs/${orgId}`;
     const items: BottomNavItem[] = [
       {
-        key: 'schedule',
-        label: 'Schedule',
-        to: '/staff/schedule',
+        key: 'dashboard',
+        label: 'Home',
+        to: `${orgBase}/dashboard`,
+        icon: LayoutDashboard,
+        match: (p, base) => p === `${base}/dashboard`,
+      },
+      {
+        key: 'calendar',
+        label: 'Calendar',
+        to: `${orgBase}/calendar`,
         icon: CalendarDays,
-        match: (p) => p.startsWith('/staff/schedule'),
+        match: (p, base) => p.startsWith(`${base}/calendar`),
       },
       {
         key: 'appointments',
         label: 'Appts',
-        to: '/staff/appointments',
+        to: `${orgBase}/appointments`,
         icon: Calendar,
-        match: (p) => p.startsWith('/staff/appointments'),
+        match: (p, base) => p.startsWith(`${base}/appointments`),
       },
       {
         key: 'availability',
