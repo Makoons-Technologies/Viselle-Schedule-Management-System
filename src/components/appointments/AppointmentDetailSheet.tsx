@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { Repeat } from 'lucide-react';
+import { Pencil, Repeat } from 'lucide-react';
 
 import { useMemo, useState } from 'react';
 
@@ -13,6 +13,7 @@ import { formatDateTime } from '@/lib/utils';
 import { MakeRecurringDialog } from '@/components/appointments/MakeRecurringDialog';
 import { EditRecurringDialog } from '@/components/appointments/EditRecurringDialog';
 import { AppointmentCheckoutSheet } from '@/components/appointments/AppointmentCheckoutSheet';
+import { EditAppointmentDialog } from '@/components/appointments/EditAppointmentDialog';
 
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 
@@ -25,6 +26,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/context/AuthContext';
 import { useStaffPermissions } from '@/hooks/useStaffPermissions';
 
 
@@ -56,9 +58,11 @@ export function AppointmentDetailSheet({
 }: AppointmentDetailSheetProps) {
 
   const queryClient = useQueryClient();
-  const { permissions } = useStaffPermissions(orgId);
+  const { user } = useAuth();
+  const { permissions, isManager } = useStaffPermissions(orgId);
 
   const [recurringOpen, setRecurringOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   const [editRecurringOpen, setEditRecurringOpen] = useState(false);
 
@@ -232,6 +236,13 @@ export function AppointmentDetailSheet({
     recurringRule && (recurringRule.status === 'active' || recurringRule.status === 'paused'),
   );
 
+  const canEdit =
+    !!data &&
+    permissions.canCreateAppointments &&
+    data.appointment.visitStatus === 'scheduled' &&
+    !data.appointment.recurringAppointmentRuleId &&
+    (isManager || data.appointment.accountId === user?.accountId);
+
 
 
   const handleCancelClick = () => setCancelConfirmOpen(true);
@@ -389,6 +400,12 @@ export function AppointmentDetailSheet({
 
               {data.appointment.visitStatus !== 'cancelled' && (
                 <>
+                  {canEdit && (
+                    <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+                      <Pencil className="h-4 w-4" /> Edit
+                    </Button>
+                  )}
+
                   {!recurringSeriesActive && (
                     <Button variant="outline" size="sm" onClick={() => setRecurringOpen(true)}>
                       <Repeat className="h-4 w-4" /> Make Recurring
@@ -459,6 +476,18 @@ export function AppointmentDetailSheet({
                 queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId, 'info'] });
               }}
             />
+            <EditAppointmentDialog
+              orgId={orgId}
+              appointmentInfo={data}
+              open={editOpen}
+              onOpenChange={setEditOpen}
+              lockStaffMember={!isManager}
+              onSuccess={() => {
+                queryClient.invalidateQueries({ queryKey: ['appointments', orgId] });
+                queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId, 'info'] });
+              }}
+            />
+
             <MakeRecurringDialog
 
               orgId={orgId}

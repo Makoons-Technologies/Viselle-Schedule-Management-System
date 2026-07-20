@@ -25,7 +25,7 @@ const PERMISSION_ITEMS: Array<{
   {
     key: 'canCreateAppointments',
     label: 'Create appointments',
-    description: 'Book new appointments for customers.',
+    description: 'Book new appointments and edit their own scheduled visits.',
   },
   {
     key: 'canCancelAppointments',
