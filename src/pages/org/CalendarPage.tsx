@@ -5,7 +5,6 @@ import { useMemo, useState } from 'react';
 import { orgApi } from '@/lib/api';
 import { APPOINTMENT_CALENDAR_LIP_CLASS, APPOINTMENT_CALENDAR_LIP_LABEL } from '@/lib/appointment-status';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
 import { filterOutCancelled, useHideCancelledAppointments } from '@/hooks/useHideCancelledAppointments';
 import { useStaffPermissions } from '@/hooks/useStaffPermissions';
@@ -13,7 +12,7 @@ import { AppointmentDetailSheet } from '@/components/appointments/AppointmentDet
 import { BatchCheckoutSheet, type BatchCheckoutItem } from '@/components/appointments/BatchCheckoutSheet';
 import { CreateAppointmentDialog } from '@/components/appointments/CreateAppointmentDialog';
 import { HideCancelledToggle } from '@/components/appointments/HideCancelledToggle';
-import { ShowAllAppointmentsToggle } from '@/components/appointments/ShowAllAppointmentsToggle';
+import { StaffScheduleFilter } from '@/components/calendar/StaffScheduleFilter';
 import { WeekAppointmentTimeGrid } from '@/components/calendar/WeekAppointmentTimeGrid';
 import { CalendarAppointmentChip } from '@/components/calendar/CalendarAppointmentChip';
 import { WeekCalendarNav } from '@/components/calendar/WeekCalendarNav';
@@ -23,7 +22,6 @@ import { Button } from '@/components/ui/button';
 
 export function CalendarPage() {
   const orgId = useOrgId();
-  const { user } = useAuth();
   const { permissions } = useStaffPermissions(orgId);
   const queryClient = useQueryClient();
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 0 }));
@@ -32,7 +30,8 @@ export function CalendarPage() {
     startTime: string;
   } | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const [showAll, setShowAll] = useState(false);
+  /** null = default all staff selected once accounts load */
+  const [selectedStaffIds, setSelectedStaffIds] = useState<string[] | null>(null);
   const [selectMode, setSelectMode] = useState(false);
   const [batchSelection, setBatchSelection] = useState<Record<string, BatchCheckoutItem>>({});
   const [batchCheckoutOpen, setBatchCheckoutOpen] = useState(false);
@@ -76,8 +75,29 @@ export function CalendarPage() {
     enabled: !!orgId,
   });
 
+  const { data: accountsData } = useQuery({
+    queryKey: ['accounts', orgId],
+    queryFn: () => orgApi.listAccounts(orgId),
+    enabled: !!orgId,
+  });
+
   const batchCheckoutEnabled =
     (orgData?.organization.batchCheckoutEnabled ?? false) && permissions.canBatchCheckout;
+
+  const staffAccounts = useMemo(() => {
+    return (accountsData?.accounts ?? [])
+      .filter((account) => account.status === 'active' && account.isBookable)
+      .slice()
+      .sort((a, b) => {
+        const last = a.lastName.localeCompare(b.lastName);
+        return last !== 0 ? last : a.firstName.localeCompare(b.firstName);
+      });
+  }, [accountsData]);
+
+  const resolvedStaffIds = useMemo(() => {
+    if (selectedStaffIds !== null) return selectedStaffIds;
+    return staffAccounts.map((account) => account.id);
+  }, [selectedStaffIds, staffAccounts]);
 
   const activeRecurringRuleIds = useMemo(
     () =>
@@ -100,13 +120,10 @@ export function CalendarPage() {
   );
 
   const appointments = useMemo(() => {
-    let list = data?.appointments ?? [];
-    if (!showAll) {
-      if (!user?.accountId) return [];
-      list = list.filter((appt) => appt.accountId === user.accountId);
-    }
+    const selected = new Set(resolvedStaffIds);
+    const list = (data?.appointments ?? []).filter((appt) => selected.has(appt.accountId));
     return filterOutCancelled(list, hideCancelled);
-  }, [data?.appointments, showAll, user?.accountId, hideCancelled]);
+  }, [data?.appointments, resolvedStaffIds, hideCancelled]);
 
   const selectedItems = useMemo(() => Object.values(batchSelection), [batchSelection]);
 
@@ -136,9 +153,9 @@ export function CalendarPage() {
         description={
           selectMode
             ? 'Select checked-in appointments to check out together'
-            : showAll
+            : resolvedStaffIds.length === staffAccounts.length && staffAccounts.length > 0
               ? 'Week view of all appointments'
-              : 'Week view of your appointments'
+              : 'Week view of selected schedules'
         }
         actions={
           <div className="flex items-center gap-2">
@@ -165,7 +182,11 @@ export function CalendarPage() {
         onNext={() => setWeekStart(addDays(weekStart, 7))}
         leading={
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <ShowAllAppointmentsToggle checked={showAll} onCheckedChange={setShowAll} />
+            <StaffScheduleFilter
+              accounts={staffAccounts}
+              selectedIds={resolvedStaffIds}
+              onSelectedIdsChange={setSelectedStaffIds}
+            />
             <HideCancelledToggle checked={hideCancelled} onCheckedChange={setHideCancelled} />
           </div>
         }
