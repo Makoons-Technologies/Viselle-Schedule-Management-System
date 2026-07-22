@@ -67,19 +67,79 @@ export function findExistingCustomerMatch(
   return null;
 }
 
-/** True when form contact fields differ from the existing customer record. */
-export function customerContactChanged(
+export type CustomerContactInput = {
+  firstName: string;
+  lastName: string;
+  email?: string;
+  phone?: string;
+};
+
+export type CustomerFieldChange = {
+  field: 'firstName' | 'lastName' | 'email' | 'phone';
+  label: string;
+  from: string;
+  to: string;
+};
+
+export function formatCustomerFieldValue(value: string | null | undefined): string {
+  const trimmed = (value ?? '').trim();
+  return trimmed || '—';
+}
+
+/** Field-level from → to diffs for customer contact fields. */
+export function getCustomerFieldChanges(
   customer: Customer,
-  input: { firstName: string; lastName: string; email?: string; phone?: string },
-): boolean {
-  if (customer.firstName.trim() !== input.firstName.trim()) return true;
-  if (customer.lastName.trim() !== input.lastName.trim()) return true;
+  input: CustomerContactInput,
+): CustomerFieldChange[] {
+  const changes: CustomerFieldChange[] = [];
+
+  if (customer.firstName.trim() !== input.firstName.trim()) {
+    changes.push({
+      field: 'firstName',
+      label: 'First name',
+      from: formatCustomerFieldValue(customer.firstName),
+      to: formatCustomerFieldValue(input.firstName),
+    });
+  }
+
+  if (customer.lastName.trim() !== input.lastName.trim()) {
+    changes.push({
+      field: 'lastName',
+      label: 'Last name',
+      from: formatCustomerFieldValue(customer.lastName),
+      to: formatCustomerFieldValue(input.lastName),
+    });
+  }
 
   const inputEmail = normalizeEmail(input.email ?? '');
   const existingEmail = customer.email ? normalizeEmail(customer.email) : '';
-  if (inputEmail !== existingEmail) return true;
+  if (inputEmail !== existingEmail) {
+    changes.push({
+      field: 'email',
+      label: 'Email',
+      from: formatCustomerFieldValue(customer.email),
+      to: formatCustomerFieldValue(input.email),
+    });
+  }
 
   const inputPhone = normalizePhone(input.phone ?? '');
   const existingPhone = customer.phone ? normalizePhone(customer.phone) : '';
-  return inputPhone !== existingPhone;
+  if (inputPhone !== existingPhone) {
+    changes.push({
+      field: 'phone',
+      label: 'Phone',
+      from: formatCustomerFieldValue(customer.phone),
+      to: formatCustomerFieldValue(input.phone),
+    });
+  }
+
+  return changes;
+}
+
+/** True when form contact fields differ from the existing customer record. */
+export function customerContactChanged(
+  customer: Customer,
+  input: CustomerContactInput,
+): boolean {
+  return getCustomerFieldChanges(customer, input).length > 0;
 }

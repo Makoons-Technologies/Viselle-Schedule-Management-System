@@ -9,6 +9,7 @@ import {
   customerContactChanged,
   customerDisplayName,
   findExistingCustomerMatch,
+  getCustomerFieldChanges,
 } from '@/lib/customers';
 import { formatDateTime, getDayOfWeekFromIso, todayDateOnlyLocal, filterFutureAppointmentSlots } from '@/lib/utils';
 import type { Customer, RecurringFrequency } from '@/types/api';
@@ -21,6 +22,7 @@ import {
   recurringIntervalForFrequency,
 } from '@/components/appointments/recurring-options';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { CustomerFieldChangesList } from '@/components/customers/CustomerFieldChangesList';
 import { helperTextClass } from '@/components/common/Panel';
 import { useRecurringDaySchedule } from '@/hooks/useRecurringDaySchedule';
 import { useOrgPlan } from '@/hooks/useOrgPlan';
@@ -69,7 +71,7 @@ interface PendingSubmit {
 
 interface MergeConfirmState {
   customer: Customer;
-  matchedBy: 'email' | 'phone';
+  matchedBy: 'email' | 'phone' | 'selected';
   pending: PendingSubmit;
 }
 
@@ -222,8 +224,9 @@ export function CreateAppointmentDialog({
       recurringDayTimes,
       withRecurring,
       customerId,
-    }: PendingSubmit & { customerId?: string }) => {
-      if (customerId) {
+      updateCustomer,
+    }: PendingSubmit & { customerId?: string; updateCustomer?: boolean }) => {
+      if (customerId && updateCustomer) {
         await orgApi.updateCustomer(orgId, customerId, {
           firstName: data.firstName,
           lastName: data.lastName,
@@ -279,8 +282,12 @@ export function CreateAppointmentDialog({
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const submitAppointment = (pending: PendingSubmit, customerId?: string) => {
-    mutation.mutate({ ...pending, customerId });
+  const submitAppointment = (
+    pending: PendingSubmit,
+    customerId?: string,
+    updateCustomer = false,
+  ) => {
+    mutation.mutate({ ...pending, customerId, updateCustomer });
   };
 
   const handleCreate = (pending: PendingSubmit) => {
@@ -305,12 +312,33 @@ export function CreateAppointmentDialog({
     }
 
     if (selectedCustomerId) {
+      const selected = customers.find((c) => c.id === selectedCustomerId);
+      if (selected && customerContactChanged(selected, pending.data)) {
+        setMergeConfirm({
+          customer: selected,
+          matchedBy: 'selected',
+          pending,
+        });
+        return;
+      }
       submitAppointment(pending, selectedCustomerId);
       return;
     }
 
     submitAppointment(pending);
   };
+
+  const mergeChanges = mergeConfirm
+    ? getCustomerFieldChanges(mergeConfirm.customer, mergeConfirm.pending.data)
+    : [];
+
+  const mergeDescription = (() => {
+    if (!mergeConfirm) return '';
+    if (mergeConfirm.matchedBy === 'selected') {
+      return `Update ${customerDisplayName(mergeConfirm.customer)}'s saved profile with these changes, then schedule under this customer?`;
+    }
+    return `This ${mergeConfirm.matchedBy} is already on file for ${customerDisplayName(mergeConfirm.customer)}. Update their profile with these changes and schedule under this customer?`;
+  })();
 
   const recurringValid =
     !makeRecurring ||
@@ -480,20 +508,18 @@ export function CreateAppointmentDialog({
       <ConfirmDialog
         open={!!mergeConfirm}
         onOpenChange={(nextOpen) => !nextOpen && setMergeConfirm(null)}
-        title="Update existing customer?"
-        description={
-          mergeConfirm
-            ? `This ${mergeConfirm.matchedBy} is already on file for ${customerDisplayName(mergeConfirm.customer)}. Update their contact info and schedule under this customer?`
-            : ''
-        }
+        title="Confirm customer changes?"
+        description={mergeDescription}
         confirmLabel="Update & Schedule"
         loading={mutation.isPending}
         onConfirm={() => {
           if (!mergeConfirm) return;
-          submitAppointment(mergeConfirm.pending, mergeConfirm.customer.id);
+          submitAppointment(mergeConfirm.pending, mergeConfirm.customer.id, true);
           setMergeConfirm(null);
         }}
-      />
+      >
+        <CustomerFieldChangesList changes={mergeChanges} />
+      </ConfirmDialog>
     </>
   );
 }

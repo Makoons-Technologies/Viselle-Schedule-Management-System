@@ -39,35 +39,35 @@ export function PlatformDashboard() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-stone-500">Total Organizations</CardTitle>
-            <Building2 className="h-4 w-4 text-brand-600" />
+            <CardTitle className="text-sm font-medium text-stone-500 dark:text-stone-400">Total Organizations</CardTitle>
+            <Building2 className="h-4 w-4 text-brand-600 dark:text-brand-400" />
           </CardHeader>
           <CardContent><p className="text-3xl font-bold">{stats?.totalOrganizations ?? orgs.length}</p></CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-stone-500">Active</CardTitle>
-            <Users className="h-4 w-4 text-brand-600" />
+            <CardTitle className="text-sm font-medium text-stone-500 dark:text-stone-400">Active</CardTitle>
+            <Users className="h-4 w-4 text-brand-600 dark:text-brand-400" />
           </CardHeader>
           <CardContent><p className="text-3xl font-bold">{stats?.activeOrganizations ?? active}</p></CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-stone-500">On Trial</CardTitle>
-            <Calendar className="h-4 w-4 text-brand-600" />
+            <CardTitle className="text-sm font-medium text-stone-500 dark:text-stone-400">On Trial</CardTitle>
+            <Calendar className="h-4 w-4 text-brand-600 dark:text-brand-400" />
           </CardHeader>
           <CardContent><p className="text-3xl font-bold">{stats?.trialOrganizations ?? 0}</p></CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-stone-500">Est. MRR</CardTitle>
-            <DollarSign className="h-4 w-4 text-brand-600" />
+            <CardTitle className="text-sm font-medium text-stone-500 dark:text-stone-400">Est. MRR</CardTitle>
+            <DollarSign className="h-4 w-4 text-brand-600 dark:text-brand-400" />
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">
               ${centsToDollars(stats?.estimatedMrrCents ?? 0).toLocaleString()}
             </p>
-            <p className="mt-1 text-xs text-stone-500">Active + trial orgs</p>
+            <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">Active + trial orgs</p>
           </CardContent>
         </Card>
       </div>
@@ -87,9 +87,14 @@ export function PlatformDashboard() {
                   ['custom', 'Custom / manual'],
                 ] as const
               ).map(([key, label]) => (
-                <div key={key} className="rounded-lg border border-stone-200 bg-stone-50 p-4">
-                  <p className="text-sm text-stone-500">{label}</p>
-                  <p className="text-2xl font-bold text-stone-900">{stats.organizationsByTier[key]}</p>
+                <div
+                  key={key}
+                  className="rounded-lg border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-800/50"
+                >
+                  <p className="text-sm text-stone-500 dark:text-stone-400">{label}</p>
+                  <p className="text-2xl font-bold text-stone-900 dark:text-stone-100">
+                    {stats.organizationsByTier[key]}
+                  </p>
                 </div>
               ))}
             </div>

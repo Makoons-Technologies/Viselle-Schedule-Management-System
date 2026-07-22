@@ -1,14 +1,16 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { orgApi } from '@/lib/api';
-import { customerContactChanged } from '@/lib/customers';
+import { getCustomerFieldChanges } from '@/lib/customers';
 import { formatDateTime, filterFutureAppointmentSlots } from '@/lib/utils';
 import type { AppointmentInfo } from '@/types/api';
 import { CustomerAutocompleteFields } from '@/components/appointments/CustomerAutocompleteFields';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { CustomerFieldChangesList } from '@/components/customers/CustomerFieldChangesList';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -67,6 +69,7 @@ export function EditAppointmentDialog({
   const { appointment, customer } = appointmentInfo;
   const timezone = appointment.timezone;
   const skipSlotClearRef = useRef(true);
+  const [pendingCustomerUpdate, setPendingCustomerUpdate] = useState<FormData | null>(null);
 
   const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -141,19 +144,26 @@ export function EditAppointmentDialog({
     return filtered;
   }, [slotsData?.availableSlots, startTime, appointment.endTime]);
 
+  const pendingCustomerChanges = useMemo(() => {
+    if (!customer || !pendingCustomerUpdate) return [];
+    return getCustomerFieldChanges(customer, pendingCustomerUpdate);
+  }, [customer, pendingCustomerUpdate]);
+
   const mutation = useMutation({
-    mutationFn: async (data: FormData) => {
-      if (customer?.id) {
-        const nameChanged =
-          data.firstName !== customer.firstName || data.lastName !== customer.lastName;
-        if (nameChanged || customerContactChanged(customer, data)) {
-          await orgApi.updateCustomer(orgId, customer.id, {
-            firstName: data.firstName,
-            lastName: data.lastName,
-            email: data.email || null,
-            phone: data.phone || null,
-          });
-        }
+    mutationFn: async ({
+      data,
+      applyCustomerUpdate,
+    }: {
+      data: FormData;
+      applyCustomerUpdate: boolean;
+    }) => {
+      if (applyCustomerUpdate && customer?.id) {
+        await orgApi.updateCustomer(orgId, customer.id, {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email || null,
+          phone: data.phone || null,
+        });
       }
 
       const scheduleChanged =
@@ -178,6 +188,7 @@ export function EditAppointmentDialog({
     },
     onSuccess: () => {
       toast.success('Appointment updated');
+      setPendingCustomerUpdate(null);
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       queryClient.invalidateQueries({ queryKey: ['appointment', appointment.id, 'info'] });
       queryClient.invalidateQueries({ queryKey: ['customers', orgId] });
@@ -187,13 +198,31 @@ export function EditAppointmentDialog({
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const handleSave = (data: FormData) => {
+    if (customer) {
+      const changes = getCustomerFieldChanges(customer, data);
+      if (changes.length > 0) {
+        setPendingCustomerUpdate(data);
+        return;
+      }
+    }
+    mutation.mutate({ data, applyCustomerUpdate: false });
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) setPendingCustomerUpdate(null);
+        onOpenChange(nextOpen);
+      }}
+    >
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit appointment</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit((data) => mutation.mutate(data))} className="space-y-4">
+        <form onSubmit={handleSubmit(handleSave)} className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <Label>Staff member</Label>
@@ -304,6 +333,22 @@ export function EditAppointmentDialog({
         </form>
       </DialogContent>
     </Dialog>
+
+    <ConfirmDialog
+      open={!!pendingCustomerUpdate}
+      onOpenChange={(nextOpen) => !nextOpen && setPendingCustomerUpdate(null)}
+      title="Confirm customer changes?"
+      description="These updates will change the customer's saved profile. Review the from → to values below."
+      confirmLabel="Save changes"
+      loading={mutation.isPending}
+      onConfirm={() => {
+        if (!pendingCustomerUpdate) return;
+        mutation.mutate({ data: pendingCustomerUpdate, applyCustomerUpdate: true });
+      }}
+    >
+      <CustomerFieldChangesList changes={pendingCustomerChanges} />
+    </ConfirmDialog>
+    </>
   );
 }
 

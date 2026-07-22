@@ -8,8 +8,8 @@ import { useAuth } from '@/context/AuthContext';
 import { LoadingState } from '@/components/common/LoadingState';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/ui/password-input';
 
 const schema = z
   .object({
@@ -85,14 +85,13 @@ export function SetPasswordPage() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" autoComplete="new-password" {...register('password')} />
+              <PasswordInput id="password" autoComplete="new-password" {...register('password')} />
               {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password.message}</p>}
             </div>
             <div>
               <Label htmlFor="confirmPassword">Confirm password</Label>
-              <Input
+              <PasswordInput
                 id="confirmPassword"
-                type="password"
                 autoComplete="new-password"
                 {...register('confirmPassword')}
               />

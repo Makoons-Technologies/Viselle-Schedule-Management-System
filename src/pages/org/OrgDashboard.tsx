@@ -53,8 +53,8 @@ export function OrgDashboard() {
         {stats.map((s) => (
           <Card key={s.label}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-stone-500">{s.label}</CardTitle>
-              <s.icon className="h-4 w-4 text-brand-600" />
+              <CardTitle className="text-sm font-medium text-stone-500 dark:text-stone-400">{s.label}</CardTitle>
+              <s.icon className="h-4 w-4 text-brand-600 dark:text-brand-400" />
             </CardHeader>
             <CardContent><p className="text-3xl font-bold">{s.value}</p></CardContent>
           </Card>

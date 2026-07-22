@@ -42,14 +42,14 @@ export function ForgotPasswordPage() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl text-brand-700">Forgot password</CardTitle>
           <CardDescription>
-            Enter your staff email and we will send a link to set a new password.
+            Enter your email and we will send a link to set a new password.
           </CardDescription>
         </CardHeader>
         <CardContent>
           {submitted ? (
             <div className="space-y-4 text-center text-sm text-stone-600 dark:text-stone-400">
               <p>
-                If a staff account exists for that email, we sent a password reset link.
+                If an account exists for that email, we sent a password reset link.
                 Check your inbox and spam folder.
               </p>
               <Button asChild className="w-full">
