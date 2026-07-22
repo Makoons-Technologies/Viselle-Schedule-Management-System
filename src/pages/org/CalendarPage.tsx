@@ -202,13 +202,25 @@ export function CalendarPage() {
         daySelectionAnchorRef.current = dayKey;
         return [dayKey];
       }
+
+      // Multi-day picks are always a contiguous range (no sparse Mon+Wed).
       if (prev.includes(dayKey)) {
-        const next = prev.filter((key) => key !== dayKey);
-        daySelectionAnchorRef.current = next[next.length - 1] ?? dayKey;
-        return next;
+        if (prev.length === 1) return prev;
+        const ordered = sortDayKeys(prev);
+        const isEndpoint = dayKey === ordered[0] || dayKey === ordered[ordered.length - 1];
+        if (isEndpoint) {
+          const next = ordered.filter((key) => key !== dayKey);
+          daySelectionAnchorRef.current = next[next.length - 1] ?? dayKey;
+          return next;
+        }
+        // Interior day: collapse selection to that single day.
+        daySelectionAnchorRef.current = dayKey;
+        return [dayKey];
       }
+
+      const ordered = sortDayKeys([...prev, dayKey]);
       daySelectionAnchorRef.current = dayKey;
-      return sortDayKeys([...prev, dayKey]);
+      return keysBetween(ordered[0], ordered[ordered.length - 1]);
     });
   };
 
@@ -222,7 +234,8 @@ export function CalendarPage() {
   const applyDayZoom = (keys: string[]) => {
     const ordered = sortDayKeys(keys).filter((key) => dayKeys.includes(key));
     if (ordered.length === 0) return;
-    setZoomedDayKeys(ordered);
+    const filled = keysBetween(ordered[0], ordered[ordered.length - 1]);
+    setZoomedDayKeys(filled);
     clearDaySelection();
   };
 
@@ -303,7 +316,7 @@ export function CalendarPage() {
               ? '1 day selected'
               : `${selectedDayKeys.length} days selected`}
             <span className="ml-1 text-stone-500 dark:text-stone-400">
-              — tap more headers to add, or drag across them
+              — tap more headers to extend the range, or drag across them
             </span>
           </p>
           <div className="flex items-center gap-2">
