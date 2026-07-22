@@ -161,9 +161,17 @@ export function CalendarPage() {
           <div className="flex items-center gap-2">
             {batchCheckoutEnabled && (
               selectMode ? (
-                <Button variant="outline" onClick={exitSelectMode}>
-                  <X className="h-4 w-4" /> Cancel selection
-                </Button>
+                <>
+                  <Button variant="outline" onClick={exitSelectMode}>
+                    <X className="h-4 w-4" /> Cancel selection
+                  </Button>
+                  <Button
+                    onClick={() => setBatchCheckoutOpen(true)}
+                    disabled={selectedItems.length === 0}
+                  >
+                    Check out ({selectedItems.length})
+                  </Button>
+                </>
               ) : (
                 <Button variant="outline" onClick={() => setSelectMode(true)}>
                   <ListChecks className="h-4 w-4" /> Select
@@ -246,7 +254,7 @@ export function CalendarPage() {
         }}
       />
       {selectMode && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-white/95 px-4 py-3 backdrop-blur-md dark:border-stone-800 dark:bg-stone-900/95 sm:px-6">
+        <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-50 border-t border-stone-200 bg-white/95 px-4 py-3 backdrop-blur-md dark:border-stone-800 dark:bg-stone-900/95 sm:px-6 md:bottom-0">
           <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
             <p className="text-sm font-medium text-stone-900 dark:text-stone-100">
               {selectedItems.length} appointment{selectedItems.length === 1 ? '' : 's'} selected
