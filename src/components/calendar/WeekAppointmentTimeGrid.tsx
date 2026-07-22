@@ -3,7 +3,10 @@ import type { Appointment } from '@/types/api';
 import {
   buildWeekTimeSlots,
   formatMinutesLabel,
-  groupAppointmentsByDayAndSlot,
+  groupAppointmentsByDay,
+  layoutDayAppointments,
+  minutesToOffsetRem,
+  SLOT_HEIGHT_REM,
   SLOT_MINUTES,
 } from '@/components/calendar/week-time-grid';
 import { buildWeekColumns, type WeekCalendarColumn } from '@/components/calendar/WeekCalendarTable';
@@ -26,7 +29,9 @@ export function WeekAppointmentTimeGrid({
   const columns = buildWeekColumns(days);
   const dayKeys = columns.map((column) => column.key);
   const timeSlots = buildWeekTimeSlots(appointments, SLOT_MINUTES);
-  const grouped = groupAppointmentsByDayAndSlot(appointments, dayKeys, SLOT_MINUTES);
+  const gridStartMinutes = timeSlots[0] ?? 8 * 60;
+  const gridHeightRem = timeSlots.length * SLOT_HEIGHT_REM;
+  const byDay = groupAppointmentsByDay(appointments, dayKeys);
 
   return (
     <div
@@ -36,69 +41,86 @@ export function WeekAppointmentTimeGrid({
         className,
       )}
     >
-      <table className="w-full min-w-[44rem] table-fixed border-collapse">
-        <thead>
-          <tr className="border-b border-stone-200 bg-stone-50/90 dark:border-stone-700 dark:bg-stone-800/80">
-            <th
-              scope="col"
-              className="sticky left-0 z-20 w-16 border-r border-stone-200 bg-stone-50/95 px-2 py-3 dark:border-stone-700 dark:bg-stone-800/95 sm:w-20"
-            />
-            {columns.map((column) => (
-              <DayHeader key={column.key} column={column} />
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {timeSlots.map((slotMinutes) => {
-            const rowCounts = columns.map(
-              (column) => grouped.get(`${column.key}:${slotMinutes}`)?.length ?? 0,
-            );
-            const maxInRow = Math.max(1, ...rowCounts);
+      <div className="min-w-[44rem]">
+        <div className="flex border-b border-stone-200 bg-stone-50/90 dark:border-stone-700 dark:bg-stone-800/80">
+          <div className="sticky left-0 z-20 w-16 shrink-0 border-r border-stone-200 bg-stone-50/95 dark:border-stone-700 dark:bg-stone-800/95 sm:w-20" />
+          {columns.map((column) => (
+            <DayHeader key={column.key} column={column} />
+          ))}
+        </div>
 
-            return (
-            <tr key={slotMinutes} className="border-b border-stone-100 last:border-b-0 dark:border-stone-800">
-              <th
-                scope="row"
-                className="sticky left-0 z-10 border-r border-stone-200 bg-white px-2 py-0 text-right align-top dark:border-stone-700 dark:bg-stone-900 sm:px-3"
+        <div className="flex">
+          <div
+            className="relative sticky left-0 z-10 w-16 shrink-0 border-r border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900 sm:w-20"
+            style={{ height: `${gridHeightRem}rem` }}
+          >
+            {timeSlots.map((slotMinutes) => (
+              <div
+                key={slotMinutes}
+                className="absolute right-0 w-16 pr-2 pt-0.5 text-right sm:w-20 sm:pr-3"
+                style={{ top: `${minutesToOffsetRem(slotMinutes, gridStartMinutes)}rem` }}
               >
-                <span className="block py-2 text-[10px] font-medium tabular-nums text-stone-500 dark:text-stone-400 sm:text-xs">
+                <span className="block text-[10px] font-medium leading-none tabular-nums text-stone-500 dark:text-stone-400 sm:text-xs">
                   {formatMinutesLabel(slotMinutes)}
                 </span>
-              </th>
-              {columns.map((column) => {
-                const cellAppointments = grouped.get(`${column.key}:${slotMinutes}`) ?? [];
-                return (
-                  <td
-                    key={`${column.key}-${slotMinutes}`}
-                    className={cn(
-                      'border-r border-stone-100 align-top p-0.5 last:border-r-0 dark:border-stone-800 sm:p-1',
-                      column.isToday && 'bg-brand-50/25 dark:bg-brand-900/20',
-                    )}
-                    style={{ minHeight: `${maxInRow * 3.25 + 0.25}rem` }}
+              </div>
+            ))}
+          </div>
+
+          {columns.map((column) => {
+            const dayAppointments = byDay.get(column.key) ?? [];
+            const positioned = layoutDayAppointments(
+              dayAppointments,
+              gridStartMinutes,
+              SLOT_MINUTES,
+              SLOT_HEIGHT_REM,
+            );
+
+            return (
+              <div
+                key={column.key}
+                className={cn(
+                  'relative min-w-0 flex-1 border-r border-stone-100 last:border-r-0 dark:border-stone-800',
+                  column.isToday && 'bg-brand-50/25 dark:bg-brand-900/20',
+                )}
+                style={{ height: `${gridHeightRem}rem` }}
+              >
+                {timeSlots.map((slotMinutes) => (
+                  <div
+                    key={`${column.key}-line-${slotMinutes}`}
+                    className="pointer-events-none absolute inset-x-0 border-t border-stone-100 dark:border-stone-800"
+                    style={{ top: `${minutesToOffsetRem(slotMinutes, gridStartMinutes)}rem` }}
+                  />
+                ))}
+
+                {positioned.map(({ appointment, topRem, heightRem, lane, laneCount }) => (
+                  <div
+                    key={`${appointment.id}-${appointment.startTime}`}
+                    className="absolute z-[1] px-0.5 sm:px-1"
+                    style={{
+                      top: `${topRem}rem`,
+                      height: `${heightRem}rem`,
+                      left: `${(lane / laneCount) * 100}%`,
+                      width: `${(1 / laneCount) * 100}%`,
+                    }}
                   >
-                    <div className="flex flex-col gap-0.5">
-                      {cellAppointments.map((appointment) => (
-                        <div key={`${appointment.id}-${appointment.startTime}`}>{renderAppointment(appointment)}</div>
-                      ))}
-                    </div>
-                  </td>
-                );
-              })}
-            </tr>
+                    {renderAppointment(appointment)}
+                  </div>
+                ))}
+              </div>
             );
           })}
-        </tbody>
-      </table>
+        </div>
+      </div>
     </div>
   );
 }
 
 function DayHeader({ column }: { column: WeekCalendarColumn }) {
   return (
-    <th
-      scope="col"
+    <div
       className={cn(
-        'border-r border-stone-200 px-2 py-3 text-center last:border-r-0 dark:border-stone-700',
+        'min-w-0 flex-1 border-r border-stone-200 px-2 py-3 text-center last:border-r-0 dark:border-stone-700',
         column.isToday && 'bg-brand-50 dark:bg-brand-900/55',
       )}
     >
@@ -124,6 +146,6 @@ function DayHeader({ column }: { column: WeekCalendarColumn }) {
           {column.dateLabel}
         </span>
       )}
-    </th>
+    </div>
   );
 }

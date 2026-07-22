@@ -42,7 +42,7 @@ export function CalendarAppointmentChip({
       disabled={disabled}
       aria-pressed={selectMode ? selected : undefined}
       className={cn(
-        'relative flex h-full min-h-[2.75rem] w-full flex-col overflow-hidden rounded-md border text-left shadow-sm transition sm:min-h-[3rem]',
+        'relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-md border text-left shadow-sm transition',
         selected
           ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-200 dark:bg-brand-950/40 dark:ring-brand-800'
           : 'border-stone-200 bg-white dark:border-stone-600 dark:bg-stone-800',
