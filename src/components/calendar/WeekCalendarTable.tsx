@@ -103,7 +103,7 @@ export function WeekCalendarTable({
                   cellClassName,
                 )}
               >
-                <div className="flex min-h-[12rem] flex-col gap-2 sm:min-h-[14rem]">
+                <div className="flex h-full min-h-[12rem] w-full flex-col items-stretch gap-2 sm:min-h-[14rem]">
                   {renderCell(column, index)}
                 </div>
               </td>
