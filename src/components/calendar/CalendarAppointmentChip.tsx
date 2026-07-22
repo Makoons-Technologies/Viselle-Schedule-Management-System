@@ -70,7 +70,7 @@ export function CalendarAppointmentChip({
       <div
         className={cn(
           'flex min-h-0 flex-1 flex-col justify-center gap-0.5 overflow-hidden py-1.5 sm:gap-1',
-          stackInset ? 'pl-1.5 pr-12 sm:pl-2' : 'px-1.5 sm:px-2',
+          stackInset ? 'pl-1.5 pr-8 sm:pl-2' : 'px-1.5 sm:px-2',
         )}
       >
         <span className="line-clamp-2 min-w-0 text-[11px] font-medium leading-snug text-stone-900 [overflow-wrap:anywhere] dark:text-stone-100 sm:text-xs">
