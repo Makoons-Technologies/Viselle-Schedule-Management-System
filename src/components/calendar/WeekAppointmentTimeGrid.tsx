@@ -14,6 +14,9 @@ import { buildWeekColumns, type WeekCalendarColumn } from '@/components/calendar
 import { panelClassName } from '@/components/common/Panel';
 import { cn } from '@/lib/utils';
 
+/** Reserved strip above stacked chips so the pager never covers title/service text. */
+const STACK_PAGER_RESERVE_REM = 1.125;
+
 interface WeekAppointmentTimeGridProps {
   days: Date[];
   appointments: Appointment[];
@@ -165,6 +168,7 @@ function DayColumn({
         const frontIndex = stackKey ? (stackFrontByKey[stackKey] ?? 0) : 0;
         const isFront = stackSize <= 1 || stackIndex === frontIndex;
         const zIndex = isFront ? stackSize + 2 : stackIndex + 1;
+        const hasStackPager = stackSize > 1;
 
         return (
           <div
@@ -179,12 +183,21 @@ function DayColumn({
             }}
           >
             <div
-              className={cn(
-                'h-full',
-                !isFront && 'ring-1 ring-stone-900/10 dark:ring-white/10',
-              )}
+              className="box-border h-full"
+              style={
+                hasStackPager
+                  ? { paddingTop: `${STACK_PAGER_RESERVE_REM}rem` }
+                  : undefined
+              }
             >
-              {renderAppointment(appointment)}
+              <div
+                className={cn(
+                  'h-full min-h-0',
+                  !isFront && 'ring-1 ring-stone-900/10 dark:ring-white/10',
+                )}
+              >
+                {renderAppointment(appointment)}
+              </div>
             </div>
           </div>
         );
@@ -222,38 +235,41 @@ function StackPager({
 }) {
   return (
     <div
-      className="pointer-events-none absolute inset-x-0 z-30 flex justify-end px-1.5 pt-1"
-      style={{ top: `${topRem}rem` }}
+      className="pointer-events-none absolute inset-x-0 z-30 flex items-center justify-end px-1.5 sm:px-2"
+      style={{
+        top: `${topRem}rem`,
+        height: `${STACK_PAGER_RESERVE_REM}rem`,
+      }}
     >
       <div
-        className="pointer-events-auto inline-flex items-center gap-0.5 rounded-md border border-stone-300/90 bg-stone-900/90 px-0.5 py-0.5 text-stone-100 shadow-md backdrop-blur-sm dark:border-stone-500 dark:bg-stone-950/95"
+        className="pointer-events-auto inline-flex h-4 items-center gap-px rounded border border-stone-600/70 bg-stone-800/85 px-0.5 text-stone-200 shadow-sm backdrop-blur-[2px] dark:border-stone-500/60 dark:bg-stone-900/80"
         role="group"
         aria-label={`Overlapping appointments ${label}`}
       >
         <button
           type="button"
-          className="inline-flex h-5 w-5 items-center justify-center rounded hover:bg-white/10"
+          className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-sm text-stone-300 hover:bg-white/10 hover:text-stone-50"
           aria-label="Previous overlapping appointment"
           onClick={(event) => {
             event.stopPropagation();
             onPrevious();
           }}
         >
-          <ChevronLeft className="h-3.5 w-3.5" />
+          <ChevronLeft className="h-3 w-3" strokeWidth={2.25} />
         </button>
-        <span className="min-w-[1.75rem] text-center text-[10px] font-semibold tabular-nums leading-none">
+        <span className="min-w-[1.5rem] px-0.5 text-center text-[9px] font-medium tabular-nums leading-none text-stone-200">
           {label}
         </span>
         <button
           type="button"
-          className="inline-flex h-5 w-5 items-center justify-center rounded hover:bg-white/10"
+          className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-sm text-stone-300 hover:bg-white/10 hover:text-stone-50"
           aria-label="Next overlapping appointment"
           onClick={(event) => {
             event.stopPropagation();
             onNext();
           }}
         >
-          <ChevronRight className="h-3.5 w-3.5" />
+          <ChevronRight className="h-3 w-3" strokeWidth={2.25} />
         </button>
       </div>
     </div>
