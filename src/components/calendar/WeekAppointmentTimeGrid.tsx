@@ -391,7 +391,8 @@ function DayHeader({
             column.isToday || selected
               ? 'bg-brand-600 text-white shadow-sm dark:bg-brand-500'
               : 'text-stone-900 dark:text-stone-100',
-            selected && !column.isToday && 'ring-2 ring-brand-300 ring-offset-2 ring-offset-stone-50 dark:ring-brand-400 dark:ring-offset-stone-800',
+            selected &&
+              'ring-2 ring-brand-300 ring-offset-2 ring-offset-stone-50 dark:ring-brand-400 dark:ring-offset-stone-800',
           )}
         >
           {column.dateLabel}
