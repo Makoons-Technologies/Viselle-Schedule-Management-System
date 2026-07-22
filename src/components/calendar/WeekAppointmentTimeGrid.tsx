@@ -5,7 +5,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import type { Appointment } from '@/types/api';
 import {
   buildWeekTimeSlots,
@@ -20,8 +20,8 @@ import { buildWeekColumns, type WeekCalendarColumn } from '@/components/calendar
 import { panelClassName } from '@/components/common/Panel';
 import { cn } from '@/lib/utils';
 
-/** Minimum comfortable tap width for cycling overlaps on tablet. */
-const STACK_EDGE_HIT_CLASS = 'w-[min(2.75rem,32%)]';
+/** Tablet-friendly width for the vertical overlap cycle rail (~44px). */
+const STACK_RAIL_CLASS = 'w-11';
 
 export type AppointmentStackMeta = {
   size: number;
@@ -317,18 +317,20 @@ function StackEdgeControls({
 }) {
   return (
     <div
-      className="pointer-events-none absolute inset-0 z-20"
+      className={cn(
+        'pointer-events-none absolute inset-y-0 right-0 z-20 flex flex-col items-stretch',
+        STACK_RAIL_CLASS,
+      )}
       role="group"
       aria-label={`Overlapping appointments ${label}`}
     >
       <button
         type="button"
         className={cn(
-          'pointer-events-auto absolute inset-y-0 left-0 flex min-h-11 items-center justify-center rounded-l-md',
-          'bg-gradient-to-r from-stone-900/20 via-stone-900/10 to-transparent',
-          'text-stone-800 hover:from-stone-900/30 hover:via-stone-900/15',
-          'dark:from-black/35 dark:via-black/15 dark:text-stone-100 dark:hover:from-black/45',
-          STACK_EDGE_HIT_CLASS,
+          'pointer-events-auto flex min-h-0 flex-1 items-center justify-center rounded-tr-md',
+          'bg-gradient-to-b from-stone-900/25 via-stone-900/10 to-transparent',
+          'text-stone-800 hover:from-stone-900/35 hover:via-stone-900/15',
+          'dark:from-black/40 dark:via-black/15 dark:text-stone-100 dark:hover:from-black/50',
         )}
         aria-label="Previous overlapping appointment"
         onClick={(event) => {
@@ -336,16 +338,18 @@ function StackEdgeControls({
           onPrevious();
         }}
       >
-        <ChevronLeft className="h-5 w-5 drop-shadow-sm" strokeWidth={2.5} />
+        <ChevronUp className="h-5 w-5 drop-shadow-sm" strokeWidth={2.5} />
       </button>
+      <span className="pointer-events-none mx-auto shrink-0 rounded bg-stone-900/80 px-1 py-0.5 text-[9px] font-semibold tabular-nums leading-none text-white dark:bg-stone-950/85">
+        {label}
+      </span>
       <button
         type="button"
         className={cn(
-          'pointer-events-auto absolute inset-y-0 right-0 flex min-h-11 items-center justify-center rounded-r-md',
-          'bg-gradient-to-l from-stone-900/20 via-stone-900/10 to-transparent',
-          'text-stone-800 hover:from-stone-900/30 hover:via-stone-900/15',
-          'dark:from-black/35 dark:via-black/15 dark:text-stone-100 dark:hover:from-black/45',
-          STACK_EDGE_HIT_CLASS,
+          'pointer-events-auto flex min-h-0 flex-1 items-center justify-center rounded-br-md',
+          'bg-gradient-to-t from-stone-900/25 via-stone-900/10 to-transparent',
+          'text-stone-800 hover:from-stone-900/35 hover:via-stone-900/15',
+          'dark:from-black/40 dark:via-black/15 dark:text-stone-100 dark:hover:from-black/50',
         )}
         aria-label="Next overlapping appointment"
         onClick={(event) => {
@@ -353,10 +357,7 @@ function StackEdgeControls({
           onNext();
         }}
       >
-        <span className="pointer-events-none absolute right-1 top-1 rounded bg-stone-900/80 px-1 py-0.5 text-[9px] font-semibold tabular-nums leading-none text-white dark:bg-stone-950/85">
-          {label}
-        </span>
-        <ChevronRight className="h-5 w-5 drop-shadow-sm" strokeWidth={2.5} />
+        <ChevronDown className="h-5 w-5 drop-shadow-sm" strokeWidth={2.5} />
       </button>
     </div>
   );

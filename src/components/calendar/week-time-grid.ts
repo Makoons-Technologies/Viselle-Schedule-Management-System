@@ -2,7 +2,7 @@ import { appointmentScheduleFromIso } from '@/lib/utils';
 
 export const SLOT_MINUTES = 30;
 /** Visual height of one 30-minute row on the week calendar. */
-export const SLOT_HEIGHT_REM = 3;
+export const SLOT_HEIGHT_REM = 4;
 const DEFAULT_DAY_START = 8 * 60;
 const DEFAULT_DAY_END = 18 * 60;
 

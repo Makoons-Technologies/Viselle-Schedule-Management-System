@@ -4,7 +4,7 @@
  */
 
 const SLOT_MINUTES = 30;
-const SLOT_HEIGHT_REM = 3;
+const SLOT_HEIGHT_REM = 4;
 
 function appointmentStartMinutes(iso: string): number {
   const start = new Date(iso);
