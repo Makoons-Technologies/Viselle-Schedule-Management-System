@@ -1,4 +1,10 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import {
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Appointment } from '@/types/api';
 import {
@@ -14,14 +20,28 @@ import { buildWeekColumns, type WeekCalendarColumn } from '@/components/calendar
 import { panelClassName } from '@/components/common/Panel';
 import { cn } from '@/lib/utils';
 
-/** Reserved strip above stacked chips so the pager never covers title/service text. */
-const STACK_PAGER_RESERVE_REM = 1.125;
+/** Minimum comfortable tap width for cycling overlaps on tablet. */
+const STACK_EDGE_HIT_CLASS = 'w-[min(2.75rem,32%)]';
+
+export type AppointmentStackMeta = {
+  size: number;
+  index: number;
+  isFront: boolean;
+};
 
 interface WeekAppointmentTimeGridProps {
   days: Date[];
   appointments: Appointment[];
-  renderAppointment: (appointment: Appointment) => ReactNode;
+  renderAppointment: (appointment: Appointment, stack?: AppointmentStackMeta) => ReactNode;
   className?: string;
+  /** Day keys (yyyy-MM-dd) highlighted for zoom selection. Ignored while zoomed. */
+  selectedDayKeys?: string[];
+  /** When set, only these days are shown (zoomed view). */
+  zoomedDayKeys?: string[] | null;
+  onDayHeaderSelect?: (dayKey: string, event: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }) => void;
+  onDayHeaderRangeSelect?: (dayKeys: string[]) => void;
+  /** Double-click / double-tap shortcut to zoom into a day immediately. */
+  onDayHeaderActivate?: (dayKey: string) => void;
 }
 
 export function WeekAppointmentTimeGrid({
@@ -29,15 +49,36 @@ export function WeekAppointmentTimeGrid({
   appointments,
   renderAppointment,
   className,
+  selectedDayKeys = [],
+  zoomedDayKeys = null,
+  onDayHeaderSelect,
+  onDayHeaderRangeSelect,
+  onDayHeaderActivate,
 }: WeekAppointmentTimeGridProps) {
-  const columns = buildWeekColumns(days);
-  const dayKeys = columns.map((column) => column.key);
+  const allColumns = buildWeekColumns(days);
+  const isZoomed = !!zoomedDayKeys && zoomedDayKeys.length > 0;
+  const zoomedKeySet = useMemo(
+    () => (isZoomed ? new Set(zoomedDayKeys) : null),
+    [isZoomed, zoomedDayKeys],
+  );
+  const columns = useMemo(
+    () => (zoomedKeySet ? allColumns.filter((column) => zoomedKeySet.has(column.key)) : allColumns),
+    [allColumns, zoomedKeySet],
+  );
+  const dayKeys = allColumns.map((column) => column.key);
+  const selectedKeySet = useMemo(() => new Set(selectedDayKeys), [selectedDayKeys]);
   const timeSlots = buildWeekTimeSlots(appointments, SLOT_MINUTES);
   const gridStartMinutes = timeSlots[0] ?? 8 * 60;
   const gridHeightRem = timeSlots.length * SLOT_HEIGHT_REM;
   const byDay = groupAppointmentsByDay(appointments, dayKeys);
   /** Which stack member is on top, keyed by overlap-group id. */
   const [stackFrontByKey, setStackFrontByKey] = useState<Record<string, number>>({});
+  const dragRef = useRef<{
+    pointerId: number;
+    anchorKey: string;
+    moved: boolean;
+  } | null>(null);
+  const headerRowRef = useRef<HTMLDivElement | null>(null);
 
   const cycleStack = (stackKey: string, stackSize: number, delta: number) => {
     setStackFrontByKey((prev) => {
@@ -47,6 +88,69 @@ export function WeekAppointmentTimeGrid({
     });
   };
 
+  const keysBetween = (fromKey: string, toKey: string): string[] => {
+    const fromIndex = dayKeys.indexOf(fromKey);
+    const toIndex = dayKeys.indexOf(toKey);
+    if (fromIndex < 0 || toIndex < 0) return [toKey];
+    const start = Math.min(fromIndex, toIndex);
+    const end = Math.max(fromIndex, toIndex);
+    return dayKeys.slice(start, end + 1);
+  };
+
+  const dayKeyFromClientX = (clientX: number): string | null => {
+    const row = headerRowRef.current;
+    if (!row) return null;
+    const buttons = Array.from(row.querySelectorAll<HTMLElement>('[data-day-key]'));
+    for (const el of buttons) {
+      const rect = el.getBoundingClientRect();
+      if (clientX >= rect.left && clientX <= rect.right) {
+        return el.dataset.dayKey ?? null;
+      }
+    }
+    return null;
+  };
+
+  const handleHeaderPointerDown = (columnKey: string, event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (isZoomed || !onDayHeaderRangeSelect) return;
+    if (event.button !== 0) return;
+    dragRef.current = { pointerId: event.pointerId, anchorKey: columnKey, moved: false };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handleHeaderPointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId || isZoomed || !onDayHeaderRangeSelect) return;
+    const overKey = dayKeyFromClientX(event.clientX);
+    if (!overKey || overKey === drag.anchorKey) return;
+    drag.moved = true;
+    onDayHeaderRangeSelect(keysBetween(drag.anchorKey, overKey));
+  };
+
+  const handleHeaderPointerUp = (columnKey: string, event: ReactPointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const moved = drag.moved;
+    dragRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    if (moved) return;
+    onDayHeaderSelect?.(columnKey, {
+      shiftKey: event.shiftKey,
+      metaKey: event.metaKey,
+      ctrlKey: event.ctrlKey,
+    });
+  };
+
+  const columnMinWidthRem = isZoomed
+    ? columns.length <= 1
+      ? 18
+      : columns.length <= 3
+        ? 12
+        : 9
+    : 6;
+  const gridMinWidthRem = 5 + columns.length * columnMinWidthRem;
+
   return (
     <div
       className={cn(
@@ -55,11 +159,23 @@ export function WeekAppointmentTimeGrid({
         className,
       )}
     >
-      <div className="min-w-[44rem]">
-        <div className="flex border-b border-stone-200 bg-stone-50/90 dark:border-stone-700 dark:bg-stone-800/80">
+      <div style={{ minWidth: `${gridMinWidthRem}rem` }}>
+        <div
+          ref={headerRowRef}
+          className="flex border-b border-stone-200 bg-stone-50/90 dark:border-stone-700 dark:bg-stone-800/80"
+        >
           <div className="sticky left-0 z-20 w-16 shrink-0 border-r border-stone-200 bg-stone-50/95 dark:border-stone-700 dark:bg-stone-800/95 sm:w-20" />
           {columns.map((column) => (
-            <DayHeader key={column.key} column={column} />
+            <DayHeader
+              key={column.key}
+              column={column}
+              selectable={!isZoomed && !!onDayHeaderSelect}
+              selected={!isZoomed && selectedKeySet.has(column.key)}
+              onPointerDown={(event) => handleHeaderPointerDown(column.key, event)}
+              onPointerMove={handleHeaderPointerMove}
+              onPointerUp={(event) => handleHeaderPointerUp(column.key, event)}
+              onDoubleClick={() => onDayHeaderActivate?.(column.key)}
+            />
           ))}
         </div>
 
@@ -127,27 +243,8 @@ function DayColumn({
   positioned: ReturnType<typeof layoutDayAppointments<Appointment>>;
   stackFrontByKey: Record<string, number>;
   onCycleStack: (stackKey: string, stackSize: number, delta: number) => void;
-  renderAppointment: (appointment: Appointment) => ReactNode;
+  renderAppointment: (appointment: Appointment, stack?: AppointmentStackMeta) => ReactNode;
 }) {
-  const stackPagerAnchor = useMemo(() => {
-    const anchors = new Map<string, { topRem: number; heightRem: number }>();
-    for (const item of positioned) {
-      if (item.stackSize <= 1 || !item.stackKey) continue;
-      const existing = anchors.get(item.stackKey);
-      if (!existing) {
-        anchors.set(item.stackKey, { topRem: item.topRem, heightRem: item.heightRem });
-        continue;
-      }
-      const topRem = Math.min(existing.topRem, item.topRem);
-      const bottomRem = Math.max(
-        existing.topRem + existing.heightRem,
-        item.topRem + item.heightRem,
-      );
-      anchors.set(item.stackKey, { topRem, heightRem: bottomRem - topRem });
-    }
-    return anchors;
-  }, [positioned]);
-
   return (
     <div
       className={cn(
@@ -168,7 +265,7 @@ function DayColumn({
         const frontIndex = stackKey ? (stackFrontByKey[stackKey] ?? 0) : 0;
         const isFront = stackSize <= 1 || stackIndex === frontIndex;
         const zIndex = isFront ? stackSize + 2 : stackIndex + 1;
-        const hasStackPager = stackSize > 1;
+        const hasStackControls = stackSize > 1 && isFront && !!stackKey;
 
         return (
           <div
@@ -183,107 +280,107 @@ function DayColumn({
             }}
           >
             <div
-              className="box-border h-full"
-              style={
-                hasStackPager
-                  ? { paddingTop: `${STACK_PAGER_RESERVE_REM}rem` }
-                  : undefined
-              }
+              className={cn(
+                'relative h-full min-h-0',
+                !isFront && 'ring-1 ring-stone-900/10 dark:ring-white/10',
+              )}
             >
-              <div
-                className={cn(
-                  'h-full min-h-0',
-                  !isFront && 'ring-1 ring-stone-900/10 dark:ring-white/10',
-                )}
-              >
-                {renderAppointment(appointment)}
-              </div>
+              {renderAppointment(
+                appointment,
+                stackSize > 1
+                  ? { size: stackSize, index: stackIndex, isFront }
+                  : undefined,
+              )}
+              {hasStackControls ? (
+                <StackEdgeControls
+                  label={`${frontIndex + 1}/${stackSize}`}
+                  onPrevious={() => onCycleStack(stackKey, stackSize, -1)}
+                  onNext={() => onCycleStack(stackKey, stackSize, 1)}
+                />
+              ) : null}
             </div>
           </div>
-        );
-      })}
-
-      {[...stackPagerAnchor.entries()].map(([stackKey, anchor]) => {
-        const stackSize =
-          positioned.find((item) => item.stackKey === stackKey)?.stackSize ?? 1;
-        const frontIndex = stackFrontByKey[stackKey] ?? 0;
-
-        return (
-          <StackPager
-            key={`pager-${stackKey}`}
-            topRem={anchor.topRem}
-            label={`${frontIndex + 1}/${stackSize}`}
-            onPrevious={() => onCycleStack(stackKey, stackSize, -1)}
-            onNext={() => onCycleStack(stackKey, stackSize, 1)}
-          />
         );
       })}
     </div>
   );
 }
 
-function StackPager({
-  topRem,
+function StackEdgeControls({
   label,
   onPrevious,
   onNext,
 }: {
-  topRem: number;
   label: string;
   onPrevious: () => void;
   onNext: () => void;
 }) {
   return (
     <div
-      className="pointer-events-none absolute inset-x-0 z-30 flex items-center justify-end px-1.5 sm:px-2"
-      style={{
-        top: `${topRem}rem`,
-        height: `${STACK_PAGER_RESERVE_REM}rem`,
-      }}
+      className="pointer-events-none absolute inset-0 z-20"
+      role="group"
+      aria-label={`Overlapping appointments ${label}`}
     >
-      <div
-        className="pointer-events-auto inline-flex h-4 items-center gap-px rounded border border-stone-600/70 bg-stone-800/85 px-0.5 text-stone-200 shadow-sm backdrop-blur-[2px] dark:border-stone-500/60 dark:bg-stone-900/80"
-        role="group"
-        aria-label={`Overlapping appointments ${label}`}
+      <button
+        type="button"
+        className={cn(
+          'pointer-events-auto absolute inset-y-0 left-0 flex min-h-11 items-center justify-center rounded-l-md',
+          'bg-gradient-to-r from-stone-900/20 via-stone-900/10 to-transparent',
+          'text-stone-800 hover:from-stone-900/30 hover:via-stone-900/15',
+          'dark:from-black/35 dark:via-black/15 dark:text-stone-100 dark:hover:from-black/45',
+          STACK_EDGE_HIT_CLASS,
+        )}
+        aria-label="Previous overlapping appointment"
+        onClick={(event) => {
+          event.stopPropagation();
+          onPrevious();
+        }}
       >
-        <button
-          type="button"
-          className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-sm text-stone-300 hover:bg-white/10 hover:text-stone-50"
-          aria-label="Previous overlapping appointment"
-          onClick={(event) => {
-            event.stopPropagation();
-            onPrevious();
-          }}
-        >
-          <ChevronLeft className="h-3 w-3" strokeWidth={2.25} />
-        </button>
-        <span className="min-w-[1.5rem] px-0.5 text-center text-[9px] font-medium tabular-nums leading-none text-stone-200">
+        <ChevronLeft className="h-5 w-5 drop-shadow-sm" strokeWidth={2.5} />
+      </button>
+      <button
+        type="button"
+        className={cn(
+          'pointer-events-auto absolute inset-y-0 right-0 flex min-h-11 items-center justify-center rounded-r-md',
+          'bg-gradient-to-l from-stone-900/20 via-stone-900/10 to-transparent',
+          'text-stone-800 hover:from-stone-900/30 hover:via-stone-900/15',
+          'dark:from-black/35 dark:via-black/15 dark:text-stone-100 dark:hover:from-black/45',
+          STACK_EDGE_HIT_CLASS,
+        )}
+        aria-label="Next overlapping appointment"
+        onClick={(event) => {
+          event.stopPropagation();
+          onNext();
+        }}
+      >
+        <span className="pointer-events-none absolute right-1 top-1 rounded bg-stone-900/80 px-1 py-0.5 text-[9px] font-semibold tabular-nums leading-none text-white dark:bg-stone-950/85">
           {label}
         </span>
-        <button
-          type="button"
-          className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-sm text-stone-300 hover:bg-white/10 hover:text-stone-50"
-          aria-label="Next overlapping appointment"
-          onClick={(event) => {
-            event.stopPropagation();
-            onNext();
-          }}
-        >
-          <ChevronRight className="h-3 w-3" strokeWidth={2.25} />
-        </button>
-      </div>
+        <ChevronRight className="h-5 w-5 drop-shadow-sm" strokeWidth={2.5} />
+      </button>
     </div>
   );
 }
 
-function DayHeader({ column }: { column: WeekCalendarColumn }) {
-  return (
-    <div
-      className={cn(
-        'min-w-0 flex-1 border-r border-stone-200 px-2 py-3 text-center last:border-r-0 dark:border-stone-700',
-        column.isToday && 'bg-brand-50 dark:bg-brand-900/55',
-      )}
-    >
+function DayHeader({
+  column,
+  selectable,
+  selected,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onDoubleClick,
+}: {
+  column: WeekCalendarColumn;
+  selectable: boolean;
+  selected: boolean;
+  onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => void;
+  onPointerMove: (event: ReactPointerEvent<HTMLButtonElement>) => void;
+  onPointerUp: (event: ReactPointerEvent<HTMLButtonElement>) => void;
+  onDoubleClick: () => void;
+}) {
+  const content = (
+    <>
       <span
         className={cn(
           'block text-[10px] font-semibold uppercase tracking-wider',
@@ -297,15 +394,60 @@ function DayHeader({ column }: { column: WeekCalendarColumn }) {
       {column.dateLabel !== undefined && (
         <span
           className={cn(
-            'mt-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold tabular-nums sm:h-8 sm:w-8 sm:text-sm',
-            column.isToday
+            'mt-1.5 inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold tabular-nums sm:h-9 sm:w-9',
+            column.isToday || selected
               ? 'bg-brand-600 text-white shadow-sm dark:bg-brand-500'
               : 'text-stone-900 dark:text-stone-100',
+            selected && !column.isToday && 'ring-2 ring-brand-300 ring-offset-2 ring-offset-stone-50 dark:ring-brand-400 dark:ring-offset-stone-800',
           )}
         >
           {column.dateLabel}
         </span>
       )}
-    </div>
+    </>
+  );
+
+  const shellClass = cn(
+    'min-w-0 flex-1 border-r border-stone-200 px-1 py-3 text-center last:border-r-0 dark:border-stone-700 sm:px-2',
+    column.isToday && 'bg-brand-50 dark:bg-brand-900/55',
+    selected && !column.isToday && 'bg-brand-50/70 dark:bg-brand-900/35',
+  );
+
+  if (!selectable) {
+    return (
+      <div className={shellClass} data-day-key={column.key}>
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      data-day-key={column.key}
+      className={cn(
+        shellClass,
+        'min-h-[3.75rem] touch-manipulation transition-colors select-none',
+        'hover:bg-stone-100/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500',
+        'dark:hover:bg-stone-700/50',
+        selected && 'hover:bg-brand-50 dark:hover:bg-brand-900/45',
+      )}
+      aria-pressed={selected}
+      aria-label={`Select ${column.dayLabel}${column.dateLabel ? ` ${column.dateLabel}` : ''}`}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={(event) => {
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+      }}
+      onDoubleClick={(event) => {
+        event.preventDefault();
+        onDoubleClick();
+      }}
+    >
+      {content}
+    </button>
   );
 }

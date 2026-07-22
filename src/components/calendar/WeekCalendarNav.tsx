@@ -9,6 +9,7 @@ interface WeekCalendarNavProps {
   onPrevious: () => void;
   onNext: () => void;
   leading?: ReactNode;
+  trailing?: ReactNode;
   className?: string;
 }
 
@@ -17,6 +18,7 @@ export function WeekCalendarNav({
   onPrevious,
   onNext,
   leading,
+  trailing,
   className,
 }: WeekCalendarNavProps) {
   return (
@@ -28,16 +30,19 @@ export function WeekCalendarNav({
       )}
     >
       {leading && <div className="shrink-0">{leading}</div>}
-      <div className="flex items-center justify-center gap-1 sm:ml-auto">
-        <Button variant="outline" size="icon" onClick={onPrevious} title="Previous week">
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        <span className="min-w-[10rem] px-2 text-center text-sm font-semibold">
-          {label}
-        </span>
-        <Button variant="outline" size="icon" onClick={onNext} title="Next week">
-          <ChevronRight className="h-4 w-4" />
-        </Button>
+      <div className="flex flex-wrap items-center justify-center gap-2 sm:ml-auto">
+        <div className="flex items-center justify-center gap-1">
+          <Button variant="outline" size="icon" onClick={onPrevious} title="Previous week">
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="min-w-[10rem] px-2 text-center text-sm font-semibold">
+            {label}
+          </span>
+          <Button variant="outline" size="icon" onClick={onNext} title="Next week">
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+        {trailing}
       </div>
     </div>
   );

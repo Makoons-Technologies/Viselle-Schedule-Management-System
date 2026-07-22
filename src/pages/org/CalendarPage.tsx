@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { addDays, endOfWeek, format, startOfWeek } from 'date-fns';
-import { ListChecks, Plus, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { addDays, endOfWeek, format, parseISO, startOfWeek } from 'date-fns';
+import { ListChecks, Plus, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
 import { orgApi } from '@/lib/api';
 import { APPOINTMENT_CALENDAR_LIP_CLASS, APPOINTMENT_CALENDAR_LIP_LABEL } from '@/lib/appointment-status';
 import { cn } from '@/lib/utils';
@@ -20,6 +20,21 @@ import { PageHeader } from '@/components/common/PageHeader';
 import { LoadingState } from '@/components/common/LoadingState';
 import { Button } from '@/components/ui/button';
 
+function sortDayKeys(keys: string[]): string[] {
+  return [...keys].sort();
+}
+
+function formatZoomLabel(dayKeys: string[]): string {
+  if (dayKeys.length === 0) return '';
+  const first = parseISO(dayKeys[0]);
+  if (dayKeys.length === 1) return format(first, 'EEE, MMM d');
+  const last = parseISO(dayKeys[dayKeys.length - 1]);
+  if (format(first, 'MMM') === format(last, 'MMM')) {
+    return `${format(first, 'MMM d')} – ${format(last, 'd')}`;
+  }
+  return `${format(first, 'MMM d')} – ${format(last, 'MMM d')}`;
+}
+
 export function CalendarPage() {
   const orgId = useOrgId();
   const { permissions } = useStaffPermissions(orgId);
@@ -36,10 +51,14 @@ export function CalendarPage() {
   const [batchSelection, setBatchSelection] = useState<Record<string, BatchCheckoutItem>>({});
   const [batchCheckoutOpen, setBatchCheckoutOpen] = useState(false);
   const { hideCancelled, setHideCancelled } = useHideCancelledAppointments();
+  const [selectedDayKeys, setSelectedDayKeys] = useState<string[]>([]);
+  const [zoomedDayKeys, setZoomedDayKeys] = useState<string[] | null>(null);
+  const daySelectionAnchorRef = useRef<string | null>(null);
 
   const weekEnd = endOfWeek(weekStart, { weekStartsOn: 0 });
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
-
+  const dayKeys = useMemo(() => days.map((day) => format(day, 'yyyy-MM-dd')), [days]);
+  const isDayZoomed = !!zoomedDayKeys && zoomedDayKeys.length > 0;
   const { data, isLoading } = useQuery({
     queryKey: ['appointments', orgId, weekStart.toISOString()],
     queryFn: () =>
@@ -144,6 +163,73 @@ export function CalendarPage() {
     setBatchSelection({});
   };
 
+  const clearDaySelection = () => {
+    setSelectedDayKeys([]);
+    daySelectionAnchorRef.current = null;
+  };
+
+  const exitDayZoom = () => {
+    setZoomedDayKeys(null);
+    clearDaySelection();
+  };
+
+  const changeWeek = (nextStart: Date) => {
+    setWeekStart(nextStart);
+    exitDayZoom();
+  };
+
+  const keysBetween = (fromKey: string, toKey: string): string[] => {
+    const fromIndex = dayKeys.indexOf(fromKey);
+    const toIndex = dayKeys.indexOf(toKey);
+    if (fromIndex < 0 || toIndex < 0) return [toKey];
+    const start = Math.min(fromIndex, toIndex);
+    const end = Math.max(fromIndex, toIndex);
+    return dayKeys.slice(start, end + 1);
+  };
+
+  const handleDayHeaderSelect = (
+    dayKey: string,
+    event: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean },
+  ) => {
+    if (event.shiftKey && daySelectionAnchorRef.current) {
+      setSelectedDayKeys(keysBetween(daySelectionAnchorRef.current, dayKey));
+      return;
+    }
+
+    setSelectedDayKeys((prev) => {
+      const additive = event.metaKey || event.ctrlKey || prev.length > 0;
+      if (!additive) {
+        daySelectionAnchorRef.current = dayKey;
+        return [dayKey];
+      }
+      if (prev.includes(dayKey)) {
+        const next = prev.filter((key) => key !== dayKey);
+        daySelectionAnchorRef.current = next[next.length - 1] ?? dayKey;
+        return next;
+      }
+      daySelectionAnchorRef.current = dayKey;
+      return sortDayKeys([...prev, dayKey]);
+    });
+  };
+
+  const handleDayHeaderRangeSelect = (keys: string[]) => {
+    setSelectedDayKeys(sortDayKeys(keys));
+    if (keys.length > 0) {
+      daySelectionAnchorRef.current = keys[0];
+    }
+  };
+
+  const applyDayZoom = (keys: string[]) => {
+    const ordered = sortDayKeys(keys).filter((key) => dayKeys.includes(key));
+    if (ordered.length === 0) return;
+    setZoomedDayKeys(ordered);
+    clearDaySelection();
+  };
+
+  const weekNavLabel = isDayZoomed
+    ? formatZoomLabel(zoomedDayKeys)
+    : `${format(weekStart, 'MMM d')} – ${format(weekEnd, 'MMM d, yyyy')}`;
+
   if (isLoading) return <LoadingState />;
 
   return (
@@ -153,9 +239,13 @@ export function CalendarPage() {
         description={
           selectMode
             ? 'Select checked-in appointments to check out together'
-            : resolvedStaffIds.length === staffAccounts.length && staffAccounts.length > 0
-              ? 'Week view of all appointments'
-              : 'Week view of selected schedules'
+            : isDayZoomed
+              ? zoomedDayKeys.length === 1
+                ? 'Focused day view — show full week to zoom out'
+                : `Focused ${zoomedDayKeys.length}-day view — show full week to zoom out`
+              : resolvedStaffIds.length === staffAccounts.length && staffAccounts.length > 0
+                ? 'Week view of all appointments — tap day headers to zoom'
+                : 'Week view of selected schedules — tap day headers to zoom'
         }
         actions={
           <div className="flex items-center gap-2">
@@ -185,9 +275,9 @@ export function CalendarPage() {
         }
       />
       <WeekCalendarNav
-        label={`${format(weekStart, 'MMM d')} – ${format(weekEnd, 'MMM d, yyyy')}`}
-        onPrevious={() => setWeekStart(addDays(weekStart, -7))}
-        onNext={() => setWeekStart(addDays(weekStart, 7))}
+        label={weekNavLabel}
+        onPrevious={() => changeWeek(addDays(weekStart, -7))}
+        onNext={() => changeWeek(addDays(weekStart, 7))}
         leading={
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <StaffScheduleFilter
@@ -198,7 +288,39 @@ export function CalendarPage() {
             <HideCancelledToggle checked={hideCancelled} onCheckedChange={setHideCancelled} />
           </div>
         }
+        trailing={
+          isDayZoomed ? (
+            <Button variant="outline" size="sm" onClick={exitDayZoom} className="min-h-10">
+              <ZoomOut className="h-4 w-4" /> Full week
+            </Button>
+          ) : null
+        }
       />
+      {!isDayZoomed && selectedDayKeys.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-stone-200 bg-white px-3 py-3 shadow-sm dark:border-stone-700 dark:bg-stone-900 sm:px-4">
+          <p className="text-sm text-stone-700 dark:text-stone-200">
+            {selectedDayKeys.length === 1
+              ? '1 day selected'
+              : `${selectedDayKeys.length} days selected`}
+            <span className="ml-1 text-stone-500 dark:text-stone-400">
+              — tap more headers to add, or drag across them
+            </span>
+          </p>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={clearDaySelection} className="min-h-10">
+              Clear
+            </Button>
+            <Button
+              size="sm"
+              className="min-h-10"
+              onClick={() => applyDayZoom(selectedDayKeys)}
+            >
+              <ZoomIn className="h-4 w-4" />
+              {selectedDayKeys.length === 1 ? 'View day' : `View ${selectedDayKeys.length} days`}
+            </Button>
+          </div>
+        </div>
+      )}
       <div className="mb-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-stone-600 dark:text-stone-300">
         {(Object.keys(APPOINTMENT_CALENDAR_LIP_CLASS) as Array<keyof typeof APPOINTMENT_CALENDAR_LIP_CLASS>)
           .filter((state) => state !== 'cancelled')
@@ -212,7 +334,12 @@ export function CalendarPage() {
       <WeekAppointmentTimeGrid
         days={days}
         appointments={appointments}
-        renderAppointment={(appt) => {
+        selectedDayKeys={selectedDayKeys}
+        zoomedDayKeys={zoomedDayKeys}
+        onDayHeaderSelect={handleDayHeaderSelect}
+        onDayHeaderRangeSelect={handleDayHeaderRangeSelect}
+        onDayHeaderActivate={(dayKey) => applyDayZoom([dayKey])}
+        renderAppointment={(appt, stack) => {
           const customer = customersById[appt.customerId];
           const customerName = customer
             ? `${customer.firstName} ${customer.lastName}`.trim()
@@ -236,6 +363,7 @@ export function CalendarPage() {
                   ? `${customerName} — ${serviceName} — recurring`
                   : `${customerName} — ${serviceName}`
               }
+              stackInset={!!stack && stack.isFront}
               selectMode={selectMode}
               selected={!!batchSelection[appt.id]}
               selectable={checkoutEligible}

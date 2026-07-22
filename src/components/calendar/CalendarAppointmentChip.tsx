@@ -16,6 +16,8 @@ interface CalendarAppointmentChipProps {
   selected?: boolean;
   /** In select mode, whether this chip can be selected (arrived + unpaid). */
   selectable?: boolean;
+  /** Horizontal inset so stacked edge controls do not cover title/service text. */
+  stackInset?: boolean;
 }
 
 export function CalendarAppointmentChip({
@@ -29,6 +31,7 @@ export function CalendarAppointmentChip({
   selectMode = false,
   selected = false,
   selectable = true,
+  stackInset = false,
 }: CalendarAppointmentChipProps) {
   const lipClass = getAppointmentCalendarLipClass(visitStatus, paymentStatus);
   const lipLabel = getAppointmentCalendarLipLabel(visitStatus, paymentStatus);
@@ -64,15 +67,20 @@ export function CalendarAppointmentChip({
           {selected && <Check className="h-3 w-3" />}
         </span>
       )}
-      <div className="flex flex-1 flex-col justify-center gap-0.5 px-1.5 py-1 sm:gap-1 sm:px-2">
-        <span className="truncate text-[11px] font-medium leading-tight text-stone-900 dark:text-stone-100 sm:text-xs">
+      <div
+        className={cn(
+          'flex min-h-0 flex-1 flex-col justify-center gap-0.5 py-1 sm:gap-1',
+          stackInset ? 'px-9 sm:px-10' : 'px-1.5 sm:px-2',
+        )}
+      >
+        <span className="line-clamp-2 min-w-0 text-[11px] font-medium leading-tight text-stone-900 [overflow-wrap:anywhere] dark:text-stone-100 sm:text-xs">
           {customerName}
         </span>
-        <span className="truncate text-[10px] leading-tight text-stone-600 dark:text-stone-300 sm:text-[11px]">
+        <span className="line-clamp-2 min-w-0 text-[10px] leading-tight text-stone-600 [overflow-wrap:anywhere] dark:text-stone-300 sm:text-[11px]">
           {serviceName}
         </span>
         {isRecurring ? (
-          <span className="truncate text-[9px] font-medium text-brand-600 dark:text-brand-400 sm:text-[10px]">
+          <span className="line-clamp-1 min-w-0 text-[9px] font-medium text-brand-600 [overflow-wrap:anywhere] dark:text-brand-400 sm:text-[10px]">
             Recurring
           </span>
         ) : null}
