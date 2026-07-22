@@ -66,6 +66,125 @@ assert(
   '9:45 UTC wall clock → 585 minutes',
 );
 
+function intervalsOverlap(aStart: number, aEnd: number, bStart: number, bEnd: number) {
+  return aStart < bEnd && bStart < aEnd;
+}
+
+function layoutDayAppointments(
+  appointments: Array<{ id: string; startTime: string; endTime: string }>,
+  gridStartMinutes: number,
+) {
+  const placed = appointments
+    .map((appointment) => {
+      const geometry = appointmentBlockGeometry(
+        appointment.startTime,
+        appointment.endTime,
+        gridStartMinutes,
+      );
+      return { appointment, identity: appointment.id, ...geometry };
+    })
+    .sort((a, b) => {
+      const byStart = a.startMinutes - b.startMinutes;
+      if (byStart !== 0) return byStart;
+      return a.identity.localeCompare(b.identity);
+    });
+
+  const parent = placed.map((_, index) => index);
+  const find = (index: number): number => {
+    if (parent[index] !== index) parent[index] = find(parent[index]);
+    return parent[index];
+  };
+  const unite = (a: number, b: number) => {
+    const rootA = find(a);
+    const rootB = find(b);
+    if (rootA !== rootB) parent[rootB] = rootA;
+  };
+
+  for (let i = 0; i < placed.length; i += 1) {
+    for (let j = i + 1; j < placed.length; j += 1) {
+      if (placed[j].startMinutes >= placed[i].endMinutes) break;
+      if (
+        intervalsOverlap(
+          placed[i].startMinutes,
+          placed[i].endMinutes,
+          placed[j].startMinutes,
+          placed[j].endMinutes,
+        )
+      ) {
+        unite(i, j);
+      }
+    }
+  }
+
+  const clusters = new Map<number, number[]>();
+  for (let i = 0; i < placed.length; i += 1) {
+    const root = find(i);
+    const members = clusters.get(root) ?? [];
+    members.push(i);
+    clusters.set(root, members);
+  }
+
+  return placed.map((item, index) => {
+    const root = find(index);
+    const members = clusters.get(root) ?? [index];
+    const stackSize = members.length;
+    const stackIndex = members.indexOf(index);
+    return {
+      id: item.appointment.id,
+      topRem: item.topRem,
+      heightRem: item.heightRem,
+      stackSize,
+      stackIndex,
+      stackKey:
+        stackSize > 1
+          ? members
+              .map((memberIndex) => placed[memberIndex].identity)
+              .sort()
+              .join('|')
+          : '',
+    };
+  });
+}
+
+const stacked = layoutDayAppointments(
+  [
+    {
+      id: 'a',
+      startTime: '2026-07-22T09:00:00.000Z',
+      endTime: '2026-07-22T10:00:00.000Z',
+    },
+    {
+      id: 'b',
+      startTime: '2026-07-22T09:30:00.000Z',
+      endTime: '2026-07-22T10:30:00.000Z',
+    },
+    {
+      id: 'c',
+      startTime: '2026-07-22T11:00:00.000Z',
+      endTime: '2026-07-22T11:30:00.000Z',
+    },
+  ],
+  gridStart,
+);
+
+const a = stacked.find((item) => item.id === 'a')!;
+const b = stacked.find((item) => item.id === 'b')!;
+const c = stacked.find((item) => item.id === 'c')!;
+
+assert(a.stackSize === 2 && b.stackSize === 2, 'partial overlap a/b share one stack of 2');
+assert(a.stackKey === b.stackKey && a.stackKey !== '', 'overlapping peers share a stack key');
+assert(c.stackSize === 1 && c.stackKey === '', 'non-overlapping c stays alone (full width)');
+assert(
+  a.topRem === minutesToOffsetRem(9 * 60, gridStart),
+  `a keeps exact 9:00 top (${a.topRem})`,
+);
+assert(
+  b.topRem === minutesToOffsetRem(9 * 60 + 30, gridStart),
+  `b keeps exact 9:30 top (${b.topRem})`,
+);
+assert(a.heightRem === 2 * SLOT_HEIGHT_REM, 'a 9:00–10:00 is two slots tall');
+assert(b.heightRem === 2 * SLOT_HEIGHT_REM, 'b 9:30–10:30 is two slots tall');
+
 if (process.exitCode) {
   console.error('\nVerification failed.');
 } else {

@@ -104,63 +104,117 @@ export interface PositionedAppointment<T> {
   appointment: T;
   topRem: number;
   heightRem: number;
-  /** 0-based lane within overlapping peers. */
-  lane: number;
-  /** Lane count for overlapping peers (controls width). */
-  laneCount: number;
+  /** Shared key for the connected overlap group (empty when alone). */
+  stackKey: string;
+  /** 0-based index within the overlap stack (stable: start time, then id). */
+  stackIndex: number;
+  /** Size of the connected overlap group (1 when alone). */
+  stackSize: number;
+}
+
+type TimedAppointment = { startTime: string; endTime: string; id?: string };
+
+function appointmentIdentity(appointment: TimedAppointment, fallbackIndex: number): string {
+  return appointment.id ?? `${appointment.startTime}:${appointment.endTime}:${fallbackIndex}`;
+}
+
+function intervalsOverlap(
+  aStart: number,
+  aEnd: number,
+  bStart: number,
+  bEnd: number,
+): boolean {
+  return aStart < bEnd && bStart < aEnd;
 }
 
 /**
- * Place appointments with exact start/end offsets; overlapping items share horizontal lanes.
+ * Place appointments with exact start/end offsets.
+ * Overlapping items form a connected stack (full-width layering), not side-by-side lanes.
  */
-export function layoutDayAppointments<T extends { startTime: string; endTime: string }>(
+export function layoutDayAppointments<T extends TimedAppointment>(
   appointments: T[],
   gridStartMinutes: number,
   slotMinutes = SLOT_MINUTES,
   slotHeightRem = SLOT_HEIGHT_REM,
 ): PositionedAppointment<T>[] {
-  const sorted = [...appointments].sort((a, b) => a.startTime.localeCompare(b.startTime));
-  const laneEnds: number[] = [];
-  const placed: Array<{
-    appointment: T;
-    startMinutes: number;
-    endMinutes: number;
-    topRem: number;
-    heightRem: number;
-    lane: number;
-  }> = [];
+  const placed = appointments
+    .map((appointment, index) => {
+      const geometry = appointmentBlockGeometry(
+        appointment.startTime,
+        appointment.endTime,
+        gridStartMinutes,
+        slotMinutes,
+        slotHeightRem,
+      );
+      return {
+        appointment,
+        identity: appointmentIdentity(appointment, index),
+        ...geometry,
+      };
+    })
+    .sort((a, b) => {
+      const byStart = a.startMinutes - b.startMinutes;
+      if (byStart !== 0) return byStart;
+      return a.identity.localeCompare(b.identity);
+    });
 
-  for (const appointment of sorted) {
-    const geometry = appointmentBlockGeometry(
-      appointment.startTime,
-      appointment.endTime,
-      gridStartMinutes,
-      slotMinutes,
-      slotHeightRem,
-    );
-    let lane = laneEnds.findIndex((end) => end <= geometry.startMinutes);
-    if (lane === -1) {
-      lane = laneEnds.length;
-      laneEnds.push(geometry.endMinutes);
-    } else {
-      laneEnds[lane] = geometry.endMinutes;
-    }
-    placed.push({ appointment, lane, ...geometry });
-  }
+  const parent = placed.map((_, index) => index);
+  const find = (index: number): number => {
+    if (parent[index] !== index) parent[index] = find(parent[index]);
+    return parent[index];
+  };
+  const unite = (a: number, b: number) => {
+    const rootA = find(a);
+    const rootB = find(b);
+    if (rootA !== rootB) parent[rootB] = rootA;
+  };
 
-  return placed.map((item) => {
-    let maxLane = item.lane;
-    for (const other of placed) {
-      if (other.startMinutes < item.endMinutes && other.endMinutes > item.startMinutes) {
-        maxLane = Math.max(maxLane, other.lane);
+  for (let i = 0; i < placed.length; i += 1) {
+    for (let j = i + 1; j < placed.length; j += 1) {
+      if (placed[j].startMinutes >= placed[i].endMinutes) break;
+      if (
+        intervalsOverlap(
+          placed[i].startMinutes,
+          placed[i].endMinutes,
+          placed[j].startMinutes,
+          placed[j].endMinutes,
+        )
+      ) {
+        unite(i, j);
       }
     }
+  }
+
+  const clusters = new Map<number, number[]>();
+  for (let i = 0; i < placed.length; i += 1) {
+    const root = find(i);
+    const members = clusters.get(root) ?? [];
+    members.push(i);
+    clusters.set(root, members);
+  }
+
+  const stackMeta = new Map<number, { stackKey: string; stackIndex: number; stackSize: number }>();
+  for (const members of clusters.values()) {
+    const stackSize = members.length;
+    const stackKey =
+      stackSize > 1
+        ? members
+            .map((index) => placed[index].identity)
+            .sort()
+            .join('|')
+        : '';
+    members.forEach((index, stackIndex) => {
+      stackMeta.set(index, { stackKey, stackIndex, stackSize });
+    });
+  }
+
+  return placed.map((item, index) => {
+    const meta = stackMeta.get(index) ?? { stackKey: '', stackIndex: 0, stackSize: 1 };
     return {
       appointment: item.appointment,
       topRem: item.topRem,
       heightRem: item.heightRem,
-      lane: item.lane,
-      laneCount: maxLane + 1,
+      ...meta,
     };
   });
 }
