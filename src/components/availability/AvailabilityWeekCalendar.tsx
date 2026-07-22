@@ -1,4 +1,3 @@
-import { Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { AvailabilityRule } from '@/types/api';
 import {
@@ -72,11 +71,10 @@ export function AvailabilityWeekCalendar({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="mt-auto w-full shrink-0 justify-center self-stretch text-stone-600 dark:border-stone-600 dark:bg-stone-900 dark:text-stone-300 dark:hover:bg-stone-800"
+                  className="mt-auto w-full shrink-0 justify-center self-stretch text-center text-stone-600 dark:border-stone-600 dark:bg-stone-900 dark:text-stone-300 dark:hover:bg-stone-800"
                   onClick={() => setAddDay(dayOfWeek)}
                 >
-                  <Plus className="h-4 w-4 shrink-0" />
-                  Add hours
+                  add
                 </Button>
               )}
             </>
