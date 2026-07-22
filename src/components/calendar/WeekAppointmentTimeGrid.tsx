@@ -293,7 +293,6 @@ function DayColumn({
               )}
               {hasStackControls ? (
                 <StackEdgeControls
-                  label={`${frontIndex + 1}/${stackSize}`}
                   onPrevious={() => onCycleStack(stackKey, stackSize, -1)}
                   onNext={() => onCycleStack(stackKey, stackSize, 1)}
                 />
@@ -307,11 +306,9 @@ function DayColumn({
 }
 
 function StackEdgeControls({
-  label,
   onPrevious,
   onNext,
 }: {
-  label: string;
   onPrevious: () => void;
   onNext: () => void;
 }) {
@@ -322,7 +319,7 @@ function StackEdgeControls({
         STACK_RAIL_CLASS,
       )}
       role="group"
-      aria-label={`Overlapping appointments ${label}`}
+      aria-label="Overlapping appointments"
     >
       <button
         type="button"
@@ -340,9 +337,6 @@ function StackEdgeControls({
       >
         <ChevronUp className="h-5 w-5 drop-shadow-sm" strokeWidth={2.5} />
       </button>
-      <span className="pointer-events-none mx-auto shrink-0 rounded bg-stone-900/80 px-1 py-0.5 text-[9px] font-semibold tabular-nums leading-none text-white dark:bg-stone-950/85">
-        {label}
-      </span>
       <button
         type="button"
         className={cn(
