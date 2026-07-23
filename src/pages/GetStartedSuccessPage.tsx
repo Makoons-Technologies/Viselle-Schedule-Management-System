@@ -53,12 +53,10 @@ export function GetStartedSuccessPage() {
           return;
         }
 
+        // Keep polling while Stripe webhook / reconcile finishes provisioning.
+        setStatus(attempts >= 8 ? 'pending' : 'loading');
         attempts += 1;
-        if (attempts < 15) {
-          window.setTimeout(() => void poll(), 2000);
-        } else {
-          setStatus('pending');
-        }
+        window.setTimeout(() => void poll(), attempts < 30 ? 2000 : 5000);
       } catch {
         if (!cancelled) setStatus('failed');
       }
