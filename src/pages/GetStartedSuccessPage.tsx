@@ -1,16 +1,31 @@
 import { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import { MarketingFooter, MarketingHeader } from '@/components/marketing/MarketingLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { getSignupSessionStatus } from '@/lib/signup';
 
+const SHOP_LOADING_LINES = [
+  'Warming up the towel warmer…',
+  'Alphabetizing the product shelf…',
+  'Untangling the cape strings…',
+  'Polishing the mirrors (again)…',
+  'Restocking the cotton balls…',
+  'Finding a parking spot for your first client…',
+  'Tuning the appointment bells…',
+  'Folding the last clean towel…',
+  'Charging the clippers…',
+  'Putting the “open” sign on straight…',
+];
+
 export function GetStartedSuccessPage() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get('session_id');
   const [status, setStatus] = useState<'loading' | 'completed' | 'pending' | 'failed' | 'missing'>('loading');
   const [email, setEmail] = useState<string | null>(null);
+  const [lineIndex, setLineIndex] = useState(0);
 
   useEffect(() => {
     if (!sessionId) {
@@ -56,6 +71,24 @@ export function GetStartedSuccessPage() {
     };
   }, [sessionId]);
 
+  useEffect(() => {
+    if (status !== 'loading' && status !== 'pending') return;
+    const id = window.setInterval(() => {
+      setLineIndex((i) => (i + 1) % SHOP_LOADING_LINES.length);
+    }, 2400);
+    return () => window.clearInterval(id);
+  }, [status]);
+
+  useEffect(() => {
+    if (status !== 'completed') return;
+    const id = window.setTimeout(() => {
+      navigate('/login', { replace: true });
+    }, 1400);
+    return () => window.clearTimeout(id);
+  }, [status, navigate]);
+
+  const isBusy = status === 'loading' || status === 'pending';
+
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-stone-950">
       <MarketingHeader />
@@ -63,7 +96,7 @@ export function GetStartedSuccessPage() {
       <div className="mx-auto max-w-lg px-4 py-16 sm:px-6">
         <Card>
           <CardHeader className="text-center">
-            {status === 'loading' || status === 'pending' ? (
+            {isBusy ? (
               <Loader2 className="mx-auto h-12 w-12 animate-spin text-brand-600" />
             ) : status === 'completed' ? (
               <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-600 dark:text-emerald-400" />
@@ -81,30 +114,25 @@ export function GetStartedSuccessPage() {
             </CardTitle>
             <CardDescription>
               {status === 'completed' &&
-                'Your salon account is ready. Sign in with the email you used at checkout.'}
-              {status === 'pending' &&
-                'This usually takes a few seconds. You can sign in shortly — we will keep checking.'}
-              {status === 'loading' && 'Confirming your payment and creating your workspace…'}
+                (email
+                  ? `All set — taking you to sign in as ${email}…`
+                  : 'All set — taking you to sign in…')}
+              {isBusy && SHOP_LOADING_LINES[lineIndex]}
               {status === 'failed' &&
                 'We could not finish provisioning your account. Please contact support with your receipt.'}
               {status === 'missing' && 'Return to signup and try checkout again.'}
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            {email && status === 'completed' && (
-              <p className="text-center text-sm text-stone-600 dark:text-stone-300">
-                Sign in as <span className="font-medium text-stone-900 dark:text-stone-100">{email}</span>
-              </p>
-            )}
-            <Button asChild className="w-full">
-              <Link to="/login">{status === 'completed' ? 'Sign in to your dashboard' : 'Go to sign in'}</Link>
-            </Button>
-            {status !== 'completed' && (
+          {!isBusy && status !== 'completed' && (
+            <CardContent className="flex flex-col gap-3">
+              <Button asChild className="w-full">
+                <Link to="/login">Go to sign in</Link>
+              </Button>
               <Button asChild variant="outline" className="w-full">
                 <Link to="/get-started">Back to signup</Link>
               </Button>
-            )}
-          </CardContent>
+            </CardContent>
+          )}
         </Card>
       </div>
 
