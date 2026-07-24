@@ -16,6 +16,8 @@ import type {
   Organization,
   OrgPlanFeatures,
   OrganizationSettings,
+  MrrGranularity,
+  MrrReport,
   PlatformStats,
   StaffPermissions,
   RecurringAppointmentRule,
@@ -118,6 +120,8 @@ export const authApi = {
 export const ownerApi = {
   getPlatformStats: () =>
     apiClient.get<{ stats: PlatformStats }>('/owner/stats').then((r) => r.data),
+  getMrrReport: (params?: { granularity?: MrrGranularity; from?: string; to?: string }) =>
+    apiClient.get<MrrReport>('/owner/reports/mrr', { params }).then((r) => r.data),
   listOrganizations: () =>
     apiClient.get<{ organizations: Organization[] }>('/owner/organizations').then((r) => r.data),
   createOrganization: (data: CreateOrganizationInput) =>

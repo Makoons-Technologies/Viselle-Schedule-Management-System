@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/common/PageHeader';
 import { LoadingState } from '@/components/common/LoadingState';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { MrrChart } from '@/components/dashboard/MrrChart';
 
 export function PlatformDashboard() {
   const { data: orgData, isLoading: orgsLoading } = useQuery({
@@ -101,6 +102,10 @@ export function PlatformDashboard() {
           </CardContent>
         </Card>
       )}
+
+      <div className="mt-6">
+        <MrrChart />
+      </div>
     </div>
   );
 }

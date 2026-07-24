@@ -175,6 +175,35 @@ export interface RevenueReport {
   totalSalesCount: number;
 }
 
+export type MrrGranularity = 'day' | 'week' | 'month';
+
+export interface MrrPoint {
+  /** Bucket start date (YYYY-MM-DD). For "week" this is the Monday of that week. */
+  period: string;
+  /** Estimated platform MRR as of the end of this bucket (cumulative). */
+  mrrCents: number;
+  /** Estimated MRR contributed by organizations that signed up within this bucket. */
+  newMrrCents: number;
+  /** Count of organizations that signed up within this bucket. */
+  newOrganizationsCount: number;
+}
+
+/**
+ * Estimated Monthly Recurring Revenue trend: each organization is assumed to
+ * contribute its *current* subscription price from its signup date onward
+ * (there's no historical billing ledger), so this is an approximation that
+ * matches today's "Est. MRR" figure exactly at the most recent point.
+ */
+export interface MrrReport {
+  metric: 'mrr';
+  granularity: MrrGranularity;
+  from: string;
+  to: string;
+  series: MrrPoint[];
+  currentMrrCents: number;
+  totalNewOrganizationsCount: number;
+}
+
 export interface BillingInfo {
   organizationId: string;
   billingStatus: BillingStatus;
