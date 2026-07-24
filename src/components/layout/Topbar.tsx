@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import { LogOut, Menu, Settings } from 'lucide-react';
+import { LifeBuoy, LogOut, Menu, Settings } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -92,6 +92,8 @@ export function Topbar() {
     navigate('/login');
   };
 
+  const onHelpPage = location.pathname.startsWith('/support');
+
   return (
     <>
     <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-stone-200 bg-white px-3 dark:border-stone-800 dark:bg-stone-900 sm:h-16 sm:px-6">      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
@@ -151,6 +153,16 @@ export function Topbar() {
       </div>
 
       <div className="flex shrink-0 items-center gap-1 sm:gap-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn('h-10 w-10', onHelpPage && 'bg-stone-100 text-brand-700 dark:bg-stone-800 dark:text-brand-300')}
+          onClick={() => navigate('/support')}
+          title="Help & support"
+          aria-label="Help & support"
+        >
+          <LifeBuoy className="h-4 w-4" />
+        </Button>
         {showSettingsButton ? (
           <Button
             variant="ghost"

@@ -32,6 +32,9 @@ import type {
   ScheduleResponse,
   Service,
   SubscriptionTier,
+  SupportTicket,
+  SupportTicketMessage,
+  SupportTicketStatus,
   WebsiteSettings,
   WebsiteSettingsResponse,
   UpdateWebsiteInput,
@@ -155,6 +158,36 @@ export const ownerApi = {
   regenerateWebsiteApiKey: (id: string) =>
     apiClient
       .post<WebsiteSettingsResponse & { apiKey: string }>(`/owner/organizations/${id}/website/regenerate-api-key`)
+      .then((r) => r.data),
+
+  listSupportTickets: (params?: { status?: SupportTicketStatus; organizationId?: string }) =>
+    apiClient.get<{ tickets: SupportTicket[] }>('/owner/support-tickets', { params }).then((r) => r.data),
+  getSupportTicket: (ticketId: string) =>
+    apiClient
+      .get<{ ticket: SupportTicket; messages: SupportTicketMessage[] }>(`/owner/support-tickets/${ticketId}`)
+      .then((r) => r.data),
+  updateSupportTicketStatus: (ticketId: string, status: SupportTicketStatus) =>
+    apiClient
+      .patch<{ ticket: SupportTicket }>(`/owner/support-tickets/${ticketId}`, { status })
+      .then((r) => r.data),
+  replySupportTicket: (ticketId: string, data: { body: string; isInternalNote?: boolean }) =>
+    apiClient
+      .post<{ message: SupportTicketMessage }>(`/owner/support-tickets/${ticketId}/messages`, data)
+      .then((r) => r.data),
+};
+
+export const supportApi = {
+  createTicket: (data: { subject: string; body: string }) =>
+    apiClient.post<{ ticket: SupportTicket }>('/support-tickets', data).then((r) => r.data),
+  listMyTickets: () =>
+    apiClient.get<{ tickets: SupportTicket[] }>('/support-tickets').then((r) => r.data),
+  getMyTicket: (ticketId: string) =>
+    apiClient
+      .get<{ ticket: SupportTicket; messages: SupportTicketMessage[] }>(`/support-tickets/${ticketId}`)
+      .then((r) => r.data),
+  replyToTicket: (ticketId: string, body: string) =>
+    apiClient
+      .post<{ message: SupportTicketMessage }>(`/support-tickets/${ticketId}/messages`, { body })
       .then((r) => r.data),
 };
 

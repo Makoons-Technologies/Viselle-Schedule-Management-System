@@ -459,3 +459,28 @@ export interface CreateOrganizationInput {
   monthlyPriceCents?: number;
   ownerEmail: string;
 }
+
+export type SupportTicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
+
+export interface SupportTicket {
+  id: string;
+  organizationId?: string | null;
+  createdByUserId?: string | null;
+  creatorEmail: string;
+  creatorRole: UserRole;
+  subject: string;
+  body: string;
+  status: SupportTicketStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SupportTicketMessage {
+  id: string;
+  ticketId: string;
+  authorUserId?: string | null;
+  authorEmail: string;
+  isInternalNote: boolean;
+  body: string;
+  createdAt: string;
+}
