@@ -1,5 +1,6 @@
 import { useAuth } from '@/context/AuthContext';
 import { SidebarBrand, SidebarNav } from '@/components/layout/SidebarNav';
+import { PoweredByMakoons } from '@/components/common/PoweredByMakoons';
 
 export function Sidebar() {
   const { user } = useAuth();
@@ -13,6 +14,9 @@ export function Sidebar() {
       <SidebarBrand subtitle={subtitle} />
       <div className="flex-1 overflow-y-auto p-3">
         <SidebarNav />
+      </div>
+      <div className="border-t border-stone-200 px-4 py-3 dark:border-stone-800">
+        <PoweredByMakoons />
       </div>
     </aside>
   );

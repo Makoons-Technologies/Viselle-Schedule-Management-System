@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import type { BookingBranding, SiteTemplate } from '@/types/api';
 import { bookingStyleVars } from '@/lib/booking-branding';
 import { cn } from '@/lib/utils';
+import { PoweredByMakoons } from '@/components/common/PoweredByMakoons';
 import { bookingTheme } from './booking-theme';
 
 interface BookingPublicShellProps {
@@ -88,9 +89,12 @@ export function BookingPublicShell({
           <footer className="px-4 pb-6 pt-2 text-center">
             {footer}
             {showPoweredBy && (
-              <Link to="/" className="text-xs text-neutral-400 hover:text-neutral-600">
-                Powered by Viselle
-              </Link>
+              <>
+                <Link to="/" className="text-xs text-neutral-400 hover:text-neutral-600">
+                  Powered by Viselle
+                </Link>
+                <PoweredByMakoons className="mt-1 text-neutral-300" />
+              </>
             )}
           </footer>
         )}

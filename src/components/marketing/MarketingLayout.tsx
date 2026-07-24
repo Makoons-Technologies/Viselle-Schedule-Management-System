@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Scissors } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PoweredByMakoons } from '@/components/common/PoweredByMakoons';
 
 export function MarketingHeader() {
   return (
@@ -50,6 +51,9 @@ export function MarketingFooter() {
             Contact us
           </Link>
         </p>
+      </div>
+      <div className="mx-auto mt-4 max-w-6xl px-4 sm:px-6">
+        <PoweredByMakoons className="text-stone-600" />
       </div>
     </footer>
   );
