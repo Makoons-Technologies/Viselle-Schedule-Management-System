@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { ApiError } from '@/lib/api';
+import type { ResolvedTrialOffer, TrialCampaign } from '@/types/api';
 
 const signupClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL as string,
@@ -93,11 +94,15 @@ export function getStartedPath(params?: {
   plan?: SignupTierId;
   subdomain?: boolean;
   customWebsite?: boolean;
+  code?: string;
+  trial?: boolean;
 }): string {
   const search = new URLSearchParams();
   if (params?.plan) search.set('plan', params.plan);
   if (params?.subdomain) search.set('subdomain', '1');
   if (params?.customWebsite) search.set('customWebsite', '1');
+  if (params?.code) search.set('code', params.code);
+  if (params?.trial) search.set('trial', '1');
   const query = search.toString();
   return query ? `/get-started?${query}` : '/get-started';
 }
@@ -128,6 +133,15 @@ export async function checkSlugAvailable(slug: string) {
   return data.available;
 }
 
+export interface SignupCheckoutResult {
+  checkoutUrl?: string;
+  sessionId?: string;
+  cart: SignupCart;
+  provisioned?: boolean;
+  organizationId?: string;
+  slug?: string;
+}
+
 export async function createSignupCheckout(input: {
   businessName: string;
   slug: string;
@@ -137,12 +151,23 @@ export async function createSignupCheckout(input: {
   tier: SignupTierId;
   subdomainAddon: boolean;
   customWebsiteAddon: boolean;
+  code?: string;
+  useHomepageCampaign?: boolean;
 }) {
-  const { data } = await signupClient.post<{ checkoutUrl: string; sessionId: string; cart: SignupCart }>(
-    '/signup/checkout',
-    input,
-  );
+  const { data } = await signupClient.post<SignupCheckoutResult>('/signup/checkout', input);
   return data;
+}
+
+export async function validateTrialCode(code: string) {
+  const { data } = await signupClient.get<{ offer: ResolvedTrialOffer }>('/signup/trials/validate', {
+    params: { code },
+  });
+  return data.offer;
+}
+
+export async function fetchLiveHomepageTrial() {
+  const { data } = await signupClient.get<{ campaign: TrialCampaign | null }>('/signup/trials/homepage');
+  return data.campaign;
 }
 
 export async function getSignupSessionStatus(sessionId: string) {
