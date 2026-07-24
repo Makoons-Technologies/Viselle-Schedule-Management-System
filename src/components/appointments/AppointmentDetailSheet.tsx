@@ -28,6 +28,8 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
 import { useStaffPermissions } from '@/hooks/useStaffPermissions';
+import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
+import { TrialLockedControl } from '@/components/common/TrialLockedControl';
 
 
 
@@ -60,6 +62,7 @@ export function AppointmentDetailSheet({
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { permissions, isManager } = useStaffPermissions(orgId);
+  const trialExpired = useOrgTrialExpired();
 
   const [recurringOpen, setRecurringOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -362,21 +365,25 @@ export function AppointmentDetailSheet({
             <div className="flex flex-wrap gap-2">
               {permissions.canManageVisitPayment && data.appointment.visitStatus === 'scheduled' && (
                 <>
-                  <Button
-                    size="sm"
-                    onClick={() => visitStatusMutation.mutate('arrived')}
-                    disabled={visitStatusMutation.isPending}
-                  >
-                    Check in
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setMissedConfirmOpen(true)}
-                    disabled={visitStatusMutation.isPending}
-                  >
-                    Mark missed
-                  </Button>
+                  <TrialLockedControl locked={trialExpired}>
+                    <Button
+                      size="sm"
+                      onClick={() => visitStatusMutation.mutate('arrived')}
+                      disabled={trialExpired || visitStatusMutation.isPending}
+                    >
+                      Check in
+                    </Button>
+                  </TrialLockedControl>
+                  <TrialLockedControl locked={trialExpired}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setMissedConfirmOpen(true)}
+                      disabled={trialExpired || visitStatusMutation.isPending}
+                    >
+                      Mark missed
+                    </Button>
+                  </TrialLockedControl>
                 </>
               )}
 
@@ -384,70 +391,88 @@ export function AppointmentDetailSheet({
                 data.appointment.visitStatus === 'arrived' &&
                 data.appointment.paymentStatus === 'unpaid' && (
                 <>
-                  <Button size="sm" onClick={() => setCheckoutOpen(true)}>
-                    Checkout
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => undoCheckInMutation.mutate()}
-                    disabled={undoCheckInMutation.isPending}
-                  >
-                    Undo check-in
-                  </Button>
+                  <TrialLockedControl locked={trialExpired}>
+                    <Button size="sm" onClick={() => setCheckoutOpen(true)} disabled={trialExpired}>
+                      Checkout
+                    </Button>
+                  </TrialLockedControl>
+                  <TrialLockedControl locked={trialExpired}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => undoCheckInMutation.mutate()}
+                      disabled={trialExpired || undoCheckInMutation.isPending}
+                    >
+                      Undo check-in
+                    </Button>
+                  </TrialLockedControl>
                 </>
               )}
 
               {data.appointment.visitStatus !== 'cancelled' && (
                 <>
                   {canEdit && (
-                    <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-                      <Pencil className="h-4 w-4" /> Edit
-                    </Button>
+                    <TrialLockedControl locked={trialExpired}>
+                      <Button variant="outline" size="sm" onClick={() => setEditOpen(true)} disabled={trialExpired}>
+                        <Pencil className="h-4 w-4" /> Edit
+                      </Button>
+                    </TrialLockedControl>
                   )}
 
                   {!recurringSeriesActive && (
-                    <Button variant="outline" size="sm" onClick={() => setRecurringOpen(true)}>
-                      <Repeat className="h-4 w-4" /> Make Recurring
-                    </Button>
+                    <TrialLockedControl locked={trialExpired}>
+                      <Button variant="outline" size="sm" onClick={() => setRecurringOpen(true)} disabled={trialExpired}>
+                        <Repeat className="h-4 w-4" /> Make Recurring
+                      </Button>
+                    </TrialLockedControl>
                   )}
 
                   {data.appointment.recurringAppointmentRuleId && recurringRule && recurringSeriesActive && (
-                    <Button variant="outline" size="sm" onClick={() => setEditRecurringOpen(true)}>
-                      <Repeat className="h-4 w-4" /> Edit Series
-                    </Button>
+                    <TrialLockedControl locked={trialExpired}>
+                      <Button variant="outline" size="sm" onClick={() => setEditRecurringOpen(true)} disabled={trialExpired}>
+                        <Repeat className="h-4 w-4" /> Edit Series
+                      </Button>
+                    </TrialLockedControl>
                   )}
 
                   {data.appointment.recurringAppointmentRuleId && recurringRule && (
+                    <TrialLockedControl locked={trialExpired}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-700 hover:bg-red-50 hover:text-red-800"
+                        onClick={() => setDeleteSeriesOpen(true)}
+                        disabled={trialExpired || deleteSeriesMutation.isPending}
+                      >
+                        Delete Series
+                      </Button>
+                    </TrialLockedControl>
+                  )}
+
+                  <TrialLockedControl locked={trialExpired}>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="text-red-700 hover:bg-red-50 hover:text-red-800"
-                      onClick={() => setDeleteSeriesOpen(true)}
-                      disabled={deleteSeriesMutation.isPending}
+                      onClick={() => sendSmsMutation.mutate()}
+                      disabled={trialExpired || sendSmsMutation.isPending || !data.customer?.phone?.trim()}
+                      title={
+                        trialExpired
+                          ? undefined
+                          : data.customer?.phone?.trim()
+                            ? undefined
+                            : 'Add a phone number for this customer to send SMS'
+                      }
                     >
-                      Delete Series
+                      Send SMS
                     </Button>
-                  )}
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => sendSmsMutation.mutate()}
-                    disabled={sendSmsMutation.isPending || !data.customer?.phone?.trim()}
-                    title={
-                      data.customer?.phone?.trim()
-                        ? undefined
-                        : 'Add a phone number for this customer to send SMS'
-                    }
-                  >
-                    Send SMS
-                  </Button>
+                  </TrialLockedControl>
 
                   {permissions.canCancelAppointments && (
-                    <Button variant="destructive" size="sm" onClick={handleCancelClick} disabled={cancelMutation.isPending}>
-                      Cancel
-                    </Button>
+                    <TrialLockedControl locked={trialExpired}>
+                      <Button variant="destructive" size="sm" onClick={handleCancelClick} disabled={trialExpired || cancelMutation.isPending}>
+                        Cancel
+                      </Button>
+                    </TrialLockedControl>
                   )}
                 </>
               )}

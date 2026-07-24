@@ -6,11 +6,13 @@ import { orgApi } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgPlan } from '@/hooks/useOrgPlan';
+import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
 import type { Account } from '@/types/api';
 import { CreateStaffDialog } from '@/components/staff/CreateStaffDialog';
 import { StaffAvailabilityDialog } from '@/components/staff/StaffAvailabilityDialog';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { TableIconButton, TableRowActions } from '@/components/common/TableIconButton';
+import { TrialLockedControl } from '@/components/common/TrialLockedControl';
 import { SettingsBackHeader } from '@/components/settings/SettingsBackHeader';
 import { Panel } from '@/components/common/Panel';
 import { EmptyState } from '@/components/common/EmptyState';
@@ -24,6 +26,7 @@ export function StaffPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { plan } = useOrgPlan(orgId);
+  const trialExpired = useOrgTrialExpired();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [removeTarget, setRemoveTarget] = useState<Account | null>(null);
@@ -73,9 +76,11 @@ export function StaffPage() {
         title="Staff"
         backTo={`/orgs/${orgId}/settings`}
         actions={
-          <Button onClick={openCreate} disabled={atStaffLimit}>
-            <Plus className="h-4 w-4" /> Add Staff
-          </Button>
+          <TrialLockedControl locked={trialExpired}>
+            <Button onClick={openCreate} disabled={trialExpired || atStaffLimit}>
+              <Plus className="h-4 w-4" /> Add Staff
+            </Button>
+          </TrialLockedControl>
         }
       />
       {staffLimit ? (
@@ -93,7 +98,15 @@ export function StaffPage() {
         </p>
       )}
       {accounts.length === 0 ? (
-        <EmptyState icon={Users} title="No staff members" action={<Button onClick={openCreate}>Add Staff</Button>} />
+        <EmptyState
+          icon={Users}
+          title="No staff members"
+          action={
+            <TrialLockedControl locked={trialExpired}>
+              <Button onClick={openCreate} disabled={trialExpired}>Add Staff</Button>
+            </TrialLockedControl>
+          }
+        />
       ) : (
         <Panel>
           <Table>
@@ -127,20 +140,33 @@ export function StaffPage() {
                   </TableCell>
                   <TableCell>
                     <TableRowActions>
-                      <TableIconButton
-                        icon={Clock}
-                        label="Manage availability"
-                        onClick={() => setAvailabilityTarget(a)}
-                      />
-                      <TableIconButton icon={Wrench} label="Edit staff member" onClick={() => openEdit(a)} />
-                      {canRemove(a) ? (
+                      <TrialLockedControl locked={trialExpired}>
                         <TableIconButton
-                          icon={Trash2}
-                          label="Remove staff member"
-                          variant="ghost"
-                          destructive
-                          onClick={() => setRemoveTarget(a)}
+                          icon={Clock}
+                          label="Manage availability"
+                          onClick={() => setAvailabilityTarget(a)}
+                          disabled={trialExpired}
                         />
+                      </TrialLockedControl>
+                      <TrialLockedControl locked={trialExpired}>
+                        <TableIconButton
+                          icon={Wrench}
+                          label="Edit staff member"
+                          onClick={() => openEdit(a)}
+                          disabled={trialExpired}
+                        />
+                      </TrialLockedControl>
+                      {canRemove(a) ? (
+                        <TrialLockedControl locked={trialExpired}>
+                          <TableIconButton
+                            icon={Trash2}
+                            label="Remove staff member"
+                            variant="ghost"
+                            destructive
+                            onClick={() => setRemoveTarget(a)}
+                            disabled={trialExpired}
+                          />
+                        </TrialLockedControl>
                       ) : null}
                     </TableRowActions>
                   </TableCell>
@@ -164,6 +190,7 @@ export function StaffPage() {
         account={availabilityTarget}
         open={!!availabilityTarget}
         onOpenChange={(open) => !open && setAvailabilityTarget(null)}
+        trialLocked={trialExpired}
       />
       <ConfirmDialog
         open={!!removeTarget}

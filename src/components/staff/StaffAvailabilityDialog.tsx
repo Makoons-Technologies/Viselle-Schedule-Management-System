@@ -16,6 +16,7 @@ interface StaffAvailabilityDialogProps {
   account: Account | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  trialLocked?: boolean;
 }
 
 export function StaffAvailabilityDialog({
@@ -23,6 +24,7 @@ export function StaffAvailabilityDialog({
   account,
   open,
   onOpenChange,
+  trialLocked = false,
 }: StaffAvailabilityDialogProps) {
   const queryClient = useQueryClient();
   const accountId = account?.id ?? '';
@@ -76,6 +78,7 @@ export function StaffAvailabilityDialog({
             onRemove={(ruleId) => deleteMutation.mutate(ruleId)}
             adding={createMutation.isPending}
             removingRuleId={deleteMutation.isPending ? deleteMutation.variables : null}
+            trialLocked={trialLocked}
           />
         )}
       </DialogContent>

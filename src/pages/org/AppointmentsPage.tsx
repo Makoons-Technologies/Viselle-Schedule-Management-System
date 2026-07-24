@@ -12,6 +12,7 @@ import { useAuth } from '@/context/AuthContext';
 
 import { useOrgId } from '@/hooks/useOrgId';
 import { useStaffPermissions } from '@/hooks/useStaffPermissions';
+import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
 
 import type { Appointment, Account, Customer, Service } from '@/types/api';
 
@@ -31,6 +32,8 @@ import { Panel } from '@/components/common/Panel';
 import { EmptyState } from '@/components/common/EmptyState';
 
 import { LoadingState } from '@/components/common/LoadingState';
+
+import { TrialLockedControl } from '@/components/common/TrialLockedControl';
 
 import { Button } from '@/components/ui/button';
 
@@ -162,6 +165,7 @@ export function AppointmentsPage() {
 
   const orgId = useOrgId();
   const { permissions } = useStaffPermissions(orgId);
+  const trialExpired = useOrgTrialExpired();
 
   const { user } = useAuth();
 
@@ -311,9 +315,11 @@ export function AppointmentsPage() {
 
         actions={
           permissions.canCreateAppointments ? (
-            <Button onClick={() => setCreateOpen(true)}>
-              <Plus className="h-4 w-4" /> New
-            </Button>
+            <TrialLockedControl locked={trialExpired}>
+              <Button disabled={trialExpired} onClick={() => setCreateOpen(true)}>
+                <Plus className="h-4 w-4" /> New
+              </Button>
+            </TrialLockedControl>
           ) : undefined
         }
 
@@ -377,7 +383,9 @@ export function AppointmentsPage() {
 
           action={
             showAll && !search && permissions.canCreateAppointments ? (
-              <Button onClick={() => setCreateOpen(true)}>Create Appointment</Button>
+              <TrialLockedControl locked={trialExpired}>
+                <Button disabled={trialExpired} onClick={() => setCreateOpen(true)}>Create Appointment</Button>
+              </TrialLockedControl>
             ) : undefined
           }
 

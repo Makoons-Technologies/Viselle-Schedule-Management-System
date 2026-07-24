@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import type { StaffPermissions } from '@/types/api';
+import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
+import { TRIAL_LOCKED_MESSAGE } from '@/lib/trial';
 
 interface StaffPermissionsSectionProps {
   orgId: string;
@@ -52,6 +54,7 @@ const PERMISSION_ITEMS: Array<{
 
 export function StaffPermissionsSection({ orgId }: StaffPermissionsSectionProps) {
   const queryClient = useQueryClient();
+  const trialExpired = useOrgTrialExpired();
 
   const { data, isLoading } = useQuery({
     queryKey: ['staff-permissions', orgId],
@@ -89,7 +92,8 @@ export function StaffPermissionsSection({ orgId }: StaffPermissionsSectionProps)
             label={item.label}
             description={item.description}
             checked={permissions[item.key]}
-            disabled={updateMutation.isPending}
+            disabled={updateMutation.isPending || trialExpired}
+            title={trialExpired ? TRIAL_LOCKED_MESSAGE : undefined}
             onCheckedChange={(checked) => updateMutation.mutate({ [item.key]: checked })}
           />
         ))}
@@ -103,16 +107,18 @@ function PermissionRow({
   description,
   checked,
   disabled,
+  title,
   onCheckedChange,
 }: {
   label: string;
   description: string;
   checked: boolean;
   disabled: boolean;
+  title?: string;
   onCheckedChange: (checked: boolean) => void;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4">
+    <div className="flex items-start justify-between gap-4" title={title}>
       <div className="min-w-0 space-y-1">
         <Label>{label}</Label>
         <p className={helperTextClass}>{description}</p>

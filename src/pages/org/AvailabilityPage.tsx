@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { orgApi } from '@/lib/api';
 import { useOrgId } from '@/hooks/useOrgId';
+import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
 import { AvailabilityWeekCalendar } from '@/components/availability/AvailabilityWeekCalendar';
 import { SettingsBackHeader } from '@/components/settings/SettingsBackHeader';
 import { LoadingState } from '@/components/common/LoadingState';
@@ -11,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 export function AvailabilityPage() {
   const orgId = useOrgId();
+  const trialExpired = useOrgTrialExpired();
   const queryClient = useQueryClient();
   const [accountId, setAccountId] = useState('');
   const [removingRuleId, setRemovingRuleId] = useState<string | null>(null);
@@ -88,6 +90,7 @@ export function AvailabilityPage() {
           onRemove={(ruleId) => deleteMutation.mutate(ruleId)}
           adding={createMutation.isPending}
           removingRuleId={removingRuleId}
+          trialLocked={trialExpired}
         />
       )}
     </div>

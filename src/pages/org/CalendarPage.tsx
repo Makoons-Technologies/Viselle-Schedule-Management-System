@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { useOrgId } from '@/hooks/useOrgId';
 import { filterOutCancelled, useHideCancelledAppointments } from '@/hooks/useHideCancelledAppointments';
 import { useStaffPermissions } from '@/hooks/useStaffPermissions';
+import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
 import { AppointmentDetailSheet } from '@/components/appointments/AppointmentDetailSheet';
 import { BatchCheckoutSheet, type BatchCheckoutItem } from '@/components/appointments/BatchCheckoutSheet';
 import { CreateAppointmentDialog } from '@/components/appointments/CreateAppointmentDialog';
@@ -18,6 +19,7 @@ import { CalendarAppointmentChip } from '@/components/calendar/CalendarAppointme
 import { WeekCalendarNav } from '@/components/calendar/WeekCalendarNav';
 import { PageHeader } from '@/components/common/PageHeader';
 import { LoadingState } from '@/components/common/LoadingState';
+import { TrialLockedControl } from '@/components/common/TrialLockedControl';
 import { Button } from '@/components/ui/button';
 
 function sortDayKeys(keys: string[]): string[] {
@@ -38,6 +40,7 @@ function formatZoomLabel(dayKeys: string[]): string {
 export function CalendarPage() {
   const orgId = useOrgId();
   const { permissions } = useStaffPermissions(orgId);
+  const trialExpired = useOrgTrialExpired();
   const queryClient = useQueryClient();
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 0 }));
   const [selectedAppointment, setSelectedAppointment] = useState<{
@@ -268,12 +271,14 @@ export function CalendarPage() {
                   <Button variant="outline" onClick={exitSelectMode}>
                     <X className="h-4 w-4" /> Cancel selection
                   </Button>
-                  <Button
-                    onClick={() => setBatchCheckoutOpen(true)}
-                    disabled={selectedItems.length === 0}
-                  >
-                    Check out ({selectedItems.length})
-                  </Button>
+                  <TrialLockedControl locked={trialExpired}>
+                    <Button
+                      onClick={() => setBatchCheckoutOpen(true)}
+                      disabled={trialExpired || selectedItems.length === 0}
+                    >
+                      Check out ({selectedItems.length})
+                    </Button>
+                  </TrialLockedControl>
                 </>
               ) : (
                 <Button variant="outline" onClick={() => setSelectMode(true)}>
@@ -282,7 +287,11 @@ export function CalendarPage() {
               )
             )}
             {permissions.canCreateAppointments && (
-              <Button onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" /> New Appointment</Button>
+              <TrialLockedControl locked={trialExpired}>
+                <Button disabled={trialExpired} onClick={() => setCreateOpen(true)}>
+                  <Plus className="h-4 w-4" /> New Appointment
+                </Button>
+              </TrialLockedControl>
             )}
           </div>
         }
@@ -409,13 +418,15 @@ export function CalendarPage() {
               >
                 Clear
               </Button>
-              <Button
-                size="sm"
-                onClick={() => setBatchCheckoutOpen(true)}
-                disabled={selectedItems.length === 0}
-              >
-                Check out ({selectedItems.length})
-              </Button>
+              <TrialLockedControl locked={trialExpired}>
+                <Button
+                  size="sm"
+                  onClick={() => setBatchCheckoutOpen(true)}
+                  disabled={trialExpired || selectedItems.length === 0}
+                >
+                  Check out ({selectedItems.length})
+                </Button>
+              </TrialLockedControl>
             </div>
           </div>
         </div>

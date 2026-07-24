@@ -4,11 +4,13 @@ import { useState } from 'react';
 import { orgApi } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
 import { useOrgId } from '@/hooks/useOrgId';
+import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
 import type { Product } from '@/types/api';
 import { CreateProductDialog } from '@/components/products/CreateProductDialog';
 import { AdjustStockDialog } from '@/components/products/AdjustStockDialog';
 import { Panel } from '@/components/common/Panel';
 import { TableIconButton } from '@/components/common/TableIconButton';
+import { TrialLockedControl } from '@/components/common/TrialLockedControl';
 import { EmptyState } from '@/components/common/EmptyState';
 import { LoadingState } from '@/components/common/LoadingState';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +27,7 @@ function isLowStock(product: Product): boolean {
 
 export function ProductsPage() {
   const orgId = useOrgId();
+  const trialExpired = useOrgTrialExpired();
   const [createOpen, setCreateOpen] = useState(false);
   const [adjustProduct, setAdjustProduct] = useState<Product | null>(null);
 
@@ -55,9 +58,11 @@ export function ProductsPage() {
           </div>
         )}
         <div className="flex justify-end sm:ml-auto">
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="h-4 w-4" /> Add Product
-          </Button>
+          <TrialLockedControl locked={trialExpired}>
+            <Button onClick={() => setCreateOpen(true)} disabled={trialExpired}>
+              <Plus className="h-4 w-4" /> Add Product
+            </Button>
+          </TrialLockedControl>
         </div>
       </div>
 
@@ -66,7 +71,11 @@ export function ProductsPage() {
           icon={Package}
           title="No products"
           description="Add retail products to sell at checkout."
-          action={<Button onClick={() => setCreateOpen(true)}>Add Product</Button>}
+          action={
+            <TrialLockedControl locked={trialExpired}>
+              <Button onClick={() => setCreateOpen(true)} disabled={trialExpired}>Add Product</Button>
+            </TrialLockedControl>
+          }
         />
       ) : (
         <Panel>
@@ -98,11 +107,14 @@ export function ProductsPage() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <TableIconButton
-                      icon={PackagePlus}
-                      label="Adjust stock"
-                      onClick={() => setAdjustProduct(p)}
-                    />
+                    <TrialLockedControl locked={trialExpired}>
+                      <TableIconButton
+                        icon={PackagePlus}
+                        label="Adjust stock"
+                        onClick={() => setAdjustProduct(p)}
+                        disabled={trialExpired}
+                      />
+                    </TrialLockedControl>
                   </TableCell>
                 </TableRow>
               ))}

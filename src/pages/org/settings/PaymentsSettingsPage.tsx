@@ -5,9 +5,11 @@ import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { orgApi } from '@/lib/api';
 import { useOrgId } from '@/hooks/useOrgId';
+import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
 import { cn } from '@/lib/utils';
 import { Panel, sectionMutedClass } from '@/components/common/Panel';
 import { LoadingState } from '@/components/common/LoadingState';
+import { TrialLockedControl } from '@/components/common/TrialLockedControl';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +17,7 @@ import { Label } from '@/components/ui/label';
 
 export function PaymentsSettingsPage() {
   const orgId = useOrgId();
+  const trialExpired = useOrgTrialExpired();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const [readerCode, setReaderCode] = useState('');
@@ -112,20 +115,26 @@ export function PaymentsSettingsPage() {
 
         <div className="flex flex-wrap gap-2">
           {needsOnboarding && (
-            <Button onClick={() => onboardMutation.mutate()} disabled={onboardMutation.isPending}>
-              {onboardMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-              Continue onboarding
-            </Button>
+            <TrialLockedControl locked={trialExpired}>
+              <Button onClick={() => onboardMutation.mutate()} disabled={trialExpired || onboardMutation.isPending}>
+                {onboardMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                Continue onboarding
+              </Button>
+            </TrialLockedControl>
           )}
           {!ready && !data?.accountId && (
-            <Button onClick={() => onboardMutation.mutate()} disabled={onboardMutation.isPending}>
-              {onboardMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-              Connect with Stripe
-            </Button>
+            <TrialLockedControl locked={trialExpired}>
+              <Button onClick={() => onboardMutation.mutate()} disabled={trialExpired || onboardMutation.isPending}>
+                {onboardMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                Connect with Stripe
+              </Button>
+            </TrialLockedControl>
           )}
-          <Button variant="outline" onClick={() => syncMutation.mutate()} disabled={syncMutation.isPending}>
-            <RefreshCw className="h-4 w-4" /> Refresh status
-          </Button>
+          <TrialLockedControl locked={trialExpired}>
+            <Button variant="outline" onClick={() => syncMutation.mutate()} disabled={trialExpired || syncMutation.isPending}>
+              <RefreshCw className="h-4 w-4" /> Refresh status
+            </Button>
+          </TrialLockedControl>
         </div>
       </Panel>
 
@@ -142,14 +151,17 @@ export function PaymentsSettingsPage() {
                 value={readerCode}
                 onChange={(e) => setReaderCode(e.target.value)}
                 placeholder="e.g. peachy-bliss"
+                disabled={trialExpired}
               />
             </div>
-            <Button
-              onClick={() => registerReaderMutation.mutate()}
-              disabled={!readerCode.trim() || registerReaderMutation.isPending}
-            >
-              Register reader
-            </Button>
+            <TrialLockedControl locked={trialExpired}>
+              <Button
+                onClick={() => registerReaderMutation.mutate()}
+                disabled={trialExpired || !readerCode.trim() || registerReaderMutation.isPending}
+              >
+                Register reader
+              </Button>
+            </TrialLockedControl>
           </div>
         </Panel>
       )}

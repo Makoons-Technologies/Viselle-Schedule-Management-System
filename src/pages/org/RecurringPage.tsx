@@ -6,6 +6,7 @@ import { orgApi } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgPlan } from '@/hooks/useOrgPlan';
+import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
 import type { RecurringAppointmentRule } from '@/types/api';
 import { PlanUpsell } from '@/components/common/PlanUpsell';
 import { EditRecurringDialog } from '@/components/appointments/EditRecurringDialog';
@@ -17,6 +18,7 @@ import {
 } from '@/components/appointments/recurring-options';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { TableIconButton, TableRowActions } from '@/components/common/TableIconButton';
+import { TrialLockedControl } from '@/components/common/TrialLockedControl';
 import { PageHeader } from '@/components/common/PageHeader';
 import { EmptyState } from '@/components/common/EmptyState';
 import { LoadingState } from '@/components/common/LoadingState';
@@ -63,23 +65,35 @@ function RecurringRuleActions({
   onEdit,
   onDelete,
   compact,
+  trialLocked,
 }: {
   rule: RecurringAppointmentRule;
   onEdit: (rule: RecurringAppointmentRule) => void;
   onDelete: (rule: RecurringAppointmentRule) => void;
   compact?: boolean;
+  trialLocked: boolean;
 }) {
   return (
     <TableRowActions className={compact ? 'w-full' : undefined}>
       {rule.status !== 'cancelled' && (
-        <TableIconButton icon={Wrench} label="Edit recurring series" onClick={() => onEdit(rule)} />
+        <TrialLockedControl locked={trialLocked}>
+          <TableIconButton
+            icon={Wrench}
+            label="Edit recurring series"
+            onClick={() => onEdit(rule)}
+            disabled={trialLocked}
+          />
+        </TrialLockedControl>
       )}
-      <TableIconButton
-        icon={Trash2}
-        label="Delete recurring series"
-        destructive
-        onClick={() => onDelete(rule)}
-      />
+      <TrialLockedControl locked={trialLocked}>
+        <TableIconButton
+          icon={Trash2}
+          label="Delete recurring series"
+          destructive
+          onClick={() => onDelete(rule)}
+          disabled={trialLocked}
+        />
+      </TrialLockedControl>
     </TableRowActions>
   );
 }
@@ -88,10 +102,12 @@ function RecurringRuleCard({
   rule,
   onEdit,
   onDelete,
+  trialLocked,
 }: {
   rule: RecurringAppointmentRule;
   onEdit: (rule: RecurringAppointmentRule) => void;
   onDelete: (rule: RecurringAppointmentRule) => void;
+  trialLocked: boolean;
 }) {
   return (
     <div className="space-y-3 border-b border-stone-100 p-4 last:border-b-0 dark:border-stone-800">
@@ -103,7 +119,7 @@ function RecurringRuleCard({
           {rule.status === 'cancelled' ? 'ended' : rule.status}
         </Badge>
       </div>
-      <RecurringRuleActions rule={rule} onEdit={onEdit} onDelete={onDelete} compact />
+      <RecurringRuleActions rule={rule} onEdit={onEdit} onDelete={onDelete} compact trialLocked={trialLocked} />
     </div>
   );
 }
@@ -112,10 +128,12 @@ function RecurringRulesTable({
   rules,
   onEdit,
   onDelete,
+  trialLocked,
 }: {
   rules: RecurringAppointmentRule[];
   onEdit: (rule: RecurringAppointmentRule) => void;
   onDelete: (rule: RecurringAppointmentRule) => void;
+  trialLocked: boolean;
 }) {
   return (
     <Table>
@@ -153,7 +171,7 @@ function RecurringRulesTable({
                 </Badge>
               </TableCell>
               <TableCell>
-                <RecurringRuleActions rule={rule} onEdit={onEdit} onDelete={onDelete} />
+                <RecurringRuleActions rule={rule} onEdit={onEdit} onDelete={onDelete} trialLocked={trialLocked} />
               </TableCell>
             </TableRow>
           );
@@ -167,20 +185,22 @@ function RecurringRulesList({
   rules,
   onEdit,
   onDelete,
+  trialLocked,
 }: {
   rules: RecurringAppointmentRule[];
   onEdit: (rule: RecurringAppointmentRule) => void;
   onDelete: (rule: RecurringAppointmentRule) => void;
+  trialLocked: boolean;
 }) {
   return (
     <Panel className="overflow-hidden">
       <div className="md:hidden">
         {rules.map((rule) => (
-          <RecurringRuleCard key={rule.id} rule={rule} onEdit={onEdit} onDelete={onDelete} />
+          <RecurringRuleCard key={rule.id} rule={rule} onEdit={onEdit} onDelete={onDelete} trialLocked={trialLocked} />
         ))}
       </div>
       <div className="hidden md:block">
-        <RecurringRulesTable rules={rules} onEdit={onEdit} onDelete={onDelete} />
+        <RecurringRulesTable rules={rules} onEdit={onEdit} onDelete={onDelete} trialLocked={trialLocked} />
       </div>
     </Panel>
   );
@@ -189,6 +209,7 @@ function RecurringRulesList({
 export function RecurringPage() {
   const orgId = useOrgId();
   const { plan, isLoading: planLoading } = useOrgPlan(orgId);
+  const trialExpired = useOrgTrialExpired();
   const queryClient = useQueryClient();
   const [editingRule, setEditingRule] = useState<RecurringAppointmentRule | null>(null);
   const [deletingRule, setDeletingRule] = useState<RecurringAppointmentRule | null>(null);
@@ -249,7 +270,12 @@ export function RecurringPage() {
           {activeRules.length > 0 && (
             <section className="space-y-3">
               <h2 className={sectionHeadingClass}>Active series</h2>
-              <RecurringRulesList rules={activeRules} onEdit={setEditingRule} onDelete={setDeletingRule} />
+              <RecurringRulesList
+                rules={activeRules}
+                onEdit={setEditingRule}
+                onDelete={setDeletingRule}
+                trialLocked={trialExpired}
+              />
             </section>
           )}
           {endedRules.length > 0 && (
@@ -260,7 +286,12 @@ export function RecurringPage() {
                   These no longer appear on the calendar. Delete to remove them from this list.
                 </p>
               </div>
-              <RecurringRulesList rules={endedRules} onEdit={setEditingRule} onDelete={setDeletingRule} />
+              <RecurringRulesList
+                rules={endedRules}
+                onEdit={setEditingRule}
+                onDelete={setDeletingRule}
+                trialLocked={trialExpired}
+              />
             </section>
           )}
         </>

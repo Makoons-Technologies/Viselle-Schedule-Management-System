@@ -4,10 +4,12 @@ import { useState } from 'react';
 import { orgApi } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
 import { useOrgId } from '@/hooks/useOrgId';
+import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
 import type { Service } from '@/types/api';
 import { CreateServiceDialog } from '@/components/services/CreateServiceDialog';
 import { Panel } from '@/components/common/Panel';
 import { TableIconButton } from '@/components/common/TableIconButton';
+import { TrialLockedControl } from '@/components/common/TrialLockedControl';
 import { EmptyState } from '@/components/common/EmptyState';
 import { LoadingState } from '@/components/common/LoadingState';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 export function ServicesPage() {
   const orgId = useOrgId();
+  const trialExpired = useOrgTrialExpired();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
 
@@ -42,12 +45,22 @@ export function ServicesPage() {
   return (
     <div>
       <div className="mb-4 flex justify-end">
-        <Button onClick={openCreate}>
-          <Plus className="h-4 w-4" /> Add Service
-        </Button>
+        <TrialLockedControl locked={trialExpired}>
+          <Button onClick={openCreate} disabled={trialExpired}>
+            <Plus className="h-4 w-4" /> Add Service
+          </Button>
+        </TrialLockedControl>
       </div>
       {services.length === 0 ? (
-        <EmptyState icon={Scissors} title="No services" action={<Button onClick={openCreate}>Add Service</Button>} />
+        <EmptyState
+          icon={Scissors}
+          title="No services"
+          action={
+            <TrialLockedControl locked={trialExpired}>
+              <Button onClick={openCreate} disabled={trialExpired}>Add Service</Button>
+            </TrialLockedControl>
+          }
+        />
       ) : (
         <Panel>
           <Table>
@@ -68,7 +81,14 @@ export function ServicesPage() {
                   <TableCell>{s.priceCents != null ? formatCurrency(s.priceCents) : '—'}</TableCell>
                   <TableCell><Badge variant={s.isActive ? 'success' : 'secondary'}>{s.isActive ? 'Active' : 'Inactive'}</Badge></TableCell>
                   <TableCell>
-                    <TableIconButton icon={Wrench} label="Edit service" onClick={() => openEdit(s)} />
+                    <TrialLockedControl locked={trialExpired}>
+                      <TableIconButton
+                        icon={Wrench}
+                        label="Edit service"
+                        onClick={() => openEdit(s)}
+                        disabled={trialExpired}
+                      />
+                    </TrialLockedControl>
                   </TableCell>
                 </TableRow>
               ))}

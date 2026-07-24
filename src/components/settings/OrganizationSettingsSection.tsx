@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { orgApi, ownerApi } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { useOrgPlan } from '@/hooks/useOrgPlan';
+import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
 import { OrganizationStatusBadge } from '@/components/common/StatusBadge';
 import { LoadingState } from '@/components/common/LoadingState';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { helperTextClass } from '@/components/common/Panel';
 import { cn, slugify } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
+import { TRIAL_LOCKED_MESSAGE } from '@/lib/trial';
 
 interface OrganizationSettingsSectionProps {
   orgId: string;
@@ -35,6 +37,7 @@ export function OrganizationSettingsSection({ orgId }: OrganizationSettingsSecti
   const queryClient = useQueryClient();
   const isPlatformOwner = user?.role === 'platform_owner';
   const { plan } = useOrgPlan(orgId);
+  const trialExpired = useOrgTrialExpired();
 
   const { data, isLoading } = useQuery({
     queryKey: ['organization', orgId, user?.role],
@@ -70,7 +73,12 @@ export function OrganizationSettingsSection({ orgId }: OrganizationSettingsSecti
       <CardHeader>
         <CardTitle className="text-base">Organization</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent>
+        <fieldset
+          disabled={trialExpired}
+          title={trialExpired ? TRIAL_LOCKED_MESSAGE : undefined}
+          className="m-0 min-w-0 space-y-4 border-0 p-0"
+        >
         <div>
           <Label>Status</Label>
           <div className="mt-1"><OrganizationStatusBadge status={org.status} /></div>
@@ -275,6 +283,7 @@ export function OrganizationSettingsSection({ orgId }: OrganizationSettingsSecti
         </div>
 
         {updateMutation.isPending && <p className={helperTextClass}>Saving…</p>}
+        </fieldset>
       </CardContent>
     </Card>
   );

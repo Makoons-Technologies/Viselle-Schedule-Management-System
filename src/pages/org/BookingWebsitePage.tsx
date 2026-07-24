@@ -8,12 +8,14 @@ import { getSubdomainBookingUrl, resolvePathBookingUrl } from '@/lib/public-book
 import { cn, formatDate } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
+import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
 import type { SiteTemplate } from '@/types/api';
 import { BookingPagePreview } from '@/components/booking/BookingPagePreview';
 import { BookingBrandingSection } from '@/components/settings/BookingBrandingSection';
 import { SettingsBackHeader } from '@/components/settings/SettingsBackHeader';
 import { normalizeBookingBranding } from '@/lib/booking-branding';
 import { LoadingState } from '@/components/common/LoadingState';
+import { TrialLockedControl } from '@/components/common/TrialLockedControl';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +24,7 @@ import { Label } from '@/components/ui/label';
 export function BookingWebsitePage() {
   const orgId = useOrgId();
   const { user } = useAuth();
+  const trialExpired = useOrgTrialExpired();
   const queryClient = useQueryClient();
   const isPlatformOwner = user?.role === 'platform_owner';
 
@@ -166,7 +169,8 @@ export function BookingWebsitePage() {
                 <button
                   type="button"
                   onClick={() => handleTemplateChange(template.id)}
-                  disabled={updateMutation.isPending}
+                  disabled={updateMutation.isPending || trialExpired}
+                  title={trialExpired ? 'Trial expired — upgrade to make changes' : undefined}
                   className={cn(
                     'w-full rounded-lg border bg-white p-4 text-left transition-colors hover:border-brand-300 dark:bg-stone-800/60 dark:hover:border-brand-600',
                     website.siteTemplate === template.id
@@ -219,9 +223,11 @@ export function BookingWebsitePage() {
               </div>
               <p className="text-sm font-medium text-brand-700 dark:text-brand-300">{subdomainUrl}</p>
               {hostingMode !== 'subdomain' ? (
-                <Button onClick={enableSubdomain} disabled={updateMutation.isPending}>
-                  Switch to hosted subdomain
-                </Button>
+                <TrialLockedControl locked={trialExpired}>
+                  <Button onClick={enableSubdomain} disabled={updateMutation.isPending || trialExpired}>
+                    Switch to hosted subdomain
+                  </Button>
+                </TrialLockedControl>
               ) : (
                 <Button asChild variant="outline">
                   <a href={subdomainUrl} target="_blank" rel="noreferrer">
@@ -231,14 +237,17 @@ export function BookingWebsitePage() {
                 </Button>
               )}
               {hostingMode === 'subdomain' && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-stone-500 dark:text-stone-400"
-                  onClick={() => updateMutation.mutate({ hostingMode: 'path', siteTemplate: website.siteTemplate })}
-                >
-                  Use included link instead
-                </Button>
+                <TrialLockedControl locked={trialExpired}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-stone-500 dark:text-stone-400"
+                    onClick={() => updateMutation.mutate({ hostingMode: 'path', siteTemplate: website.siteTemplate })}
+                    disabled={trialExpired}
+                  >
+                    Use included link instead
+                  </Button>
+                </TrialLockedControl>
               )}
             </div>
           ) : (

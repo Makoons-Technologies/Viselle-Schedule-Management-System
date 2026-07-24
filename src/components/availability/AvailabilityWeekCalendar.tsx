@@ -8,6 +8,7 @@ import { DAY_NAMES } from '@/lib/utils';
 import { AddAvailabilityDialog } from '@/components/availability/AddAvailabilityDialog';
 import { buildDayOfWeekColumns, WeekCalendarTable } from '@/components/calendar/WeekCalendarTable';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { TrialLockedControl } from '@/components/common/TrialLockedControl';
 import { Button } from '@/components/ui/button';
 
 interface AvailabilityWeekCalendarProps {
@@ -17,6 +18,7 @@ interface AvailabilityWeekCalendarProps {
   onRemove?: (ruleId: string) => void;
   adding?: boolean;
   removingRuleId?: string | null;
+  trialLocked?: boolean;
 }
 
 export function AvailabilityWeekCalendar({
@@ -26,6 +28,7 @@ export function AvailabilityWeekCalendar({
   onRemove,
   adding = false,
   removingRuleId = null,
+  trialLocked = false,
 }: AvailabilityWeekCalendarProps) {
   const [addDay, setAddDay] = useState<number | null>(null);
   const [ruleToRemove, setRuleToRemove] = useState<AvailabilityRule | null>(null);
@@ -55,27 +58,33 @@ export function AvailabilityWeekCalendar({
                       {formatAvailabilityTime(rule.startTime)} – {formatAvailabilityTime(rule.endTime)}
                     </p>
                     {!readOnly && onRemove && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="mt-1 h-7 px-2 text-brand-800 hover:bg-brand-100 hover:text-red-700 dark:text-brand-200 dark:hover:bg-brand-900/60 dark:hover:text-red-400"
-                        onClick={() => setRuleToRemove(rule)}
-                      >
-                        Remove
-                      </Button>
+                      <TrialLockedControl locked={trialLocked}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="mt-1 h-7 px-2 text-brand-800 hover:bg-brand-100 hover:text-red-700 dark:text-brand-200 dark:hover:bg-brand-900/60 dark:hover:text-red-400"
+                          onClick={() => setRuleToRemove(rule)}
+                          disabled={trialLocked}
+                        >
+                          Remove
+                        </Button>
+                      </TrialLockedControl>
                     )}
                   </div>
                 ))
               )}
               {!readOnly && onAdd && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-auto w-full shrink-0 justify-center self-stretch text-center text-stone-600 dark:border-stone-600 dark:bg-stone-900 dark:text-stone-300 dark:hover:bg-stone-800"
-                  onClick={() => setAddDay(dayOfWeek)}
-                >
-                  add
-                </Button>
+                <TrialLockedControl locked={trialLocked} className="mt-auto flex w-full shrink-0 self-stretch">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-auto w-full shrink-0 justify-center self-stretch text-center text-stone-600 dark:border-stone-600 dark:bg-stone-900 dark:text-stone-300 dark:hover:bg-stone-800"
+                    onClick={() => setAddDay(dayOfWeek)}
+                    disabled={trialLocked}
+                  >
+                    add
+                  </Button>
+                </TrialLockedControl>
               )}
             </>
           );
