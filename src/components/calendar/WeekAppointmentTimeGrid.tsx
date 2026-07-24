@@ -42,6 +42,8 @@ interface WeekAppointmentTimeGridProps {
   onDayHeaderRangeSelect?: (dayKeys: string[]) => void;
   /** Double-click / double-tap shortcut to zoom into a day immediately. */
   onDayHeaderActivate?: (dayKey: string) => void;
+  /** Click an empty time slot to create an appointment (date = day key yyyy-MM-dd). */
+  onEmptySlotClick?: (slot: { dayKey: string; minutes: number }) => void;
 }
 
 export function WeekAppointmentTimeGrid({
@@ -54,6 +56,7 @@ export function WeekAppointmentTimeGrid({
   onDayHeaderSelect,
   onDayHeaderRangeSelect,
   onDayHeaderActivate,
+  onEmptySlotClick,
 }: WeekAppointmentTimeGridProps) {
   const allColumns = buildWeekColumns(days);
   const isZoomed = !!zoomedDayKeys && zoomedDayKeys.length > 0;
@@ -217,6 +220,7 @@ export function WeekAppointmentTimeGrid({
                 stackFrontByKey={stackFrontByKey}
                 onCycleStack={cycleStack}
                 renderAppointment={renderAppointment}
+                onEmptySlotClick={onEmptySlotClick}
               />
             );
           })}
@@ -235,6 +239,7 @@ function DayColumn({
   stackFrontByKey,
   onCycleStack,
   renderAppointment,
+  onEmptySlotClick,
 }: {
   column: WeekCalendarColumn;
   gridHeightRem: number;
@@ -244,6 +249,7 @@ function DayColumn({
   stackFrontByKey: Record<string, number>;
   onCycleStack: (stackKey: string, stackSize: number, delta: number) => void;
   renderAppointment: (appointment: Appointment, stack?: AppointmentStackMeta) => ReactNode;
+  onEmptySlotClick?: (slot: { dayKey: string; minutes: number }) => void;
 }) {
   return (
     <div
@@ -260,6 +266,21 @@ function DayColumn({
           style={{ top: `${minutesToOffsetRem(slotMinutes, gridStartMinutes)}rem` }}
         />
       ))}
+
+      {onEmptySlotClick &&
+        timeSlots.map((slotMinutes) => (
+          <button
+            key={`${column.key}-slot-${slotMinutes}`}
+            type="button"
+            className="absolute inset-x-0 z-0 hover:bg-brand-500/5 focus-visible:bg-brand-500/10 focus-visible:outline-none"
+            style={{
+              top: `${minutesToOffsetRem(slotMinutes, gridStartMinutes)}rem`,
+              height: `${SLOT_HEIGHT_REM}rem`,
+            }}
+            aria-label={`Create appointment on ${column.dayLabel} at ${formatMinutesLabel(slotMinutes)}`}
+            onClick={() => onEmptySlotClick({ dayKey: column.key, minutes: slotMinutes })}
+          />
+        ))}
 
       {positioned.map(({ appointment, topRem, heightRem, stackKey, stackIndex, stackSize }) => {
         const frontIndex = stackKey ? (stackFrontByKey[stackKey] ?? 0) : 0;

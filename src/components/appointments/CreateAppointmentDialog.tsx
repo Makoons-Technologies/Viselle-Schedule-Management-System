@@ -12,6 +12,7 @@ import {
   getCustomerFieldChanges,
 } from '@/lib/customers';
 import { formatDateTime, getDayOfWeekFromIso, todayDateOnlyLocal, filterFutureAppointmentSlots } from '@/lib/utils';
+import { TRIAL_LOCKED_MESSAGE } from '@/lib/trial';
 import type { Customer, RecurringFrequency } from '@/types/api';
 import { CustomerAutocompleteFields } from '@/components/appointments/CustomerAutocompleteFields';
 import { RecurringOptionsFields } from '@/components/appointments/RecurringOptionsFields';
@@ -26,6 +27,7 @@ import { CustomerFieldChangesList } from '@/components/customers/CustomerFieldCh
 import { helperTextClass } from '@/components/common/Panel';
 import { useRecurringDaySchedule } from '@/hooks/useRecurringDaySchedule';
 import { useOrgPlan } from '@/hooks/useOrgPlan';
+import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -90,6 +92,7 @@ export function CreateAppointmentDialog({
 }: CreateAppointmentDialogProps) {
   const queryClient = useQueryClient();
   const { plan } = useOrgPlan(orgId);
+  const trialExpired = useOrgTrialExpired();
   const today = todayDateOnlyLocal();
   const initialDate =
     defaultDate && defaultDate >= today ? defaultDate : today;
@@ -181,6 +184,8 @@ export function CreateAppointmentDialog({
     setValue('startTime', '');
   }, [accountId, serviceId, date, setValue]);
 
+  const recurringAnchorRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (!open) return;
     recurringAnchorRef.current = null;
@@ -191,9 +196,15 @@ export function CreateAppointmentDialog({
     setSelectedCustomerId(null);
     setMergeConfirm(null);
     resetSchedule([], {});
-  }, [open, resetSchedule]);
+    reset({ date: initialDate });
+  }, [open, resetSchedule, reset, initialDate]);
 
-  const recurringAnchorRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (open && trialExpired) {
+      toast.error(TRIAL_LOCKED_MESSAGE);
+      onOpenChange(false);
+    }
+  }, [open, trialExpired, onOpenChange]);
 
   useEffect(() => {
     if (!makeRecurring) {
@@ -291,6 +302,11 @@ export function CreateAppointmentDialog({
   };
 
   const handleCreate = (pending: PendingSubmit) => {
+    if (trialExpired) {
+      toast.error(TRIAL_LOCKED_MESSAGE);
+      onOpenChange(false);
+      return;
+    }
     const match = findExistingCustomerMatch(customers, {
       email: pending.data.email,
       phone: pending.data.phone,
@@ -495,7 +511,7 @@ export function CreateAppointmentDialog({
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button
                 type="submit"
-                disabled={mutation.isPending || !canSubmit}
+                disabled={mutation.isPending || !canSubmit || trialExpired}
                 className="disabled:bg-brand-600/40 disabled:text-white disabled:opacity-100"
               >
                 {makeRecurring ? 'Create Series' : 'Create'}

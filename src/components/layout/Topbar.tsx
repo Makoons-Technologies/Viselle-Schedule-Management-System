@@ -8,6 +8,7 @@ import { useMobileNav } from '@/context/MobileNavContext';
 import { useOrg } from '@/context/OrgContext';
 import { orgApi } from '@/lib/api';
 import { useOrgId } from '@/hooks/useOrgId';
+import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
 import {
   getPlatformContextFromPath,
   PLATFORM_CONTEXT,
@@ -32,6 +33,7 @@ export function Topbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const routeOrgId = useOrgId();
+  const trialExpired = useOrgTrialExpired();
 
   const orgIdForQuery =
     user?.role === 'platform_owner' ? routeOrgId : user?.organizationId ?? routeOrgId;
@@ -83,6 +85,7 @@ export function Topbar() {
   const orgSettingsPath = routeOrgId ? `/orgs/${routeOrgId}/settings` : null;
   const showSettingsButton =
     !!orgSettingsPath &&
+    !trialExpired &&
     (user?.role === 'org_owner' || (user?.role === 'platform_owner' && inOrgSalonContext));
   const onSettingsPage = orgSettingsPath ? isOrgSettingsPath(location.pathname, `/orgs/${routeOrgId}`) : false;
 

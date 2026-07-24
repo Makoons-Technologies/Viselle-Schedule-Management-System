@@ -38,6 +38,7 @@ import { StaffPermissionsSettingsPage } from '@/pages/org/settings/StaffPermissi
 import { RecurringPage } from '@/pages/org/RecurringPage';
 import { StaffAdminPermissionsPage } from '@/pages/staff/StaffAdminPermissionsPage';
 import { StaffAvailabilityPage } from '@/pages/staff/StaffAvailabilityPage';
+import { TrialSettingsGuard } from '@/routes/TrialSettingsGuard';
 import type { UserRole } from '@/types/api';
 
 function StaffOrgRedirect({ to }: { to: 'calendar' | 'appointments' }) {
@@ -109,27 +110,32 @@ export const appRoutes = [
                   {
                     element: <ProtectedRoute roles={['platform_owner', 'org_owner']} />,
                     children: [
-                      { path: 'website', element: <BookingWebsitePage /> },
-                      { path: 'staff', element: <StaffPage /> },
-                      { path: 'availability', element: <AvailabilityPage /> },
-                      { path: 'services', element: <Navigate to="settings/services" replace /> },
                       { path: 'reminders', element: <Navigate to="dashboard" replace /> },
                       { path: 'recurring', element: <RecurringPage /> },
-                      { path: 'billing', element: <Navigate to="settings/general" replace /> },
-                      { path: 'owner-settings', element: <Navigate to="settings/org" replace /> },
                       {
-                        path: 'settings',
+                        element: <TrialSettingsGuard />,
                         children: [
-                          { index: true, element: <SettingsHubPage /> },
+                          { path: 'website', element: <BookingWebsitePage /> },
+                          { path: 'staff', element: <StaffPage /> },
+                          { path: 'availability', element: <AvailabilityPage /> },
+                          { path: 'services', element: <Navigate to="settings/services" replace /> },
+                          { path: 'billing', element: <Navigate to="settings/general" replace /> },
+                          { path: 'owner-settings', element: <Navigate to="settings/org" replace /> },
                           {
-                            element: <SettingsDetailLayout />,
+                            path: 'settings',
                             children: [
-                              { path: 'general', element: <GeneralSettingsPage /> },
-                              { path: 'org', element: <OrgSettingsPage /> },
-                              { path: 'services', element: <ServicesPage /> },
-                              { path: 'products', element: <ProductsPage /> },
-                              { path: 'payments', element: <PaymentsSettingsPage /> },
-                              { path: 'staff-permissions', element: <StaffPermissionsSettingsPage /> },
+                              { index: true, element: <SettingsHubPage /> },
+                              {
+                                element: <SettingsDetailLayout />,
+                                children: [
+                                  { path: 'general', element: <GeneralSettingsPage /> },
+                                  { path: 'org', element: <OrgSettingsPage /> },
+                                  { path: 'services', element: <ServicesPage /> },
+                                  { path: 'products', element: <ProductsPage /> },
+                                  { path: 'payments', element: <PaymentsSettingsPage /> },
+                                  { path: 'staff-permissions', element: <StaffPermissionsSettingsPage /> },
+                                ],
+                              },
                             ],
                           },
                         ],
@@ -146,7 +152,12 @@ export const appRoutes = [
               { path: '/staff/schedule', element: <StaffOrgRedirect to="calendar" /> },
               { path: '/staff/appointments', element: <StaffOrgRedirect to="appointments" /> },
               { path: '/staff/availability', element: <StaffAvailabilityPage /> },
-              { path: '/staff/settings/staff-permissions', element: <StaffAdminPermissionsPage /> },
+              {
+                element: <TrialSettingsGuard />,
+                children: [
+                  { path: '/staff/settings/staff-permissions', element: <StaffAdminPermissionsPage /> },
+                ],
+              },
             ],
           },
         ],

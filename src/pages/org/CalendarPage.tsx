@@ -2,9 +2,11 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { addDays, endOfWeek, format, parseISO, startOfWeek } from 'date-fns';
 import { ListChecks, Plus, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { orgApi } from '@/lib/api';
 import { APPOINTMENT_CALENDAR_LIP_CLASS, APPOINTMENT_CALENDAR_LIP_LABEL } from '@/lib/appointment-status';
 import { cn } from '@/lib/utils';
+import { TRIAL_LOCKED_MESSAGE } from '@/lib/trial';
 import { useOrgId } from '@/hooks/useOrgId';
 import { filterOutCancelled, useHideCancelledAppointments } from '@/hooks/useHideCancelledAppointments';
 import { useStaffPermissions } from '@/hooks/useStaffPermissions';
@@ -48,6 +50,7 @@ export function CalendarPage() {
     startTime: string;
   } | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [createDefaultDate, setCreateDefaultDate] = useState<string | undefined>(undefined);
   /** null = default all staff selected once accounts load */
   const [selectedStaffIds, setSelectedStaffIds] = useState<string[] | null>(null);
   const [selectMode, setSelectMode] = useState(false);
@@ -288,7 +291,13 @@ export function CalendarPage() {
             )}
             {permissions.canCreateAppointments && (
               <TrialLockedControl locked={trialExpired}>
-                <Button disabled={trialExpired} onClick={() => setCreateOpen(true)}>
+                <Button
+                  disabled={trialExpired}
+                  onClick={() => {
+                    setCreateDefaultDate(undefined);
+                    setCreateOpen(true);
+                  }}
+                >
                   <Plus className="h-4 w-4" /> New Appointment
                 </Button>
               </TrialLockedControl>
@@ -361,6 +370,18 @@ export function CalendarPage() {
         onDayHeaderSelect={handleDayHeaderSelect}
         onDayHeaderRangeSelect={handleDayHeaderRangeSelect}
         onDayHeaderActivate={(dayKey) => applyDayZoom([dayKey])}
+        onEmptySlotClick={
+          permissions.canCreateAppointments && !selectMode
+            ? ({ dayKey }) => {
+                if (trialExpired) {
+                  toast.error(TRIAL_LOCKED_MESSAGE);
+                  return;
+                }
+                setCreateDefaultDate(dayKey);
+                setCreateOpen(true);
+              }
+            : undefined
+        }
         renderAppointment={(appt, stack) => {
           const customer = customersById[appt.customerId];
           const customerName = customer
@@ -447,7 +468,12 @@ export function CalendarPage() {
           queryClient.invalidateQueries({ queryKey: ['appointments', orgId] });
         }}
       />
-      <CreateAppointmentDialog orgId={orgId} open={createOpen} onOpenChange={setCreateOpen} />
+      <CreateAppointmentDialog
+        orgId={orgId}
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        defaultDate={createDefaultDate}
+      />
     </div>
   );
 }

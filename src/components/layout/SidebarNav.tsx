@@ -16,6 +16,7 @@ import { useOrgPlan } from '@/hooks/useOrgPlan';
 
 import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgAdminAccess } from '@/hooks/useOrgAdminAccess';
+import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
 
 import { getOrgNavigation } from '@/components/layout/org-navigation';
 import {
@@ -237,6 +238,7 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
 
   const showRecurring = plan ? plan.recurringAppointmentsEnabled : true;
   const canManageStaff = useOrgAdminAccess(effectiveOrgId ?? undefined);
+  const trialExpired = useOrgTrialExpired();
 
   if (!user) return null;
 
@@ -257,7 +259,7 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
       { label: 'My Availability', to: '/staff/availability', icon: Clock },
     ];
 
-    if (canManageStaff) {
+    if (canManageStaff && !trialExpired) {
       staffItems.push({
         label: 'Staff permissions',
         to: '/staff/settings/staff-permissions',
@@ -346,7 +348,7 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
 
       mainItems={orgNav.main}
 
-      settingsItems={orgNav.settings}
+      settingsItems={trialExpired ? [] : orgNav.settings}
 
     />
 
