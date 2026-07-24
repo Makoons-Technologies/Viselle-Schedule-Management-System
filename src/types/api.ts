@@ -368,6 +368,18 @@ export interface Appointment {
   updatedAt: string;
 }
 
+export interface CustomerServiceNote {
+  id: string;
+  organizationId: string;
+  customerId: string;
+  serviceId: string;
+  body: string;
+  sourceAppointmentId?: string | null;
+  createdByAccountId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Product {
   id: string;
   organizationId: string;
@@ -537,6 +549,7 @@ export interface AppointmentInfo {
   account: Account | null;
   service: Service | null;
   customer: Customer | null;
+  customerServiceNotes?: CustomerServiceNote[];
 }
 
 export interface ApiErrorBody {

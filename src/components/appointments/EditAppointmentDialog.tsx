@@ -9,6 +9,7 @@ import { getCustomerFieldChanges } from '@/lib/customers';
 import { formatDateTime, filterFutureAppointmentSlots } from '@/lib/utils';
 import type { AppointmentInfo } from '@/types/api';
 import { CustomerAutocompleteFields } from '@/components/appointments/CustomerAutocompleteFields';
+import { CustomerServiceNoteHistory } from '@/components/appointments/CustomerServiceNoteHistory';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { CustomerFieldChangesList } from '@/components/customers/CustomerFieldChangesList';
 import { Button } from '@/components/ui/button';
@@ -317,6 +318,11 @@ export function EditAppointmentDialog({
             </div>
           </div>
 
+          <CustomerServiceNoteHistory
+            orgId={orgId}
+            customerId={customer?.id}
+            serviceId={serviceId}
+          />
           <div>
             <Label>Notes</Label>
             <Textarea {...register('appointmentNotes')} />

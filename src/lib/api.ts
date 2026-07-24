@@ -13,6 +13,7 @@ import type {
   CreateServiceInput,
   Customer,
   ImpersonateOwnerResponse,
+  CustomerServiceNote,
   LoginResponse,
   Organization,
   OrgPlanFeatures,
@@ -320,6 +321,12 @@ export const orgApi = {
   ) =>
     apiClient
       .patch<{ customer: Customer }>(`/organizations/${orgId}/customers/${customerId}`, data)
+      .then((r) => r.data),
+  listCustomerServiceNotes: (orgId: string, customerId: string, serviceId: string) =>
+    apiClient
+      .get<{ notes: CustomerServiceNote[] }>(`/organizations/${orgId}/customers/${customerId}/service-notes`, {
+        params: { serviceId },
+      })
       .then((r) => r.data),
 
   listAvailabilityRules: (orgId: string, accountId: string) =>
