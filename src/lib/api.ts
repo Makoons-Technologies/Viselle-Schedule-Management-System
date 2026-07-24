@@ -36,6 +36,12 @@ import type {
   WebsiteSettingsResponse,
   UpdateWebsiteInput,
   UploadBookingAssetInput,
+  TrialCampaign,
+  TrialRedemption,
+  PlatformTrialSettings,
+  TrialCampaignType,
+  TrialPaymentMode,
+  ReferralStat,
 } from '@/types/api';
 
 const TOKEN_KEY = 'viselle_auth_token';
@@ -156,6 +162,39 @@ export const ownerApi = {
     apiClient
       .post<WebsiteSettingsResponse & { apiKey: string }>(`/owner/organizations/${id}/website/regenerate-api-key`)
       .then((r) => r.data),
+
+  listTrialCampaigns: () =>
+    apiClient.get<{ campaigns: TrialCampaign[] }>('/owner/trials/campaigns').then((r) => r.data),
+  createTrialCampaign: (data: {
+    name: string;
+    type: TrialCampaignType;
+    code?: string;
+    durationDays: number;
+    maxRedemptions?: number;
+    paymentMode: TrialPaymentMode;
+    enabled?: boolean;
+  }) => apiClient.post<{ campaign: TrialCampaign }>('/owner/trials/campaigns', data).then((r) => r.data),
+  getTrialCampaign: (id: string) =>
+    apiClient
+      .get<{ campaign: TrialCampaign; redemptions: TrialRedemption[] }>(`/owner/trials/campaigns/${id}`)
+      .then((r) => r.data),
+  updateTrialCampaign: (
+    id: string,
+    data: Partial<{
+      name: string;
+      code: string;
+      durationDays: number;
+      maxRedemptions: number | null;
+      paymentMode: TrialPaymentMode;
+      enabled: boolean;
+    }>,
+  ) => apiClient.patch<{ campaign: TrialCampaign }>(`/owner/trials/campaigns/${id}`, data).then((r) => r.data),
+  listReferrals: () =>
+    apiClient.get<{ referrals: ReferralStat[] }>('/owner/trials/referrals').then((r) => r.data),
+  getTrialSettings: () =>
+    apiClient.get<{ settings: PlatformTrialSettings }>('/owner/trials/settings').then((r) => r.data),
+  updateTrialSettings: (data: Partial<Pick<PlatformTrialSettings, 'referralDurationDays' | 'referralPaymentMode'>>) =>
+    apiClient.patch<{ settings: PlatformTrialSettings }>('/owner/trials/settings', data).then((r) => r.data),
 };
 
 export const orgApi = {

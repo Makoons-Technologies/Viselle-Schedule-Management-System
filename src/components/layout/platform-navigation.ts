@@ -1,4 +1,4 @@
-import { Building2, LayoutDashboard, Settings } from 'lucide-react';
+import { Building2, LayoutDashboard, Settings, TicketPercent } from 'lucide-react';
 
 export const PLATFORM_CONTEXT = 'platform';
 
@@ -16,6 +16,7 @@ export function getPlatformNavigation(): PlatformNavLink[] {
   return [
     { label: 'Dashboard', to: '/platform/dashboard', icon: LayoutDashboard },
     { label: 'Organizations', to: '/platform/organizations', icon: Building2 },
+    { label: 'Trials & Campaigns', to: '/platform/trials', icon: TicketPercent },
   ];
 }
 

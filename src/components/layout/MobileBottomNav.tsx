@@ -5,6 +5,7 @@ import {
   Clock,
   LayoutDashboard,
   Settings,
+  TicketPercent,
   UserCircle,
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
@@ -148,6 +149,13 @@ export function MobileBottomNav() {
         to: '/platform/organizations',
         icon: Building2,
         match: (p) => p.startsWith('/platform/organizations'),
+      },
+      {
+        key: 'trials',
+        label: 'Trials',
+        to: '/platform/trials',
+        icon: TicketPercent,
+        match: (p) => p.startsWith('/platform/trials'),
       },
     ];
 
