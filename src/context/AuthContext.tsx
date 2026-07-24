@@ -1,6 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { authApi, getStoredToken, setStoredToken } from '@/lib/api';
+import {
+  authApi,
+  getImpersonationOriginToken,
+  getStoredToken,
+  ownerApi,
+  setImpersonationOriginToken,
+  setStoredToken,
+} from '@/lib/api';
 import type { AuthUser, StaffMembership } from '@/types/api';
 
 interface AuthContextValue {
@@ -9,9 +16,12 @@ interface AuthContextValue {
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isImpersonating: boolean;
   login: (email: string, password: string) => Promise<AuthUser>;
   completePasswordSetup: (token: string, password: string) => Promise<AuthUser>;
   switchOrganization: (organizationId: string) => Promise<AuthUser>;
+  loginAsOwner: (organizationId: string) => Promise<{ user: AuthUser; organization: { id: string; name: string } }>;
+  exitImpersonation: () => void;
   logout: () => void;
 }
 
@@ -67,11 +77,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     setStoredToken(null);
+    setImpersonationOriginToken(null);
     setToken(null);
     queryClient.clear();
   }, [queryClient]);
 
+  const loginAsOwner = useCallback(async (organizationId: string) => {
+    const originToken = getStoredToken();
+    const result = await ownerApi.impersonateOwner(organizationId);
+    if (originToken) {
+      setImpersonationOriginToken(originToken);
+    }
+    setToken(result.token);
+    const impersonatedUser = applyAuthSession(queryClient, result);
+    return { user: impersonatedUser, organization: result.organization };
+  }, [queryClient]);
+
+  const exitImpersonation = useCallback(() => {
+    const originToken = getImpersonationOriginToken();
+    setImpersonationOriginToken(null);
+    if (!originToken) {
+      logout();
+      return;
+    }
+    setStoredToken(originToken);
+    setToken(originToken);
+    queryClient.removeQueries({ queryKey: ['auth', 'me'] });
+  }, [queryClient, logout]);
+
   const memberships = user?.memberships ?? [];
+  const isImpersonating = !!user?.impersonatedBy;
 
   const value = useMemo(
     () => ({
@@ -80,12 +115,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       token,
       isLoading: !!token && isLoading,
       isAuthenticated: !!token && !!user,
+      isImpersonating,
       login,
       completePasswordSetup,
       switchOrganization,
+      loginAsOwner,
+      exitImpersonation,
       logout,
     }),
-    [user, memberships, token, isLoading, login, completePasswordSetup, switchOrganization, logout],
+    [
+      user,
+      memberships,
+      token,
+      isLoading,
+      isImpersonating,
+      login,
+      completePasswordSetup,
+      switchOrganization,
+      loginAsOwner,
+      exitImpersonation,
+      logout,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

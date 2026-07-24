@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ban, Plus, Settings } from 'lucide-react';
+import { Ban, LogIn, Plus, Settings } from 'lucide-react';
 import { useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ownerApi } from '@/lib/api';
+import { ApiError, ownerApi } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useOrg } from '@/context/OrgContext';
@@ -17,10 +17,12 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 export function OrganizationsPage() {
-  const { user } = useAuth();
+  const { user, loginAsOwner } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { setSelectedOrgId } = useOrg();
   const [orgToDeactivate, setOrgToDeactivate] = useState<{ id: string; name: string } | null>(null);
+  const [impersonatingOrgId, setImpersonatingOrgId] = useState<string | null>(null);
   const isPlatformOwner = user?.role === 'platform_owner';
 
   const { data, isLoading } = useQuery({
@@ -44,6 +46,19 @@ export function OrganizationsPage() {
       setOrgToDeactivate(null);
     },
     onError: (err: Error) => toast.error(err.message),
+  });
+
+  const impersonateMutation = useMutation({
+    mutationFn: (id: string) => loginAsOwner(id),
+    onMutate: (id: string) => setImpersonatingOrgId(id),
+    onSuccess: ({ organization }) => {
+      setSelectedOrgId(organization.id);
+      navigate(`/orgs/${organization.id}/dashboard`);
+    },
+    onError: (err: unknown) => {
+      toast.error(err instanceof ApiError ? err.message : 'Could not log in as owner');
+    },
+    onSettled: () => setImpersonatingOrgId(null),
   });
 
   if (isLoading) return <LoadingState />;
@@ -86,6 +101,12 @@ export function OrganizationsPage() {
                         <Settings className="h-4 w-4" />
                       </Link>
                     </TableIconButton>
+                    <TableIconButton
+                      icon={LogIn}
+                      label="Log in as owner"
+                      onClick={() => impersonateMutation.mutate(org.id)}
+                      disabled={impersonatingOrgId === org.id}
+                    />
                     {org.status === 'active' && (
                       <TableIconButton
                         icon={Ban}

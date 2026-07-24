@@ -72,6 +72,9 @@ export interface AuthUser {
   organizationId?: string | null;
   accountId?: string | null;
   memberships?: StaffMembership[];
+  /** Set when this session is a platform_owner impersonating an org_owner. */
+  impersonatedBy?: string | null;
+  impersonatedByEmail?: string | null;
 }
 
 export interface StaffMembership {
@@ -85,6 +88,12 @@ export interface LoginResponse {
   token: string;
   user: AuthUser;
   memberships?: StaffMembership[];
+}
+
+export interface ImpersonateOwnerResponse {
+  token: string;
+  user: AuthUser;
+  organization: { id: string; name: string };
 }
 
 export interface Organization {

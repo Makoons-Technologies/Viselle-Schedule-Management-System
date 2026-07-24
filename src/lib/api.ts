@@ -12,6 +12,7 @@ import type {
   CreateOrganizationInput,
   CreateServiceInput,
   Customer,
+  ImpersonateOwnerResponse,
   LoginResponse,
   Organization,
   OrgPlanFeatures,
@@ -49,6 +50,7 @@ import type {
 } from '@/types/api';
 
 const TOKEN_KEY = 'viselle_auth_token';
+const IMPERSONATION_ORIGIN_TOKEN_KEY = 'viselle_impersonation_origin_token';
 
 export class ApiError extends Error {
   code: string;
@@ -111,6 +113,19 @@ export function setStoredToken(token: string | null) {
   }
 }
 
+/** The platform_owner token stashed while impersonating an org owner, so "Exit" can restore it without a re-login. */
+export function getImpersonationOriginToken() {
+  return localStorage.getItem(IMPERSONATION_ORIGIN_TOKEN_KEY);
+}
+
+export function setImpersonationOriginToken(token: string | null) {
+  if (token) {
+    localStorage.setItem(IMPERSONATION_ORIGIN_TOKEN_KEY, token);
+  } else {
+    localStorage.removeItem(IMPERSONATION_ORIGIN_TOKEN_KEY);
+  }
+}
+
 export const authApi = {
   login: (email: string, password: string) =>
     apiClient.post<LoginResponse>('/auth/login', { email, password }).then((r) => r.data),
@@ -141,6 +156,8 @@ export const ownerApi = {
     apiClient.patch<{ organization: Organization }>(`/owner/organizations/${id}`, data).then((r) => r.data),
   deactivateOrganization: (id: string) =>
     apiClient.patch<{ organization: Organization }>(`/owner/organizations/${id}/deactivate`).then((r) => r.data),
+  impersonateOwner: (id: string) =>
+    apiClient.post<ImpersonateOwnerResponse>(`/owner/organizations/${id}/impersonate`).then((r) => r.data),
   getSettings: (id: string) =>
     apiClient.get<{ settings: OrganizationSettings }>(`/owner/organizations/${id}/settings`).then((r) => r.data),
   updateSettings: (id: string, data: Partial<OrganizationSettings>) =>
