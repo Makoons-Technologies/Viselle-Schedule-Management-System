@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Copy, Plus } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { ownerApi } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
@@ -47,6 +47,30 @@ function useCopyToClipboard() {
   };
 }
 
+/** Local YYYY-MM-DD (for a date `<input>`) -> end-of-day ISO timestamp for `expiresAt`. */
+function dateInputToExpiresAtIso(value: string): string | null {
+  if (!value) return null;
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) return null;
+  const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
+  return endOfDay.toISOString();
+}
+
+/** ISO timestamp -> local YYYY-MM-DD for a date `<input>`. */
+function expiresAtIsoToDateInput(iso?: string | null): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function isCampaignExpired(campaign: Pick<TrialCampaign, 'expiresAt'>): boolean {
+  return Boolean(campaign.expiresAt) && new Date(campaign.expiresAt as string).getTime() <= Date.now();
+}
+
 function CopyButton({ label, copied, onCopy }: { label: string; copied: boolean; onCopy: () => void }) {
   return (
     <Button type="button" variant="outline" size="sm" onClick={onCopy} title={label}>
@@ -62,8 +86,11 @@ interface CampaignFormState {
   code: string;
   durationDays: string;
   maxRedemptions: string;
+  unlimitedMaxUses: boolean;
   paymentMode: TrialPaymentMode;
   enabled: boolean;
+  expiresAt: string;
+  noExpiration: boolean;
 }
 
 const EMPTY_FORM: CampaignFormState = {
@@ -72,8 +99,11 @@ const EMPTY_FORM: CampaignFormState = {
   code: '',
   durationDays: '14',
   maxRedemptions: '1',
+  unlimitedMaxUses: false,
   paymentMode: 'free_no_card',
   enabled: false,
+  expiresAt: '',
+  noExpiration: true,
 };
 
 function CreateCampaignDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
@@ -87,9 +117,11 @@ function CreateCampaignDialog({ open, onOpenChange }: { open: boolean; onOpenCha
         type: form.type,
         code: form.type === 'code' ? form.code.trim() : undefined,
         durationDays: Number(form.durationDays),
-        maxRedemptions: form.type === 'code' ? Number(form.maxRedemptions) : undefined,
+        maxRedemptions:
+          form.type === 'code' ? (form.unlimitedMaxUses ? null : Number(form.maxRedemptions)) : undefined,
         paymentMode: form.paymentMode,
         enabled: form.enabled,
+        expiresAt: form.noExpiration ? null : dateInputToExpiresAtIso(form.expiresAt),
       }),
     onSuccess: () => {
       toast.success('Campaign created');
@@ -103,7 +135,9 @@ function CreateCampaignDialog({ open, onOpenChange }: { open: boolean; onOpenCha
   const canSubmit =
     form.name.trim().length > 0 &&
     Number(form.durationDays) >= 1 &&
-    (form.type === 'homepage' || (form.code.trim().length >= 3 && Number(form.maxRedemptions) >= 1));
+    (form.type === 'homepage' ||
+      (form.code.trim().length >= 3 && (form.unlimitedMaxUses || Number(form.maxRedemptions) >= 1))) &&
+    (form.noExpiration || form.expiresAt.length > 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -151,26 +185,60 @@ function CreateCampaignDialog({ open, onOpenChange }: { open: boolean; onOpenCha
           </div>
 
           {form.type === 'code' && (
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Code</Label>
-                <Input
-                  value={form.code}
-                  onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
-                  placeholder="SPRING2026"
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Code</Label>
+                  <Input
+                    value={form.code}
+                    onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
+                    placeholder="SPRING2026"
+                  />
+                </div>
+                <div>
+                  <Label>Max uses</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={form.maxRedemptions}
+                    disabled={form.unlimitedMaxUses}
+                    onChange={(e) => setForm((f) => ({ ...f, maxRedemptions: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-between rounded-lg border border-stone-200 px-3 py-2 dark:border-stone-700">
+                <div>
+                  <p className="text-sm font-medium text-stone-900 dark:text-stone-100">Unlimited max uses</p>
+                  <p className={sectionMutedClass}>No cap on how many times this code can be redeemed.</p>
+                </div>
+                <Switch
+                  checked={form.unlimitedMaxUses}
+                  onCheckedChange={(checked) => setForm((f) => ({ ...f, unlimitedMaxUses: checked }))}
                 />
               </div>
-              <div>
-                <Label>Max uses</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={form.maxRedemptions}
-                  onChange={(e) => setForm((f) => ({ ...f, maxRedemptions: e.target.value }))}
-                />
-              </div>
-            </div>
+            </>
           )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Expires on</Label>
+              <Input
+                type="date"
+                value={form.expiresAt}
+                disabled={form.noExpiration}
+                onChange={(e) => setForm((f) => ({ ...f, expiresAt: e.target.value }))}
+              />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-stone-200 px-3 py-2 dark:border-stone-700">
+              <div>
+                <p className="text-sm font-medium text-stone-900 dark:text-stone-100">Unlimited / no expiration</p>
+              </div>
+              <Switch
+                checked={form.noExpiration}
+                onCheckedChange={(checked) => setForm((f) => ({ ...f, noExpiration: checked }))}
+              />
+            </div>
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -249,6 +317,63 @@ function CampaignDetailDialog({ campaignId, onOpenChange }: { campaignId: string
     ? `${window.location.origin}/get-started?code=${encodeURIComponent(campaign.code)}`
     : null;
 
+  const [expiryDraft, setExpiryDraft] = useState<{ date: string; noExpiration: boolean } | null>(null);
+  const [maxUsesDraft, setMaxUsesDraft] = useState<{ value: string; unlimited: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!campaign) {
+      setExpiryDraft(null);
+      setMaxUsesDraft(null);
+      return;
+    }
+    setExpiryDraft({
+      date: expiresAtIsoToDateInput(campaign.expiresAt),
+      noExpiration: !campaign.expiresAt,
+    });
+    setMaxUsesDraft({
+      value: campaign.maxRedemptions != null ? String(campaign.maxRedemptions) : '1',
+      unlimited: campaign.maxRedemptions == null,
+    });
+    // Only re-sync drafts when a different campaign loads, not on every refetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaign?.id]);
+
+  const expiryChanged =
+    campaign &&
+    expiryDraft &&
+    (expiryDraft.noExpiration
+      ? Boolean(campaign.expiresAt)
+      : dateInputToExpiresAtIso(expiryDraft.date) !== (campaign.expiresAt ?? null));
+
+  const updateExpiryMutation = useMutation({
+    mutationFn: () =>
+      ownerApi.updateTrialCampaign(campaignId!, {
+        expiresAt: expiryDraft!.noExpiration ? null : dateInputToExpiresAtIso(expiryDraft!.date),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['owner', 'trials', 'campaigns'] });
+      toast.success('Expiration updated');
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const maxUsesChanged =
+    campaign &&
+    maxUsesDraft &&
+    (maxUsesDraft.unlimited ? campaign.maxRedemptions != null : Number(maxUsesDraft.value) !== campaign.maxRedemptions);
+
+  const updateMaxUsesMutation = useMutation({
+    mutationFn: () =>
+      ownerApi.updateTrialCampaign(campaignId!, {
+        maxRedemptions: maxUsesDraft!.unlimited ? null : Number(maxUsesDraft!.value),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['owner', 'trials', 'campaigns'] });
+      toast.success('Max uses updated');
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   return (
     <Dialog open={Boolean(campaignId)} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -257,10 +382,14 @@ function CampaignDetailDialog({ campaignId, onOpenChange }: { campaignId: string
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle>{campaign.name}</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                {campaign.name}
+                {isCampaignExpired(campaign) && <Badge variant="secondary">Expired</Badge>}
+              </DialogTitle>
               <DialogDescription>
                 {campaign.type === 'code' ? 'Shared code campaign' : 'Homepage campaign'} ·{' '}
                 {campaign.durationDays}-day trial · {PAYMENT_MODE_LABEL[campaign.paymentMode]}
+                {campaign.expiresAt && ` · Expires ${formatDate(campaign.expiresAt)}`}
               </DialogDescription>
             </DialogHeader>
 
@@ -280,6 +409,75 @@ function CampaignDetailDialog({ campaignId, onOpenChange }: { campaignId: string
                   disabled={toggleMutation.isPending}
                 />
               </div>
+
+              {campaign.type === 'code' && maxUsesDraft && (
+                <div className="rounded-lg border border-stone-200 p-3 dark:border-stone-700">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-stone-900 dark:text-stone-100">Max uses</p>
+                    <div className="flex items-center gap-2">
+                      <span className={sectionMutedClass}>Unlimited</span>
+                      <Switch
+                        checked={maxUsesDraft.unlimited}
+                        onCheckedChange={(checked) => setMaxUsesDraft((d) => (d ? { ...d, unlimited: checked } : d))}
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={1}
+                      value={maxUsesDraft.value}
+                      disabled={maxUsesDraft.unlimited}
+                      onChange={(e) => setMaxUsesDraft((d) => (d ? { ...d, value: e.target.value } : d))}
+                      className="max-w-[8rem]"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={!maxUsesChanged || updateMaxUsesMutation.isPending}
+                      onClick={() => updateMaxUsesMutation.mutate()}
+                    >
+                      Save
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {expiryDraft && (
+                <div className="rounded-lg border border-stone-200 p-3 dark:border-stone-700">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-stone-900 dark:text-stone-100">Expiration</p>
+                    <div className="flex items-center gap-2">
+                      <span className={sectionMutedClass}>No expiration</span>
+                      <Switch
+                        checked={expiryDraft.noExpiration}
+                        onCheckedChange={(checked) => setExpiryDraft((d) => (d ? { ...d, noExpiration: checked } : d))}
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <Input
+                      type="date"
+                      value={expiryDraft.date}
+                      disabled={expiryDraft.noExpiration}
+                      onChange={(e) => setExpiryDraft((d) => (d ? { ...d, date: e.target.value } : d))}
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={!expiryChanged || updateExpiryMutation.isPending}
+                      onClick={() => updateExpiryMutation.mutate()}
+                    >
+                      Save
+                    </Button>
+                  </div>
+                  <p className={`${sectionMutedClass} mt-1`}>
+                    After this date, the code and homepage offer can no longer be redeemed.
+                  </p>
+                </div>
+              )}
 
               {campaign.code && (
                 <div className="flex flex-wrap items-center gap-2">
@@ -363,13 +561,14 @@ function CampaignsTab() {
               <TableHead>Duration</TableHead>
               <TableHead>Payment</TableHead>
               <TableHead>Redemptions</TableHead>
+              <TableHead>Expires</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {campaigns.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-stone-500">
+                <TableCell colSpan={8} className="text-center text-stone-500">
                   No campaigns yet — create one to start offering timed trials.
                 </TableCell>
               </TableRow>
@@ -387,12 +586,18 @@ function CampaignsTab() {
                 <TableCell className="text-stone-500">{PAYMENT_MODE_LABEL[campaign.paymentMode]}</TableCell>
                 <TableCell className="text-stone-500">
                   {campaign.redemptionCount}
-                  {campaign.maxRedemptions != null ? ` / ${campaign.maxRedemptions}` : ''}
+                  {campaign.maxRedemptions != null ? ` / ${campaign.maxRedemptions}` : ' (unlimited)'}
+                </TableCell>
+                <TableCell className="text-stone-500">
+                  {campaign.expiresAt ? formatDate(campaign.expiresAt) : 'Never'}
                 </TableCell>
                 <TableCell>
-                  <Badge variant={campaign.enabled ? 'success' : 'secondary'}>
-                    {campaign.enabled ? 'Live' : 'Off'}
-                  </Badge>
+                  <div className="flex flex-wrap gap-1">
+                    <Badge variant={campaign.enabled ? 'success' : 'secondary'}>
+                      {campaign.enabled ? 'Live' : 'Off'}
+                    </Badge>
+                    {isCampaignExpired(campaign) && <Badge variant="secondary">Expired</Badge>}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

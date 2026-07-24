@@ -131,6 +131,8 @@ export interface TrialCampaign {
   redemptionCount: number;
   paymentMode: TrialPaymentMode;
   enabled: boolean;
+  /** Null = campaign never expires (unlimited duration). */
+  expiresAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -176,9 +176,12 @@ export const ownerApi = {
     type: TrialCampaignType;
     code?: string;
     durationDays: number;
-    maxRedemptions?: number;
+    // Omit for the default (1); null = unlimited max uses (code campaigns only).
+    maxRedemptions?: number | null;
     paymentMode: TrialPaymentMode;
     enabled?: boolean;
+    // Omit/undefined = no expiration; null explicitly clears an expiration on update.
+    expiresAt?: string | null;
   }) => apiClient.post<{ campaign: TrialCampaign }>('/owner/trials/campaigns', data).then((r) => r.data),
   getTrialCampaign: (id: string) =>
     apiClient
@@ -193,6 +196,7 @@ export const ownerApi = {
       maxRedemptions: number | null;
       paymentMode: TrialPaymentMode;
       enabled: boolean;
+      expiresAt: string | null;
     }>,
   ) => apiClient.patch<{ campaign: TrialCampaign }>(`/owner/trials/campaigns/${id}`, data).then((r) => r.data),
   listReferrals: () =>
