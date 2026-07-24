@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Calendar, Clock, MessageSquare, Sparkles, Users } from 'lucide-react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -6,7 +6,8 @@ import { MarketingFooter, MarketingHeader } from '@/components/marketing/Marketi
 import { PricingSection } from '@/components/marketing/PricingSection';
 import { WebsiteOptionsSection } from '@/components/marketing/WebsiteOptionsSection';
 import { Button } from '@/components/ui/button';
-import { getStartedPath } from '@/lib/signup';
+import { fetchLiveHomepageTrial, getStartedPath } from '@/lib/signup';
+import type { TrialCampaign } from '@/types/api';
 
 const INDUSTRY_FEATURES = [
   {
@@ -37,12 +38,19 @@ const INDUSTRY_FEATURES = [
 
 export function LandingPage() {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const [homepageTrial, setHomepageTrial] = useState<TrialCampaign | null>(null);
 
   useEffect(() => {
     const hash = window.location.hash;
     if (hash) {
       document.querySelector(hash)?.scrollIntoView({ behavior: 'smooth' });
     }
+  }, []);
+
+  useEffect(() => {
+    fetchLiveHomepageTrial()
+      .then((campaign) => setHomepageTrial(campaign))
+      .catch(() => setHomepageTrial(null));
   }, []);
 
   if (!isLoading && isAuthenticated && user) {
@@ -77,6 +85,16 @@ export function LandingPage() {
               <a href="#pricing">See plans &amp; pricing</a>
             </Button>
           </div>
+          {homepageTrial && (
+            <div className="mt-4 flex justify-center">
+              <Button asChild variant="ghost" size="lg" className="text-brand-700 hover:text-brand-800 dark:text-brand-300">
+                <Link to={getStartedPath({ trial: true })}>
+                  <Sparkles className="h-4 w-4" />
+                  Start a {homepageTrial.durationDays}-day free trial — no commitment
+                </Link>
+              </Button>
+            </div>
+          )}
         </div>
       </section>
 

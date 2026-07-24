@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Building2,
   Check,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   CreditCard,
   Globe,
   Loader2,
+  Tag,
   User,
 } from 'lucide-react';
 import { MarketingFooter, MarketingHeader } from '@/components/marketing/MarketingLayout';
@@ -21,10 +23,12 @@ import { contactPath } from '@/lib/contact';
 import {
   checkSlugAvailable,
   createSignupCheckout,
+  fetchLiveHomepageTrial,
   fetchSignupCatalog,
   formatCents,
   previewSignupCart,
   slugifyBusinessName,
+  validateTrialCode,
   websiteOptionFromParams,
   websiteOptionToAddons,
   type SignupCart,
@@ -34,6 +38,7 @@ import {
   type SignupWebsiteOption,
 } from '@/lib/signup';
 import { ApiError } from '@/lib/api';
+import type { ResolvedTrialOffer, TrialCampaign } from '@/types/api';
 
 const STEPS = [
   { id: 'business', label: 'Your business', icon: Building2 },
@@ -95,7 +100,16 @@ function CartSummary({ cart, compact }: { cart: SignupCart | null; compact?: boo
   );
 }
 
+function describeOffer(offer: ResolvedTrialOffer): string {
+  const modeLabel = offer.paymentMode === 'free_no_card' ? 'no card required' : 'card required, charged after trial';
+  if (offer.kind === 'campaign') {
+    return `${offer.durationDays}-day free trial (${modeLabel}) — ${offer.name}`;
+  }
+  return `${offer.durationDays}-day free trial (${modeLabel}) — referred by ${offer.referringOrgName}`;
+}
+
 export function GetStartedPage() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialPlan = (searchParams.get('plan') as SignupTierId | null) ?? 'professional';
   const initialWebsiteOption = websiteOptionFromParams({
@@ -103,6 +117,8 @@ export function GetStartedPage() {
     customWebsite: searchParams.get('customWebsite') === '1',
   });
   const cancelled = searchParams.get('cancelled') === '1';
+  const initialCode = searchParams.get('code') ?? '';
+  const trialParam = searchParams.get('trial') === '1';
 
   const [stepIndex, setStepIndex] = useState(0);
   const [catalog, setCatalog] = useState<{
@@ -130,6 +146,12 @@ export function GetStartedPage() {
   );
   const [websiteOption, setWebsiteOption] = useState<SignupWebsiteOption>(initialWebsiteOption);
 
+  const [trialCode, setTrialCode] = useState(initialCode);
+  const [trialCodeStatus, setTrialCodeStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
+  const [trialOffer, setTrialOffer] = useState<ResolvedTrialOffer | null>(null);
+  const [homepageTrial, setHomepageTrial] = useState<TrialCampaign | null>(null);
+  const [provisionedResult, setProvisionedResult] = useState<{ organizationId: string; slug: string } | null>(null);
+
   const { subdomainAddon, customWebsiteAddon } = websiteOptionToAddons(websiteOption);
 
   const currentStep = STEPS[stepIndex].id;
@@ -139,6 +161,44 @@ export function GetStartedPage() {
       .then((data) => setCatalog(data))
       .catch(() => setError('Could not load signup options. Please try again later.'));
   }, []);
+
+  useEffect(() => {
+    if (!trialParam || initialCode) return;
+    fetchLiveHomepageTrial()
+      .then((campaign) => setHomepageTrial(campaign))
+      .catch(() => setHomepageTrial(null));
+    // Only needs to run once on mount for the homepage-CTA entry path.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const trimmed = trialCode.trim();
+    if (!trimmed) {
+      setTrialCodeStatus('idle');
+      setTrialOffer(null);
+      return;
+    }
+
+    setTrialCodeStatus('checking');
+    const timer = window.setTimeout(() => {
+      validateTrialCode(trimmed)
+        .then((offer) => {
+          setTrialOffer(offer);
+          setTrialCodeStatus('valid');
+        })
+        .catch(() => {
+          setTrialOffer(null);
+          setTrialCodeStatus('invalid');
+        });
+    }, 400);
+
+    return () => window.clearTimeout(timer);
+  }, [trialCode]);
+
+  const useHomepageCampaign = trialParam && trialCode.trim().length === 0 && Boolean(homepageTrial);
+  const isFreeTrialCheckout =
+    (trialCodeStatus === 'valid' && trialOffer?.paymentMode === 'free_no_card') ||
+    (useHomepageCampaign && homepageTrial?.paymentMode === 'free_no_card');
 
   useEffect(() => {
     if (!slugTouched && businessName) {
@@ -196,7 +256,7 @@ export function GetStartedPage() {
       case 'website':
         return true;
       case 'checkout':
-        return Boolean(cart);
+        return Boolean(cart) && trialCodeStatus !== 'checking' && trialCodeStatus !== 'invalid';
       default:
         return false;
     }
@@ -211,6 +271,7 @@ export function GetStartedPage() {
     slug,
     slugStatus,
     tier,
+    trialCodeStatus,
   ]);
 
   async function handleCheckout() {
@@ -226,7 +287,17 @@ export function GetStartedPage() {
         tier,
         subdomainAddon,
         customWebsiteAddon,
+        code: trialCodeStatus === 'valid' ? trialCode.trim() : undefined,
+        useHomepageCampaign,
       });
+
+      if (result.provisioned && result.organizationId && result.slug) {
+        setProvisionedResult({ organizationId: result.organizationId, slug: result.slug });
+        setSubmitting(false);
+        window.setTimeout(() => navigate('/login', { replace: true }), 1800);
+        return;
+      }
+
       window.location.href = result.checkoutUrl!;
     } catch (err) {
       const message =
@@ -290,6 +361,26 @@ export function GetStartedPage() {
       highlight: true,
     },
   ];
+
+  if (provisionedResult) {
+    return (
+      <div className="min-h-screen bg-stone-50 dark:bg-stone-950">
+        <MarketingHeader />
+        <div className="mx-auto max-w-lg px-4 py-16 sm:px-6">
+          <Card>
+            <CardHeader className="text-center">
+              <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-600 dark:text-emerald-400" />
+              <CardTitle className="mt-4">Your free trial is ready!</CardTitle>
+              <CardDescription>
+                {businessName} is all set — taking you to sign in as {ownerEmail}…
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+        <MarketingFooter />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-stone-950">
@@ -534,10 +625,49 @@ export function GetStartedPage() {
                       Owner: {ownerName} ({ownerEmail})
                     </p>
                   </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="trialCode">Trial or referral code (optional)</Label>
+                    <div className="relative">
+                      <Tag className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                      <Input
+                        id="trialCode"
+                        value={trialCode}
+                        onChange={(e) => setTrialCode(e.target.value.toUpperCase())}
+                        placeholder="Enter a code"
+                        className="pl-9"
+                      />
+                    </div>
+                    {trialCodeStatus === 'checking' && (
+                      <p className="text-xs text-stone-500 dark:text-stone-400">
+                        <Loader2 className="mr-1 inline h-3 w-3 animate-spin" />
+                        Checking code…
+                      </p>
+                    )}
+                    {trialCodeStatus === 'valid' && trialOffer && (
+                      <p className="text-xs text-emerald-600 dark:text-emerald-400">{describeOffer(trialOffer)}</p>
+                    )}
+                    {trialCodeStatus === 'invalid' && (
+                      <p className="text-xs text-red-600 dark:text-red-400">
+                        That code is invalid or expired. Clear it to continue with a paid plan.
+                      </p>
+                    )}
+                    {trialCodeStatus === 'idle' && useHomepageCampaign && homepageTrial && (
+                      <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                        {homepageTrial.durationDays}-day free trial (
+                        {homepageTrial.paymentMode === 'free_no_card' ? 'no card required' : 'card required, charged after trial'}
+                        )
+                      </p>
+                    )}
+                  </div>
+
                   <CartSummary cart={cart} />
                   <p className="text-xs text-stone-500 dark:text-stone-400">
-                    You&apos;ll complete payment on Stripe. Your account is created automatically after payment
-                    succeeds.
+                    {trialCodeStatus === 'valid' && trialOffer?.paymentMode === 'free_no_card'
+                      ? 'No card needed — your account is created immediately.'
+                      : useHomepageCampaign && homepageTrial?.paymentMode === 'free_no_card'
+                        ? 'No card needed — your account is created immediately.'
+                        : "You'll complete payment on Stripe. Your account is created automatically after payment succeeds."}
                   </p>
                 </div>
               )}
@@ -567,8 +697,10 @@ export function GetStartedPage() {
                     {submitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Redirecting…
+                        {isFreeTrialCheckout ? 'Creating account…' : 'Redirecting…'}
                       </>
+                    ) : isFreeTrialCheckout ? (
+                      'Start free trial'
                     ) : (
                       'Continue to Stripe'
                     )}

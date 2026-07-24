@@ -15,6 +15,7 @@ import { ManageBookingPage } from '@/pages/public/ManageBookingPage';
 import { PlatformDashboard } from '@/pages/platform/PlatformDashboard';
 import { OrganizationsPage } from '@/pages/platform/OrganizationsPage';
 import { CreateOrganizationPage } from '@/pages/platform/CreateOrganizationPage';
+import { TrialsCampaignsPage } from '@/pages/platform/TrialsCampaignsPage';
 import { PlatformOrgLayout } from '@/pages/platform/PlatformOrgLayout';
 import { PlatformOrgOverviewPage } from '@/pages/platform/PlatformOrgOverviewPage';
 import { PlatformOrgSettingsPage } from '@/pages/platform/PlatformOrgSettingsPage';
@@ -83,6 +84,7 @@ export const appRoutes = [
               { path: '/platform/dashboard', element: <PlatformDashboard /> },
               { path: '/platform/organizations', element: <OrganizationsPage /> },
               { path: '/platform/organizations/new', element: <CreateOrganizationPage /> },
+              { path: '/platform/trials', element: <TrialsCampaignsPage /> },
               {
                 path: '/platform/orgs/:orgId',
                 element: <PlatformOrgLayout />,

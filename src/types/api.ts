@@ -110,9 +110,71 @@ export interface Organization {
   city?: string | null;
   address?: string | null;
   phone?: string | null;
+  trialEndsAt?: string | null;
+  trialCampaignId?: string | null;
+  referredByOrganizationId?: string | null;
+  referralCode?: string | null;
   createdAt: string;
   updatedAt: string;
 }
+
+export type TrialCampaignType = 'code' | 'homepage';
+export type TrialPaymentMode = 'stripe_trial' | 'free_no_card';
+
+export interface TrialCampaign {
+  id: string;
+  name: string;
+  type: TrialCampaignType;
+  code?: string | null;
+  durationDays: number;
+  maxRedemptions?: number | null;
+  redemptionCount: number;
+  paymentMode: TrialPaymentMode;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TrialRedemption {
+  id: string;
+  campaignId: string;
+  organizationId: string;
+  redeemedAt: string;
+  organizationName: string;
+  organizationSlug: string;
+}
+
+export interface PlatformTrialSettings {
+  id: 'default';
+  referralDurationDays: number;
+  referralPaymentMode: TrialPaymentMode;
+  updatedAt: string;
+}
+
+export interface ReferralStat {
+  organizationId: string;
+  name: string;
+  slug: string;
+  referralCode: string;
+  attributedSignupCount: number;
+}
+
+export type ResolvedTrialOffer =
+  | {
+      kind: 'campaign';
+      campaignId: string;
+      name: string;
+      durationDays: number;
+      paymentMode: TrialPaymentMode;
+      code?: string | null;
+    }
+  | {
+      kind: 'referral';
+      referredByOrganizationId: string;
+      referringOrgName: string;
+      durationDays: number;
+      paymentMode: TrialPaymentMode;
+    };
 
 export interface OrganizationSettings {
   id: string;
