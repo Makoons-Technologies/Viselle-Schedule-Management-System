@@ -5,6 +5,7 @@ import { useOrgId } from '@/hooks/useOrgId';
 import { PageHeader } from '@/components/common/PageHeader';
 import { LoadingState } from '@/components/common/LoadingState';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { RevenueChart } from '@/components/dashboard/RevenueChart';
 
 export function OrgDashboard() {
   const orgId = useOrgId();
@@ -60,6 +61,12 @@ export function OrgDashboard() {
           </Card>
         ))}
       </div>
+
+      {orgId && (
+        <div className="mt-6">
+          <RevenueChart orgId={orgId} />
+        </div>
+      )}
     </div>
   );
 }

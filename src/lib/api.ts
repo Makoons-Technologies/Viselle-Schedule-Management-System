@@ -29,6 +29,8 @@ import type {
   VisitStatus,
   Reminder,
   ReminderType,
+  RevenueGranularity,
+  RevenueReport,
   ScheduleResponse,
   Service,
   SubscriptionTier,
@@ -244,6 +246,9 @@ export const orgApi = {
 
   listCustomers: (orgId: string) =>
     apiClient.get<{ customers: Customer[] }>(`/organizations/${orgId}/customers`).then((r) => r.data),
+
+  getRevenueReport: (orgId: string, params?: { granularity?: RevenueGranularity; from?: string; to?: string }) =>
+    apiClient.get<RevenueReport>(`/organizations/${orgId}/reports/revenue`, { params }).then((r) => r.data),
   updateCustomer: (
     orgId: string,
     customerId: string,

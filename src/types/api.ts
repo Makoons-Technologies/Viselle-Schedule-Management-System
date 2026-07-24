@@ -151,6 +151,30 @@ export interface PlatformStats {
   estimatedMrrCents: number;
 }
 
+export type RevenueGranularity = 'day' | 'week' | 'month';
+
+export interface RevenuePoint {
+  /** Bucket start date (YYYY-MM-DD). For "week" this is the Monday of that week. */
+  period: string;
+  revenueCents: number;
+  salesCount: number;
+}
+
+/**
+ * "Revenue" is the sum of paid sale totals (subtotal + tip) for sales with a
+ * succeeded payment. There is no cost-of-goods-sold data in the system, so
+ * this is presented as a revenue/profit approximation rather than true profit.
+ */
+export interface RevenueReport {
+  metric: 'revenue';
+  granularity: RevenueGranularity;
+  from: string;
+  to: string;
+  series: RevenuePoint[];
+  totalRevenueCents: number;
+  totalSalesCount: number;
+}
+
 export interface BillingInfo {
   organizationId: string;
   billingStatus: BillingStatus;

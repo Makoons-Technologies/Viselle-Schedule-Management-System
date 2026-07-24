@@ -13,6 +13,15 @@ export function centsToDollars(cents: number) {
   return cents / 100;
 }
 
+export function formatCompactCurrency(cents: number) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(cents / 100);
+}
+
 export function dollarsToCents(dollars: number) {
   return Math.round(dollars * 100);
 }
