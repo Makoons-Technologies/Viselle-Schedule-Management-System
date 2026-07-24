@@ -28,3 +28,17 @@ export function getPlatformOrgNavigation(orgId: string): PlatformNavLink[] {
     { label: 'Settings', to: `${base}/settings`, icon: Settings },
   ];
 }
+
+export function getPlatformContextFromPath(pathname: string): string {
+  const platformOrgMatch = pathname.match(/^\/platform\/orgs\/([^/]+)/);
+  if (platformOrgMatch) return platformOrgMatch[1];
+
+  const orgMatch = pathname.match(/^\/orgs\/([^/]+)/);
+  if (orgMatch) return orgMatch[1];
+
+  return PLATFORM_CONTEXT;
+}
+
+export function isPlatformOrgAdminPath(pathname: string): boolean {
+  return pathname.startsWith('/platform/orgs/');
+}
