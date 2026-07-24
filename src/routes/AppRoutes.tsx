@@ -39,6 +39,10 @@ import { RecurringPage } from '@/pages/org/RecurringPage';
 import { StaffAdminPermissionsPage } from '@/pages/staff/StaffAdminPermissionsPage';
 import { StaffAvailabilityPage } from '@/pages/staff/StaffAvailabilityPage';
 import { TrialSettingsGuard } from '@/routes/TrialSettingsGuard';
+import { MyTicketsPage } from '@/pages/support/MyTicketsPage';
+import { TicketDetailPage } from '@/pages/support/TicketDetailPage';
+import { PlatformSupportInboxPage } from '@/pages/platform/PlatformSupportInboxPage';
+import { PlatformTicketDetailPage } from '@/pages/platform/PlatformTicketDetailPage';
 import type { UserRole } from '@/types/api';
 
 function StaffOrgRedirect({ to }: { to: 'calendar' | 'appointments' }) {
@@ -86,6 +90,8 @@ export const appRoutes = [
               { path: '/platform/organizations', element: <OrganizationsPage /> },
               { path: '/platform/organizations/new', element: <CreateOrganizationPage /> },
               { path: '/platform/trials', element: <TrialsCampaignsPage /> },
+              { path: '/platform/support', element: <PlatformSupportInboxPage /> },
+              { path: '/platform/support/:ticketId', element: <PlatformTicketDetailPage /> },
               {
                 path: '/platform/orgs/:orgId',
                 element: <PlatformOrgLayout />,
@@ -99,6 +105,8 @@ export const appRoutes = [
           {
             element: <ProtectedRoute roles={['platform_owner', 'org_owner', 'staff']} />,
             children: [
+              { path: '/support', element: <MyTicketsPage /> },
+              { path: '/support/:ticketId', element: <TicketDetailPage /> },
               {
                 path: '/orgs/:orgId',
                 element: <OrgLayout />,

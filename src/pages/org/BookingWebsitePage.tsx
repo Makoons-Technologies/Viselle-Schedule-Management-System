@@ -12,6 +12,7 @@ import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
 import type { SiteTemplate } from '@/types/api';
 import { BookingPagePreview } from '@/components/booking/BookingPagePreview';
 import { BookingBrandingSection } from '@/components/settings/BookingBrandingSection';
+import { DeveloperApiSection } from '@/components/settings/DeveloperApiSection';
 import { SettingsBackHeader } from '@/components/settings/SettingsBackHeader';
 import { normalizeBookingBranding } from '@/lib/booking-branding';
 import { LoadingState } from '@/components/common/LoadingState';
@@ -264,6 +265,8 @@ export function BookingWebsitePage() {
           )}
         </CardContent>
       </Card>
+
+      <DeveloperApiSection orgId={orgId!} data={data} />
 
       <div className="flex flex-wrap items-center gap-2 text-sm text-stone-500 dark:text-stone-400">
         <Label>Status</Label>

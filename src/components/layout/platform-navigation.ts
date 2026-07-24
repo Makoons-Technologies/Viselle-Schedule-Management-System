@@ -1,4 +1,4 @@
-import { Building2, LayoutDashboard, Settings, TicketPercent } from 'lucide-react';
+import { Building2, LayoutDashboard, LifeBuoy, Settings, TicketPercent } from 'lucide-react';
 
 export const PLATFORM_CONTEXT = 'platform';
 
@@ -17,6 +17,7 @@ export function getPlatformNavigation(): PlatformNavLink[] {
     { label: 'Dashboard', to: '/platform/dashboard', icon: LayoutDashboard },
     { label: 'Organizations', to: '/platform/organizations', icon: Building2 },
     { label: 'Trials & Campaigns', to: '/platform/trials', icon: TicketPercent },
+    { label: 'Support inbox', to: '/platform/support', icon: LifeBuoy },
   ];
 }
 
@@ -26,18 +27,4 @@ export function getPlatformOrgNavigation(orgId: string): PlatformNavLink[] {
     { label: 'Overview', to: base, icon: LayoutDashboard },
     { label: 'Settings', to: `${base}/settings`, icon: Settings },
   ];
-}
-
-export function getPlatformContextFromPath(pathname: string): string {
-  const platformOrgMatch = pathname.match(/^\/platform\/orgs\/([^/]+)/);
-  if (platformOrgMatch) return platformOrgMatch[1];
-
-  const orgMatch = pathname.match(/^\/orgs\/([^/]+)/);
-  if (orgMatch) return orgMatch[1];
-
-  return PLATFORM_CONTEXT;
-}
-
-export function isPlatformOrgAdminPath(pathname: string): boolean {
-  return pathname.startsWith('/platform/orgs/');
 }
