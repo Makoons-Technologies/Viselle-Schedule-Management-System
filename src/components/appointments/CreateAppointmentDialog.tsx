@@ -14,6 +14,7 @@ import {
 import { formatDateTime, getDayOfWeekFromIso, todayDateOnlyLocal, filterFutureAppointmentSlots } from '@/lib/utils';
 import type { Customer, RecurringFrequency } from '@/types/api';
 import { CustomerAutocompleteFields } from '@/components/appointments/CustomerAutocompleteFields';
+import { CustomerServiceNoteHistory } from '@/components/appointments/CustomerServiceNoteHistory';
 import { RecurringOptionsFields } from '@/components/appointments/RecurringOptionsFields';
 import {
   dayTimesToApiPayload,
@@ -452,6 +453,11 @@ export function CreateAppointmentDialog({
                 )}
               </div>
             </div>
+            <CustomerServiceNoteHistory
+              orgId={orgId}
+              customerId={selectedCustomerId}
+              serviceId={serviceId}
+            />
             <div>
               <Label>Notes</Label>
               <Textarea {...register('appointmentNotes')} />

@@ -14,6 +14,7 @@ import { MakeRecurringDialog } from '@/components/appointments/MakeRecurringDial
 import { EditRecurringDialog } from '@/components/appointments/EditRecurringDialog';
 import { AppointmentCheckoutSheet } from '@/components/appointments/AppointmentCheckoutSheet';
 import { EditAppointmentDialog } from '@/components/appointments/EditAppointmentDialog';
+import { NoteHistoryList } from '@/components/appointments/CustomerServiceNoteHistory';
 
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 
@@ -332,6 +333,10 @@ export function AppointmentDetailSheet({
               )}
 
             </div>
+
+            {data.customerServiceNotes && data.customerServiceNotes.length > 0 && (
+              <NoteHistoryList notes={data.customerServiceNotes} />
+            )}
 
             {remindersData && remindersData.reminders.length > 0 && (
 
