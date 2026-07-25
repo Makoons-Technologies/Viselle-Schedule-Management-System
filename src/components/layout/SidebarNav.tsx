@@ -296,7 +296,7 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
           mobile={mobile}
           title={`${selectedOrg?.name ?? 'Salon'} · Operations`}
           mainItems={orgNav.main}
-          settingsItems={orgNav.settings}
+          settingsItems={trialExpired ? [] : orgNav.settings}
         />
       );
     }

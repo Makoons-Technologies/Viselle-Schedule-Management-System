@@ -17,9 +17,9 @@ import { TRIAL_SETTINGS_LOCKED_MESSAGE } from '@/lib/trial';
  * fall back to the signed-in user's own organization when there's no
  * :orgId route param.
  *
- * Platform owners are exempt — useOrgTrialExpired() always returns false for
- * them, so they keep full settings access when managing a customer org via
- * /orgs/:orgId/....
+ * When a platform owner views an expired org via /orgs/:orgId/..., this guard
+ * also blocks salon Settings — they should use dedicated platform admin routes
+ * (/platform/orgs/:id/...) to manage that org instead.
  */
 export function TrialSettingsGuard() {
   const trialExpired = useOrgTrialExpired();
