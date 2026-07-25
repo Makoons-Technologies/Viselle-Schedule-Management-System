@@ -263,6 +263,17 @@ export const orgApi = {
     apiClient.get<{ organization: Organization }>(`/organizations/${orgId}`).then((r) => r.data),
   getPlan: (orgId: string) =>
     apiClient.get<{ plan: OrgPlanFeatures }>(`/organizations/${orgId}/plan`).then((r) => r.data),
+  changePlan: (orgId: string, tier: Exclude<SubscriptionTier, 'custom'>) =>
+    apiClient
+      .post<{
+        plan: OrgPlanFeatures;
+        previousTier: SubscriptionTier | null;
+        change: 'upgrade' | 'downgrade' | 'same' | 'switch';
+        billingMode: 'stripe_updated' | 'settings_only' | 'settings_only_stripe_failed';
+        message: string;
+        hasStripeSubscription: boolean;
+      }>(`/organizations/${orgId}/plan/change`, { tier })
+      .then((r) => r.data),
   getStaffPermissions: (orgId: string) =>
     apiClient.get<{ staffPermissions: StaffPermissions }>(`/organizations/${orgId}/staff-permissions`).then((r) => r.data),
   updateStaffPermissions: (orgId: string, data: Partial<StaffPermissions>) =>

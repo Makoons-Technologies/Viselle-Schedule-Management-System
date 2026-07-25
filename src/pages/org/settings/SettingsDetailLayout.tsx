@@ -6,6 +6,7 @@ import { useOrgId } from '@/hooks/useOrgId';
 
 const SETTINGS_TITLES: Record<string, string> = {
   general: 'General',
+  plan: 'Plan',
   org: 'Organization',
   services: 'Services',
   products: 'Products',
@@ -35,7 +36,7 @@ export function SettingsDetailLayout() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className={location.pathname.endsWith('/plan') ? 'mx-auto max-w-5xl' : 'mx-auto max-w-3xl'}>
       <SettingsBackHeader title={getSettingsTitle(location.pathname)} backTo={`/orgs/${orgId}/settings`} />
       <Outlet />
     </div>

@@ -1,12 +1,18 @@
 import { Link } from 'react-router-dom';
-import { Check, Minus } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import { getStartedPath } from '@/lib/signup';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { PRICING_TIERS, type PricingTier } from '@/lib/pricing';
+import {
+  PLAN_FEATURES,
+  PLAN_TIERS,
+  priceMonthlyDollars,
+  tierIncludesFeature,
+  type PlanTierMarketing,
+} from '@/lib/plan-features';
 
-function TierCard({ tier }: { tier: PricingTier }) {
+function TierCard({ tier }: { tier: PlanTierMarketing }) {
   return (
     <Card
       className={cn(
@@ -25,25 +31,32 @@ function TierCard({ tier }: { tier: PricingTier }) {
         <CardTitle className="text-xl">{tier.name}</CardTitle>
         <CardDescription>{tier.tagline}</CardDescription>
         <div className="pt-2">
-          <span className="text-3xl font-bold text-stone-900 dark:text-stone-100">${tier.priceMonthly}</span>
+          <span className="text-3xl font-bold text-stone-900 dark:text-stone-100">
+            ${priceMonthlyDollars(tier)}
+          </span>
           <span className="text-sm text-stone-500 dark:text-stone-400">/month</span>
         </div>
-        <p className="text-sm font-medium text-brand-700 dark:text-brand-300">{tier.staffLimit}</p>
+        <p className="text-sm font-medium text-brand-700 dark:text-brand-300">{tier.staffLimitLabel}</p>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-4">
         <ul className="space-y-2 text-sm text-stone-700 dark:text-stone-300">
-          {tier.features.map((feature) => (
-            <li key={feature} className="flex gap-2">
-              <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-600 dark:text-brand-400" />
-              <span>{feature}</span>
-            </li>
-          ))}
-          {tier.notIncluded?.map((item) => (
-            <li key={item} className="flex gap-2 text-stone-400 dark:text-stone-500">
-              <Minus className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>{item}</span>
-            </li>
-          ))}
+          {PLAN_FEATURES.map((feature) => {
+            const included = tierIncludesFeature(tier.id, feature.id);
+            return (
+              <li
+                key={feature.id}
+                className={cn('flex gap-2', !included && 'text-stone-400 dark:text-stone-500')}
+                title={feature.description}
+              >
+                {included ? (
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-600 dark:text-brand-400" />
+                ) : (
+                  <X className="mt-0.5 h-4 w-4 shrink-0" />
+                )}
+                <span>{feature.name}</span>
+              </li>
+            );
+          })}
         </ul>
         <Button asChild className="mt-auto w-full" variant={tier.highlighted ? 'default' : 'outline'}>
           <Link to={getStartedPath({ plan: tier.id })}>Get started</Link>
@@ -72,7 +85,7 @@ export function PricingSection() {
         </div>
 
         <div className="mt-12 grid gap-6 lg:grid-cols-3">
-          {PRICING_TIERS.map((tier) => (
+          {PLAN_TIERS.map((tier) => (
             <TierCard key={tier.id} tier={tier} />
           ))}
         </div>

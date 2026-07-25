@@ -32,6 +32,7 @@ import { BookingWebsitePage } from '@/pages/org/BookingWebsitePage';
 import { SettingsHubPage } from '@/pages/org/settings/SettingsHubPage';
 import { SettingsDetailLayout } from '@/pages/org/settings/SettingsDetailLayout';
 import { GeneralSettingsPage } from '@/pages/org/settings/GeneralSettingsPage';
+import { PlanSettingsPage } from '@/pages/org/settings/PlanSettingsPage';
 import { OrgSettingsPage } from '@/pages/org/settings/OrgSettingsPage';
 import { PaymentsSettingsPage } from '@/pages/org/settings/PaymentsSettingsPage';
 import { StaffPermissionsSettingsPage } from '@/pages/org/settings/StaffPermissionsSettingsPage';
@@ -127,7 +128,7 @@ export const appRoutes = [
                           { path: 'staff', element: <StaffPage /> },
                           { path: 'availability', element: <AvailabilityPage /> },
                           { path: 'services', element: <Navigate to="settings/services" replace /> },
-                          { path: 'billing', element: <Navigate to="settings/general" replace /> },
+                          { path: 'billing', element: <Navigate to="settings/plan" replace /> },
                           { path: 'owner-settings', element: <Navigate to="settings/org" replace /> },
                           {
                             path: 'settings',
@@ -137,6 +138,7 @@ export const appRoutes = [
                                 element: <SettingsDetailLayout />,
                                 children: [
                                   { path: 'general', element: <GeneralSettingsPage /> },
+                                  { path: 'plan', element: <PlanSettingsPage /> },
                                   { path: 'org', element: <OrgSettingsPage /> },
                                   { path: 'services', element: <ServicesPage /> },
                                   { path: 'products', element: <ProductsPage /> },

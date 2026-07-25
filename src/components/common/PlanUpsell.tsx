@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
 import { contactPath } from '@/lib/contact';
+import { useOrgId } from '@/hooks/useOrgId';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -11,6 +12,8 @@ interface PlanUpsellProps {
 }
 
 export function PlanUpsell({ title, description, featureLabel }: PlanUpsellProps) {
+  const orgId = useOrgId();
+
   return (
     <Card className="border-brand-200 bg-gradient-to-br from-brand-50 to-white dark:border-brand-900 dark:from-brand-950/40 dark:to-stone-900">
       <CardContent className="flex flex-col items-start gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
@@ -24,11 +27,11 @@ export function PlanUpsell({ title, description, featureLabel }: PlanUpsellProps
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button asChild variant="outline">
-            <Link to={contactPath({ interest: 'upgrade' })}>Contact to upgrade</Link>
+          <Button asChild>
+            <Link to={`/orgs/${orgId}/settings/plan`}>Upgrade plan</Link>
           </Button>
-          <Button asChild variant="ghost" size="sm" className="text-stone-500">
-            <a href="/#pricing">View plans</a>
+          <Button asChild variant="outline">
+            <Link to={contactPath({ interest: 'upgrade' })}>Contact us</Link>
           </Button>
         </div>
       </CardContent>

@@ -11,6 +11,7 @@ import {
   Scissors,
   Shield,
   Settings,
+  Sparkles,
   Users,
   UserCircle,
 } from 'lucide-react';
@@ -36,7 +37,10 @@ export function getOrgSettingsHubGroups(
 ): SettingsHubGroup[] {
   const groups: SettingsHubGroup[] = [
     {
-      items: [{ label: 'General', to: `${orgBase}/settings/general`, icon: Settings }],
+      items: [
+        { label: 'General', to: `${orgBase}/settings/general`, icon: Settings },
+        { label: 'Plan', to: `${orgBase}/settings/plan`, icon: Sparkles },
+      ],
     },
   ];
 
