@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Building2,
@@ -12,6 +12,7 @@ import {
   Tag,
   User,
 } from 'lucide-react';
+import { z } from 'zod';
 import { MarketingFooter, MarketingHeader } from '@/components/marketing/MarketingLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -47,6 +48,52 @@ const STEPS = [
   { id: 'website', label: 'Website options', icon: Globe },
   { id: 'checkout', label: 'Review & pay', icon: CreditCard },
 ] as const;
+
+const emailSchema = z.string().trim().email();
+
+function isValidEmail(value: string): boolean {
+  return emailSchema.safeParse(value).success;
+}
+
+/** Sync controlled inputs with browser autofill (onChange alone can miss it). */
+function syncInputValue(setter: (value: string) => void) {
+  return (event: FormEvent<HTMLInputElement>) => {
+    setter(event.currentTarget.value);
+  };
+}
+
+type AccountFieldErrors = {
+  ownerName?: string;
+  ownerEmail?: string;
+  password?: string;
+  confirmPassword?: string;
+};
+
+function getAccountFieldErrors(input: {
+  ownerName: string;
+  ownerEmail: string;
+  password: string;
+  confirmPassword: string;
+}): AccountFieldErrors {
+  const errors: AccountFieldErrors = {};
+  if (!input.ownerName.trim()) {
+    errors.ownerName = 'Enter your name';
+  }
+  if (!input.ownerEmail.trim()) {
+    errors.ownerEmail = 'Enter your email';
+  } else if (!isValidEmail(input.ownerEmail)) {
+    errors.ownerEmail = 'Enter a valid email address';
+  }
+  if (input.password.length < 8) {
+    errors.password = 'Password must be at least 8 characters';
+  }
+  if (!input.confirmPassword) {
+    errors.confirmPassword = 'Confirm your password';
+  } else if (input.password !== input.confirmPassword) {
+    errors.confirmPassword = 'Passwords do not match';
+  }
+  return errors;
+}
 
 function CartSummary({ cart, compact }: { cart: SignupCart | null; compact?: boolean }) {
   if (!cart) {
@@ -134,12 +181,19 @@ export function GetStartedPage() {
   const [businessName, setBusinessName] = useState('');
   const [slug, setSlug] = useState('');
   const [slugTouched, setSlugTouched] = useState(false);
-  const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
+  const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'error'>('idle');
 
   const [ownerName, setOwnerName] = useState('');
   const [ownerEmail, setOwnerEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [accountTouched, setAccountTouched] = useState({
+    ownerName: false,
+    ownerEmail: false,
+    password: false,
+    confirmPassword: false,
+  });
+  const [accountShowAllErrors, setAccountShowAllErrors] = useState(false);
 
   const [tier, setTier] = useState<SignupTierId>(
     ['starter', 'professional', 'business'].includes(initialPlan) ? initialPlan : 'professional',
@@ -212,14 +266,37 @@ export function GetStartedPage() {
       return;
     }
 
+    let cancelled = false;
+    let retryTimer: number | undefined;
     setSlugStatus('checking');
     const timer = window.setTimeout(() => {
       checkSlugAvailable(slug)
-        .then((available) => setSlugStatus(available ? 'available' : 'taken'))
-        .catch(() => setSlugStatus('idle'));
+        .then((available) => {
+          if (!cancelled) setSlugStatus(available ? 'available' : 'taken');
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setSlugStatus('error');
+          // Transient network failures left Continue disabled forever — retry once.
+          retryTimer = window.setTimeout(() => {
+            if (cancelled) return;
+            setSlugStatus('checking');
+            checkSlugAvailable(slug)
+              .then((available) => {
+                if (!cancelled) setSlugStatus(available ? 'available' : 'taken');
+              })
+              .catch(() => {
+                if (!cancelled) setSlugStatus('error');
+              });
+          }, 1500);
+        });
     }, 400);
 
-    return () => window.clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      if (retryTimer !== undefined) window.clearTimeout(retryTimer);
+    };
   }, [slug]);
 
   const refreshCart = useCallback(async () => {
@@ -240,34 +317,71 @@ export function GetStartedPage() {
 
   const bookingBase = (import.meta.env.VITE_BOOKING_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? 'https://viselle.app';
 
+  const accountErrors = useMemo(
+    () =>
+      getAccountFieldErrors({
+        ownerName,
+        ownerEmail,
+        password,
+        confirmPassword,
+      }),
+    [confirmPassword, ownerEmail, ownerName, password],
+  );
+
+  const visibleAccountErrors = useMemo(() => {
+    const visible: AccountFieldErrors = {};
+    (Object.keys(accountErrors) as Array<keyof AccountFieldErrors>).forEach((key) => {
+      const value =
+        key === 'ownerName'
+          ? ownerName
+          : key === 'ownerEmail'
+            ? ownerEmail
+            : key === 'password'
+              ? password
+              : confirmPassword;
+      const hasValue = key === 'password' || key === 'confirmPassword' ? value.length > 0 : value.trim().length > 0;
+      // If password is filled but confirm is empty/mismatched, surface it (common autofill gap).
+      const confirmNeedsAttention =
+        key === 'confirmPassword' && password.length > 0 && Boolean(accountErrors.confirmPassword);
+      const shouldShow =
+        accountShowAllErrors || accountTouched[key] || (hasValue && Boolean(accountErrors[key])) || confirmNeedsAttention;
+      if (shouldShow && accountErrors[key]) {
+        visible[key] = accountErrors[key];
+      }
+    });
+    return visible;
+  }, [
+    accountErrors,
+    accountShowAllErrors,
+    accountTouched,
+    confirmPassword,
+    ownerEmail,
+    ownerName,
+    password,
+  ]);
+
   const canContinue = useMemo(() => {
     switch (currentStep) {
       case 'business':
         return businessName.trim().length > 0 && slug.length >= 2 && slugStatus === 'available';
       case 'account':
-        return (
-          ownerName.trim().length > 0 &&
-          ownerEmail.includes('@') &&
-          password.length >= 8 &&
-          password === confirmPassword
-        );
+        return Object.keys(accountErrors).length === 0;
       case 'plan':
-        return Boolean(tier);
+        return Boolean(tier) && Boolean(catalog);
       case 'website':
         return true;
       case 'checkout':
-        return Boolean(cart) && trialCodeStatus !== 'checking' && trialCodeStatus !== 'invalid';
+        return Boolean(cart) && !loadingCart && trialCodeStatus !== 'checking' && trialCodeStatus !== 'invalid';
       default:
         return false;
     }
   }, [
+    accountErrors,
     businessName,
     cart,
-    confirmPassword,
+    catalog,
     currentStep,
-    ownerEmail,
-    ownerName,
-    password,
+    loadingCart,
     slug,
     slugStatus,
     tier,
@@ -311,9 +425,20 @@ export function GetStartedPage() {
 
   function goNext() {
     setError(null);
+    if (currentStep === 'account' && Object.keys(accountErrors).length > 0) {
+      setAccountShowAllErrors(true);
+      return;
+    }
+    if (currentStep === 'business' && !canContinue) {
+      return;
+    }
     if (stepIndex < STEPS.length - 1) {
       setStepIndex((i) => i + 1);
     }
+  }
+
+  function markAccountTouched(field: keyof typeof accountTouched) {
+    setAccountTouched((prev) => (prev[field] ? prev : { ...prev, [field]: true }));
   }
 
   function goBack() {
@@ -455,10 +580,16 @@ export function GetStartedPage() {
                     <Label htmlFor="businessName">Business name</Label>
                     <Input
                       id="businessName"
+                      name="organization"
                       value={businessName}
                       onChange={(e) => setBusinessName(e.target.value)}
+                      onInput={syncInputValue(setBusinessName)}
                       placeholder="Luna Hair Studio"
+                      autoComplete="organization"
                     />
+                    {businessName.trim().length === 0 && slug.length >= 2 && (
+                      <p className="text-xs text-red-600 dark:text-red-400">Enter your business name</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="slug">Booking page URL</Label>
@@ -466,26 +597,35 @@ export function GetStartedPage() {
                       <span className="shrink-0 text-sm text-stone-500 dark:text-stone-400">{bookingBase}/book/</span>
                       <Input
                         id="slug"
+                        name="slug"
                         value={slug}
                         onChange={(e) => {
                           setSlugTouched(true);
                           setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''));
                         }}
                         placeholder="luna-hair-studio"
+                        autoComplete="off"
                       />
                     </div>
+                    {businessName.trim().length > 0 && slug.length < 2 && (
+                      <p className="text-xs text-red-600 dark:text-red-400">
+                        URL must be at least 2 characters
+                      </p>
+                    )}
                     {slug.length >= 2 && (
                       <p
                         className={cn(
                           'text-xs',
                           slugStatus === 'available' && 'text-emerald-600 dark:text-emerald-400',
-                          slugStatus === 'taken' && 'text-red-600 dark:text-red-400',
+                          (slugStatus === 'taken' || slugStatus === 'error') &&
+                            'text-red-600 dark:text-red-400',
                           slugStatus === 'checking' && 'text-stone-500 dark:text-stone-400',
                         )}
                       >
                         {slugStatus === 'checking' && 'Checking availability…'}
                         {slugStatus === 'available' && 'This URL is available'}
                         {slugStatus === 'taken' && 'This URL is already taken — try another'}
+                        {slugStatus === 'error' && 'Could not check this URL — wait a moment or try again'}
                       </p>
                     )}
                   </div>
@@ -496,37 +636,94 @@ export function GetStartedPage() {
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="ownerName">Your name</Label>
-                    <Input id="ownerName" value={ownerName} onChange={(e) => setOwnerName(e.target.value)} />
+                    <Input
+                      id="ownerName"
+                      name="name"
+                      value={ownerName}
+                      onChange={(e) => setOwnerName(e.target.value)}
+                      onInput={syncInputValue(setOwnerName)}
+                      onBlur={() => markAccountTouched('ownerName')}
+                      autoComplete="name"
+                      aria-invalid={Boolean(visibleAccountErrors.ownerName)}
+                    />
+                    {visibleAccountErrors.ownerName && (
+                      <p className="text-xs text-red-600 dark:text-red-400">{visibleAccountErrors.ownerName}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="ownerEmail">Email</Label>
                     <Input
                       id="ownerEmail"
+                      name="email"
                       type="email"
+                      inputMode="email"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
                       value={ownerEmail}
                       onChange={(e) => setOwnerEmail(e.target.value)}
+                      onInput={syncInputValue(setOwnerEmail)}
+                      onBlur={() => {
+                        setOwnerEmail((current) => current.trim());
+                        markAccountTouched('ownerEmail');
+                      }}
+                      autoComplete="email"
+                      aria-invalid={Boolean(visibleAccountErrors.ownerEmail)}
                     />
+                    {visibleAccountErrors.ownerEmail && (
+                      <p className="text-xs text-red-600 dark:text-red-400">{visibleAccountErrors.ownerEmail}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
                     <PasswordInput
                       id="password"
+                      name="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      onInput={syncInputValue(setPassword)}
+                      onBlur={() => markAccountTouched('password')}
                       autoComplete="new-password"
+                      aria-invalid={Boolean(visibleAccountErrors.password)}
                     />
-                    <p className="text-xs text-stone-500 dark:text-stone-400">At least 8 characters</p>
+                    {visibleAccountErrors.password ? (
+                      <p className="text-xs text-red-600 dark:text-red-400">{visibleAccountErrors.password}</p>
+                    ) : (
+                      <p className="text-xs text-stone-500 dark:text-stone-400">At least 8 characters</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="confirmPassword">Confirm password</Label>
                     <PasswordInput
                       id="confirmPassword"
+                      name="confirmPassword"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
+                      onInput={syncInputValue(setConfirmPassword)}
+                      onBlur={() => markAccountTouched('confirmPassword')}
                       autoComplete="new-password"
+                      aria-invalid={Boolean(visibleAccountErrors.confirmPassword)}
                     />
+                    {visibleAccountErrors.confirmPassword && (
+                      <p className="text-xs text-red-600 dark:text-red-400">
+                        {visibleAccountErrors.confirmPassword}
+                      </p>
+                    )}
                   </div>
                 </div>
+              )}
+
+              {currentStep === 'plan' && !catalog && (
+                <p className="text-sm text-stone-500 dark:text-stone-400">
+                  {error ? (
+                    'Could not load plans. Please refresh and try again.'
+                  ) : (
+                    <>
+                      <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
+                      Loading plans…
+                    </>
+                  )}
+                </p>
               )}
 
               {currentStep === 'plan' && catalog && (
@@ -662,6 +859,14 @@ export function GetStartedPage() {
                   </div>
 
                   <CartSummary cart={cart} />
+                  {!cart && !loadingCart && (
+                    <p className="text-xs text-red-600 dark:text-red-400">
+                      Could not load your cart. Check your connection, then go back and return to this step.
+                    </p>
+                  )}
+                  {loadingCart && (
+                    <p className="text-xs text-stone-500 dark:text-stone-400">Updating cart…</p>
+                  )}
                   <p className="text-xs text-stone-500 dark:text-stone-400">
                     {trialCodeStatus === 'valid' && trialOffer?.paymentMode === 'free_no_card'
                       ? 'No card needed — your account is created immediately.'
