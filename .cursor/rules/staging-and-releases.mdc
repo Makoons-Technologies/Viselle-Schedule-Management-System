@@ -1,0 +1,37 @@
+---
+description: Staging-first git workflow, semver, Vercel staging, and public release notes
+alwaysApply: true
+---
+
+# Staging & releases
+
+## Branches
+
+- **`staging`** — default integration branch. Day-to-day work merges here first.
+- **`main`** — production (viselle.net / production Vercel). Promote only via staging → main when cutting a release.
+
+No force-push to `main`.
+
+## Semver (start at 0.0.1)
+
+When promoting staging → main, bump **one** of:
+
+| Part | Meaning |
+|------|---------|
+| **z (patch)** | User won’t notice unless a bug affects them |
+| **y (minor)** | User will notice; no retraining / no breaking change |
+| **x (major)** | Breaks compatibility or requires user retraining |
+
+Phases: **alpha** (0.x) → **beta** (3-month trials) → **GA** (1.0.0+).
+
+## Release notes
+
+Public page: `/releases` (no auth). Source of truth: `CHANGELOG.md` (also rendered via `src/content/releases.md`). Keep them in sync when cutting a release. Link lives in the marketing footer.
+
+## Release cut
+
+Use `npm run cut-release -- --bump patch|minor|major` (see `docs/staging-and-releases.md`). Bump both this repo and Beauty-Backend-API to the same version when promoting.
+
+## Environments (separate DBs)
+
+Staging frontend (Vercel `staging` branch) must point `VITE_API_BASE_URL` at the **staging API**, which uses a **separate Supabase project** from production. Never point staging UI at production API/DB for day-to-day testing that mutates data.

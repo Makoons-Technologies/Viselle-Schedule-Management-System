@@ -50,6 +50,9 @@ export function MarketingFooter() {
           <Link to="/docs/api" className="text-brand-300 hover:text-brand-200">
             API docs
           </Link>
+          <Link to="/releases" className="text-brand-300 hover:text-brand-200">
+            Release notes
+          </Link>
           <Link to="/contact" className="text-brand-300 hover:text-brand-200">
             Contact us
           </Link>

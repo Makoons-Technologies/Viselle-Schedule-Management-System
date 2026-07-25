@@ -1,0 +1,24 @@
+---
+description: Viselle frontend overview — stack, pairing with Beauty-Backend-API
+alwaysApply: true
+---
+
+# Project overview (Viselle Schedule Management System)
+
+This repo is the **Viselle** frontend (React + Vite + TypeScript). The companion backend is **Beauty-Backend-API**.
+
+## Surface areas
+
+- Marketing / public: landing, get-started, contact, API docs, **release notes** (`/releases`), public booking.
+- App: platform_owner, org_owner, and staff dashboards under authenticated routes.
+
+## Conventions
+
+- API client and types: `src/lib/api.ts`, `src/types/api.ts` — keep in sync with backend contracts.
+- Public marketing chrome: `MarketingHeader` / `MarketingFooter` in `src/components/marketing/MarketingLayout.tsx`.
+- Do not commit secrets (`.env`, `prod.env` with live keys). Use `.env.example` / `.env.staging.example` as templates only.
+- After meaningful UI/API client changes, run `npm run build`.
+
+## Related backend
+
+Schema, auth, billing, trials, and cron live in Beauty-Backend-API. Prefer staging-first workflow for both repos (see staging-and-releases rule).
