@@ -12,6 +12,7 @@ import {
 } from '@/components/booking/BookingPublicShell';
 import { BookingStepProgress, BookingSelectionSummary } from '@/components/booking/BookingStepProgress';
 import { BookingTimeGrid } from '@/components/booking/BookingTimeGrid';
+import { PublicBookingSeo } from '@/components/booking/PublicBookingSeo';
 import { bookingChoiceClass, bookingTheme } from '@/components/booking/booking-theme';
 import { LoadingState } from '@/components/common/LoadingState';
 import { publicBookingApi, getManageBookingUrl } from '@/lib/public-booking';
@@ -147,12 +148,24 @@ export function PublicBookingPage({ slugOverride }: PublicBookingPageProps = {})
     ? `${selectedAccount.firstName} ${selectedAccount.lastName}`
     : undefined;
 
+  const seo = (
+    <PublicBookingSeo
+      name={org.name}
+      slug={org.slug}
+      city={org.city}
+      address={org.address}
+      phone={org.phone}
+      branding={branding}
+    />
+  );
+
   if (confirmed) {
     const manageUrl =
       managementToken && slug ? getManageBookingUrl(slug, managementToken) : null;
 
     return (
       <BookingPublicShell businessName={org.name} siteTemplate={siteTemplate} branding={branding}>
+        {seo}
         <div className="flex flex-col items-center py-8 text-center">
           <CheckCircle2 className={cn('mb-4 h-14 w-14', theme.accent)} />
           <h1 className="text-xl font-bold text-neutral-900">You&apos;re booked!</h1>
@@ -191,6 +204,7 @@ export function PublicBookingPage({ slugOverride }: PublicBookingPageProps = {})
 
   return (
     <BookingPublicShell businessName={org.name} subtitle="Book online" siteTemplate={siteTemplate} branding={branding}>
+      {seo}
       {step !== 'service' && (
         <button
           type="button"

@@ -7,10 +7,14 @@ export interface PublicOrganization {
   name: string;
   slug: string;
   publicBookingEnabled: boolean;
+  city?: string | null;
+  address?: string | null;
+  phone?: string | null;
   bookingSite: {
     hostingMode: string;
     siteTemplate: SiteTemplate | null;
     deploymentStatus: string;
+    subdomain?: string | null;
     branding: BookingBranding;
   } | null;
 }

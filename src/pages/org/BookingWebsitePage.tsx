@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Copy, ExternalLink, Globe, LayoutTemplate, Sparkles } from 'lucide-react';
+import { Copy, ExternalLink, Globe, LayoutTemplate } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { orgApi, ownerApi } from '@/lib/api';
 import { contactPath } from '@/lib/contact';
-import { getSubdomainBookingUrl, resolvePathBookingUrl } from '@/lib/public-booking';
+import { resolvePathBookingUrl } from '@/lib/public-booking';
 import { cn, formatDate } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
@@ -13,10 +13,10 @@ import type { SiteTemplate } from '@/types/api';
 import { BookingPagePreview } from '@/components/booking/BookingPagePreview';
 import { BookingBrandingSection } from '@/components/settings/BookingBrandingSection';
 import { DeveloperApiSection } from '@/components/settings/DeveloperApiSection';
+import { HostedSubdomainSection } from '@/components/settings/HostedSubdomainSection';
 import { SettingsBackHeader } from '@/components/settings/SettingsBackHeader';
 import { normalizeBookingBranding } from '@/lib/booking-branding';
 import { LoadingState } from '@/components/common/LoadingState';
-import { TrialLockedControl } from '@/components/common/TrialLockedControl';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -77,11 +77,9 @@ export function BookingWebsitePage() {
   const branding = normalizeBookingBranding(website.bookingBranding);
   const hostingMode = website.hostingMode ?? 'path';
   const pathUrl = resolvePathBookingUrl(data.pathBookingUrl, data.organizationSlug);
-  const subdomainUrl = getSubdomainBookingUrl(data.organizationSlug, data.subdomainBaseDomain);
-  const liveUrl = hostingMode === 'subdomain' ? subdomainUrl : pathUrl;
 
   const copyUrl = async () => {
-    await navigator.clipboard.writeText(liveUrl);
+    await navigator.clipboard.writeText(pathUrl);
     toast.success('Link copied');
   };
 
@@ -89,13 +87,6 @@ export function BookingWebsitePage() {
     updateMutation.mutate({
       hostingMode: hostingMode === 'subdomain' ? 'subdomain' : 'path',
       siteTemplate: template,
-    });
-  };
-
-  const enableSubdomain = () => {
-    updateMutation.mutate({
-      hostingMode: 'subdomain',
-      siteTemplate: website.siteTemplate ?? data.siteTemplates[0]?.id ?? 'classic',
     });
   };
 
@@ -199,72 +190,14 @@ export function BookingWebsitePage() {
         siteTemplate={website.siteTemplate ?? 'classic'}
       />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Sparkles className="h-4 w-4" />
-            Hosted subdomain (paid add-on)
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-stone-600 dark:text-stone-300">
-            Upgrade to your own subdomain like{' '}
-            <span className="font-mono text-brand-700 dark:text-brand-300">
-              {data.organizationSlug}.{data.subdomainBaseDomain}
-            </span>
-            . It shows the same booking page as your included link — same style, branding, and services — at a
-            shorter, branded address.
-          </p>
-
-          {data.subdomainHostingEnabled ? (
-            <div className="space-y-3 rounded-lg border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-800/50">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="success">Subdomain enabled</Badge>
-                {hostingMode === 'subdomain' && <Badge>Live on subdomain</Badge>}
-              </div>
-              <p className="text-sm font-medium text-brand-700 dark:text-brand-300">{subdomainUrl}</p>
-              {hostingMode !== 'subdomain' ? (
-                <TrialLockedControl locked={trialExpired}>
-                  <Button onClick={enableSubdomain} disabled={updateMutation.isPending || trialExpired}>
-                    Switch to hosted subdomain
-                  </Button>
-                </TrialLockedControl>
-              ) : (
-                <Button asChild variant="outline">
-                  <a href={subdomainUrl} target="_blank" rel="noreferrer">
-                    <ExternalLink className="h-4 w-4" />
-                    Open subdomain site
-                  </a>
-                </Button>
-              )}
-              {hostingMode === 'subdomain' && (
-                <TrialLockedControl locked={trialExpired}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-stone-500 dark:text-stone-400"
-                    onClick={() => updateMutation.mutate({ hostingMode: 'path', siteTemplate: website.siteTemplate })}
-                    disabled={trialExpired}
-                  >
-                    Use included link instead
-                  </Button>
-                </TrialLockedControl>
-              )}
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              <Button asChild>
-                <Link to={contactPath({ interest: 'subdomain', slug: data.organizationSlug })}>
-                  Request hosted subdomain
-                </Link>
-              </Button>
-              <Button asChild variant="outline">
-                <a href="/#websites">Compare booking page options</a>
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <HostedSubdomainSection
+        orgId={orgId!}
+        data={data}
+        isPlatformOwner={isPlatformOwner}
+        trialExpired={trialExpired}
+        updatePending={updateMutation.isPending}
+        onUpdate={(payload) => updateMutation.mutate(payload)}
+      />
 
       <DeveloperApiSection orgId={orgId!} data={data} />
 
