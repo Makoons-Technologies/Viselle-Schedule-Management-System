@@ -107,7 +107,7 @@ export function OrganizationsPage() {
                       onClick={() => impersonateMutation.mutate(org.id)}
                       disabled={impersonatingOrgId === org.id}
                     />
-                    {org.status === 'active' && (
+                    {(org.status === 'active' || org.status === 'trial') && (
                       <TableIconButton
                         icon={Ban}
                         label="Deactivate organization"
