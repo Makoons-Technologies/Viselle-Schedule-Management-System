@@ -1,10 +1,13 @@
 import { Link } from 'react-router-dom';
 import { MarketingFooter, MarketingHeader } from '@/components/marketing/MarketingLayout';
+import { PageSeo } from '@/components/seo/PageSeo';
 import { Button } from '@/components/ui/button';
+import { marketingSeo } from '@/content/marketing-seo';
 
 export function NotFoundPage() {
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-brand-50 via-white to-stone-50 dark:from-stone-950 dark:via-stone-900 dark:to-stone-950">
+      <PageSeo {...marketingSeo.notFound} />
       <MarketingHeader />
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col items-center justify-center px-4 py-16 text-center sm:px-6">
         <p className="text-sm font-medium tracking-wide text-brand-700 dark:text-brand-300">404</p>

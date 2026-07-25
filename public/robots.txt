@@ -1,0 +1,21 @@
+# Viselle marketing site — https://viselle.net
+User-agent: *
+Allow: /
+Allow: /contact
+Allow: /get-started
+Allow: /docs/api
+Allow: /releases
+Allow: /book/
+Allow: /llms.txt
+
+Disallow: /login
+Disallow: /forgot-password
+Disallow: /set-password
+Disallow: /platform/
+Disallow: /orgs/
+Disallow: /staff/
+Disallow: /support/
+Disallow: /get-started/success
+Disallow: /book/*/manage/
+
+Sitemap: https://viselle.net/sitemap.xml

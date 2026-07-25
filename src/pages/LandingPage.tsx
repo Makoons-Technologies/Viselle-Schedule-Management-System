@@ -5,7 +5,9 @@ import { useAuth } from '@/context/AuthContext';
 import { MarketingFooter, MarketingHeader } from '@/components/marketing/MarketingLayout';
 import { PricingSection } from '@/components/marketing/PricingSection';
 import { WebsiteOptionsSection } from '@/components/marketing/WebsiteOptionsSection';
+import { PageSeo } from '@/components/seo/PageSeo';
 import { Button } from '@/components/ui/button';
+import { marketingSeo } from '@/content/marketing-seo';
 import { fetchLiveHomepageTrial, getStartedPath } from '@/lib/signup';
 import type { TrialCampaign } from '@/types/api';
 
@@ -39,13 +41,21 @@ const INDUSTRY_FEATURES = [
 export function LandingPage() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const [homepageTrial, setHomepageTrial] = useState<TrialCampaign | null>(null);
+  const [hash, setHash] = useState(() =>
+    typeof window !== 'undefined' ? window.location.hash : '',
+  );
 
   useEffect(() => {
-    const hash = window.location.hash;
+    const onHashChange = () => setHash(window.location.hash);
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  useEffect(() => {
     if (hash) {
       document.querySelector(hash)?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, []);
+  }, [hash]);
 
   useEffect(() => {
     fetchLiveHomepageTrial()
@@ -59,8 +69,16 @@ export function LandingPage() {
     return <Navigate to={`/orgs/${user.organizationId}/calendar`} replace />;
   }
 
+  const seo =
+    hash === '#pricing'
+      ? marketingSeo.pricing
+      : hash === '#websites'
+        ? marketingSeo.websites
+        : marketingSeo.home;
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-brand-50 via-white to-stone-50 dark:from-stone-950 dark:via-stone-900 dark:to-stone-950">
+      <PageSeo {...seo} />
       <MarketingHeader />
 
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">

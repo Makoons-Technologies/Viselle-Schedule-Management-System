@@ -14,6 +14,7 @@ import { BookingSelectionSummary } from '@/components/booking/BookingStepProgres
 import { BookingTimeGrid } from '@/components/booking/BookingTimeGrid';
 import { bookingTheme } from '@/components/booking/booking-theme';
 import { LoadingState } from '@/components/common/LoadingState';
+import { PageSeo } from '@/components/seo/PageSeo';
 import { publicBookingApi } from '@/lib/public-booking';
 import {
   appointmentScheduleFromIso,
@@ -111,9 +112,19 @@ export function ManageBookingPage({ slugOverride }: ManageBookingPageProps = {})
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const manageSeo = (
+    <PageSeo
+      title="Manage appointment"
+      description="View, reschedule, or cancel your appointment."
+      path={slug && token ? `/book/${slug}/manage/${token}` : '/'}
+      robots="noindex,nofollow"
+    />
+  );
+
   if (appointmentQuery.isLoading) {
     return (
       <BookingPublicShell showPoweredBy>
+        {manageSeo}
         <LoadingState />
       </BookingPublicShell>
     );
@@ -122,6 +133,7 @@ export function ManageBookingPage({ slugOverride }: ManageBookingPageProps = {})
   if (!data) {
     return (
       <BookingPublicShell showPoweredBy>
+        {manageSeo}
         <p className="text-center text-neutral-600">This appointment link is invalid or has expired.</p>
       </BookingPublicShell>
     );
@@ -140,6 +152,7 @@ export function ManageBookingPage({ slugOverride }: ManageBookingPageProps = {})
   if (isCancelled) {
     return (
       <BookingPublicShell businessName={organization.name} siteTemplate={siteTemplate} branding={branding}>
+        {manageSeo}
         <div className="flex flex-col items-center py-8 text-center">
           <CalendarX2 className={cn('mb-4 h-14 w-14 text-neutral-400')} />
           <h1 className="text-xl font-bold text-neutral-900">Appointment cancelled</h1>
@@ -159,6 +172,7 @@ export function ManageBookingPage({ slugOverride }: ManageBookingPageProps = {})
         siteTemplate={siteTemplate}
         branding={branding}
       >
+        {manageSeo}
         <button
           type="button"
           onClick={() => {
@@ -236,6 +250,7 @@ export function ManageBookingPage({ slugOverride }: ManageBookingPageProps = {})
         siteTemplate={siteTemplate}
         branding={branding}
       >
+        {manageSeo}
         <button
           type="button"
           onClick={() => setMode('details')}
@@ -281,6 +296,7 @@ export function ManageBookingPage({ slugOverride }: ManageBookingPageProps = {})
       siteTemplate={siteTemplate}
       branding={branding}
     >
+      {manageSeo}
       <div className="py-4">
         <CheckCircle2 className={cn('mb-4 h-12 w-12', theme.accent)} />
         <BookingPageTitle siteTemplate={siteTemplate} branding={branding}>

@@ -14,7 +14,9 @@ import {
 } from 'lucide-react';
 import { z } from 'zod';
 import { MarketingFooter, MarketingHeader } from '@/components/marketing/MarketingLayout';
+import { PageSeo } from '@/components/seo/PageSeo';
 import { Button } from '@/components/ui/button';
+import { marketingSeo } from '@/content/marketing-seo';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -490,6 +492,7 @@ export function GetStartedPage() {
   if (provisionedResult) {
     return (
       <div className="min-h-screen bg-stone-50 dark:bg-stone-950">
+        <PageSeo {...marketingSeo.getStartedSuccess} />
         <MarketingHeader />
         <div className="mx-auto max-w-lg px-4 py-16 sm:px-6">
           <Card>
@@ -509,6 +512,7 @@ export function GetStartedPage() {
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-stone-950">
+      <PageSeo {...marketingSeo.getStarted} />
       <MarketingHeader />
 
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">

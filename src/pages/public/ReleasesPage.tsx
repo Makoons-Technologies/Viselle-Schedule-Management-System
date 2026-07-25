@@ -3,6 +3,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Link } from 'react-router-dom';
 import { MarketingFooter, MarketingHeader } from '@/components/marketing/MarketingLayout';
+import { PageSeo } from '@/components/seo/PageSeo';
+import { marketingSeo } from '@/content/marketing-seo';
 import releasesMarkdown from '@/content/releases.md?raw';
 
 const markdownComponents = {
@@ -95,6 +97,7 @@ const markdownComponents = {
 export function ReleasesPage() {
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-stone-950">
+      <PageSeo {...marketingSeo.releases} />
       <MarketingHeader />
       <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
         <p className="text-sm text-stone-500 dark:text-stone-400">

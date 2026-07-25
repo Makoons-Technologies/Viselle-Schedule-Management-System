@@ -15,6 +15,7 @@ import { BookingTimeGrid } from '@/components/booking/BookingTimeGrid';
 import { PublicBookingSeo } from '@/components/booking/PublicBookingSeo';
 import { bookingChoiceClass, bookingTheme } from '@/components/booking/booking-theme';
 import { LoadingState } from '@/components/common/LoadingState';
+import { PageSeo } from '@/components/seo/PageSeo';
 import { publicBookingApi, getManageBookingUrl } from '@/lib/public-booking';
 import { centsToDollars, filterFutureAppointmentSlots, formatDateTime, appointmentScheduleFromIso, cn } from '@/lib/utils';
 import type { Service, BookingBranding } from '@/types/api';
@@ -132,6 +133,24 @@ export function PublicBookingPage({ slugOverride }: PublicBookingPageProps = {})
   if (!org || !org.publicBookingEnabled) {
     return (
       <BookingPublicShell showPoweredBy>
+        {org ? (
+          <PublicBookingSeo
+            name={org.name}
+            slug={org.slug}
+            city={org.city}
+            address={org.address}
+            phone={org.phone}
+            branding={org.bookingSite?.branding ?? null}
+            indexable={false}
+          />
+        ) : (
+          <PageSeo
+            title="Booking unavailable"
+            description="Online booking is not available for this business."
+            path={slug ? `/book/${slug}` : '/'}
+            robots="noindex,follow"
+          />
+        )}
         <p className="text-center text-neutral-600">Online booking is not available for this business.</p>
       </BookingPublicShell>
     );
@@ -156,6 +175,7 @@ export function PublicBookingPage({ slugOverride }: PublicBookingPageProps = {})
       address={org.address}
       phone={org.phone}
       branding={branding}
+      indexable
     />
   );
 

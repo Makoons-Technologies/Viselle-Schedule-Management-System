@@ -6,10 +6,12 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 import { useAuth } from '@/context/AuthContext';
 import { LoadingState } from '@/components/common/LoadingState';
+import { PageSeo } from '@/components/seo/PageSeo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { PasswordInput } from '@/components/ui/password-input';
+import { marketingSeo } from '@/content/marketing-seo';
 
 const schema = z
   .object({
@@ -76,6 +78,7 @@ export function SetPasswordPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-50 to-stone-100 p-4 dark:from-stone-950 dark:to-stone-900">
+      <PageSeo {...marketingSeo.setPassword} />
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl text-brand-700">Set your password</CardTitle>

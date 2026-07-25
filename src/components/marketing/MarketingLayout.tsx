@@ -56,6 +56,9 @@ export function MarketingFooter() {
           <Link to="/contact" className="text-brand-300 hover:text-brand-200">
             Contact us
           </Link>
+          <a href="/llms.txt" className="text-brand-300 hover:text-brand-200">
+            llms.txt
+          </a>
         </p>
       </div>
       <div className="mx-auto mt-4 max-w-6xl px-4 sm:px-6">

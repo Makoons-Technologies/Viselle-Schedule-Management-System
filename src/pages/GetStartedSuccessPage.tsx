@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import { MarketingFooter, MarketingHeader } from '@/components/marketing/MarketingLayout';
+import { PageSeo } from '@/components/seo/PageSeo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { marketingSeo } from '@/content/marketing-seo';
 import { getSignupSessionStatus } from '@/lib/signup';
 
 const SHOP_LOADING_LINES = [
@@ -89,6 +91,7 @@ export function GetStartedSuccessPage() {
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-stone-950">
+      <PageSeo {...marketingSeo.getStartedSuccess} />
       <MarketingHeader />
 
       <div className="mx-auto max-w-lg px-4 py-16 sm:px-6">

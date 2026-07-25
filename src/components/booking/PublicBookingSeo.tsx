@@ -1,5 +1,12 @@
 import { useEffect } from 'react';
-import { isSubdomainBookingHost } from '@/lib/subdomain-booking';
+import {
+  absoluteUrl,
+  applyPageSeo,
+  removeHeadNode,
+  upsertJsonLd,
+  upsertLink,
+  upsertMeta,
+} from '@/lib/seo';
 import type { BookingBranding } from '@/types/api';
 
 export interface PublicBookingSeoProps {
@@ -9,43 +16,15 @@ export interface PublicBookingSeoProps {
   address?: string | null;
   phone?: string | null;
   branding?: BookingBranding | null;
-}
-
-function upsertMeta(attr: 'name' | 'property', key: string, content: string) {
-  const selector = `meta[${attr}="${key}"]`;
-  let el = document.head.querySelector(selector) as HTMLMetaElement | null;
-  if (!el) {
-    el = document.createElement('meta');
-    el.setAttribute(attr, key);
-    document.head.appendChild(el);
-  }
-  el.content = content;
-}
-
-function upsertLink(rel: string, href: string) {
-  let el = document.head.querySelector(`link[rel="${rel}"]`) as HTMLLinkElement | null;
-  if (!el) {
-    el = document.createElement('link');
-    el.rel = rel;
-    document.head.appendChild(el);
-  }
-  el.href = href;
-}
-
-function upsertJsonLd(id: string, data: Record<string, unknown>) {
-  let el = document.getElementById(id) as HTMLScriptElement | null;
-  if (!el) {
-    el = document.createElement('script');
-    el.id = id;
-    el.type = 'application/ld+json';
-    document.head.appendChild(el);
-  }
-  el.textContent = JSON.stringify(data);
+  /** When false, ask crawlers not to index (inactive / booking disabled). */
+  indexable?: boolean;
+  /** Canonical path, e.g. `/book/my-salon`. Defaults to current pathname. */
+  canonicalPath?: string;
 }
 
 /**
- * SEO / AI discoverability for public booking pages (especially hosted subdomain hosts).
- * Sets title, description, Open Graph, and LocalBusiness JSON-LD from real org data only.
+ * SEO / AI discoverability for public booking pages (path and hosted subdomain).
+ * Sets title, description, Open Graph, canonical, and LocalBusiness/BeautySalon JSON-LD from real org data only.
  */
 export function PublicBookingSeo({
   name,
@@ -54,41 +33,43 @@ export function PublicBookingSeo({
   address,
   phone,
   branding,
+  indexable = true,
+  canonicalPath,
 }: PublicBookingSeoProps) {
   useEffect(() => {
     const previousTitle = document.title;
-    const pageUrl = window.location.href.split('?')[0];
+    const path = canonicalPath ?? `/book/${slug}`;
+    const pageUrl = absoluteUrl(path);
     const description = city
       ? `Book an appointment online with ${name} in ${city}. Choose a service and time that works for you.`
       : `Book an appointment online with ${name}. Choose a service and time that works for you.`;
-    const title = `Book with ${name}`;
-    const isSubdomain = isSubdomainBookingHost();
+    const title = city ? `Book with ${name} in ${city}` : `Book with ${name}`;
+    const robots = indexable ? 'index,follow' : 'noindex,follow';
 
-    document.title = title;
-    upsertMeta('name', 'description', description);
-    upsertMeta('name', 'robots', isSubdomain ? 'index,follow' : 'index,follow');
-    upsertMeta('property', 'og:type', 'website');
-    upsertMeta('property', 'og:title', title);
-    upsertMeta('property', 'og:description', description);
-    upsertMeta('property', 'og:url', pageUrl);
+    applyPageSeo({
+      title,
+      description,
+      path,
+      robots,
+      image: branding?.logoUrl ?? null,
+      jsonLdId: 'public-booking-jsonld',
+    });
+
+    // Prefer the live page URL on hosted subdomains so OG/url matches what users share.
+    const shareUrl = window.location.href.split('?')[0] || pageUrl;
+    upsertMeta('property', 'og:url', shareUrl);
     upsertMeta('property', 'og:site_name', name);
-    upsertMeta('name', 'twitter:card', 'summary');
-    upsertMeta('name', 'twitter:title', title);
-    upsertMeta('name', 'twitter:description', description);
+    upsertLink('canonical', shareUrl);
 
-    if (branding?.logoUrl) {
-      upsertMeta('property', 'og:image', branding.logoUrl);
-      upsertMeta('name', 'twitter:image', branding.logoUrl);
-    }
     if (branding?.faviconUrl) {
       upsertLink('icon', branding.faviconUrl);
     }
 
     const jsonLd: Record<string, unknown> = {
       '@context': 'https://schema.org',
-      '@type': 'LocalBusiness',
+      '@type': ['LocalBusiness', 'BeautySalon'],
       name,
-      url: pageUrl,
+      url: shareUrl,
       description,
     };
     if (phone) jsonLd.telephone = phone;
@@ -104,7 +85,7 @@ export function PublicBookingSeo({
       '@type': 'ReserveAction',
       target: {
         '@type': 'EntryPoint',
-        urlTemplate: pageUrl,
+        urlTemplate: shareUrl,
         actionPlatform: [
           'http://schema.org/DesktopWebPlatform',
           'http://schema.org/MobileWebPlatform',
@@ -120,10 +101,19 @@ export function PublicBookingSeo({
 
     return () => {
       document.title = previousTitle;
-      const script = document.getElementById('public-booking-jsonld');
-      script?.remove();
+      removeHeadNode('public-booking-jsonld');
     };
-  }, [name, slug, city, address, phone, branding?.logoUrl, branding?.faviconUrl]);
+  }, [
+    name,
+    slug,
+    city,
+    address,
+    phone,
+    branding?.logoUrl,
+    branding?.faviconUrl,
+    indexable,
+    canonicalPath,
+  ]);
 
   return null;
 }

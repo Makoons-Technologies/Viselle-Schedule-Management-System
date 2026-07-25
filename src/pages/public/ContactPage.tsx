@@ -12,6 +12,8 @@ import {
 } from '@/components/booking/BookingPublicShell';
 import { bookingTheme } from '@/components/booking/booking-theme';
 import { MarketingHeader } from '@/components/marketing/MarketingLayout';
+import { PageSeo } from '@/components/seo/PageSeo';
+import { marketingSeo } from '@/content/marketing-seo';
 import {
   CONTACT_EMAIL,
   CONTACT_INTEREST_LABELS,
@@ -76,6 +78,7 @@ export function ContactPage() {
 
   return (
     <div className="min-h-screen bg-neutral-100">
+      <PageSeo {...marketingSeo.contact} />
       <MarketingHeader />
 
       <BookingPublicShell

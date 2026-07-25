@@ -1,0 +1,36 @@
+# Viselle
+
+> Viselle is web-based scheduling software for salons, spas, and beauty studios. Businesses use it to manage appointments, staff schedules, services, and client reminders, and to offer an online booking page clients can use without calling.
+
+## Product
+
+- Online booking pages (path links and optional hosted subdomains)
+- Staff calendars and availability
+- Services and pricing
+- Email and text appointment reminders
+- Recurring appointments
+- Multi-staff / team schedules
+- Public booking API for custom websites
+
+## Who it is for
+
+Beauty and wellness businesses — hair salons, spas, nail studios, estheticians, and similar appointment-based shops.
+
+## Key URLs
+
+- Home: https://viselle.net/
+- Get started: https://viselle.net/get-started
+- Pricing (on home): https://viselle.net/#pricing
+- Booking page options: https://viselle.net/#websites
+- Contact: https://viselle.net/contact
+- Public booking API docs: https://viselle.net/docs/api
+- Release notes: https://viselle.net/releases
+- Sign in: https://viselle.net/login
+
+## Public booking
+
+Salon booking pages are available at `https://viselle.net/book/{slug}` and, when enabled, on hosted subdomains under `sites.viselle.net`.
+
+## Contact
+
+hello@viselle.net
