@@ -93,7 +93,7 @@ export function ContactPage() {
       >
         <BookingPageTitle>Contact us</BookingPageTitle>
         <p className="-mt-4 mb-6 text-sm text-neutral-500">
-          Tell us about your salon, spa, or studio. We&apos;ll help you pick the right plan and booking setup.
+          Tell us about your salon, spa, or studio. For plan changes, sign in and use Settings → Plan.
         </p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-1 flex-col">

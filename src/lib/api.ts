@@ -309,6 +309,18 @@ export const orgApi = {
         hasStripeSubscription: boolean;
       }>(`/organizations/${orgId}/plan/change`, { tier })
       .then((r) => r.data),
+  createPlanCheckout: (orgId: string, tier: Exclude<SubscriptionTier, 'custom'>) =>
+    apiClient
+      .post<{ checkoutUrl?: string; sessionId: string }>(`/organizations/${orgId}/plan/checkout`, {
+        tier,
+      })
+      .then((r) => r.data),
+  getPlanCheckoutStatus: (orgId: string, sessionId: string) =>
+    apiClient
+      .get<{ status: 'pending' | 'completed' | 'failed'; plan: OrgPlanFeatures }>(
+        `/organizations/${orgId}/plan/checkout/${encodeURIComponent(sessionId)}`,
+      )
+      .then((r) => r.data),
   getStaffPermissions: (orgId: string) =>
     apiClient.get<{ staffPermissions: StaffPermissions }>(`/organizations/${orgId}/staff-permissions`).then((r) => r.data),
   updateStaffPermissions: (orgId: string, data: Partial<StaffPermissions>) =>

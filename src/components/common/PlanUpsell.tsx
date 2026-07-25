@@ -31,7 +31,7 @@ export function PlanUpsell({ title, description, featureLabel }: PlanUpsellProps
             <Link to={`/orgs/${orgId}/settings/plan`}>Upgrade plan</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link to={contactPath({ interest: 'upgrade' })}>Contact us</Link>
+            <Link to={contactPath({ interest: 'general' })}>Contact us</Link>
           </Button>
         </div>
       </CardContent>

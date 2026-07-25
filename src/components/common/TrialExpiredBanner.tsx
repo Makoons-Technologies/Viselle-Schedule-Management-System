@@ -1,11 +1,10 @@
 import { AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { contactPath } from '@/lib/contact';
 import type { Organization } from '@/types/api';
 
 interface TrialExpiredBannerProps {
-  organization: Pick<Organization, 'slug'>;
+  organization: Pick<Organization, 'id' | 'slug'>;
   isPlatformOwner?: boolean;
 }
 
@@ -23,9 +22,7 @@ export function TrialExpiredBanner({ organization, isPlatformOwner }: TrialExpir
           size="sm"
           className="h-7 shrink-0 rounded-full bg-white px-3 text-xs font-semibold text-red-700 hover:bg-red-50"
         >
-          <Link to={contactPath({ interest: 'upgrade', slug: organization.slug })} target="_blank" rel="noopener noreferrer">
-            Upgrade / contact us
-          </Link>
+          <Link to={`/orgs/${organization.id}/settings/plan`}>Upgrade</Link>
         </Button>
       )}
     </div>

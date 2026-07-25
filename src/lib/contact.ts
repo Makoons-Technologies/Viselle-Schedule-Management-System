@@ -1,20 +1,9 @@
-import type { PricingTierId } from './pricing';
-
-export type ContactInterest =
-  | 'general'
-  | `plan-${PricingTierId}`
-  | 'subdomain'
-  | 'api'
-  | 'upgrade';
+export type ContactInterest = 'general' | 'subdomain' | 'api';
 
 export const CONTACT_INTEREST_LABELS: Record<ContactInterest, string> = {
   general: 'General question',
-  'plan-starter': 'Starter plan ($20/mo)',
-  'plan-professional': 'Professional plan ($49/mo)',
-  'plan-business': 'Business plan ($99/mo)',
   subdomain: 'Hosted subdomain',
   api: 'My website + booking API',
-  upgrade: 'Upgrade my current plan',
 };
 
 export const CONTACT_EMAIL =

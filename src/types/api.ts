@@ -205,6 +205,9 @@ export interface OrganizationSettings {
   maxMonthlyAppointments?: number | null;
   monthlyPriceCents: number;
   internalNotes?: string | null;
+  /** Platform SaaS subscription (signup/upgrade Checkout), not Connect. */
+  stripeSubscriptionId?: string | null;
+  stripeCustomerId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -218,6 +221,8 @@ export interface OrgPlanFeatures {
   maxStaffAccounts: number;
   monthlyPriceCents: number;
   subdomainHostingEnabled: boolean;
+  /** True when a platform SaaS Stripe subscription id is stored (proration path). */
+  hasStripeSubscription: boolean;
 }
 
 export interface PlatformStats {

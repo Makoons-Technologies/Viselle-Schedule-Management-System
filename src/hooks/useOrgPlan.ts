@@ -34,6 +34,7 @@ export function useOrgPlan(orgId: string | undefined) {
         maxStaffAccounts: data.settings.maxStaffAccounts,
         monthlyPriceCents: data.settings.monthlyPriceCents,
         subdomainHostingEnabled: data.settings.subdomainHostingEnabled,
+        hasStripeSubscription: Boolean(data.settings.stripeSubscriptionId),
       },
     }),
   });

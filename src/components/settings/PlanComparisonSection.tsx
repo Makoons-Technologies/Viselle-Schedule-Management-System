@@ -20,20 +20,28 @@ import type { SubscriptionTier } from '@/types/api';
 interface PlanComparisonSectionProps {
   orgId: string;
   currentTier: SubscriptionTier | null | undefined;
+  hasStripeSubscription: boolean;
 }
 
 function ctaLabel(
   current: PlanTierId | null,
   target: PlanTierId,
-): 'Current plan' | 'Upgrade' | 'Downgrade' | 'Switch plan' {
-  if (current === target) return 'Current plan';
+  hasStripeSubscription: boolean,
+): 'Current plan' | 'Upgrade' | 'Downgrade' | 'Switch plan' | 'Subscribe' {
+  if (current === target) {
+    return hasStripeSubscription ? 'Current plan' : 'Subscribe';
+  }
   const change = compareTierChange(current, target);
   if (change === 'upgrade') return 'Upgrade';
   if (change === 'downgrade') return 'Downgrade';
   return 'Switch plan';
 }
 
-export function PlanComparisonSection({ orgId, currentTier }: PlanComparisonSectionProps) {
+export function PlanComparisonSection({
+  orgId,
+  currentTier,
+  hasStripeSubscription,
+}: PlanComparisonSectionProps) {
   const queryClient = useQueryClient();
   const normalizedCurrent: PlanTierId | null =
     currentTier === 'starter' || currentTier === 'professional' || currentTier === 'business'
@@ -45,10 +53,9 @@ export function PlanComparisonSection({ orgId, currentTier }: PlanComparisonSect
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['org-plan', orgId] });
       queryClient.invalidateQueries({ queryKey: ['owner-settings', orgId] });
+      queryClient.invalidateQueries({ queryKey: ['organization', orgId] });
       if (result.billingMode === 'settings_only_stripe_failed') {
         toast.warning(result.message);
-      } else if (result.billingMode === 'settings_only') {
-        toast.success(result.message, { duration: 8000 });
       } else {
         toast.success(result.message);
       }
@@ -56,13 +63,44 @@ export function PlanComparisonSection({ orgId, currentTier }: PlanComparisonSect
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const checkoutMutation = useMutation({
+    mutationFn: (tier: PlanTierId) => orgApi.createPlanCheckout(orgId, tier),
+    onSuccess: (result) => {
+      if (!result.checkoutUrl) {
+        toast.error('Checkout could not be started. Please try again or contact support.');
+        return;
+      }
+      window.location.assign(result.checkoutUrl);
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const pending =
+    changeMutation.isPending || checkoutMutation.isPending;
+  const pendingTier = changeMutation.isPending
+    ? changeMutation.variables
+    : checkoutMutation.isPending
+      ? checkoutMutation.variables
+      : undefined;
+
   function confirmAndChange(tier: PlanTierId) {
-    const label = ctaLabel(normalizedCurrent, tier);
+    const label = ctaLabel(normalizedCurrent, tier, hasStripeSubscription);
     if (label === 'Current plan') return;
     const tierMeta = PLAN_TIERS.find((t) => t.id === tier)!;
+
+    if (!hasStripeSubscription) {
+      const ok = window.confirm(
+        `${label} to ${tierMeta.name} ($${priceMonthlyDollars(tierMeta)}/mo)?\n\n` +
+          'You will be taken to Stripe Checkout to enter your card and activate billing. Features unlock after payment succeeds.',
+      );
+      if (!ok) return;
+      checkoutMutation.mutate(tier);
+      return;
+    }
+
     const ok = window.confirm(
       `${label} to ${tierMeta.name} ($${priceMonthlyDollars(tierMeta)}/mo)?\n\n` +
-        'Features unlock or lock immediately. If Stripe billing is linked, the subscription price updates with proration; otherwise only plan features change and you may need to contact us about invoicing.',
+        'Features unlock or lock immediately. Your Stripe subscription price updates with proration.',
     );
     if (!ok) return;
     changeMutation.mutate(tier);
@@ -74,8 +112,9 @@ export function PlanComparisonSection({ orgId, currentTier }: PlanComparisonSect
         <CardHeader>
           <CardTitle className="text-base">Compare plans</CardTitle>
           <CardDescription>
-            Checkmarks show what each tier includes. Upgrade or downgrade anytime — feature access
-            updates immediately.
+            {hasStripeSubscription
+              ? 'Checkmarks show what each tier includes. Upgrade or downgrade anytime — feature access updates immediately.'
+              : 'Checkmarks show what each tier includes. Choose a plan to pay with Stripe Checkout and activate your account.'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -83,6 +122,13 @@ export function PlanComparisonSection({ orgId, currentTier }: PlanComparisonSect
             <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
               This organization is on a custom plan. Choosing a tier below replaces custom feature
               flags with that tier&apos;s presets.
+            </p>
+          )}
+
+          {!hasStripeSubscription && (
+            <p className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-950 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-100">
+              No card is linked yet. Selecting a plan opens Stripe Checkout so you can subscribe and
+              unlock the app.
             </p>
           )}
 
@@ -138,19 +184,21 @@ export function PlanComparisonSection({ orgId, currentTier }: PlanComparisonSect
                 <tr>
                   <td className="pt-4" />
                   {PLAN_TIERS.map((tier) => {
-                    const label = ctaLabel(normalizedCurrent, tier.id);
+                    const label = ctaLabel(normalizedCurrent, tier.id, hasStripeSubscription);
                     const isCurrent = label === 'Current plan';
                     return (
                       <td key={tier.id} className="px-2 pt-4 text-center">
                         <Button
                           size="sm"
                           variant={isCurrent ? 'secondary' : tier.highlighted ? 'default' : 'outline'}
-                          disabled={isCurrent || changeMutation.isPending}
+                          disabled={isCurrent || pending}
                           className={cn('w-full min-w-[7.5rem]', isCurrent && 'cursor-default')}
                           onClick={() => confirmAndChange(tier.id)}
                         >
-                          {changeMutation.isPending && changeMutation.variables === tier.id
-                            ? 'Updating…'
+                          {pending && pendingTier === tier.id
+                            ? hasStripeSubscription
+                              ? 'Updating…'
+                              : 'Redirecting…'
                             : label}
                         </Button>
                       </td>
@@ -163,7 +211,7 @@ export function PlanComparisonSection({ orgId, currentTier }: PlanComparisonSect
 
           <p className="text-xs text-stone-500 dark:text-stone-400">
             Need a custom arrangement?{' '}
-            <Link to={contactPath({ interest: 'upgrade' })} className="text-brand-700 hover:underline">
+            <Link to={contactPath({ interest: 'general' })} className="text-brand-700 hover:underline">
               Contact us
             </Link>
             .
