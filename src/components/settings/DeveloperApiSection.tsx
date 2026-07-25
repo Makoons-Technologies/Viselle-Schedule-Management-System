@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { BookOpen, Code2, ExternalLink, KeyRound, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { orgApi, ownerApi } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -11,11 +12,15 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import type { WebsiteSettingsResponse } from '@/types/api';
 
-const DEFAULT_DOCS_URL =
-  'https://github.com/Makoons-Technologies/Beauty-Backend-API/blob/main/docs/public-booking-api.md';
+/** Public (no-auth) docs page. Override with absolute URL via VITE_PUBLIC_API_DOCS_URL if needed. */
+const DEFAULT_DOCS_PATH = '/docs/api';
 
-function getApiDocsUrl(): string {
-  return (import.meta.env.VITE_PUBLIC_API_DOCS_URL as string | undefined) || DEFAULT_DOCS_URL;
+function getApiDocsHref(): string {
+  return (import.meta.env.VITE_PUBLIC_API_DOCS_URL as string | undefined) || DEFAULT_DOCS_PATH;
+}
+
+function isExternalDocsHref(href: string): boolean {
+  return /^https?:\/\//i.test(href);
 }
 
 interface DeveloperApiSectionProps {
@@ -81,11 +86,18 @@ export function DeveloperApiSection({ orgId, data }: DeveloperApiSectionProps) {
         </p>
 
         <Button asChild variant="outline" size="sm">
-          <a href={getApiDocsUrl()} target="_blank" rel="noreferrer">
-            <BookOpen className="h-4 w-4" />
-            View developer docs
-            <ExternalLink className="h-3.5 w-3.5" />
-          </a>
+          {isExternalDocsHref(getApiDocsHref()) ? (
+            <a href={getApiDocsHref()} target="_blank" rel="noreferrer">
+              <BookOpen className="h-4 w-4" />
+              View developer docs
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          ) : (
+            <Link to={getApiDocsHref()}>
+              <BookOpen className="h-4 w-4" />
+              View developer docs
+            </Link>
+          )}
         </Button>
 
         {!isExternalApi ? (

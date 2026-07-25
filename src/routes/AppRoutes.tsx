@@ -8,6 +8,7 @@ import { SetPasswordPage } from '@/pages/SetPasswordPage';
 import { LandingPage } from '@/pages/LandingPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { ContactPage } from '@/pages/public/ContactPage';
+import { PublicApiDocsPage } from '@/pages/public/PublicApiDocsPage';
 import { GetStartedPage } from '@/pages/GetStartedPage';
 import { GetStartedSuccessPage } from '@/pages/GetStartedSuccessPage';
 import { PublicBookingPage } from '@/pages/public/PublicBookingPage';
@@ -72,6 +73,8 @@ function ProtectedRoute({ roles }: { roles?: UserRole[] }) {
 export const appRoutes = [
   { path: '/', element: <LandingPage /> },
   { path: '/contact', element: <ContactPage /> },
+  { path: '/docs/api', element: <PublicApiDocsPage /> },
+  { path: '/developers', element: <Navigate to="/docs/api" replace /> },
   { path: '/get-started', element: <GetStartedPage /> },
   { path: '/get-started/success', element: <GetStartedSuccessPage /> },
   { path: '/website', element: <Navigate to="/#websites" replace /> },

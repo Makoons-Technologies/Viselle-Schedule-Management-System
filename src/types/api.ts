@@ -125,6 +125,10 @@ export interface Organization {
   referralCode?: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Present on GET /owner/organizations */
+  hostingMode?: WebsiteHostingMode;
+  /** Present on GET /owner/organizations — custom website build requested at signup */
+  customWebsiteRequested?: boolean;
 }
 
 export type TrialCampaignType = 'code' | 'homepage';
@@ -477,6 +481,7 @@ export interface WebsiteSettings {
   organizationId: string;
   hostingMode: WebsiteHostingMode;
   siteTemplate?: SiteTemplate | null;
+  subdomain?: string | null;
   websiteHostingEnabled: boolean;
   apiKeyPrefix?: string | null;
   allowedOrigins: string[];
@@ -500,9 +505,13 @@ export interface WebsiteSettingsResponse {
   subdomainBaseDomain: string;
   pathBookingBaseUrl: string;
   pathBookingUrl: string;
+  subdomainUrl: string;
+  defaultSubdomain: string;
+  effectiveSubdomain: string;
   subdomainHostingEnabled: boolean;
   publicApiBaseUrl: string;
   organizationSlug: string;
+  organizationName: string;
   publicBookingEnabled: boolean;
   apiAccess: {
     apiKeyConfigured: boolean;
@@ -511,9 +520,17 @@ export interface WebsiteSettingsResponse {
   };
 }
 
+export interface SubdomainAvailability {
+  subdomain: string;
+  available: boolean;
+  reason?: 'invalid' | 'reserved' | 'taken';
+  suggestion?: string;
+}
+
 export interface UpdateWebsiteInput {
   hostingMode?: WebsiteHostingMode;
   siteTemplate?: SiteTemplate | null;
+  subdomain?: string | null;
   allowedOrigins?: string[];
   bookingBranding?: BookingBranding;
 }
@@ -600,6 +617,7 @@ export interface CreateOrganizationInput {
 }
 
 export type SupportTicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
+export type SupportTicketType = 'support' | 'feature_request' | 'bug';
 
 export interface SupportTicket {
   id: string;
@@ -607,6 +625,7 @@ export interface SupportTicket {
   createdByUserId?: string | null;
   creatorEmail: string;
   creatorRole: UserRole;
+  type: SupportTicketType;
   subject: string;
   body: string;
   status: SupportTicketStatus;

@@ -46,7 +46,10 @@ export function MarketingFooter() {
     <footer className="border-t border-stone-200 bg-stone-900 py-10 text-stone-400">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 sm:flex-row sm:px-6">
         <p className="text-sm">© {new Date().getFullYear()} Viselle. Built for beauty businesses.</p>
-        <p className="text-sm">
+        <p className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm">
+          <Link to="/docs/api" className="text-brand-300 hover:text-brand-200">
+            API docs
+          </Link>
           <Link to="/contact" className="text-brand-300 hover:text-brand-200">
             Contact us
           </Link>

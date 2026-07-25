@@ -11,7 +11,11 @@ import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { TableIconButton, TableRowActions } from '@/components/common/TableIconButton';
 import { Panel } from '@/components/common/Panel';
 import { PageHeader } from '@/components/common/PageHeader';
-import { OrganizationStatusBadge, BillingStatusBadge } from '@/components/common/StatusBadge';
+import {
+  OrganizationStatusBadge,
+  BillingStatusBadge,
+  WebsiteHostingBadge,
+} from '@/components/common/StatusBadge';
 import { LoadingState } from '@/components/common/LoadingState';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -82,6 +86,7 @@ export function OrganizationsPage() {
               <TableHead>Slug</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Billing</TableHead>
+              <TableHead>Website</TableHead>
               <TableHead>Created</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -93,6 +98,12 @@ export function OrganizationsPage() {
                 <TableCell className="text-stone-500">{org.slug}</TableCell>
                 <TableCell><OrganizationStatusBadge status={org.status} /></TableCell>
                 <TableCell><BillingStatusBadge status={org.billingStatus} /></TableCell>
+                <TableCell>
+                  <WebsiteHostingBadge
+                    hostingMode={org.hostingMode}
+                    customWebsiteRequested={org.customWebsiteRequested}
+                  />
+                </TableCell>
                 <TableCell className="text-stone-500">{formatDate(org.createdAt)}</TableCell>
                 <TableCell>
                   <TableRowActions>

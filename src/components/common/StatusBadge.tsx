@@ -4,6 +4,7 @@ import type {
   OrganizationStatus,
   PaymentStatus,
   VisitStatus,
+  WebsiteHostingMode,
 } from '@/types/api';
 
 const orgVariants: Record<OrganizationStatus, 'default' | 'success' | 'warning' | 'destructive' | 'secondary'> = {
@@ -65,4 +66,37 @@ export function OrganizationStatusBadge({ status }: { status: OrganizationStatus
 
 export function BillingStatusBadge({ status }: { status: BillingStatus }) {
   return <Badge variant={billingVariants[status]}>{status.replace('_', ' ')}</Badge>;
+}
+
+const hostingVariants: Record<
+  'free' | 'subdomain' | 'custom_website' | 'external_api',
+  'default' | 'success' | 'warning' | 'secondary'
+> = {
+  free: 'secondary',
+  subdomain: 'success',
+  custom_website: 'warning',
+  external_api: 'default',
+};
+
+export function WebsiteHostingBadge({
+  hostingMode,
+  customWebsiteRequested,
+}: {
+  hostingMode?: WebsiteHostingMode | null;
+  customWebsiteRequested?: boolean;
+}) {
+  if (customWebsiteRequested) {
+    return <Badge variant={hostingVariants.custom_website}>Custom website</Badge>;
+  }
+
+  switch (hostingMode) {
+    case 'subdomain':
+      return <Badge variant={hostingVariants.subdomain}>Hosted subdomain</Badge>;
+    case 'external_api':
+      return <Badge variant={hostingVariants.external_api}>3rd party + API</Badge>;
+    case 'path':
+    case 'none':
+    default:
+      return <Badge variant={hostingVariants.free}>Free booking link</Badge>;
+  }
 }

@@ -46,6 +46,16 @@ After login as platform owner, select **Demo Spa** in the top bar to manage the 
 | Org owner | `/orgs/:orgId/dashboard` |
 | Staff | `/staff/schedule` |
 
+Public (no login):
+
+| Path | Description |
+|------|-------------|
+| `/docs/api` | Public Booking API developer docs |
+| `/developers` | Redirects to `/docs/api` |
+
+Source markdown for the docs page: `src/content/public-booking-api.md` (keep in sync with
+`Beauty-Backend-API/docs/public-booking-api.md`).
+
 ## Scripts
 
 | Command | Description |
