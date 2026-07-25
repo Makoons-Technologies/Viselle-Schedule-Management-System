@@ -25,6 +25,7 @@ import type {
   SupportTicket,
   SupportTicketMessage,
   SupportTicketStatus,
+  SupportTicketType,
   CustomWebsiteRequest,
   CustomWebsiteRequestNote,
   CustomWebsiteRequestStatus,
@@ -46,6 +47,7 @@ import type {
   SubscriptionTier,
   WebsiteSettings,
   WebsiteSettingsResponse,
+  SubdomainAvailability,
   UpdateWebsiteInput,
   UploadBookingAssetInput,
   TrialCampaign,
@@ -181,6 +183,12 @@ export const ownerApi = {
     apiClient.get<WebsiteSettingsResponse>(`/owner/organizations/${id}/website`).then((r) => r.data),
   updateWebsite: (id: string, data: UpdateWebsiteInput) =>
     apiClient.patch<WebsiteSettingsResponse>(`/owner/organizations/${id}/website`, data).then((r) => r.data),
+  checkSubdomainAvailable: (id: string, subdomain: string) =>
+    apiClient
+      .get<SubdomainAvailability>(
+        `/owner/organizations/${id}/website/subdomain/${encodeURIComponent(subdomain)}/available`,
+      )
+      .then((r) => r.data),
   uploadBookingAsset: (id: string, data: UploadBookingAssetInput) =>
     apiClient
       .post<{ url: string; websiteSettings: WebsiteSettings }>(
@@ -230,8 +238,11 @@ export const ownerApi = {
   updateTrialSettings: (data: Partial<Pick<PlatformTrialSettings, 'referralDurationDays' | 'referralPaymentMode'>>) =>
     apiClient.patch<{ settings: PlatformTrialSettings }>('/owner/trials/settings', data).then((r) => r.data),
 
-  listSupportTickets: (params?: { status?: SupportTicketStatus; organizationId?: string }) =>
-    apiClient.get<{ tickets: SupportTicket[] }>('/owner/support-tickets', { params }).then((r) => r.data),
+  listSupportTickets: (params?: {
+    status?: SupportTicketStatus;
+    organizationId?: string;
+    type?: SupportTicketType;
+  }) => apiClient.get<{ tickets: SupportTicket[] }>('/owner/support-tickets', { params }).then((r) => r.data),
   getSupportTicket: (ticketId: string) =>
     apiClient
       .get<{ ticket: SupportTicket; messages: SupportTicketMessage[] }>(`/owner/support-tickets/${ticketId}`)
@@ -268,10 +279,10 @@ export const ownerApi = {
 };
 
 export const supportApi = {
-  createTicket: (data: { subject: string; body: string }) =>
+  createTicket: (data: { subject: string; body: string; type?: SupportTicketType }) =>
     apiClient.post<{ ticket: SupportTicket }>('/support-tickets', data).then((r) => r.data),
-  listMyTickets: () =>
-    apiClient.get<{ tickets: SupportTicket[] }>('/support-tickets').then((r) => r.data),
+  listMyTickets: (params?: { type?: SupportTicketType }) =>
+    apiClient.get<{ tickets: SupportTicket[] }>('/support-tickets', { params }).then((r) => r.data),
   getMyTicket: (ticketId: string) =>
     apiClient
       .get<{ ticket: SupportTicket; messages: SupportTicketMessage[] }>(`/support-tickets/${ticketId}`)
@@ -310,6 +321,12 @@ export const orgApi = {
     apiClient.get<WebsiteSettingsResponse>(`/organizations/${orgId}/website`).then((r) => r.data),
   updateWebsite: (orgId: string, data: UpdateWebsiteInput) =>
     apiClient.patch<WebsiteSettingsResponse>(`/organizations/${orgId}/website`, data).then((r) => r.data),
+  checkSubdomainAvailable: (orgId: string, subdomain: string) =>
+    apiClient
+      .get<SubdomainAvailability>(
+        `/organizations/${orgId}/website/subdomain/${encodeURIComponent(subdomain)}/available`,
+      )
+      .then((r) => r.data),
   uploadBookingAsset: (orgId: string, data: UploadBookingAssetInput) =>
     apiClient
       .post<{ url: string; websiteSettings: WebsiteSettings }>(`/organizations/${orgId}/website/upload-asset`, data)

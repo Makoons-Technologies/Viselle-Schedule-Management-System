@@ -8,6 +8,7 @@ import { Panel } from '@/components/common/Panel';
 import { LoadingState } from '@/components/common/LoadingState';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TicketStatusBadge } from '@/components/support/TicketStatusBadge';
+import { TicketTypeBadge } from '@/components/support/TicketTypeBadge';
 import { TicketThread } from '@/components/support/TicketThread';
 import type { SupportTicketStatus } from '@/types/api';
 
@@ -57,6 +58,7 @@ export function PlatformTicketDetailPage() {
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h1 className="text-lg font-semibold text-stone-900 dark:text-stone-100">{ticket.subject}</h1>
           <div className="flex items-center gap-2">
+            <TicketTypeBadge type={ticket.type} />
             <TicketStatusBadge status={ticket.status} />
             <Select value={ticket.status} onValueChange={(v) => statusMutation.mutate(v as SupportTicketStatus)}>
               <SelectTrigger className="h-8 w-40 text-xs">

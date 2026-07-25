@@ -9,8 +9,10 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { LoadingState } from '@/components/common/LoadingState';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TicketStatusBadge } from '@/components/support/TicketStatusBadge';
-import type { SupportTicketStatus } from '@/types/api';
+import { INBOX_TYPE_TABS } from '@/components/support/ticket-types';
+import type { SupportTicketStatus, SupportTicketType } from '@/types/api';
 
 const STATUS_FILTERS: Array<{ value: SupportTicketStatus | 'all'; label: string }> = [
   { value: 'all', label: 'All statuses' },
@@ -21,18 +23,36 @@ const STATUS_FILTERS: Array<{ value: SupportTicketStatus | 'all'; label: string 
 ];
 
 export function PlatformSupportInboxPage() {
+  const [type, setType] = useState<SupportTicketType>('support');
   const [status, setStatus] = useState<SupportTicketStatus | 'all'>('open');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['support-tickets', 'inbox', status],
-    queryFn: () => ownerApi.listSupportTickets(status === 'all' ? undefined : { status }),
+    queryKey: ['support-tickets', 'inbox', type, status],
+    queryFn: () =>
+      ownerApi.listSupportTickets({
+        type,
+        ...(status === 'all' ? {} : { status }),
+      }),
   });
 
   const tickets = data?.tickets ?? [];
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <PageHeader title="Support inbox" description="Tickets submitted by org owners, staff, and platform users." />
+      <PageHeader
+        title="Inbox"
+        description="Support tickets, feature requests, and bug reports from org owners, staff, and platform users."
+      />
+
+      <Tabs value={type} onValueChange={(v) => setType(v as SupportTicketType)}>
+        <TabsList>
+          {INBOX_TYPE_TABS.map((tab) => (
+            <TabsTrigger key={tab.value} value={tab.value}>
+              {tab.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
       <div className="flex items-center gap-2">
         <Select value={status} onValueChange={(v) => setStatus(v as SupportTicketStatus | 'all')}>

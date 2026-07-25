@@ -8,9 +8,13 @@ import { Panel } from '@/components/common/Panel';
 import { EmptyState } from '@/components/common/EmptyState';
 import { LoadingState } from '@/components/common/LoadingState';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { TicketStatusBadge } from '@/components/support/TicketStatusBadge';
+import { TicketTypeBadge } from '@/components/support/TicketTypeBadge';
 import { NewTicketDialog } from '@/components/support/NewTicketDialog';
+import { SUPPORT_TICKET_TYPE_LABELS } from '@/components/support/ticket-types';
+import type { SupportTicketType } from '@/types/api';
 
 const FAQ_ITEMS = [
   {
@@ -33,6 +37,13 @@ const FAQ_ITEMS = [
   },
 ];
 
+const TYPE_FILTERS: Array<{ value: SupportTicketType | 'all'; label: string }> = [
+  { value: 'all', label: 'All types' },
+  { value: 'support', label: SUPPORT_TICKET_TYPE_LABELS.support },
+  { value: 'feature_request', label: SUPPORT_TICKET_TYPE_LABELS.feature_request },
+  { value: 'bug', label: SUPPORT_TICKET_TYPE_LABELS.bug },
+];
+
 function FaqSection() {
   return (
     <Panel className="p-4 sm:p-6">
@@ -53,10 +64,11 @@ function FaqSection() {
 
 export function MyTicketsPage() {
   const [createOpen, setCreateOpen] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<SupportTicketType | 'all'>('all');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['support-tickets', 'mine'],
-    queryFn: () => supportApi.listMyTickets(),
+    queryKey: ['support-tickets', 'mine', typeFilter],
+    queryFn: () => supportApi.listMyTickets(typeFilter === 'all' ? undefined : { type: typeFilter }),
   });
 
   const tickets = data?.tickets ?? [];
@@ -65,7 +77,7 @@ export function MyTicketsPage() {
     <div className="mx-auto max-w-3xl space-y-6">
       <PageHeader
         title="Help & support"
-        description="Get answers or submit a ticket — we'll follow up here and by email."
+        description="Get answers or submit a support ticket, feature request, or bug report."
         actions={
           <Button onClick={() => setCreateOpen(true)}>
             <Plus className="h-4 w-4" />
@@ -77,14 +89,28 @@ export function MyTicketsPage() {
       <FaqSection />
 
       <div>
-        <h2 className="mb-3 text-sm font-medium text-stone-900 dark:text-stone-100">My tickets</h2>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-medium text-stone-900 dark:text-stone-100">My tickets</h2>
+          <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as SupportTicketType | 'all')}>
+            <SelectTrigger className="w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {TYPE_FILTERS.map((filter) => (
+                <SelectItem key={filter.value} value={filter.value}>
+                  {filter.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         {isLoading ? (
           <LoadingState />
         ) : tickets.length === 0 ? (
           <EmptyState
             icon={LifeBuoy}
             title="No tickets yet"
-            description="Submit a ticket if you run into an issue or have a question."
+            description="Submit a ticket if you run into an issue, have a feature idea, or find a bug."
             action={<Button onClick={() => setCreateOpen(true)}>Submit a ticket</Button>}
           />
         ) : (
@@ -93,6 +119,7 @@ export function MyTicketsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Subject</TableHead>
+                  <TableHead>Type</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Submitted</TableHead>
                 </TableRow>
@@ -104,6 +131,9 @@ export function MyTicketsPage() {
                       <Link to={`/support/${ticket.id}`} className="block hover:underline">
                         {ticket.subject}
                       </Link>
+                    </TableCell>
+                    <TableCell>
+                      <TicketTypeBadge type={ticket.type} />
                     </TableCell>
                     <TableCell>
                       <TicketStatusBadge status={ticket.status} />

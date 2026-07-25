@@ -7,6 +7,7 @@ import { SettingsBackHeader } from '@/components/settings/SettingsBackHeader';
 import { Panel } from '@/components/common/Panel';
 import { LoadingState } from '@/components/common/LoadingState';
 import { TicketStatusBadge } from '@/components/support/TicketStatusBadge';
+import { TicketTypeBadge } from '@/components/support/TicketTypeBadge';
 import { TicketThread } from '@/components/support/TicketThread';
 
 export function TicketDetailPage() {
@@ -40,7 +41,10 @@ export function TicketDetailPage() {
       <Panel className="p-4 sm:p-6">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h1 className="text-lg font-semibold text-stone-900 dark:text-stone-100">{ticket.subject}</h1>
-          <TicketStatusBadge status={ticket.status} />
+          <div className="flex items-center gap-2">
+            <TicketTypeBadge type={ticket.type} />
+            <TicketStatusBadge status={ticket.status} />
+          </div>
         </div>
         <p className="text-xs text-stone-500 dark:text-stone-400">
           Submitted {new Date(ticket.createdAt).toLocaleString()}

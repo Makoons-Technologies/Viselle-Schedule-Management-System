@@ -1,17 +1,20 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { supportApi } from '@/lib/api';
+import { SUPPORT_TICKET_TYPES, SUPPORT_TICKET_TYPE_LABELS } from '@/components/support/ticket-types';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 
 const schema = z.object({
+  type: z.enum(['support', 'feature_request', 'bug']),
   subject: z.string().trim().min(1, 'Required').max(200),
   body: z.string().trim().min(1, 'Required').max(5000),
 });
@@ -29,16 +32,20 @@ export function NewTicketDialog({ open, onOpenChange }: NewTicketDialogProps) {
   const {
     register,
     handleSubmit,
+    control,
     reset,
     formState: { errors },
-  } = useForm<FormData>({ resolver: zodResolver(schema) });
+  } = useForm<FormData>({
+    resolver: zodResolver(schema),
+    defaultValues: { type: 'support', subject: '', body: '' },
+  });
 
   const mutation = useMutation({
     mutationFn: (data: FormData) => supportApi.createTicket(data),
     onSuccess: ({ ticket }) => {
       toast.success('Ticket submitted');
       queryClient.invalidateQueries({ queryKey: ['support-tickets', 'mine'] });
-      reset();
+      reset({ type: 'support', subject: '', body: '' });
       onOpenChange(false);
       navigate(`/support/${ticket.id}`);
     },
@@ -53,15 +60,37 @@ export function NewTicketDialog({ open, onOpenChange }: NewTicketDialogProps) {
         </DialogHeader>
         <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-4">
           <div>
+            <Label>Type</Label>
+            <Controller
+              name="type"
+              control={control}
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SUPPORT_TICKET_TYPES.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {SUPPORT_TICKET_TYPE_LABELS[type]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.type && <p className="mt-1 text-xs text-red-600">{errors.type.message}</p>}
+          </div>
+          <div>
             <Label>Subject</Label>
-            <Input placeholder="Short summary of your issue" {...register('subject')} />
+            <Input placeholder="Short summary" {...register('subject')} />
             {errors.subject && <p className="mt-1 text-xs text-red-600">{errors.subject.message}</p>}
           </div>
           <div>
             <Label>What's going on?</Label>
             <Textarea
               rows={6}
-              placeholder="Describe the issue or question in as much detail as you can. Screenshots aren't supported yet — just describe what you see."
+              placeholder="Describe the issue, idea, or bug in as much detail as you can. Screenshots aren't supported yet — just describe what you see."
               {...register('body')}
             />
             {errors.body && <p className="mt-1 text-xs text-red-600">{errors.body.message}</p>}
