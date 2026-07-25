@@ -623,3 +623,28 @@ export interface SupportTicketMessage {
   body: string;
   createdAt: string;
 }
+
+export type CustomWebsiteRequestStatus = 'open' | 'in_progress' | 'done' | 'closed';
+export type CustomWebsiteRequestSource = 'signup' | 'backfill' | 'manual';
+
+export interface CustomWebsiteRequest {
+  id: string;
+  organizationId?: string | null;
+  pendingSignupId?: string | null;
+  contactName: string;
+  contactEmail: string;
+  businessName: string;
+  status: CustomWebsiteRequestStatus;
+  source: CustomWebsiteRequestSource;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CustomWebsiteRequestNote {
+  id: string;
+  requestId: string;
+  authorUserId?: string | null;
+  authorEmail: string;
+  body: string;
+  createdAt: string;
+}

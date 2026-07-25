@@ -25,6 +25,9 @@ import type {
   SupportTicket,
   SupportTicketMessage,
   SupportTicketStatus,
+  CustomWebsiteRequest,
+  CustomWebsiteRequestNote,
+  CustomWebsiteRequestStatus,
   RecurringAppointmentRule,
   RecurringFrequency,
   Product,
@@ -240,6 +243,27 @@ export const ownerApi = {
   replySupportTicket: (ticketId: string, data: { body: string; isInternalNote?: boolean }) =>
     apiClient
       .post<{ message: SupportTicketMessage }>(`/owner/support-tickets/${ticketId}/messages`, data)
+      .then((r) => r.data),
+
+  listCustomWebsiteRequests: (params?: { status?: CustomWebsiteRequestStatus; organizationId?: string }) =>
+    apiClient
+      .get<{ requests: CustomWebsiteRequest[] }>('/owner/custom-website-requests', { params })
+      .then((r) => r.data),
+  getCustomWebsiteRequest: (requestId: string) =>
+    apiClient
+      .get<{ request: CustomWebsiteRequest; notes: CustomWebsiteRequestNote[] }>(
+        `/owner/custom-website-requests/${requestId}`,
+      )
+      .then((r) => r.data),
+  updateCustomWebsiteRequestStatus: (requestId: string, status: CustomWebsiteRequestStatus) =>
+    apiClient
+      .patch<{ request: CustomWebsiteRequest }>(`/owner/custom-website-requests/${requestId}`, { status })
+      .then((r) => r.data),
+  addCustomWebsiteRequestNote: (requestId: string, body: string) =>
+    apiClient
+      .post<{ note: CustomWebsiteRequestNote }>(`/owner/custom-website-requests/${requestId}/notes`, {
+        body,
+      })
       .then((r) => r.data),
 };
 
