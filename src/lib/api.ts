@@ -279,7 +279,7 @@ export const ownerApi = {
 };
 
 export const supportApi = {
-  createTicket: (data: { subject: string; body: string; type?: SupportTicketType }) =>
+  createTicket: (data: { subject: string; body: string; type: SupportTicketType }) =>
     apiClient.post<{ ticket: SupportTicket }>('/support-tickets', data).then((r) => r.data),
   listMyTickets: (params?: { type?: SupportTicketType }) =>
     apiClient.get<{ tickets: SupportTicket[] }>('/support-tickets', { params }).then((r) => r.data),

@@ -625,7 +625,7 @@ export interface SupportTicket {
   createdByUserId?: string | null;
   creatorEmail: string;
   creatorRole: UserRole;
-  type?: SupportTicketType;
+  type: SupportTicketType;
   subject: string;
   body: string;
   status: SupportTicketStatus;
