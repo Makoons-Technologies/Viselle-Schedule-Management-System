@@ -2,6 +2,10 @@ import { Link } from 'react-router-dom';
 import { Scissors } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PoweredByMakoons } from '@/components/common/PoweredByMakoons';
+import { cn } from '@/lib/utils';
+
+const navLinkClassName =
+  'text-sm font-medium text-stone-600 transition-colors hover:text-brand-700 dark:text-stone-300 dark:hover:text-brand-300';
 
 export function MarketingHeader() {
   return (
@@ -13,28 +17,26 @@ export function MarketingHeader() {
           </div>
           <span className="text-xl font-semibold text-brand-700 dark:text-stone-100">Viselle</span>
         </Link>
-        <nav className="flex items-center gap-3">
-          <a
-            href="/#websites"
-            className="hidden text-sm font-medium text-stone-600 hover:text-brand-700 dark:text-stone-300 dark:hover:text-brand-300 sm:inline"
-          >
-            Booking pages
-          </a>
-          <a
-            href="/#pricing"
-            className="hidden text-sm font-medium text-stone-600 hover:text-brand-700 dark:text-stone-300 dark:hover:text-brand-300 sm:inline"
-          >
-            Pricing
-          </a>
-          <Button asChild variant="ghost" size="sm">
-            <Link to="/contact">Contact</Link>
-          </Button>
-          <Button asChild size="sm">
-            <Link to="/get-started">Get started</Link>
-          </Button>
-          <Button asChild variant="outline" size="sm">
-            <Link to="/login">Sign in</Link>
-          </Button>
+        <nav className="flex items-center gap-5 sm:gap-6">
+          <div className="flex items-center gap-5 sm:gap-6">
+            <a href="/#websites" className={cn(navLinkClassName, 'hidden sm:inline')}>
+              Booking pages
+            </a>
+            <a href="/#pricing" className={cn(navLinkClassName, 'hidden sm:inline')}>
+              Pricing
+            </a>
+            <Link to="/contact" className={navLinkClassName}>
+              Contact
+            </Link>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button asChild size="sm">
+              <Link to="/get-started">Get started</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/login">Sign in</Link>
+            </Button>
+          </div>
         </nav>
       </div>
     </header>
