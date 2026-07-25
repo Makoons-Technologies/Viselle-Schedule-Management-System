@@ -24,6 +24,7 @@ import {
   getPlatformOrgNavigation,
   isPlatformOrgAdminPath,
 } from '@/components/layout/platform-navigation';
+import { SidebarTrialStatus } from '@/components/layout/SidebarTrialStatus';
 
 import { cn } from '@/lib/utils';
 
@@ -213,6 +214,8 @@ export function SidebarBrand({ subtitle }: { subtitle?: string }) {
       <span className="text-lg font-semibold text-brand-700 dark:text-brand-300">Viselle</span>
 
       {subtitle && <p className="text-xs text-stone-500 dark:text-stone-400">{subtitle}</p>}
+
+      <SidebarTrialStatus />
 
     </div>
 
