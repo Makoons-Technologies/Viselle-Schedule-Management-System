@@ -5,7 +5,7 @@ export function getSitesBaseDomain(): string {
   return SITES_BASE_DOMAIN;
 }
 
-/** Slug from a hosted booking subdomain (e.g. yourspa.sites.viselle.app → yourspa). */
+/** Slug from a hosted booking subdomain (e.g. yourspa.sites.viselle.net → yourspa). */
 export function getSubdomainBookingSlug(): string | null {
   const host = window.location.hostname.toLowerCase();
   const base = SITES_BASE_DOMAIN.toLowerCase();

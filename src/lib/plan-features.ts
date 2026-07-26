@@ -40,7 +40,7 @@ export const PLAN_FEATURES: PlanFeature[] = [
   {
     id: 'booking_page',
     name: 'Free booking page',
-    description: 'A public page at viselle.app/book/your-business so clients can book online.',
+    description: 'A public page at viselle.net/book/your-business so clients can book online.',
     tiers: ['starter', 'professional', 'business'],
   },
   {

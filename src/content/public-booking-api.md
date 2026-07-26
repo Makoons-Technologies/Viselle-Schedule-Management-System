@@ -1,6 +1,6 @@
 # Public Booking API
 
-> Readable HTML version (no login): [viselle.app/docs/api](https://viselle.app/docs/api)
+> Readable HTML version (no login): [viselle.net/docs/api](https://viselle.net/docs/api)
 > Raw markdown: `GET /api/v1/docs/public-booking-api`
 
 This is the API that powers Viselle's booking pages. If you host booking on **your own

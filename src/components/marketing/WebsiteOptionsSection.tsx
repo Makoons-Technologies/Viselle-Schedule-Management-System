@@ -11,7 +11,7 @@ const WEBSITE_OPTIONS = [
     badge: 'Included with every plan',
     title: 'Free booking link',
     description:
-      'Share a simple link like viselle.app/book/your-salon. Clients pick a service, choose a time, and book — no extra cost.',
+      'Share a simple link like viselle.net/book/your-salon. Clients pick a service, choose a time, and book — no extra cost.',
     bullets: ['Works on any plan', 'Classic, Modern, or Minimal style', 'Ready when you turn on online booking'],
     cta: { label: 'Get started', to: getStartedPath() },
     variant: 'included' as const,
@@ -21,7 +21,7 @@ const WEBSITE_OPTIONS = [
     badge: 'Optional add-on',
     title: 'Hosted subdomain',
     description:
-      'Your own address like yourspa.viselle.app — the same booking page as your included link, on a branded subdomain.',
+      'Your own address like yourspa.sites.viselle.net — the same booking page as your included link, on a branded subdomain.',
     bullets: ['Branded subdomain URL', 'Same templates & branding as your booking page', '$19/mo — add at checkout'],
     cta: { label: 'Add at signup', to: getStartedPath({ subdomain: true }) },
     variant: 'addon' as const,

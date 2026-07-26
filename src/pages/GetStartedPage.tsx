@@ -317,7 +317,7 @@ export function GetStartedPage() {
     void refreshCart();
   }, [refreshCart]);
 
-  const bookingBase = (import.meta.env.VITE_BOOKING_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? 'https://viselle.app';
+  const bookingBase = (import.meta.env.VITE_BOOKING_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? 'https://viselle.net';
 
   const accountErrors = useMemo(
     () =>
@@ -476,7 +476,7 @@ export function GetStartedPage() {
         : '$19/mo',
       description:
         subdomainAddonInfo?.description ??
-        'Your own address like yourspa.viselle.app on Viselle.',
+        'Your own address like yourspa.sites.viselle.net on Viselle.',
     },
     {
       id: 'custom_website',

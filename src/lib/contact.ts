@@ -7,7 +7,7 @@ export const CONTACT_INTEREST_LABELS: Record<ContactInterest, string> = {
 };
 
 export const CONTACT_EMAIL =
-  (import.meta.env.VITE_CONTACT_EMAIL as string | undefined) ?? 'hello@viselle.app';
+  (import.meta.env.VITE_CONTACT_EMAIL as string | undefined) ?? 'hello@viselle.net';
 
 export function contactPath(params?: {
   interest?: ContactInterest;

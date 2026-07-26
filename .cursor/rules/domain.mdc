@@ -1,0 +1,15 @@
+---
+description: Canonical Viselle domains — never invent viselle.app
+alwaysApply: true
+---
+
+# Domains (Viselle)
+
+**Production is `viselle.net`, not `viselle.app`.** Never invent or default to `viselle.app` in docs, copy, env examples, emails, or code fallbacks.
+
+| Environment | Frontend | API |
+|---|---|---|
+| Production | `viselle.net` / `www.viselle.net` | `api.viselle.net` |
+| Staging (planned) | `staging.viselle.net` | `api-staging.viselle.net` |
+
+Related: paid booking subdomains use `sites.viselle.net` (e.g. `yourspa.sites.viselle.net`). Contact: `hello@viselle.net`.
