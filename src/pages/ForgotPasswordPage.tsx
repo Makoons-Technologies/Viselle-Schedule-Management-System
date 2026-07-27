@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { authApi } from '@/lib/api';
+import { ViselleLogo } from '@/components/common/ViselleLogo';
 import { PageSeo } from '@/components/seo/PageSeo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,6 +44,9 @@ export function ForgotPasswordPage() {
       <PageSeo {...marketingSeo.forgotPassword} />
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
+          <div className="mb-3 flex justify-center">
+            <ViselleLogo size={56} />
+          </div>
           <CardTitle className="text-2xl text-brand-700">Forgot password</CardTitle>
           <CardDescription>
             Enter your email and we will send a link to set a new password.

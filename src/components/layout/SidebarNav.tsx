@@ -25,6 +25,7 @@ import {
   isPlatformOrgAdminPath,
 } from '@/components/layout/platform-navigation';
 import { SidebarTrialStatus } from '@/components/layout/SidebarTrialStatus';
+import { ViselleLogo } from '@/components/common/ViselleLogo';
 
 import { cn } from '@/lib/utils';
 
@@ -211,9 +212,15 @@ export function SidebarBrand({ subtitle }: { subtitle?: string }) {
 
     <div className="border-b border-stone-200 px-4 py-5 dark:border-stone-800">
 
-      <span className="text-lg font-semibold text-brand-700 dark:text-brand-300">Viselle</span>
+      <div className="flex items-center gap-2.5">
 
-      {subtitle && <p className="text-xs text-stone-500 dark:text-stone-400">{subtitle}</p>}
+        <ViselleLogo size={32} />
+
+        <span className="text-lg font-semibold text-brand-700 dark:text-brand-300">Viselle</span>
+
+      </div>
+
+      {subtitle && <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">{subtitle}</p>}
 
       <SidebarTrialStatus />
 

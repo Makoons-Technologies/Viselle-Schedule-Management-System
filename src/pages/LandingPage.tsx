@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Calendar, Clock, MessageSquare, Sparkles, Users } from 'lucide-react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { ViselleLogo } from '@/components/common/ViselleLogo';
 import { MarketingFooter, MarketingHeader } from '@/components/marketing/MarketingLayout';
 import { PricingSection } from '@/components/marketing/PricingSection';
 import { WebsiteOptionsSection } from '@/components/marketing/WebsiteOptionsSection';
@@ -83,7 +84,13 @@ export function LandingPage() {
 
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="inline-flex items-center gap-1.5 rounded-full bg-brand-100 px-3 py-1 text-sm font-medium text-brand-700 dark:bg-brand-900/60 dark:text-brand-200">
+          <div className="flex flex-col items-center gap-4">
+            <ViselleLogo size={88} />
+            <p className="text-3xl font-semibold tracking-tight text-brand-700 dark:text-stone-100 sm:text-4xl">
+              Viselle
+            </p>
+          </div>
+          <p className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-brand-100 px-3 py-1 text-sm font-medium text-brand-700 dark:bg-brand-900/60 dark:text-brand-200">
             <Sparkles className="h-4 w-4" />
             For salons, spas &amp; beauty studios
           </p>

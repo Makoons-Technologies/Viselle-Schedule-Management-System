@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/lib/api';
 import { LoadingState } from '@/components/common/LoadingState';
 import { PoweredByMakoons } from '@/components/common/PoweredByMakoons';
+import { ViselleLogo } from '@/components/common/ViselleLogo';
 import { PageSeo } from '@/components/seo/PageSeo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -64,6 +65,9 @@ export function LoginPage() {
       <PageSeo {...marketingSeo.login} />
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
+          <div className="mb-3 flex justify-center">
+            <ViselleLogo size={64} />
+          </div>
           <CardTitle className="text-2xl text-brand-700">Viselle</CardTitle>
           <CardDescription>Schedule Management System</CardDescription>
         </CardHeader>
