@@ -37,7 +37,7 @@ const softwareJsonLd = {
 
 export const marketingSeo = {
   home: {
-    title: 'Scheduling for salons, spas & beauty studios',
+    title: 'Viselle',
     description:
       'Viselle helps beauty and wellness businesses manage appointments, staff schedules, and client reminders — with an online booking page clients can use anytime.',
     path: '/',
