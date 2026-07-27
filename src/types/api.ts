@@ -116,6 +116,8 @@ export interface Organization {
   smsRemindersOptIn: boolean;
   emailReminderHoursBefore: number;
   smsReminderHoursBefore: number;
+  confirmationRequestsOptIn: boolean;
+  confirmationDaysBefore: number;
   city?: string | null;
   address?: string | null;
   phone?: string | null;
@@ -472,6 +474,7 @@ export interface Reminder {
   organizationId: string;
   appointmentId: string;
   type: ReminderType;
+  purpose?: 'reminder' | 'confirmation_request';
   status: ReminderStatus;
   scheduledFor: string;
   sentAt?: string | null;

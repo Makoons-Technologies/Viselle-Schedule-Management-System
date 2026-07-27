@@ -27,6 +27,8 @@ type OrgUpdatePayload = {
   smsRemindersOptIn?: boolean;
   emailReminderHoursBefore?: number;
   smsReminderHoursBefore?: number;
+  confirmationRequestsOptIn?: boolean;
+  confirmationDaysBefore?: number;
   city?: string | null;
   address?: string | null;
   phone?: string | null;
@@ -275,6 +277,55 @@ export function OrganizationSettingsSection({ orgId }: OrganizationSettingsSecti
                   }
                   if (next !== org.smsReminderHoursBefore) {
                     updateMutation.mutate({ smsReminderHoursBefore: next });
+                  }
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4 border-t border-stone-200 pt-4 dark:border-stone-800">
+          <div>
+            <p className="text-sm font-medium text-stone-900 dark:text-stone-100">
+              Confirmation requests
+            </p>
+            <p className={helperTextClass}>
+              Customers receive a link to confirm they will attend, by default 3 days before the
+              appointment. Uses the same email/SMS channels as reminders.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <Label>Send confirmation requests</Label>
+                <p className={helperTextClass}>Ask customers to confirm ahead of time</p>
+              </div>
+              <Switch
+                checked={org.confirmationRequestsOptIn ?? true}
+                disabled={updateMutation.isPending}
+                onCheckedChange={(v) => updateMutation.mutate({ confirmationRequestsOptIn: v })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="confirmation-days">Days before appointment</Label>
+              <Input
+                id="confirmation-days"
+                key={`confirmation-days-${org.confirmationDaysBefore ?? 3}-${org.updatedAt}`}
+                type="number"
+                min={1}
+                max={30}
+                defaultValue={org.confirmationDaysBefore ?? 3}
+                disabled={!(org.confirmationRequestsOptIn ?? true) || updateMutation.isPending}
+                onBlur={(e) => {
+                  const next = Number(e.target.value);
+                  if (!Number.isInteger(next) || next < 1 || next > 30) {
+                    toast.error('Confirmation days must be between 1 and 30');
+                    e.target.value = String(org.confirmationDaysBefore ?? 3);
+                    return;
+                  }
+                  if (next !== (org.confirmationDaysBefore ?? 3)) {
+                    updateMutation.mutate({ confirmationDaysBefore: next });
                   }
                 }}
               />

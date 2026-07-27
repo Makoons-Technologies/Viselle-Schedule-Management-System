@@ -41,6 +41,7 @@ export interface ManagedAppointment {
     endTime: string;
     timezone: string;
     appointmentNotes?: string | null;
+    customerConfirmedAt?: string | null;
   };
   service: {
     id: string;
@@ -53,6 +54,34 @@ export interface ManagedAppointment {
     firstName: string;
     lastName: string;
   };
+  location?: string | null;
+  mapsUrl?: string | null;
+  calendarUrl?: string | null;
+  googleCalendarUrl?: string | null;
+}
+
+export type CustomerAppointmentTab = 'previous' | 'current' | 'future';
+export type CustomerAppointmentAction = 'view' | 'receipt';
+
+export interface CustomerAppointmentListItem {
+  id: string;
+  managementToken: string;
+  startTime: string;
+  endTime: string;
+  timezone: string;
+  visitStatus: string;
+  paymentStatus: string;
+  serviceName: string;
+  action: CustomerAppointmentAction;
+  tab: CustomerAppointmentTab;
+}
+
+export interface CustomerAppointmentsResponse {
+  organization: PublicOrganization;
+  seedAppointmentId: string;
+  previous: CustomerAppointmentListItem[];
+  current: CustomerAppointmentListItem[];
+  future: CustomerAppointmentListItem[];
 }
 
 export interface BookAppointmentResponse {
@@ -104,6 +133,10 @@ export const publicBookingApi = {
     apiClient
       .get<ManagedAppointment>(`/public/appointments/${managementToken}`)
       .then((r) => r.data),
+  listCustomerAppointments: (managementToken: string) =>
+    apiClient
+      .get<CustomerAppointmentsResponse>(`/public/appointments/${managementToken}/customer-appointments`)
+      .then((r) => r.data),
   rescheduleManagedAppointment: (
     managementToken: string,
     data: { startTime: string; timezone: string },
@@ -120,6 +153,14 @@ export const publicBookingApi = {
         `/public/appointments/${managementToken}/cancel`,
         reason ? { reason } : {},
       )
+      .then((r) => r.data),
+  confirmManagedAppointment: (managementToken: string) =>
+    apiClient
+      .patch<{
+        appointment: ManagedAppointment['appointment'];
+        message: string;
+        alreadyConfirmed: boolean;
+      }>(`/public/appointments/${managementToken}/confirm`)
       .then((r) => r.data),
 };
 
