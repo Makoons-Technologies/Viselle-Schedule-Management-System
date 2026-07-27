@@ -1,0 +1,38 @@
+---
+description: After meaningful implementation, immediately commit and push to staging
+alwaysApply: true
+---
+
+# Auto-commit & push to staging
+
+After meaningful implementation work in this repo (features, fixes, config, docs you were asked to add), **immediately commit and push to `staging`**. Do not wait for the user to ask. This is the default day-to-day workflow.
+
+## Branch policy
+
+- **`staging`** is the integration target — day-to-day work lands there first (see `staging-and-releases`).
+- Prefer working **on `staging`**. If you are on a feature branch, finish by getting the commit(s) onto **`origin/staging`** (simplest path: checkout `staging`, merge or cherry-pick as needed, then push). Do not push day-to-day work straight to `main`.
+- If both this frontend repo and Beauty-Backend-API were changed for one feature, **commit and push each repo** to its own `staging` branch.
+
+## Commit hygiene
+
+1. `git status`, `git diff`, and recent `git log` before committing.
+2. Stage only relevant files; focused message that explains **why**.
+3. On Windows PowerShell, use a here-string for the message:
+
+```powershell
+git commit -m @"
+Commit message here.
+"@
+```
+
+4. Then: `git push -u origin staging` (or push the updated local `staging` tracking branch).
+
+## Safety (unchanged)
+
+- Never commit secrets (`.env`, `prod.env` with live keys, API tokens). Use `.env.example` / `.env.staging.example` only.
+- Never force-push to `main`. No hard reset / destructive git ops unless the user explicitly requests them.
+- Skip commit only when there is nothing meaningful to commit (empty/WIP-only noise), or the user explicitly said not to commit this change.
+
+## Precedence
+
+This rule **overrides** “wait for the user to ask before committing/pushing” for normal implementation work on this project. Destructive git operations and secret handling still require caution as above.
