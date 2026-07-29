@@ -10,7 +10,7 @@ import { TRIAL_LOCKED_MESSAGE } from '@/lib/trial';
 import { useOrgId } from '@/hooks/useOrgId';
 import { filterOutCancelled, useHideCancelledAppointments } from '@/hooks/useHideCancelledAppointments';
 import { useStaffPermissions } from '@/hooks/useStaffPermissions';
-import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
+import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { AppointmentDetailSheet } from '@/components/appointments/AppointmentDetailSheet';
 import { BatchCheckoutSheet, type BatchCheckoutItem } from '@/components/appointments/BatchCheckoutSheet';
 import { CreateAppointmentDialog } from '@/components/appointments/CreateAppointmentDialog';
@@ -42,7 +42,7 @@ function formatZoomLabel(dayKeys: string[]): string {
 export function CalendarPage() {
   const orgId = useOrgId();
   const { permissions } = useStaffPermissions(orgId);
-  const trialExpired = useOrgTrialExpired();
+  const trialExpired = useOrgWriteLocked();
   const queryClient = useQueryClient();
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 0 }));
   const [selectedAppointment, setSelectedAppointment] = useState<{

@@ -64,6 +64,9 @@ export function getOrgSettingsHubGroups(
     groups.push({
       items: [{ label: 'Payments', to: `${orgBase}/settings/payments`, icon: CreditCard }],
     });
+    groups.push({
+      items: [{ label: 'Account', to: `${orgBase}/settings/account`, icon: UserCircle }],
+    });
   }
 
   return groups;

@@ -59,7 +59,19 @@ export function OrganizationsPage() {
       setSelectedOrgId(organization.id);
       navigate(`/orgs/${organization.id}/dashboard`);
     },
-    onError: (err: unknown) => {
+    onError: (err: unknown, orgId: string) => {
+      if (err instanceof ApiError && err.code === 'NO_ORG_OWNER') {
+        toast.error(err.message, {
+          action: {
+            label: 'Invite owner',
+            onClick: () => {
+              setSelectedOrgId(orgId);
+              navigate(`/platform/orgs/${orgId}/settings`);
+            },
+          },
+        });
+        return;
+      }
       toast.error(err instanceof ApiError ? err.message : 'Could not log in as owner');
     },
     onSettled: () => setImpersonatingOrgId(null),
@@ -94,7 +106,15 @@ export function OrganizationsPage() {
           <TableBody>
             {(data?.organizations ?? []).map((org) => (
               <TableRow key={org.id}>
-                <TableCell className="font-medium">{org.name}</TableCell>
+                <TableCell className="font-medium">
+                  <Link
+                    to={`/platform/orgs/${org.id}`}
+                    onClick={() => setSelectedOrgId(org.id)}
+                    className="text-stone-900 hover:text-brand-700 hover:underline dark:text-stone-100 dark:hover:text-brand-300"
+                  >
+                    {org.name}
+                  </Link>
+                </TableCell>
                 <TableCell className="text-stone-500">{org.slug}</TableCell>
                 <TableCell><OrganizationStatusBadge status={org.status} /></TableCell>
                 <TableCell><BillingStatusBadge status={org.billingStatus} /></TableCell>
@@ -107,15 +127,32 @@ export function OrganizationsPage() {
                 <TableCell className="text-stone-500">{formatDate(org.createdAt)}</TableCell>
                 <TableCell>
                   <TableRowActions>
-                    <TableIconButton label="Manage organization" asChild>
-                      <Link to={`/orgs/${org.id}/dashboard`} onClick={() => setSelectedOrgId(org.id)}>
+                    <TableIconButton label="Organization admin settings" asChild>
+                      <Link
+                        to={`/platform/orgs/${org.id}/settings`}
+                        onClick={() => setSelectedOrgId(org.id)}
+                      >
                         <Settings className="h-4 w-4" />
                       </Link>
                     </TableIconButton>
                     <TableIconButton
                       icon={LogIn}
-                      label="Log in as owner"
-                      onClick={() => impersonateMutation.mutate(org.id)}
+                      label={
+                        org.hasOwner === false
+                          ? 'No owner yet — open settings to invite'
+                          : 'Log in as owner'
+                      }
+                      onClick={() => {
+                        if (org.hasOwner === false) {
+                          setSelectedOrgId(org.id);
+                          navigate(`/platform/orgs/${org.id}/settings`);
+                          toast.message('Invite an owner first', {
+                            description: 'Open Org owner on this page to send a set-password email.',
+                          });
+                          return;
+                        }
+                        impersonateMutation.mutate(org.id);
+                      }}
                       disabled={impersonatingOrgId === org.id}
                     />
                     {(org.status === 'active' || org.status === 'trial') && (

@@ -1,62 +1,110 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { ownerApi } from '@/lib/api';
-import { PRICING_TIERS } from '@/lib/pricing';
 import { slugify } from '@/lib/utils';
 import { useOrg } from '@/context/OrgContext';
+import { organizationOwnerQueryKey } from '@/components/settings/PlatformOrgOwnerSection';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { SubscriptionTier } from '@/types/api';
+import type { TrialCampaign } from '@/types/api';
+
+const NONE_CAMPAIGN = '__none__';
 
 const schema = z.object({
   name: z.string().min(1),
   slug: z.string().min(1),
-  tier: z.enum(['starter', 'professional', 'business']),
+  trialCampaignId: z.string().optional(),
   ownerEmail: z.string().email('Enter a valid owner email'),
 });
 
 type FormData = z.infer<typeof schema>;
 
+function isCampaignSelectable(campaign: TrialCampaign): boolean {
+  if (!campaign.enabled) return false;
+  if (campaign.expiresAt && new Date(campaign.expiresAt).getTime() <= Date.now()) return false;
+  if (campaign.maxRedemptions != null && campaign.redemptionCount >= campaign.maxRedemptions) {
+    return false;
+  }
+  return true;
+}
+
+function campaignOptionLabel(campaign: TrialCampaign): string {
+  const typeLabel = campaign.type === 'homepage' ? 'Homepage' : campaign.code ?? 'Code';
+  const tier = campaign.lockedTier.charAt(0).toUpperCase() + campaign.lockedTier.slice(1);
+  return `${campaign.name} — ${campaign.durationDays}d · ${tier} · ${typeLabel}`;
+}
+
 export function CreateOrganizationPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { setSelectedOrgId } = useOrg();
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { tier: 'professional', ownerEmail: '' },
+    defaultValues: { trialCampaignId: NONE_CAMPAIGN, ownerEmail: '' },
   });
 
   const name = watch('name');
-  const tier = watch('tier') as Exclude<SubscriptionTier, 'custom'>;
+  const trialCampaignId = watch('trialCampaignId') ?? NONE_CAMPAIGN;
+
+  const campaignsQuery = useQuery({
+    queryKey: ['owner', 'trial-campaigns'],
+    queryFn: () => ownerApi.listTrialCampaigns(),
+  });
+
+  const selectableCampaigns = useMemo(
+    () => (campaignsQuery.data?.campaigns ?? []).filter(isCampaignSelectable),
+    [campaignsQuery.data?.campaigns],
+  );
+
+  const selectedCampaign = selectableCampaigns.find((c) => c.id === trialCampaignId);
 
   const mutation = useMutation({
     mutationFn: (data: FormData) =>
       ownerApi.createOrganization({
         name: data.name,
         slug: data.slug,
-        tier: data.tier,
         ownerEmail: data.ownerEmail.trim(),
+        trialCampaignId:
+          data.trialCampaignId && data.trialCampaignId !== NONE_CAMPAIGN
+            ? data.trialCampaignId
+            : null,
       }),
     onSuccess: (result) => {
-      toast.success('Organization created — set-password email sent to the owner');
+      if (result.emailSent === false) {
+        toast.warning(
+          'Organization created and owner saved, but the set-password email failed to send',
+        );
+      } else {
+        toast.success('Organization created — set-password email sent to the owner');
+      }
+      if (result.owner) {
+        queryClient.setQueryData(organizationOwnerQueryKey(result.organization.id), {
+          organization: result.organization,
+          owner: result.owner,
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ['owner', 'organizations'] });
       setSelectedOrgId(result.organization.id);
-      navigate(`/orgs/${result.organization.id}/dashboard`);
+      navigate(`/platform/orgs/${result.organization.id}/settings`);
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const selectedTier = PRICING_TIERS.find((t) => t.id === tier);
-
   return (
     <div>
-      <PageHeader title="Create Organization" description="Add a new tenant with a pricing tier" />
+      <PageHeader
+        title="Create Organization"
+        description="Add a new tenant and optionally attach a trial campaign"
+      />
       <Card className="max-w-lg">
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-4">
@@ -75,20 +123,41 @@ export function CreateOrganizationPage() {
               <Input {...register('slug')} />
             </div>
             <div>
-              <Label>Plan tier</Label>
-              <Select value={tier} onValueChange={(v) => setValue('tier', v as FormData['tier'])}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Label>Trial campaign</Label>
+              <Select
+                value={trialCampaignId}
+                onValueChange={(v) => setValue('trialCampaignId', v)}
+                disabled={campaignsQuery.isLoading}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={campaignsQuery.isLoading ? 'Loading campaigns…' : 'No trial'} />
+                </SelectTrigger>
                 <SelectContent>
-                  {PRICING_TIERS.map((option) => (
-                    <SelectItem key={option.id} value={option.id}>
-                      {option.name} — ${option.priceMonthly}/mo
+                  <SelectItem value={NONE_CAMPAIGN}>No trial — owner chooses plan on login</SelectItem>
+                  {selectableCampaigns.map((campaign) => (
+                    <SelectItem key={campaign.id} value={campaign.id}>
+                      {campaignOptionLabel(campaign)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {selectedTier && (
+              {campaignsQuery.isError && (
+                <p className="mt-2 text-xs text-red-600">Could not load trial campaigns.</p>
+              )}
+              {!campaignsQuery.isLoading && selectableCampaigns.length === 0 && (
                 <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">
-                  {selectedTier.tagline}. {selectedTier.staffLimit}.
+                  No redeemable campaigns right now. Create one under Trials &amp; Campaigns, or leave as no trial.
+                </p>
+              )}
+              {selectedCampaign && (
+                <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">
+                  Starts a {selectedCampaign.durationDays}-day trial locked to{' '}
+                  {selectedCampaign.lockedTier}. Feature access matches an active trial until it ends.
+                </p>
+              )}
+              {trialCampaignId === NONE_CAMPAIGN && (
+                <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">
+                  Org is created without a trial. The owner will need to subscribe before using the product.
                 </p>
               )}
             </div>

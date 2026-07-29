@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Link, Outlet, useParams } from 'react-router-dom';
-import { ExternalLink } from 'lucide-react';
+import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useOrg } from '@/context/OrgContext';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,13 @@ export function PlatformOrgLayout() {
 
   return (
     <div>
+      <Link
+        to="/platform/organizations"
+        className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-stone-500 transition-colors hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200"
+      >
+        <ArrowLeft className="h-4 w-4 shrink-0" />
+        Back to Organizations
+      </Link>
       {org && (
         <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-start sm:justify-between">
           <div>

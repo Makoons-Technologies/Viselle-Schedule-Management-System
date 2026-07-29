@@ -36,12 +36,14 @@ import { SettingsDetailLayout } from '@/pages/org/settings/SettingsDetailLayout'
 import { GeneralSettingsPage } from '@/pages/org/settings/GeneralSettingsPage';
 import { PlanSettingsPage } from '@/pages/org/settings/PlanSettingsPage';
 import { OrgSettingsPage } from '@/pages/org/settings/OrgSettingsPage';
+import { AccountSettingsPage } from '@/pages/org/settings/AccountSettingsPage';
 import { PaymentsSettingsPage } from '@/pages/org/settings/PaymentsSettingsPage';
 import { StaffPermissionsSettingsPage } from '@/pages/org/settings/StaffPermissionsSettingsPage';
 import { RecurringPage } from '@/pages/org/RecurringPage';
 import { StaffAdminPermissionsPage } from '@/pages/staff/StaffAdminPermissionsPage';
 import { StaffAvailabilityPage } from '@/pages/staff/StaffAvailabilityPage';
 import { TrialSettingsGuard } from '@/routes/TrialSettingsGuard';
+import { PlanRequiredGuard } from '@/routes/PlanRequiredGuard';
 import { MyTicketsPage } from '@/pages/support/MyTicketsPage';
 import { TicketDetailPage } from '@/pages/support/TicketDetailPage';
 import { PlatformSupportInboxPage } from '@/pages/platform/PlatformSupportInboxPage';
@@ -122,38 +124,52 @@ export const appRoutes = [
                 path: '/orgs/:orgId',
                 element: <OrgLayout />,
                 children: [
-                  { path: 'dashboard', element: <OrgDashboard /> },
-                  { path: 'calendar', element: <CalendarPage /> },
-                  { path: 'appointments', element: <AppointmentsPage /> },
-                  { path: 'customers', element: <CustomersPage /> },
+                  { path: 'settings/account', element: <AccountSettingsPage /> },
                   {
                     element: <ProtectedRoute roles={['platform_owner', 'org_owner']} />,
                     children: [
-                      { path: 'reminders', element: <Navigate to="dashboard" replace /> },
-                      { path: 'recurring', element: <RecurringPage /> },
                       {
-                        element: <TrialSettingsGuard />,
+                        element: <SettingsDetailLayout />,
+                        children: [{ path: 'settings/plan', element: <PlanSettingsPage /> }],
+                      },
+                      { path: 'billing', element: <Navigate to="../settings/plan" replace /> },
+                    ],
+                  },
+                  {
+                    element: <PlanRequiredGuard />,
+                    children: [
+                      { path: 'dashboard', element: <OrgDashboard /> },
+                      { path: 'calendar', element: <CalendarPage /> },
+                      { path: 'appointments', element: <AppointmentsPage /> },
+                      { path: 'customers', element: <CustomersPage /> },
+                      {
+                        element: <ProtectedRoute roles={['platform_owner', 'org_owner']} />,
                         children: [
-                          { path: 'website', element: <BookingWebsitePage /> },
-                          { path: 'staff', element: <StaffPage /> },
-                          { path: 'availability', element: <AvailabilityPage /> },
-                          { path: 'services', element: <Navigate to="settings/services" replace /> },
-                          { path: 'billing', element: <Navigate to="settings/plan" replace /> },
-                          { path: 'owner-settings', element: <Navigate to="settings/org" replace /> },
+                          { path: 'reminders', element: <Navigate to="dashboard" replace /> },
+                          { path: 'recurring', element: <RecurringPage /> },
                           {
-                            path: 'settings',
+                            element: <TrialSettingsGuard />,
                             children: [
-                              { index: true, element: <SettingsHubPage /> },
+                              { path: 'website', element: <BookingWebsitePage /> },
+                              { path: 'staff', element: <StaffPage /> },
+                              { path: 'availability', element: <AvailabilityPage /> },
+                              { path: 'services', element: <Navigate to="settings/services" replace /> },
+                              { path: 'owner-settings', element: <Navigate to="settings/org" replace /> },
                               {
-                                element: <SettingsDetailLayout />,
+                                path: 'settings',
                                 children: [
-                                  { path: 'general', element: <GeneralSettingsPage /> },
-                                  { path: 'plan', element: <PlanSettingsPage /> },
-                                  { path: 'org', element: <OrgSettingsPage /> },
-                                  { path: 'services', element: <ServicesPage /> },
-                                  { path: 'products', element: <ProductsPage /> },
-                                  { path: 'payments', element: <PaymentsSettingsPage /> },
-                                  { path: 'staff-permissions', element: <StaffPermissionsSettingsPage /> },
+                                  { index: true, element: <SettingsHubPage /> },
+                                  {
+                                    element: <SettingsDetailLayout />,
+                                    children: [
+                                      { path: 'general', element: <GeneralSettingsPage /> },
+                                      { path: 'org', element: <OrgSettingsPage /> },
+                                      { path: 'services', element: <ServicesPage /> },
+                                      { path: 'products', element: <ProductsPage /> },
+                                      { path: 'payments', element: <PaymentsSettingsPage /> },
+                                      { path: 'staff-permissions', element: <StaffPermissionsSettingsPage /> },
+                                    ],
+                                  },
                                 ],
                               },
                             ],

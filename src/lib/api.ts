@@ -10,12 +10,15 @@ import type {
   CreateAccountInput,
   CreateAppointmentInput,
   CreateOrganizationInput,
+  InviteOrgOwnerInput,
   CreateServiceInput,
   Customer,
   ImpersonateOwnerResponse,
   CustomerServiceNote,
+  LeaveOrDeleteOrgResponse,
   LoginResponse,
   Organization,
+  OrganizationOwnerSummary,
   OrgPlanFeatures,
   OrganizationSettings,
   MrrGranularity,
@@ -55,6 +58,7 @@ import type {
   PlatformTrialSettings,
   TrialCampaignType,
   TrialPaymentMode,
+  TrialLockedTier,
   ReferralStat,
 } from '@/types/api';
 
@@ -145,6 +149,10 @@ export const authApi = {
     apiClient.post<{ message: string }>('/auth/forgot-password', { email }).then((r) => r.data),
   switchOrganization: (organizationId: string) =>
     apiClient.post<LoginResponse>('/auth/switch-organization', { organizationId }).then((r) => r.data),
+  leaveOrganization: (organizationId: string) =>
+    apiClient
+      .post<LeaveOrDeleteOrgResponse>('/auth/leave-organization', { organizationId })
+      .then((r) => r.data),
 };
 
 export const ownerApi = {
@@ -155,18 +163,33 @@ export const ownerApi = {
   listOrganizations: () =>
     apiClient.get<{ organizations: Organization[] }>('/owner/organizations').then((r) => r.data),
   createOrganization: (data: CreateOrganizationInput) =>
-    apiClient.post<{ organization: Organization; settings: OrganizationSettings }>(
-      '/owner/organizations',
-      data,
-    ).then((r) => r.data),
+    apiClient
+      .post<{
+        organization: Organization;
+        settings: OrganizationSettings;
+        owner?: OrganizationOwnerSummary | null;
+        emailSent?: boolean;
+      }>('/owner/organizations', data)
+      .then((r) => r.data),
   getOrganization: (id: string) =>
-    apiClient.get<{ organization: Organization }>(`/owner/organizations/${id}`).then((r) => r.data),
+    apiClient
+      .get<{ organization: Organization; owner: OrganizationOwnerSummary | null }>(
+        `/owner/organizations/${id}`,
+      )
+      .then((r) => r.data),
   updateOrganization: (id: string, data: Partial<Organization>) =>
     apiClient.patch<{ organization: Organization }>(`/owner/organizations/${id}`, data).then((r) => r.data),
   deactivateOrganization: (id: string) =>
     apiClient.patch<{ organization: Organization }>(`/owner/organizations/${id}/deactivate`).then((r) => r.data),
   impersonateOwner: (id: string) =>
     apiClient.post<ImpersonateOwnerResponse>(`/owner/organizations/${id}/impersonate`).then((r) => r.data),
+  inviteOrgOwner: (id: string, data: InviteOrgOwnerInput) =>
+    apiClient
+      .post<{ owner: OrganizationOwnerSummary; emailSent?: boolean }>(
+        `/owner/organizations/${id}/invite-owner`,
+        data,
+      )
+      .then((r) => r.data),
   getSettings: (id: string) =>
     apiClient.get<{ settings: OrganizationSettings }>(`/owner/organizations/${id}/settings`).then((r) => r.data),
   updateSettings: (id: string, data: Partial<OrganizationSettings>) =>
@@ -211,6 +234,7 @@ export const ownerApi = {
     // Omit for the default (1); null = unlimited max uses (code campaigns only).
     maxRedemptions?: number | null;
     paymentMode: TrialPaymentMode;
+    lockedTier?: TrialLockedTier;
     enabled?: boolean;
     // Omit/undefined = no expiration; null explicitly clears an expiration on update.
     expiresAt?: string | null;
@@ -227,6 +251,7 @@ export const ownerApi = {
       durationDays: number;
       maxRedemptions: number | null;
       paymentMode: TrialPaymentMode;
+      lockedTier: TrialLockedTier;
       enabled: boolean;
       expiresAt: string | null;
     }>,
@@ -235,8 +260,9 @@ export const ownerApi = {
     apiClient.get<{ referrals: ReferralStat[] }>('/owner/trials/referrals').then((r) => r.data),
   getTrialSettings: () =>
     apiClient.get<{ settings: PlatformTrialSettings }>('/owner/trials/settings').then((r) => r.data),
-  updateTrialSettings: (data: Partial<Pick<PlatformTrialSettings, 'referralDurationDays' | 'referralPaymentMode'>>) =>
-    apiClient.patch<{ settings: PlatformTrialSettings }>('/owner/trials/settings', data).then((r) => r.data),
+  updateTrialSettings: (
+    data: Partial<Pick<PlatformTrialSettings, 'referralDurationDays' | 'referralPaymentMode' | 'referralLockedTier'>>,
+  ) => apiClient.patch<{ settings: PlatformTrialSettings }>('/owner/trials/settings', data).then((r) => r.data),
 
   listSupportTickets: (params?: {
     status?: SupportTicketStatus;
@@ -327,8 +353,10 @@ export const orgApi = {
     apiClient
       .patch<{ staffPermissions: StaffPermissions }>(`/organizations/${orgId}/staff-permissions`, data)
       .then((r) => r.data),
-  updateOrganization: (orgId: string, data: Pick<Partial<Organization>, 'name' | 'slug' | 'publicBookingEnabled' | 'batchCheckoutEnabled' | 'emailRemindersOptIn' | 'smsRemindersOptIn' | 'emailReminderHoursBefore' | 'smsReminderHoursBefore' | 'city' | 'address' | 'phone'>) =>
+  updateOrganization: (orgId: string, data: Pick<Partial<Organization>, 'name' | 'slug' | 'publicBookingEnabled' | 'batchCheckoutEnabled' | 'emailRemindersOptIn' | 'smsRemindersOptIn' | 'emailReminderHoursBefore' | 'smsReminderHoursBefore' | 'confirmationRequestsOptIn' | 'confirmationDaysBefore' | 'city' | 'address' | 'phone'>) =>
     apiClient.patch<{ organization: Organization }>(`/organizations/${orgId}`, data).then((r) => r.data),
+  deleteOrganization: (orgId: string) =>
+    apiClient.delete<LeaveOrDeleteOrgResponse>(`/organizations/${orgId}`).then((r) => r.data),
   getWebsite: (orgId: string) =>
     apiClient.get<WebsiteSettingsResponse>(`/organizations/${orgId}/website`).then((r) => r.data),
   updateWebsite: (orgId: string, data: UpdateWebsiteInput) =>

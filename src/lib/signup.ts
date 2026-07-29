@@ -123,6 +123,7 @@ export async function previewSignupCart(input: {
   tier: SignupTierId;
   subdomainAddon: boolean;
   customWebsiteAddon: boolean;
+  trialPaymentMode?: 'stripe_trial' | 'free_no_card' | null;
 }) {
   const { data } = await signupClient.post<{ cart: SignupCart }>('/signup/cart/preview', input);
   return data.cart;

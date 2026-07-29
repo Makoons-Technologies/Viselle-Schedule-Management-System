@@ -5,6 +5,7 @@ import { useOrgId } from '@/hooks/useOrgId';
 import { PageHeader } from '@/components/common/PageHeader';
 import { LoadingState } from '@/components/common/LoadingState';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DashboardTrialStatus } from '@/components/dashboard/DashboardTrialStatus';
 import { RevenueChart } from '@/components/dashboard/RevenueChart';
 
 export function OrgDashboard() {
@@ -50,6 +51,7 @@ export function OrgDashboard() {
   return (
     <div>
       <PageHeader title="Dashboard" description="Organization overview and key metrics" />
+      <DashboardTrialStatus />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (
           <Card key={s.label}>

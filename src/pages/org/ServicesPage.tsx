@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { orgApi } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
 import { useOrgId } from '@/hooks/useOrgId';
-import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
+import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import type { Service } from '@/types/api';
 import { CreateServiceDialog } from '@/components/services/CreateServiceDialog';
 import { Panel } from '@/components/common/Panel';
@@ -18,7 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 export function ServicesPage() {
   const orgId = useOrgId();
-  const trialExpired = useOrgTrialExpired();
+  const trialExpired = useOrgWriteLocked();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
 

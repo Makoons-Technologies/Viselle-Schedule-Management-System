@@ -6,7 +6,7 @@ import { orgApi } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgPlan } from '@/hooks/useOrgPlan';
-import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
+import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import type { Account } from '@/types/api';
 import { CreateStaffDialog } from '@/components/staff/CreateStaffDialog';
 import { StaffAvailabilityDialog } from '@/components/staff/StaffAvailabilityDialog';
@@ -26,7 +26,7 @@ export function StaffPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { plan } = useOrgPlan(orgId);
-  const trialExpired = useOrgTrialExpired();
+  const trialExpired = useOrgWriteLocked();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [removeTarget, setRemoveTarget] = useState<Account | null>(null);

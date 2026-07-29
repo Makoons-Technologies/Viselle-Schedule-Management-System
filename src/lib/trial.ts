@@ -24,6 +24,20 @@ export function isOrgInActiveTrial(org: TrialOrgFields | null | undefined): bool
   return true;
 }
 
+/**
+ * True when the org must subscribe via Stripe Checkout before using the app:
+ * not in an active trial, and no platform SaaS Stripe subscription linked.
+ * Mirrors backend `orgMustChoosePlan` / Plan settings `hasStripeSubscription`.
+ */
+export function orgMustChoosePlan(
+  org: TrialOrgFields | null | undefined,
+  hasStripeSubscription: boolean | null | undefined,
+): boolean {
+  if (!org) return false;
+  if (hasStripeSubscription) return false;
+  return !isOrgInActiveTrial(org);
+}
+
 export interface TrialRemainingParts {
   days: number;
   hours: number;
@@ -48,11 +62,14 @@ export function formatTrialCountdown(parts: TrialRemainingParts): string {
   return `${parts.days}d ${parts.hours}h ${parts.minutes}m ${parts.seconds}s`;
 }
 
-/** Tooltip/title text shown on controls locked by an expired trial. */
-export const TRIAL_LOCKED_MESSAGE = 'Trial expired — upgrade to make changes';
+/** Tooltip/title text shown on controls locked by expired trial or missing plan. */
+export const TRIAL_LOCKED_MESSAGE = 'Subscribe or upgrade to make changes';
 
 /** Toast shown when navigation into a Settings-area route is blocked by an expired trial. */
 export const TRIAL_SETTINGS_LOCKED_MESSAGE = 'Trial expired — upgrade to access Settings';
+
+/** Toast / copy when the org must pick a paid plan before using the app. */
+export const PLAN_REQUIRED_MESSAGE = 'Choose a plan to continue using Viselle';
 
 /**
  * Spread onto a `<Button>` (or other control) to lock it down when the

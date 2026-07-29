@@ -3,17 +3,17 @@ import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useOrg } from '@/context/OrgContext';
 import { useOrgId } from '@/hooks/useOrgId';
+import { useOrgPlan } from '@/hooks/useOrgPlan';
 import { orgApi } from '@/lib/api';
-import { isOrgInActiveTrial, isOrgTrialExpired } from '@/lib/trial';
+import { isOrgTrialExpired, orgMustChoosePlan } from '@/lib/trial';
 import { getPlatformContextFromPath, PLATFORM_CONTEXT } from '@/components/layout/platform-navigation';
-import { TrialActiveBanner } from '@/components/common/TrialActiveBanner';
 import { TrialExpiredBanner } from '@/components/common/TrialExpiredBanner';
+import { PlanRequiredBanner } from '@/components/common/PlanRequiredBanner';
 
 /**
- * Persistent trial banner for the current org context — active (amber countdown)
- * or expired (red lock notice). Shown for org_owner/staff on their org pages and
- * for platform_owner when viewing that org. Shares the organization query key
- * with Topbar so no extra network requests are made.
+ * Persistent org billing/trial banners for the current org context.
+ * Shares the organization query key with Topbar so no extra network requests
+ * are made. Active-trial countdown lives in SidebarTrialStatus under the brand.
  */
 export function OrgTrialBanner() {
   const { user } = useAuth();
@@ -30,6 +30,8 @@ export function OrgTrialBanner() {
     enabled: !!orgIdForQuery && !isPlatformOwner,
   });
 
+  const { plan } = useOrgPlan(orgIdForQuery ?? undefined);
+
   const contextValue = isPlatformOwner ? getPlatformContextFromPath(location.pathname) : null;
   const selectedOrgFromContext =
     contextValue && contextValue !== PLATFORM_CONTEXT
@@ -44,8 +46,14 @@ export function OrgTrialBanner() {
     return <TrialExpiredBanner organization={organization} isPlatformOwner={isPlatformOwner} />;
   }
 
-  if (isOrgInActiveTrial(organization) && organization.trialEndsAt) {
-    return <TrialActiveBanner organization={organization} isPlatformOwner={isPlatformOwner} />;
+  if (orgMustChoosePlan(organization, plan?.hasStripeSubscription)) {
+    return (
+      <PlanRequiredBanner
+        organization={organization}
+        isStaff={user?.role === 'staff'}
+        isPlatformOwner={isPlatformOwner}
+      />
+    );
   }
 
   return null;

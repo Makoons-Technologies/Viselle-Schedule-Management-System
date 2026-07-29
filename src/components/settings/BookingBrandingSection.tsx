@@ -15,7 +15,7 @@ import {
   resolveUiOpacity,
 } from '@/lib/booking-branding';
 import { useAuth } from '@/context/AuthContext';
-import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
+import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { BookingPagePreview } from '@/components/booking/BookingPagePreview';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,7 +37,7 @@ interface BookingBrandingSectionProps {
 
 export function BookingBrandingSection({ orgId, website, siteTemplate }: BookingBrandingSectionProps) {
   const { user } = useAuth();
-  const trialExpired = useOrgTrialExpired();
+  const trialExpired = useOrgWriteLocked();
   const queryClient = useQueryClient();
   const isPlatformOwner = user?.role === 'platform_owner';
   const api = isPlatformOwner ? ownerApi : orgApi;

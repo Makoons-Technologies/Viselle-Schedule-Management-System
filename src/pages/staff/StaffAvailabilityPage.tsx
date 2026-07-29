@@ -7,7 +7,7 @@ import { AvailabilityWeekCalendar } from '@/components/availability/Availability
 import { PageHeader } from '@/components/common/PageHeader';
 import { LoadingState } from '@/components/common/LoadingState';
 import { useStaffPermissions } from '@/hooks/useStaffPermissions';
-import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
+import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 
 export function StaffAvailabilityPage() {
   const { user } = useAuth();
@@ -15,7 +15,7 @@ export function StaffAvailabilityPage() {
   const orgId = user?.organizationId ?? '';
   const accountId = user?.accountId ?? '';
   const { permissions } = useStaffPermissions(orgId);
-  const trialExpired = useOrgTrialExpired();
+  const trialExpired = useOrgWriteLocked();
   const canEdit = permissions.canManageOwnSchedule;
   const [removingRuleId, setRemovingRuleId] = useState<string | null>(null);
 

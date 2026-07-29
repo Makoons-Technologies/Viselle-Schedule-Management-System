@@ -3,37 +3,32 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
-import { TRIAL_SETTINGS_LOCKED_MESSAGE } from '@/lib/trial';
+import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
+import { PLAN_REQUIRED_MESSAGE, TRIAL_SETTINGS_LOCKED_MESSAGE } from '@/lib/trial';
 
 /**
- * Blocks navigation into any org Settings-area route (the Settings hub and
- * its detail pages, plus Staff / Availability / Booking website, which the
- * Settings hub links out to, and the staff self-service permissions page)
- * once the org's trial has expired. Redirects to the org dashboard with a
- * toast instead of rendering the page.
+ * Blocks navigation into org Settings-area routes (hub + detail pages, Staff /
+ * Availability / Booking website, staff permissions) when the org is write-locked
+ * (expired trial, or unpaid / no Stripe plan for org_owner/staff).
  *
- * Works for routes both under /orgs/:orgId/... and outside it (e.g.
- * /staff/settings/staff-permissions) since useOrgId()/useOrgTrialExpired()
- * fall back to the signed-in user's own organization when there's no
- * :orgId route param.
- *
- * When a platform owner views an expired org via /orgs/:orgId/..., this guard
- * also blocks salon Settings — they should use dedicated platform admin routes
- * (/platform/orgs/:id/...) to manage that org instead.
+ * Plan settings (`settings/plan`) and Account are routed outside this guard so
+ * upgrade / subscribe stays reachable. Platform owners are not plan-gated by
+ * useOrgWriteLocked.
  */
 export function TrialSettingsGuard() {
+  const writeLocked = useOrgWriteLocked();
   const trialExpired = useOrgTrialExpired();
   const orgId = useOrgId();
   const warned = useRef(false);
 
   useEffect(() => {
-    if (trialExpired && !warned.current) {
+    if (writeLocked && !warned.current) {
       warned.current = true;
-      toast.error(TRIAL_SETTINGS_LOCKED_MESSAGE);
+      toast.error(trialExpired ? TRIAL_SETTINGS_LOCKED_MESSAGE : PLAN_REQUIRED_MESSAGE);
     }
-  }, [trialExpired]);
+  }, [writeLocked, trialExpired]);
 
-  if (trialExpired) {
+  if (writeLocked) {
     if (!orgId) return null;
     return <Navigate to={`/orgs/${orgId}/dashboard`} replace />;
   }

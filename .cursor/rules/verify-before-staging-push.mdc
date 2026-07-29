@@ -1,0 +1,29 @@
+---
+description: Run verification before staging push; fix failures before pushing
+alwaysApply: true
+---
+
+# Verify before staging push
+
+Complements `auto-commit-staging`. **Do not push broken work to `staging`** hoping CI will catch it.
+
+## Workflow
+
+1. After meaningful work, run **relevant verification** before commit/push.
+2. If anything fails → **investigate, fix, and re-run checks**. Repeat until they pass.
+3. Only then commit and push to `staging` (per `auto-commit-staging`).
+4. If checks cannot pass after reasonable effort, **stop and report the blocker** to the user — do not push.
+
+## Typical verify commands (this repo)
+
+Pick what matches the change; not every task needs every command:
+
+- `npm run build` — default after UI/API client/type changes (`tsc` + Vite)
+- `npm run lint` — when lint-related rules or broad refactors touched many files
+
+Report results from **actual command output**, not assumptions (see `shell-autonomy`).
+
+## Safety (unchanged)
+
+- Never commit secrets (`.env`, `prod.env`, live API tokens).
+- Never force-push to `main`. No destructive git ops unless the user explicitly requests them.

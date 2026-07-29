@@ -16,7 +16,7 @@ import { getPlatformContextFromPath, PLATFORM_CONTEXT } from '@/components/layou
 /**
  * Compact trial label under the Viselle brand in the sidebar.
  * Live countdown while the org is on an active trial; "Trial expired" when soft-locked.
- * Shares the organization query key with OrgTrialBanner / Topbar.
+ * Shares the organization query key with OrgTrialBanner (expired) / Topbar.
  */
 export function SidebarTrialStatus() {
   const { user } = useAuth();

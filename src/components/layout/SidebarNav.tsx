@@ -1,12 +1,13 @@
 import {
-
+  ArrowLeft,
   Clock,
-
   LayoutDashboard,
   Shield,
+  Sparkles,
+  UserCircle,
 } from 'lucide-react';
 
-import { NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 
 import { useAuth } from '@/context/AuthContext';
 
@@ -16,7 +17,8 @@ import { useOrgPlan } from '@/hooks/useOrgPlan';
 
 import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgAdminAccess } from '@/hooks/useOrgAdminAccess';
-import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
+import { useOrgMustChoosePlan } from '@/hooks/useOrgMustChoosePlan';
+import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 
 import { getOrgNavigation } from '@/components/layout/org-navigation';
 import {
@@ -25,19 +27,17 @@ import {
   isPlatformOrgAdminPath,
 } from '@/components/layout/platform-navigation';
 import { SidebarTrialStatus } from '@/components/layout/SidebarTrialStatus';
+import { ViselleLogo } from '@/components/common/ViselleLogo';
 
 import { cn } from '@/lib/utils';
 
 
 
 interface NavItem {
-
   label: string;
-
   to: string;
-
   icon: typeof LayoutDashboard;
-
+  end?: boolean;
 }
 
 
@@ -105,19 +105,18 @@ function NavSection({
       )}
 
       <nav className="space-y-0.5">
-
         {items.map((item) => (
-
-          <NavLink key={item.to} to={item.to} onClick={onNavigate} className={navLinkClass(mobile)}>
-
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.end}
+            onClick={onNavigate}
+            className={navLinkClass(mobile)}
+          >
             <item.icon className="h-5 w-5 shrink-0" />
-
             {item.label}
-
           </NavLink>
-
         ))}
-
       </nav>
 
     </div>
@@ -169,15 +168,16 @@ function NavSectionWithGroups({
         <div className="space-y-0.5">
 
           {mainItems.map((item) => (
-
-            <NavLink key={item.to} to={item.to} onClick={onNavigate} className={navLinkClass(mobile)}>
-
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              onClick={onNavigate}
+              className={navLinkClass(mobile)}
+            >
               <item.icon className="h-5 w-5 shrink-0" />
-
               {item.label}
-
             </NavLink>
-
           ))}
 
         </div>
@@ -186,7 +186,13 @@ function NavSectionWithGroups({
           <div className="mt-4 border-t border-stone-200 pt-4 dark:border-stone-800">
             <div className="space-y-0.5">
               {settingsItems.map((item) => (
-                <NavLink key={item.to} to={item.to} onClick={onNavigate} className={navLinkClass(mobile)}>
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  onClick={onNavigate}
+                  className={navLinkClass(mobile)}
+                >
                   <item.icon className="h-5 w-5 shrink-0" />
                   {item.label}
                 </NavLink>
@@ -211,9 +217,15 @@ export function SidebarBrand({ subtitle }: { subtitle?: string }) {
 
     <div className="border-b border-stone-200 px-4 py-5 dark:border-stone-800">
 
-      <span className="text-lg font-semibold text-brand-700 dark:text-brand-300">Viselle</span>
+      <div className="flex items-center gap-2.5">
 
-      {subtitle && <p className="text-xs text-stone-500 dark:text-stone-400">{subtitle}</p>}
+        <ViselleLogo size={32} />
+
+        <span className="text-lg font-semibold text-brand-700 dark:text-brand-300">Viselle</span>
+
+      </div>
+
+      {subtitle && <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">{subtitle}</p>}
 
       <SidebarTrialStatus />
 
@@ -241,11 +253,10 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
 
   const showRecurring = plan ? plan.recurringAppointmentsEnabled : true;
   const canManageStaff = useOrgAdminAccess(effectiveOrgId ?? undefined);
-  const trialExpired = useOrgTrialExpired();
+  const writeLocked = useOrgWriteLocked();
+  const mustChoosePlan = useOrgMustChoosePlan();
 
   if (!user) return null;
-
-
 
   if (user.role === 'staff') {
     const orgId = user.organizationId;
@@ -262,13 +273,19 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
       { label: 'My Availability', to: '/staff/availability', icon: Clock },
     ];
 
-    if (canManageStaff && !trialExpired) {
+    if (canManageStaff && !writeLocked) {
       staffItems.push({
         label: 'Staff permissions',
         to: '/staff/settings/staff-permissions',
         icon: Shield,
       });
     }
+
+    staffItems.push({
+      label: 'Account',
+      to: `${orgBase}/settings/account`,
+      icon: UserCircle,
+    });
 
     return (
       <NavSectionWithGroups
@@ -299,19 +316,32 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
           mobile={mobile}
           title={`${selectedOrg?.name ?? 'Salon'} · Operations`}
           mainItems={orgNav.main}
-          settingsItems={trialExpired ? [] : orgNav.settings}
+          settingsItems={writeLocked ? [] : orgNav.settings}
         />
       );
     }
 
     if (platformOrgId && selectedOrg) {
       return (
-        <NavSection
-          onNavigate={onNavigate}
-          mobile={mobile}
-          title={selectedOrg.name}
-          items={getPlatformOrgNavigation(platformOrgId)}
-        />
+        <div>
+          <Link
+            to="/platform/organizations"
+            onClick={onNavigate}
+            className={cn(
+              'mb-3 flex items-center gap-2 rounded-lg px-3 font-medium text-stone-500 transition-colors hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100',
+              mobile ? 'min-h-11 py-2.5 text-[0.9375rem]' : 'py-2 text-sm',
+            )}
+          >
+            <ArrowLeft className="h-4 w-4 shrink-0" />
+            Back to Organizations
+          </Link>
+          <NavSection
+            onNavigate={onNavigate}
+            mobile={mobile}
+            title={selectedOrg.name}
+            items={getPlatformOrgNavigation(platformOrgId)}
+          />
+        </div>
       );
     }
 
@@ -331,32 +361,34 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
 
   if (!orgId) return null;
 
-  const orgNav = getOrgNavigation(`/orgs/${orgId}`, {
-
+  const orgBase = `/orgs/${orgId}`;
+  const orgNav = getOrgNavigation(orgBase, {
     showAdminSettings: true,
-
     showRecurring,
-
   });
 
-
+  if (mustChoosePlan) {
+    return (
+      <NavSectionWithGroups
+        onNavigate={onNavigate}
+        mobile={mobile}
+        mainItems={[
+          { label: 'Plan', to: `${orgBase}/settings/plan`, icon: Sparkles },
+          { label: 'Account', to: `${orgBase}/settings/account`, icon: UserCircle },
+        ]}
+        settingsItems={[]}
+      />
+    );
+  }
 
   return (
-
     <NavSectionWithGroups
-
       onNavigate={onNavigate}
-
       mobile={mobile}
-
       mainItems={orgNav.main}
-
-      settingsItems={trialExpired ? [] : orgNav.settings}
-
+      settingsItems={writeLocked ? [] : orgNav.settings}
     />
-
   );
-
 }
 
 

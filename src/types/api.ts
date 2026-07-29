@@ -90,6 +90,11 @@ export interface LoginResponse {
   memberships?: StaffMembership[];
 }
 
+/** Result of leave-organization or owner self-delete. */
+export type LeaveOrDeleteOrgResponse =
+  | { outcome: 'switched'; token: string; user: AuthUser; memberships?: StaffMembership[] }
+  | { outcome: 'logged_out' };
+
 export interface ImpersonateOwnerResponse {
   token: string;
   user: AuthUser;
@@ -116,6 +121,8 @@ export interface Organization {
   smsRemindersOptIn: boolean;
   emailReminderHoursBefore: number;
   smsReminderHoursBefore: number;
+  confirmationRequestsOptIn: boolean;
+  confirmationDaysBefore: number;
   city?: string | null;
   address?: string | null;
   phone?: string | null;
@@ -129,10 +136,21 @@ export interface Organization {
   hostingMode?: WebsiteHostingMode;
   /** Present on GET /owner/organizations — custom website build requested at signup */
   customWebsiteRequested?: boolean;
+  /** Present on GET /owner/organizations — true when an org_owner user exists */
+  hasOwner?: boolean;
+}
+
+export interface OrganizationOwnerSummary {
+  email: string;
+  status: 'active' | 'inactive' | 'deleted';
+  /** True when invited but password setup is not finished. */
+  setupPending: boolean;
 }
 
 export type TrialCampaignType = 'code' | 'homepage';
 export type TrialPaymentMode = 'stripe_trial' | 'free_no_card';
+/** Plan locked for signup when this trial/campaign/referral offer applies. */
+export type TrialLockedTier = 'starter' | 'professional' | 'business';
 
 export interface TrialCampaign {
   id: string;
@@ -143,6 +161,8 @@ export interface TrialCampaign {
   maxRedemptions?: number | null;
   redemptionCount: number;
   paymentMode: TrialPaymentMode;
+  /** Signup plan locked while this campaign offer applies. */
+  lockedTier: TrialLockedTier;
   enabled: boolean;
   /** Null = campaign never expires (unlimited duration). */
   expiresAt?: string | null;
@@ -163,6 +183,8 @@ export interface PlatformTrialSettings {
   id: 'default';
   referralDurationDays: number;
   referralPaymentMode: TrialPaymentMode;
+  /** Signup plan locked when a referral trial offer applies. */
+  referralLockedTier: TrialLockedTier;
   updatedAt: string;
 }
 
@@ -181,6 +203,7 @@ export type ResolvedTrialOffer =
       name: string;
       durationDays: number;
       paymentMode: TrialPaymentMode;
+      lockedTier: TrialLockedTier;
       code?: string | null;
     }
   | {
@@ -189,6 +212,7 @@ export type ResolvedTrialOffer =
       referringOrgName: string;
       durationDays: number;
       paymentMode: TrialPaymentMode;
+      lockedTier: TrialLockedTier;
     };
 
 export interface OrganizationSettings {
@@ -472,6 +496,7 @@ export interface Reminder {
   organizationId: string;
   appointmentId: string;
   type: ReminderType;
+  purpose?: 'reminder' | 'confirmation_request';
   status: ReminderStatus;
   scheduledFor: string;
   sentAt?: string | null;
@@ -616,9 +641,16 @@ export interface CreateServiceInput {
 export interface CreateOrganizationInput {
   name: string;
   slug: string;
+  /** Optional — not used by platform create; signup may still send a tier. */
   tier?: Exclude<SubscriptionTier, 'custom'>;
   monthlyPriceCents?: number;
+  /** Optional trial campaign; omit/null = no trial (owner chooses plan on first login). */
+  trialCampaignId?: string | null;
   ownerEmail: string;
+}
+
+export interface InviteOrgOwnerInput {
+  email: string;
 }
 
 export type SupportTicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';

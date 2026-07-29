@@ -5,7 +5,7 @@ import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { orgApi } from '@/lib/api';
 import { useOrgId } from '@/hooks/useOrgId';
-import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
+import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { cn } from '@/lib/utils';
 import { Panel, sectionMutedClass } from '@/components/common/Panel';
 import { LoadingState } from '@/components/common/LoadingState';
@@ -17,7 +17,7 @@ import { Label } from '@/components/ui/label';
 
 export function PaymentsSettingsPage() {
   const orgId = useOrgId();
-  const trialExpired = useOrgTrialExpired();
+  const trialExpired = useOrgWriteLocked();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const [readerCode, setReaderCode] = useState('');

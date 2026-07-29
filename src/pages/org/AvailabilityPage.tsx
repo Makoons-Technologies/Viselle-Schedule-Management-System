@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { orgApi } from '@/lib/api';
 import { useOrgId } from '@/hooks/useOrgId';
-import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
+import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { AvailabilityWeekCalendar } from '@/components/availability/AvailabilityWeekCalendar';
 import { SettingsBackHeader } from '@/components/settings/SettingsBackHeader';
 import { LoadingState } from '@/components/common/LoadingState';
@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 export function AvailabilityPage() {
   const orgId = useOrgId();
-  const trialExpired = useOrgTrialExpired();
+  const trialExpired = useOrgWriteLocked();
   const queryClient = useQueryClient();
   const [accountId, setAccountId] = useState('');
   const [removingRuleId, setRemovingRuleId] = useState<string | null>(null);
