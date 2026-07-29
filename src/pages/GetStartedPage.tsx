@@ -141,7 +141,9 @@ function CartSummary({ cart, compact }: { cart: SignupCart | null; compact?: boo
         </div>
         {cart.monthlyRecurringCents > 0 && (
           <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
-            Then {formatCents(cart.monthlyRecurringCents)}/month for your subscription
+            {cart.dueTodayCents === 0
+              ? `Then ${formatCents(cart.monthlyRecurringCents)}/month after trial`
+              : `Then ${formatCents(cart.monthlyRecurringCents)}/month for your subscription`}
           </p>
         )}
       </div>
@@ -252,9 +254,13 @@ export function GetStartedPage() {
   }, [trialCode]);
 
   const useHomepageCampaign = trialParam && trialCode.trim().length === 0 && Boolean(homepageTrial);
-  const isFreeTrialCheckout =
-    (trialCodeStatus === 'valid' && trialOffer?.paymentMode === 'free_no_card') ||
-    (useHomepageCampaign && homepageTrial?.paymentMode === 'free_no_card');
+  const activeTrialPaymentMode =
+    trialCodeStatus === 'valid' && trialOffer
+      ? trialOffer.paymentMode
+      : useHomepageCampaign && homepageTrial
+        ? homepageTrial.paymentMode
+        : null;
+  const isFreeTrialCheckout = activeTrialPaymentMode === 'free_no_card';
 
   const lockedTier: SignupTierId | null =
     trialCodeStatus === 'valid' && trialOffer
@@ -316,14 +322,19 @@ export function GetStartedPage() {
   const refreshCart = useCallback(async () => {
     setLoadingCart(true);
     try {
-      const next = await previewSignupCart({ tier, subdomainAddon, customWebsiteAddon });
+      const next = await previewSignupCart({
+        tier,
+        subdomainAddon,
+        customWebsiteAddon,
+        trialPaymentMode: activeTrialPaymentMode,
+      });
       setCart(next);
     } catch {
       setCart(null);
     } finally {
       setLoadingCart(false);
     }
-  }, [tier, subdomainAddon, customWebsiteAddon]);
+  }, [tier, subdomainAddon, customWebsiteAddon, activeTrialPaymentMode]);
 
   useEffect(() => {
     void refreshCart();
