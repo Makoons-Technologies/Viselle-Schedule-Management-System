@@ -6,6 +6,8 @@ export interface PlatformNavLink {
   label: string;
   to: string;
   icon: typeof LayoutDashboard;
+  /** Exact path match only (avoids parent routes staying active on nested pages). */
+  end?: boolean;
 }
 
 export function getPlatformOrgBase(orgId: string) {
@@ -25,7 +27,7 @@ export function getPlatformNavigation(): PlatformNavLink[] {
 export function getPlatformOrgNavigation(orgId: string): PlatformNavLink[] {
   const base = getPlatformOrgBase(orgId);
   return [
-    { label: 'Overview', to: base, icon: LayoutDashboard },
+    { label: 'Overview', to: base, icon: LayoutDashboard, end: true },
     { label: 'Settings', to: `${base}/settings`, icon: Settings },
   ];
 }
