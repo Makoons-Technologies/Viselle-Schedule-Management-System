@@ -4,16 +4,15 @@ import { useAuth } from '@/context/AuthContext';
 import { useOrg } from '@/context/OrgContext';
 import { useOrgId } from '@/hooks/useOrgId';
 import { orgApi } from '@/lib/api';
-import { isOrgInActiveTrial, isOrgTrialExpired } from '@/lib/trial';
+import { isOrgTrialExpired } from '@/lib/trial';
 import { getPlatformContextFromPath, PLATFORM_CONTEXT } from '@/components/layout/platform-navigation';
-import { TrialActiveBanner } from '@/components/common/TrialActiveBanner';
 import { TrialExpiredBanner } from '@/components/common/TrialExpiredBanner';
 
 /**
- * Persistent trial banner for the current org context — active (amber countdown)
- * or expired (red lock notice). Shown for org_owner/staff on their org pages and
- * for platform_owner when viewing that org. Shares the organization query key
- * with Topbar so no extra network requests are made.
+ * Persistent expired-trial banner (red soft-lock notice) for the current org
+ * context. Active-trial countdown lives in SidebarTrialStatus under the brand.
+ * Shares the organization query key with Topbar so no extra network requests
+ * are made.
  */
 export function OrgTrialBanner() {
   const { user } = useAuth();
@@ -42,10 +41,6 @@ export function OrgTrialBanner() {
 
   if (isOrgTrialExpired(organization)) {
     return <TrialExpiredBanner organization={organization} isPlatformOwner={isPlatformOwner} />;
-  }
-
-  if (isOrgInActiveTrial(organization) && organization.trialEndsAt) {
-    return <TrialActiveBanner organization={organization} isPlatformOwner={isPlatformOwner} />;
   }
 
   return null;
