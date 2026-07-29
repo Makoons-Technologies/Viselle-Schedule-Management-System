@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Building2,
@@ -151,12 +151,82 @@ function CartSummary({ cart, compact }: { cart: SignupCart | null; compact?: boo
   );
 }
 
+type TrialCodeStatus = 'idle' | 'checking' | 'valid' | 'invalid';
+
 function describeOffer(offer: ResolvedTrialOffer): string {
   const modeLabel = offer.paymentMode === 'free_no_card' ? 'no card required' : 'card required, charged after trial';
   if (offer.kind === 'campaign') {
     return `${offer.durationDays}-day free trial (${modeLabel}) — ${offer.name}`;
   }
   return `${offer.durationDays}-day free trial (${modeLabel}) — referred by ${offer.referringOrgName}`;
+}
+
+function TrialCodeField({
+  trialCode,
+  trialCodeStatus,
+  trialOffer,
+  useHomepageCampaign,
+  homepageTrial,
+  onChange,
+  onCommit,
+}: {
+  trialCode: string;
+  trialCodeStatus: TrialCodeStatus;
+  trialOffer: ResolvedTrialOffer | null;
+  useHomepageCampaign: boolean;
+  homepageTrial: TrialCampaign | null;
+  onChange: (value: string) => void;
+  onCommit: () => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="trialCode" className="text-xs font-medium text-stone-600 dark:text-stone-400">
+        Trial or referral code
+      </Label>
+      <div className="relative">
+        <Tag className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+        <Input
+          id="trialCode"
+          value={trialCode}
+          onChange={(e) => onChange(e.target.value.toUpperCase())}
+          onBlur={() => onCommit()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              (e.target as HTMLInputElement).blur();
+            }
+          }}
+          placeholder="Optional"
+          className="pl-9"
+          autoComplete="off"
+          spellCheck={false}
+        />
+      </div>
+      {trialCodeStatus === 'checking' && (
+        <p className="text-xs text-stone-500 dark:text-stone-400">
+          <Loader2 className="mr-1 inline h-3 w-3 animate-spin" />
+          Checking code…
+        </p>
+      )}
+      {trialCodeStatus === 'valid' && trialOffer && (
+        <p className="text-xs text-emerald-600 dark:text-emerald-400">{describeOffer(trialOffer)}</p>
+      )}
+      {trialCodeStatus === 'invalid' && (
+        <p className="text-xs text-red-600 dark:text-red-400">
+          That code is invalid or expired. Clear it to continue with a paid plan.
+        </p>
+      )}
+      {trialCodeStatus === 'idle' && useHomepageCampaign && homepageTrial && (
+        <p className="text-xs text-emerald-600 dark:text-emerald-400">
+          {homepageTrial.durationDays}-day free trial (
+          {homepageTrial.paymentMode === 'free_no_card'
+            ? 'no card required'
+            : 'card required, charged after trial'}
+          )
+        </p>
+      )}
+    </div>
+  );
 }
 
 export function GetStartedPage() {
@@ -205,10 +275,14 @@ export function GetStartedPage() {
   const [websiteOption, setWebsiteOption] = useState<SignupWebsiteOption>(initialWebsiteOption);
 
   const [trialCode, setTrialCode] = useState(initialCode);
-  const [trialCodeStatus, setTrialCodeStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
+  const [trialCodeStatus, setTrialCodeStatus] = useState<TrialCodeStatus>('idle');
   const [trialOffer, setTrialOffer] = useState<ResolvedTrialOffer | null>(null);
+  const [committedTrialCode, setCommittedTrialCode] = useState('');
   const [homepageTrial, setHomepageTrial] = useState<TrialCampaign | null>(null);
   const [provisionedResult, setProvisionedResult] = useState<{ organizationId: string; slug: string } | null>(null);
+  const committedTrialCodeRef = useRef(committedTrialCode);
+  const trialValidateSeq = useRef(0);
+  committedTrialCodeRef.current = committedTrialCode;
 
   const { subdomainAddon, customWebsiteAddon } = websiteOptionToAddons(websiteOption);
 
@@ -229,31 +303,47 @@ export function GetStartedPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    const trimmed = trialCode.trim();
+  const commitTrialCode = useCallback(async (rawCode: string) => {
+    const trimmed = rawCode.trim().toUpperCase();
     if (!trimmed) {
+      trialValidateSeq.current += 1;
+      setTrialCode('');
+      setCommittedTrialCode('');
       setTrialCodeStatus('idle');
       setTrialOffer(null);
       return;
     }
 
+    if (trimmed === committedTrialCodeRef.current) {
+      return;
+    }
+
+    const seq = ++trialValidateSeq.current;
     setTrialCodeStatus('checking');
-    const timer = window.setTimeout(() => {
-      validateTrialCode(trimmed)
-        .then((offer) => {
-          setTrialOffer(offer);
-          setTrialCodeStatus('valid');
-        })
-        .catch(() => {
-          setTrialOffer(null);
-          setTrialCodeStatus('invalid');
-        });
-    }, 400);
+    try {
+      const offer = await validateTrialCode(trimmed);
+      if (seq !== trialValidateSeq.current) return;
+      setTrialCode(trimmed);
+      setCommittedTrialCode(trimmed);
+      setTrialOffer(offer);
+      setTrialCodeStatus('valid');
+    } catch {
+      if (seq !== trialValidateSeq.current) return;
+      setCommittedTrialCode(trimmed);
+      setTrialOffer(null);
+      setTrialCodeStatus('invalid');
+    }
+  }, []);
 
-    return () => window.clearTimeout(timer);
-  }, [trialCode]);
+  // Validate ?code= from the URL once on mount.
+  useEffect(() => {
+    if (!initialCode.trim()) return;
+    void commitTrialCode(initialCode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const useHomepageCampaign = trialParam && trialCode.trim().length === 0 && Boolean(homepageTrial);
+  const useHomepageCampaign =
+    trialParam && trialCodeStatus === 'idle' && committedTrialCode.length === 0 && Boolean(homepageTrial);
   const activeTrialPaymentMode =
     trialCodeStatus === 'valid' && trialOffer
       ? trialOffer.paymentMode
@@ -426,7 +516,7 @@ export function GetStartedPage() {
         tier,
         subdomainAddon,
         customWebsiteAddon,
-        code: trialCodeStatus === 'valid' ? trialCode.trim() : undefined,
+        code: trialCodeStatus === 'valid' ? committedTrialCode : undefined,
         useHomepageCampaign,
       });
 
@@ -866,50 +956,6 @@ export function GetStartedPage() {
                     </p>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="trialCode">Trial or referral code (optional)</Label>
-                    <div className="relative">
-                      <Tag className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
-                      <Input
-                        id="trialCode"
-                        value={trialCode}
-                        onChange={(e) => setTrialCode(e.target.value.toUpperCase())}
-                        placeholder="Enter a code"
-                        className="pl-9"
-                      />
-                    </div>
-                    {trialCodeStatus === 'checking' && (
-                      <p className="text-xs text-stone-500 dark:text-stone-400">
-                        <Loader2 className="mr-1 inline h-3 w-3 animate-spin" />
-                        Checking code…
-                      </p>
-                    )}
-                    {trialCodeStatus === 'valid' && trialOffer && (
-                      <p className="text-xs text-emerald-600 dark:text-emerald-400">{describeOffer(trialOffer)}</p>
-                    )}
-                    {trialCodeStatus === 'invalid' && (
-                      <p className="text-xs text-red-600 dark:text-red-400">
-                        That code is invalid or expired. Clear it to continue with a paid plan.
-                      </p>
-                    )}
-                    {trialCodeStatus === 'idle' && useHomepageCampaign && homepageTrial && (
-                      <p className="text-xs text-emerald-600 dark:text-emerald-400">
-                        {homepageTrial.durationDays}-day free trial (
-                        {homepageTrial.paymentMode === 'free_no_card' ? 'no card required' : 'card required, charged after trial'}
-                        )
-                      </p>
-                    )}
-                  </div>
-
-                  <CartSummary cart={cart} />
-                  {!cart && !loadingCart && (
-                    <p className="text-xs text-red-600 dark:text-red-400">
-                      Could not load your cart. Check your connection, then go back and return to this step.
-                    </p>
-                  )}
-                  {loadingCart && (
-                    <p className="text-xs text-stone-500 dark:text-stone-400">Updating cart…</p>
-                  )}
                   <p className="text-xs text-stone-500 dark:text-stone-400">
                     {trialCodeStatus === 'valid' && trialOffer?.paymentMode === 'free_no_card'
                       ? 'No card needed — your account is created immediately.'
@@ -963,17 +1009,34 @@ export function GetStartedPage() {
             </CardContent>
           </Card>
 
-          <aside className="hidden lg:block">
+          <aside>
             <Card className="sticky top-6">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Your cart</CardTitle>
               </CardHeader>
-              <CardContent>
-                {loadingCart ? (
+              <CardContent className="space-y-4">
+                {loadingCart && !cart ? (
                   <Loader2 className="h-5 w-5 animate-spin text-stone-400" />
                 ) : (
                   <CartSummary cart={cart} compact />
                 )}
+                {loadingCart && cart && (
+                  <p className="text-xs text-stone-500 dark:text-stone-400">
+                    <Loader2 className="mr-1 inline h-3 w-3 animate-spin" />
+                    Updating amounts…
+                  </p>
+                )}
+                <div className="border-t border-stone-200 pt-4 dark:border-stone-700">
+                  <TrialCodeField
+                    trialCode={trialCode}
+                    trialCodeStatus={trialCodeStatus}
+                    trialOffer={trialOffer}
+                    useHomepageCampaign={useHomepageCampaign}
+                    homepageTrial={homepageTrial}
+                    onChange={setTrialCode}
+                    onCommit={() => void commitTrialCode(trialCode)}
+                  />
+                </div>
               </CardContent>
             </Card>
           </aside>
