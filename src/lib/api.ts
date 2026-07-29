@@ -163,10 +163,14 @@ export const ownerApi = {
   listOrganizations: () =>
     apiClient.get<{ organizations: Organization[] }>('/owner/organizations').then((r) => r.data),
   createOrganization: (data: CreateOrganizationInput) =>
-    apiClient.post<{ organization: Organization; settings: OrganizationSettings }>(
-      '/owner/organizations',
-      data,
-    ).then((r) => r.data),
+    apiClient
+      .post<{
+        organization: Organization;
+        settings: OrganizationSettings;
+        owner?: OrganizationOwnerSummary | null;
+        emailSent?: boolean;
+      }>('/owner/organizations', data)
+      .then((r) => r.data),
   getOrganization: (id: string) =>
     apiClient
       .get<{ organization: Organization; owner: OrganizationOwnerSummary | null }>(
@@ -181,7 +185,10 @@ export const ownerApi = {
     apiClient.post<ImpersonateOwnerResponse>(`/owner/organizations/${id}/impersonate`).then((r) => r.data),
   inviteOrgOwner: (id: string, data: InviteOrgOwnerInput) =>
     apiClient
-      .post<{ owner: OrganizationOwnerSummary }>(`/owner/organizations/${id}/invite-owner`, data)
+      .post<{ owner: OrganizationOwnerSummary; emailSent?: boolean }>(
+        `/owner/organizations/${id}/invite-owner`,
+        data,
+      )
       .then((r) => r.data),
   getSettings: (id: string) =>
     apiClient.get<{ settings: OrganizationSettings }>(`/owner/organizations/${id}/settings`).then((r) => r.data),

@@ -21,6 +21,11 @@ interface PlatformOrgOwnerSectionProps {
   orgId: string;
 }
 
+/** Dedicated key so owner summary is not poisoned by other org detail caches. */
+export function organizationOwnerQueryKey(orgId: string) {
+  return ['organization', orgId, 'owner-summary'] as const;
+}
+
 /** Platform-only: invite an org owner when the org has none, or show current owner. */
 export function PlatformOrgOwnerSection({ orgId }: PlatformOrgOwnerSectionProps) {
   const queryClient = useQueryClient();
@@ -34,17 +39,29 @@ export function PlatformOrgOwnerSection({ orgId }: PlatformOrgOwnerSectionProps)
     defaultValues: { email: '' },
   });
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['organization', orgId, 'platform_owner'],
+  const { data, isLoading, isError, error, refetch } = useQuery({
+    queryKey: organizationOwnerQueryKey(orgId),
     queryFn: () => ownerApi.getOrganization(orgId),
     enabled: !!orgId,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   const inviteMutation = useMutation({
     mutationFn: (email: string) => ownerApi.inviteOrgOwner(orgId, { email }),
     onSuccess: (result) => {
-      toast.success(`Set-password email sent to ${result.owner.email}`);
+      if (result.emailSent === false) {
+        toast.warning(`Owner saved as ${result.owner.email}, but the set-password email failed to send`);
+      } else {
+        toast.success(`Set-password email sent to ${result.owner.email}`);
+      }
       reset({ email: '' });
+      queryClient.setQueryData(organizationOwnerQueryKey(orgId), (prev) =>
+        prev && typeof prev === 'object' && 'organization' in prev
+          ? { ...prev, owner: result.owner }
+          : prev,
+      );
+      void queryClient.invalidateQueries({ queryKey: organizationOwnerQueryKey(orgId) });
       queryClient.invalidateQueries({ queryKey: ['organization', orgId] });
       queryClient.invalidateQueries({ queryKey: ['owner', 'organizations'] });
     },
@@ -52,6 +69,24 @@ export function PlatformOrgOwnerSection({ orgId }: PlatformOrgOwnerSectionProps)
   });
 
   if (isLoading) return <LoadingState />;
+
+  if (isError) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Org owner</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-red-600 dark:text-red-400">
+            {(error as Error)?.message || 'Could not load owner details.'}
+          </p>
+          <Button type="button" size="sm" variant="outline" onClick={() => refetch()}>
+            Retry
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const owner = data?.owner ?? null;
 

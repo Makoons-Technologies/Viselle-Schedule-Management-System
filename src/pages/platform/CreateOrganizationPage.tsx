@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { ownerApi } from '@/lib/api';
 import { slugify } from '@/lib/utils';
 import { useOrg } from '@/context/OrgContext';
+import { organizationOwnerQueryKey } from '@/components/settings/PlatformOrgOwnerSection';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -44,6 +45,7 @@ function campaignOptionLabel(campaign: TrialCampaign): string {
 
 export function CreateOrganizationPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { setSelectedOrgId } = useOrg();
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -77,7 +79,20 @@ export function CreateOrganizationPage() {
             : null,
       }),
     onSuccess: (result) => {
-      toast.success('Organization created — set-password email sent to the owner');
+      if (result.emailSent === false) {
+        toast.warning(
+          'Organization created and owner saved, but the set-password email failed to send',
+        );
+      } else {
+        toast.success('Organization created — set-password email sent to the owner');
+      }
+      if (result.owner) {
+        queryClient.setQueryData(organizationOwnerQueryKey(result.organization.id), {
+          organization: result.organization,
+          owner: result.owner,
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ['owner', 'organizations'] });
       setSelectedOrgId(result.organization.id);
       navigate(`/platform/orgs/${result.organization.id}/settings`);
     },
