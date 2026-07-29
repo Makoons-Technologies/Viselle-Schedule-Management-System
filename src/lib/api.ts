@@ -57,6 +57,7 @@ import type {
   PlatformTrialSettings,
   TrialCampaignType,
   TrialPaymentMode,
+  TrialLockedTier,
   ReferralStat,
 } from '@/types/api';
 
@@ -221,6 +222,7 @@ export const ownerApi = {
     // Omit for the default (1); null = unlimited max uses (code campaigns only).
     maxRedemptions?: number | null;
     paymentMode: TrialPaymentMode;
+    lockedTier?: TrialLockedTier;
     enabled?: boolean;
     // Omit/undefined = no expiration; null explicitly clears an expiration on update.
     expiresAt?: string | null;
@@ -237,6 +239,7 @@ export const ownerApi = {
       durationDays: number;
       maxRedemptions: number | null;
       paymentMode: TrialPaymentMode;
+      lockedTier: TrialLockedTier;
       enabled: boolean;
       expiresAt: string | null;
     }>,
@@ -245,8 +248,9 @@ export const ownerApi = {
     apiClient.get<{ referrals: ReferralStat[] }>('/owner/trials/referrals').then((r) => r.data),
   getTrialSettings: () =>
     apiClient.get<{ settings: PlatformTrialSettings }>('/owner/trials/settings').then((r) => r.data),
-  updateTrialSettings: (data: Partial<Pick<PlatformTrialSettings, 'referralDurationDays' | 'referralPaymentMode'>>) =>
-    apiClient.patch<{ settings: PlatformTrialSettings }>('/owner/trials/settings', data).then((r) => r.data),
+  updateTrialSettings: (
+    data: Partial<Pick<PlatformTrialSettings, 'referralDurationDays' | 'referralPaymentMode' | 'referralLockedTier'>>,
+  ) => apiClient.patch<{ settings: PlatformTrialSettings }>('/owner/trials/settings', data).then((r) => r.data),
 
   listSupportTickets: (params?: {
     status?: SupportTicketStatus;

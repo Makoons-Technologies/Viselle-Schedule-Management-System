@@ -144,6 +144,8 @@ export interface OrganizationOwnerSummary {
 
 export type TrialCampaignType = 'code' | 'homepage';
 export type TrialPaymentMode = 'stripe_trial' | 'free_no_card';
+/** Plan locked for signup when this trial/campaign/referral offer applies. */
+export type TrialLockedTier = 'starter' | 'professional' | 'business';
 
 export interface TrialCampaign {
   id: string;
@@ -154,6 +156,8 @@ export interface TrialCampaign {
   maxRedemptions?: number | null;
   redemptionCount: number;
   paymentMode: TrialPaymentMode;
+  /** Signup plan locked while this campaign offer applies. */
+  lockedTier: TrialLockedTier;
   enabled: boolean;
   /** Null = campaign never expires (unlimited duration). */
   expiresAt?: string | null;
@@ -174,6 +178,8 @@ export interface PlatformTrialSettings {
   id: 'default';
   referralDurationDays: number;
   referralPaymentMode: TrialPaymentMode;
+  /** Signup plan locked when a referral trial offer applies. */
+  referralLockedTier: TrialLockedTier;
   updatedAt: string;
 }
 
@@ -192,6 +198,7 @@ export type ResolvedTrialOffer =
       name: string;
       durationDays: number;
       paymentMode: TrialPaymentMode;
+      lockedTier: TrialLockedTier;
       code?: string | null;
     }
   | {
@@ -200,6 +207,7 @@ export type ResolvedTrialOffer =
       referringOrgName: string;
       durationDays: number;
       paymentMode: TrialPaymentMode;
+      lockedTier: TrialLockedTier;
     };
 
 export interface OrganizationSettings {

@@ -256,6 +256,18 @@ export function GetStartedPage() {
     (trialCodeStatus === 'valid' && trialOffer?.paymentMode === 'free_no_card') ||
     (useHomepageCampaign && homepageTrial?.paymentMode === 'free_no_card');
 
+  const lockedTier: SignupTierId | null =
+    trialCodeStatus === 'valid' && trialOffer
+      ? trialOffer.lockedTier
+      : useHomepageCampaign && homepageTrial
+        ? homepageTrial.lockedTier
+        : null;
+  const planLocked = Boolean(lockedTier);
+
+  useEffect(() => {
+    if (lockedTier) setTier(lockedTier);
+  }, [lockedTier]);
+
   useEffect(() => {
     if (!slugTouched && businessName) {
       setSlug(slugifyBusinessName(businessName));
@@ -572,7 +584,10 @@ export function GetStartedPage() {
               <CardDescription>
                 {currentStep === 'business' && 'Tell us what clients will see on your booking page.'}
                 {currentStep === 'account' && 'Create the owner login for your Viselle dashboard.'}
-                {currentStep === 'plan' && 'Every plan includes a free booking link — pick what fits your team.'}
+                {currentStep === 'plan' &&
+                  (planLocked
+                    ? 'Your trial offer includes a set plan — plan selection is locked.'
+                    : 'Every plan includes a free booking link — pick what fits your team.')}
                 {currentStep === 'website' && 'Optional upgrades you can add now or later.'}
                 {currentStep === 'checkout' && 'Review your cart, then pay securely with Stripe.'}
               </CardDescription>
@@ -732,16 +747,29 @@ export function GetStartedPage() {
 
               {currentStep === 'plan' && catalog && (
                 <div className="grid gap-4">
+                  {planLocked && (
+                    <p className="text-sm text-stone-600 dark:text-stone-300">
+                      Plan is set by your trial offer and cannot be changed.
+                    </p>
+                  )}
                   {catalog.plans.map((plan) => (
                     <button
                       key={plan.id}
                       type="button"
-                      onClick={() => setTier(plan.id)}
+                      disabled={planLocked}
+                      aria-disabled={planLocked}
+                      onClick={() => {
+                        if (!planLocked) setTier(plan.id);
+                      }}
                       className={cn(
                         'rounded-lg border p-4 text-left transition-colors',
                         tier === plan.id
                           ? 'border-brand-500 bg-brand-50 ring-1 ring-brand-200 dark:bg-brand-950/40 dark:ring-brand-800'
-                          : 'border-stone-200 hover:border-stone-300 dark:border-stone-700 dark:hover:border-stone-600',
+                          : 'border-stone-200 dark:border-stone-700',
+                        planLocked
+                          ? 'cursor-not-allowed opacity-60'
+                          : 'hover:border-stone-300 dark:hover:border-stone-600',
+                        planLocked && tier !== plan.id && 'opacity-40',
                       )}
                     >
                       <div className="flex items-start justify-between gap-4">

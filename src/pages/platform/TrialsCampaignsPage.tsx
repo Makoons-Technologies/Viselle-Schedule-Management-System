@@ -23,11 +23,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import type { TrialCampaign, TrialCampaignType, TrialPaymentMode } from '@/types/api';
+import type { TrialCampaign, TrialCampaignType, TrialLockedTier, TrialPaymentMode } from '@/types/api';
 
 const PAYMENT_MODE_LABEL: Record<TrialPaymentMode, string> = {
   stripe_trial: 'Stripe trial (card now)',
   free_no_card: 'Free (no card)',
+};
+
+const LOCKED_TIER_LABEL: Record<TrialLockedTier, string> = {
+  starter: 'Starter',
+  professional: 'Professional',
+  business: 'Business',
 };
 
 function useCopyToClipboard() {
@@ -88,6 +94,7 @@ interface CampaignFormState {
   maxRedemptions: string;
   unlimitedMaxUses: boolean;
   paymentMode: TrialPaymentMode;
+  lockedTier: TrialLockedTier;
   enabled: boolean;
   expiresAt: string;
   noExpiration: boolean;
@@ -101,6 +108,7 @@ const EMPTY_FORM: CampaignFormState = {
   maxRedemptions: '1',
   unlimitedMaxUses: false,
   paymentMode: 'free_no_card',
+  lockedTier: 'professional',
   enabled: false,
   expiresAt: '',
   noExpiration: true,
@@ -120,6 +128,7 @@ function CreateCampaignDialog({ open, onOpenChange }: { open: boolean; onOpenCha
         maxRedemptions:
           form.type === 'code' ? (form.unlimitedMaxUses ? null : Number(form.maxRedemptions)) : undefined,
         paymentMode: form.paymentMode,
+        lockedTier: form.lockedTier,
         enabled: form.enabled,
         expiresAt: form.noExpiration ? null : dateInputToExpiresAtIso(form.expiresAt),
       }),
@@ -267,6 +276,26 @@ function CreateCampaignDialog({ open, onOpenChange }: { open: boolean; onOpenCha
             </div>
           </div>
 
+          <div>
+            <Label>Locked plan</Label>
+            <Select
+              value={form.lockedTier}
+              onValueChange={(v) => setForm((f) => ({ ...f, lockedTier: v as TrialLockedTier }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="starter">Starter</SelectItem>
+                <SelectItem value="professional">Professional</SelectItem>
+                <SelectItem value="business">Business</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className={`${sectionMutedClass} mt-1`}>
+              Signup locks to this plan while the trial offer applies — the plan picker is disabled.
+            </p>
+          </div>
+
           <div className="flex items-center justify-between rounded-lg border border-stone-200 px-3 py-2 dark:border-stone-700">
             <div>
               <p className="text-sm font-medium text-stone-900 dark:text-stone-100">Enabled</p>
@@ -319,11 +348,13 @@ function CampaignDetailDialog({ campaignId, onOpenChange }: { campaignId: string
 
   const [expiryDraft, setExpiryDraft] = useState<{ date: string; noExpiration: boolean } | null>(null);
   const [maxUsesDraft, setMaxUsesDraft] = useState<{ value: string; unlimited: boolean } | null>(null);
+  const [lockedTierDraft, setLockedTierDraft] = useState<TrialLockedTier | null>(null);
 
   useEffect(() => {
     if (!campaign) {
       setExpiryDraft(null);
       setMaxUsesDraft(null);
+      setLockedTierDraft(null);
       return;
     }
     setExpiryDraft({
@@ -334,6 +365,7 @@ function CampaignDetailDialog({ campaignId, onOpenChange }: { campaignId: string
       value: campaign.maxRedemptions != null ? String(campaign.maxRedemptions) : '1',
       unlimited: campaign.maxRedemptions == null,
     });
+    setLockedTierDraft(campaign.lockedTier);
     // Only re-sync drafts when a different campaign loads, not on every refetch.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaign?.id]);
@@ -374,6 +406,17 @@ function CampaignDetailDialog({ campaignId, onOpenChange }: { campaignId: string
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const lockedTierChanged = campaign && lockedTierDraft && lockedTierDraft !== campaign.lockedTier;
+
+  const updateLockedTierMutation = useMutation({
+    mutationFn: () => ownerApi.updateTrialCampaign(campaignId!, { lockedTier: lockedTierDraft! }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['owner', 'trials', 'campaigns'] });
+      toast.success('Locked plan updated');
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   return (
     <Dialog open={Boolean(campaignId)} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -388,7 +431,8 @@ function CampaignDetailDialog({ campaignId, onOpenChange }: { campaignId: string
               </DialogTitle>
               <DialogDescription>
                 {campaign.type === 'code' ? 'Shared code campaign' : 'Homepage campaign'} ·{' '}
-                {campaign.durationDays}-day trial · {PAYMENT_MODE_LABEL[campaign.paymentMode]}
+                {campaign.durationDays}-day trial · {PAYMENT_MODE_LABEL[campaign.paymentMode]} ·{' '}
+                {LOCKED_TIER_LABEL[campaign.lockedTier]} plan
                 {campaign.expiresAt && ` · Expires ${formatDate(campaign.expiresAt)}`}
               </DialogDescription>
             </DialogHeader>
@@ -479,6 +523,39 @@ function CampaignDetailDialog({ campaignId, onOpenChange }: { campaignId: string
                 </div>
               )}
 
+              {lockedTierDraft && (
+                <div className="rounded-lg border border-stone-200 p-3 dark:border-stone-700">
+                  <p className="text-sm font-medium text-stone-900 dark:text-stone-100">Locked plan</p>
+                  <p className={`${sectionMutedClass} mt-1`}>
+                    Signups with this offer cannot choose a different plan.
+                  </p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <Select
+                      value={lockedTierDraft}
+                      onValueChange={(v) => setLockedTierDraft(v as TrialLockedTier)}
+                    >
+                      <SelectTrigger className="max-w-[12rem]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="starter">Starter</SelectItem>
+                        <SelectItem value="professional">Professional</SelectItem>
+                        <SelectItem value="business">Business</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={!lockedTierChanged || updateLockedTierMutation.isPending}
+                      onClick={() => updateLockedTierMutation.mutate()}
+                    >
+                      Save
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {campaign.code && (
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="secondary">{campaign.code}</Badge>
@@ -559,6 +636,7 @@ function CampaignsTab() {
               <TableHead>Type</TableHead>
               <TableHead>Code</TableHead>
               <TableHead>Duration</TableHead>
+              <TableHead>Plan</TableHead>
               <TableHead>Payment</TableHead>
               <TableHead>Redemptions</TableHead>
               <TableHead>Expires</TableHead>
@@ -568,7 +646,7 @@ function CampaignsTab() {
           <TableBody>
             {campaigns.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-stone-500">
+                <TableCell colSpan={9} className="text-center text-stone-500">
                   No campaigns yet — create one to start offering timed trials.
                 </TableCell>
               </TableRow>
@@ -583,6 +661,7 @@ function CampaignsTab() {
                 <TableCell className="capitalize text-stone-500">{campaign.type}</TableCell>
                 <TableCell className="text-stone-500">{campaign.code ?? '—'}</TableCell>
                 <TableCell className="text-stone-500">{campaign.durationDays}d</TableCell>
+                <TableCell className="text-stone-500">{LOCKED_TIER_LABEL[campaign.lockedTier]}</TableCell>
                 <TableCell className="text-stone-500">{PAYMENT_MODE_LABEL[campaign.paymentMode]}</TableCell>
                 <TableCell className="text-stone-500">
                   {campaign.redemptionCount}
@@ -665,22 +744,26 @@ function SettingsTab() {
 
   const [durationDays, setDurationDays] = useState<string | null>(null);
   const [paymentMode, setPaymentMode] = useState<TrialPaymentMode | null>(null);
+  const [lockedTier, setLockedTier] = useState<TrialLockedTier | null>(null);
 
   const settings = data?.settings;
   const effectiveDuration = durationDays ?? (settings ? String(settings.referralDurationDays) : '14');
   const effectivePaymentMode = paymentMode ?? settings?.referralPaymentMode ?? 'free_no_card';
+  const effectiveLockedTier = lockedTier ?? settings?.referralLockedTier ?? 'professional';
 
   const mutation = useMutation({
     mutationFn: () =>
       ownerApi.updateTrialSettings({
         referralDurationDays: Number(effectiveDuration),
         referralPaymentMode: effectivePaymentMode,
+        referralLockedTier: effectiveLockedTier,
       }),
     onSuccess: () => {
       toast.success('Referral settings saved');
       queryClient.invalidateQueries({ queryKey: ['owner', 'trials', 'settings'] });
       setDurationDays(null);
       setPaymentMode(null);
+      setLockedTier(null);
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -720,6 +803,22 @@ function SettingsTab() {
               <SelectItem value="stripe_trial">Stripe trial (card now)</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+        <div>
+          <Label>Locked plan</Label>
+          <Select value={effectiveLockedTier} onValueChange={(v) => setLockedTier(v as TrialLockedTier)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="starter">Starter</SelectItem>
+              <SelectItem value="professional">Professional</SelectItem>
+              <SelectItem value="business">Business</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className={`${sectionMutedClass} mt-1`}>
+            Referral signups lock to this plan — the Get Started plan picker is disabled.
+          </p>
         </div>
         <div>
           <Label>Referral rewards</Label>
