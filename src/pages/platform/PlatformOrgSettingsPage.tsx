@@ -3,6 +3,7 @@ import { OrganizationSettingsSection } from '@/components/settings/OrganizationS
 import { PlatformAdminSection } from '@/components/settings/PlatformAdminSection';
 import { PlatformOrgBillingSection } from '@/components/settings/PlatformOrgBillingSection';
 import { PlatformOrgDangerSection } from '@/components/settings/PlatformOrgDangerSection';
+import { PlatformOrgOwnerSection } from '@/components/settings/PlatformOrgOwnerSection';
 
 export function PlatformOrgSettingsPage() {
   const { orgId } = useParams<{ orgId: string }>();
@@ -11,6 +12,7 @@ export function PlatformOrgSettingsPage() {
 
   return (
     <div className="max-w-xl space-y-6">
+      <PlatformOrgOwnerSection orgId={orgId} />
       <OrganizationSettingsSection orgId={orgId} />
       <PlatformAdminSection orgId={orgId} />
       <PlatformOrgBillingSection orgId={orgId} />

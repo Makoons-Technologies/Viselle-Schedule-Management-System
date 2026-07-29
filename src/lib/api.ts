@@ -10,12 +10,14 @@ import type {
   CreateAccountInput,
   CreateAppointmentInput,
   CreateOrganizationInput,
+  InviteOrgOwnerInput,
   CreateServiceInput,
   Customer,
   ImpersonateOwnerResponse,
   CustomerServiceNote,
   LoginResponse,
   Organization,
+  OrganizationOwnerSummary,
   OrgPlanFeatures,
   OrganizationSettings,
   MrrGranularity,
@@ -160,13 +162,21 @@ export const ownerApi = {
       data,
     ).then((r) => r.data),
   getOrganization: (id: string) =>
-    apiClient.get<{ organization: Organization }>(`/owner/organizations/${id}`).then((r) => r.data),
+    apiClient
+      .get<{ organization: Organization; owner: OrganizationOwnerSummary | null }>(
+        `/owner/organizations/${id}`,
+      )
+      .then((r) => r.data),
   updateOrganization: (id: string, data: Partial<Organization>) =>
     apiClient.patch<{ organization: Organization }>(`/owner/organizations/${id}`, data).then((r) => r.data),
   deactivateOrganization: (id: string) =>
     apiClient.patch<{ organization: Organization }>(`/owner/organizations/${id}/deactivate`).then((r) => r.data),
   impersonateOwner: (id: string) =>
     apiClient.post<ImpersonateOwnerResponse>(`/owner/organizations/${id}/impersonate`).then((r) => r.data),
+  inviteOrgOwner: (id: string, data: InviteOrgOwnerInput) =>
+    apiClient
+      .post<{ owner: OrganizationOwnerSummary }>(`/owner/organizations/${id}/invite-owner`, data)
+      .then((r) => r.data),
   getSettings: (id: string) =>
     apiClient.get<{ settings: OrganizationSettings }>(`/owner/organizations/${id}/settings`).then((r) => r.data),
   updateSettings: (id: string, data: Partial<OrganizationSettings>) =>

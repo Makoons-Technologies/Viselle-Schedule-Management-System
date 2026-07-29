@@ -59,7 +59,19 @@ export function OrganizationsPage() {
       setSelectedOrgId(organization.id);
       navigate(`/orgs/${organization.id}/dashboard`);
     },
-    onError: (err: unknown) => {
+    onError: (err: unknown, orgId: string) => {
+      if (err instanceof ApiError && err.code === 'NO_ORG_OWNER') {
+        toast.error(err.message, {
+          action: {
+            label: 'Invite owner',
+            onClick: () => {
+              setSelectedOrgId(orgId);
+              navigate(`/platform/orgs/${orgId}/settings`);
+            },
+          },
+        });
+        return;
+      }
       toast.error(err instanceof ApiError ? err.message : 'Could not log in as owner');
     },
     onSettled: () => setImpersonatingOrgId(null),
@@ -125,8 +137,22 @@ export function OrganizationsPage() {
                     </TableIconButton>
                     <TableIconButton
                       icon={LogIn}
-                      label="Log in as owner"
-                      onClick={() => impersonateMutation.mutate(org.id)}
+                      label={
+                        org.hasOwner === false
+                          ? 'No owner yet — open settings to invite'
+                          : 'Log in as owner'
+                      }
+                      onClick={() => {
+                        if (org.hasOwner === false) {
+                          setSelectedOrgId(org.id);
+                          navigate(`/platform/orgs/${org.id}/settings`);
+                          toast.message('Invite an owner first', {
+                            description: 'Open Org owner on this page to send a set-password email.',
+                          });
+                          return;
+                        }
+                        impersonateMutation.mutate(org.id);
+                      }}
                       disabled={impersonatingOrgId === org.id}
                     />
                     {(org.status === 'active' || org.status === 'trial') && (

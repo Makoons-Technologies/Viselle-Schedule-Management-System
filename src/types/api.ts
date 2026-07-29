@@ -131,6 +131,15 @@ export interface Organization {
   hostingMode?: WebsiteHostingMode;
   /** Present on GET /owner/organizations — custom website build requested at signup */
   customWebsiteRequested?: boolean;
+  /** Present on GET /owner/organizations — true when an org_owner user exists */
+  hasOwner?: boolean;
+}
+
+export interface OrganizationOwnerSummary {
+  email: string;
+  status: 'active' | 'inactive' | 'deleted';
+  /** True when invited but password setup is not finished. */
+  setupPending: boolean;
 }
 
 export type TrialCampaignType = 'code' | 'homepage';
@@ -622,6 +631,10 @@ export interface CreateOrganizationInput {
   tier?: Exclude<SubscriptionTier, 'custom'>;
   monthlyPriceCents?: number;
   ownerEmail: string;
+}
+
+export interface InviteOrgOwnerInput {
+  email: string;
 }
 
 export type SupportTicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
