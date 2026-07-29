@@ -11,6 +11,7 @@ import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
 import {
   getPlatformContextFromPath,
+  getPlatformOrgBase,
   PLATFORM_CONTEXT,
 } from '@/components/layout/platform-navigation';
 import { isOrgSettingsPath } from '@/components/layout/org-navigation';
@@ -28,7 +29,7 @@ import {
 export function Topbar() {
   const { user, logout, memberships, switchOrganization } = useAuth();
   const [logoutOpen, setLogoutOpen] = useState(false);
-  const { organizations, setSelectedOrgId, selectedOrg } = useOrg();
+  const { organizations, selectedOrg } = useOrg();
   const { setOpen: setMobileNavOpen } = useMobileNav();
   const navigate = useNavigate();
   const location = useLocation();
@@ -70,24 +71,31 @@ export function Topbar() {
     }
   };
 
-  const handleContextChange = (value: string) => {
-    if (value === PLATFORM_CONTEXT) {
-      setSelectedOrgId(null);
-      navigate('/platform/dashboard');
-      return;
-    }
+  const platformOrgId =
+    user?.role === 'platform_owner' && contextValue && contextValue !== PLATFORM_CONTEXT
+      ? contextValue
+      : null;
 
-    setSelectedOrgId(value);
-    navigate(`/orgs/${value}/dashboard`);
-  };
+  const orgSettingsPath =
+    user?.role === 'platform_owner'
+      ? platformOrgId
+        ? `${getPlatformOrgBase(platformOrgId)}/settings`
+        : null
+      : routeOrgId
+        ? `/orgs/${routeOrgId}/settings`
+        : null;
 
-  const inOrgSalonContext = location.pathname.startsWith('/orgs/');
-  const orgSettingsPath = routeOrgId ? `/orgs/${routeOrgId}/settings` : null;
   const showSettingsButton =
     !!orgSettingsPath &&
-    !trialExpired &&
-    (user?.role === 'org_owner' || (user?.role === 'platform_owner' && inOrgSalonContext));
-  const onSettingsPage = orgSettingsPath ? isOrgSettingsPath(location.pathname, `/orgs/${routeOrgId}`) : false;
+    (user?.role === 'platform_owner'
+      ? true
+      : !trialExpired && user?.role === 'org_owner');
+
+  const onSettingsPage = !orgSettingsPath
+    ? false
+    : user?.role === 'platform_owner'
+      ? location.pathname.startsWith(orgSettingsPath)
+      : !!routeOrgId && isOrgSettingsPath(location.pathname, `/orgs/${routeOrgId}`);
 
   const handleLogout = () => {
     setLogoutOpen(false);
@@ -99,7 +107,8 @@ export function Topbar() {
 
   return (
     <>
-    <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-stone-200 bg-white px-3 dark:border-stone-800 dark:bg-stone-900 sm:h-16 sm:px-6">      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
+    <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-stone-200 bg-white px-3 dark:border-stone-800 dark:bg-stone-900 sm:h-16 sm:px-6">
+      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
         <Button
           variant="ghost"
           size="icon"
@@ -111,28 +120,7 @@ export function Topbar() {
           <Menu className="h-5 w-5" />
         </Button>
 
-        {user?.role === 'platform_owner' ? (
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            <Select value={contextValue ?? PLATFORM_CONTEXT} onValueChange={handleContextChange}>
-              <SelectTrigger className="h-10 w-full min-w-0 max-w-[11rem] text-xs sm:max-w-xs sm:text-sm md:max-w-sm">
-                <SelectValue placeholder="Select context" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={PLATFORM_CONTEXT}>Viselle Platform</SelectItem>
-                {organizations.map((org) => (
-                  <SelectItem key={org.id} value={org.id}>
-                    {org.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {selectedOrgFromContext && (
-              <span className="hidden truncate text-xs text-stone-400 lg:inline">
-                /{selectedOrgFromContext.slug}
-              </span>
-            )}
-          </div>
-        ) : user?.role === 'staff' && memberships.length > 1 ? (
+        {user?.role === 'staff' && memberships.length > 1 ? (
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <Select value={user.organizationId ?? undefined} onValueChange={handleStaffOrgChange}>
               <SelectTrigger className="h-10 w-full min-w-0 max-w-[11rem] text-xs sm:max-w-xs sm:text-sm md:max-w-sm">
@@ -148,9 +136,20 @@ export function Topbar() {
             </Select>
           </div>
         ) : (
-          <div className="min-w-0 md:hidden">
-            <p className="truncate text-sm font-semibold text-stone-900 dark:text-stone-100">{businessName ?? 'Viselle'}</p>
-            <p className="truncate text-xs capitalize text-stone-500 dark:text-stone-400">{user?.role?.replace('_', ' ')}</p>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-stone-900 dark:text-stone-100">
+              {businessName ?? 'Viselle'}
+            </p>
+            {selectedOrgFromContext && (
+              <p className="truncate text-xs text-stone-500 dark:text-stone-400">
+                /{selectedOrgFromContext.slug}
+              </p>
+            )}
+            {!selectedOrgFromContext && (
+              <p className="truncate text-xs capitalize text-stone-500 dark:text-stone-400 md:hidden">
+                {user?.role?.replace('_', ' ')}
+              </p>
+            )}
           </div>
         )}
       </div>
@@ -172,8 +171,8 @@ export function Topbar() {
             size="icon"
             className={cn('h-10 w-10', onSettingsPage && 'bg-stone-100 text-brand-700 dark:bg-stone-800 dark:text-brand-300')}
             onClick={() => navigate(orgSettingsPath!)}
-            title="Settings"
-            aria-label="Settings"
+            title={user?.role === 'platform_owner' ? 'Organization admin' : 'Settings'}
+            aria-label={user?.role === 'platform_owner' ? 'Organization admin' : 'Settings'}
           >
             <Settings className="h-4 w-4" />
           </Button>

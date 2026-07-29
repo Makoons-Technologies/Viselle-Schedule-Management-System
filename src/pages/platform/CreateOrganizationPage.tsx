@@ -47,7 +47,7 @@ export function CreateOrganizationPage() {
     onSuccess: (result) => {
       toast.success('Organization created — set-password email sent to the owner');
       setSelectedOrgId(result.organization.id);
-      navigate(`/orgs/${result.organization.id}/dashboard`);
+      navigate(`/platform/orgs/${result.organization.id}/settings`);
     },
     onError: (err: Error) => toast.error(err.message),
   });

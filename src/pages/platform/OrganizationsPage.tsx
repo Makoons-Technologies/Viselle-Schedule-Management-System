@@ -94,7 +94,15 @@ export function OrganizationsPage() {
           <TableBody>
             {(data?.organizations ?? []).map((org) => (
               <TableRow key={org.id}>
-                <TableCell className="font-medium">{org.name}</TableCell>
+                <TableCell className="font-medium">
+                  <Link
+                    to={`/platform/orgs/${org.id}`}
+                    onClick={() => setSelectedOrgId(org.id)}
+                    className="text-stone-900 hover:text-brand-700 hover:underline dark:text-stone-100 dark:hover:text-brand-300"
+                  >
+                    {org.name}
+                  </Link>
+                </TableCell>
                 <TableCell className="text-stone-500">{org.slug}</TableCell>
                 <TableCell><OrganizationStatusBadge status={org.status} /></TableCell>
                 <TableCell><BillingStatusBadge status={org.billingStatus} /></TableCell>
@@ -107,8 +115,11 @@ export function OrganizationsPage() {
                 <TableCell className="text-stone-500">{formatDate(org.createdAt)}</TableCell>
                 <TableCell>
                   <TableRowActions>
-                    <TableIconButton label="Manage organization" asChild>
-                      <Link to={`/orgs/${org.id}/dashboard`} onClick={() => setSelectedOrgId(org.id)}>
+                    <TableIconButton label="Organization admin settings" asChild>
+                      <Link
+                        to={`/platform/orgs/${org.id}/settings`}
+                        onClick={() => setSelectedOrgId(org.id)}
+                      >
                         <Settings className="h-4 w-4" />
                       </Link>
                     </TableIconButton>
