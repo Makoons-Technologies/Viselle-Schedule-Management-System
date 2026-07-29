@@ -162,6 +162,7 @@ function describeOffer(offer: ResolvedTrialOffer): string {
 }
 
 function TrialCodeField({
+  id = 'trialCode',
   trialCode,
   trialCodeStatus,
   trialOffer,
@@ -169,7 +170,9 @@ function TrialCodeField({
   homepageTrial,
   onChange,
   onCommit,
+  compact,
 }: {
+  id?: string;
   trialCode: string;
   trialCodeStatus: TrialCodeStatus;
   trialOffer: ResolvedTrialOffer | null;
@@ -177,16 +180,17 @@ function TrialCodeField({
   homepageTrial: TrialCampaign | null;
   onChange: (value: string) => void;
   onCommit: () => void;
+  compact?: boolean;
 }) {
   return (
-    <div className="space-y-2">
-      <Label htmlFor="trialCode" className="text-xs font-medium text-stone-600 dark:text-stone-400">
+    <div className={cn('space-y-2', compact && 'space-y-1.5')}>
+      <Label htmlFor={id} className="text-xs font-medium text-stone-600 dark:text-stone-400">
         Trial or referral code
       </Label>
       <div className="relative">
         <Tag className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
         <Input
-          id="trialCode"
+          id={id}
           value={trialCode}
           onChange={(e) => onChange(e.target.value.toUpperCase())}
           onBlur={() => onCommit()}
@@ -229,8 +233,134 @@ function TrialCodeField({
   );
 }
 
+function CartDueToday({ cart, loadingCart }: { cart: SignupCart | null; loadingCart: boolean }) {
+  if (loadingCart && !cart) {
+    return <Loader2 className="h-4 w-4 animate-spin text-stone-400" />;
+  }
+  if (!cart) {
+    return <p className="text-xs text-stone-500 dark:text-stone-400">Cart unavailable</p>;
+  }
+  return (
+    <div>
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-sm font-semibold text-stone-900 dark:text-stone-100">Due today</span>
+        <span className="text-sm font-semibold text-stone-900 dark:text-stone-100">
+          {formatCents(cart.dueTodayCents)}
+          {loadingCart && <Loader2 className="ml-1.5 inline h-3 w-3 animate-spin text-stone-400" />}
+        </span>
+      </div>
+      {cart.monthlyRecurringCents > 0 && (
+        <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">
+          {cart.dueTodayCents === 0
+            ? `Then ${formatCents(cart.monthlyRecurringCents)}/mo after trial`
+            : `Then ${formatCents(cart.monthlyRecurringCents)}/mo`}
+        </p>
+      )}
+      {cart.items[0] && (
+        <p className="mt-1 truncate text-xs text-stone-500 dark:text-stone-400">
+          {cart.items.map((item) => item.name).join(' · ')}
+        </p>
+      )}
+    </div>
+  );
+}
+
+type SignupCartPanelProps = {
+  cart: SignupCart | null;
+  loadingCart: boolean;
+  trialCode: string;
+  trialCodeStatus: TrialCodeStatus;
+  trialOffer: ResolvedTrialOffer | null;
+  useHomepageCampaign: boolean;
+  homepageTrial: TrialCampaign | null;
+  onTrialCodeChange: (value: string) => void;
+  onTrialCodeCommit: () => void;
+  inputId: string;
+  variant: 'sidebar' | 'mobileBar';
+};
+
+function SignupCartPanel({
+  cart,
+  loadingCart,
+  trialCode,
+  trialCodeStatus,
+  trialOffer,
+  useHomepageCampaign,
+  homepageTrial,
+  onTrialCodeChange,
+  onTrialCodeCommit,
+  inputId,
+  variant,
+}: SignupCartPanelProps) {
+  const codeField = (
+    <TrialCodeField
+      id={inputId}
+      trialCode={trialCode}
+      trialCodeStatus={trialCodeStatus}
+      trialOffer={trialOffer}
+      useHomepageCampaign={useHomepageCampaign}
+      homepageTrial={homepageTrial}
+      onChange={onTrialCodeChange}
+      onCommit={onTrialCodeCommit}
+      compact={variant === 'mobileBar'}
+    />
+  );
+
+  if (variant === 'mobileBar') {
+    return (
+      <div className="space-y-3">
+        {codeField}
+        <div className="border-t border-stone-200 pt-3 dark:border-stone-700">
+          <CartDueToday cart={cart} loadingCart={loadingCart} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Card className="sticky top-6">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Your cart</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {codeField}
+        <div className="border-t border-stone-200 pt-4 dark:border-stone-700">
+          {loadingCart && !cart ? (
+            <Loader2 className="h-5 w-5 animate-spin text-stone-400" />
+          ) : (
+            <CartSummary cart={cart} compact />
+          )}
+          {loadingCart && cart && (
+            <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">
+              <Loader2 className="mr-1 inline h-3 w-3 animate-spin" />
+              Updating amounts…
+            </p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function useIsLgUp() {
+  const [isLgUp, setIsLgUp] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia('(min-width: 1024px)').matches : false,
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const onChange = () => setIsLgUp(mq.matches);
+    onChange();
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  return isLgUp;
+}
+
 export function GetStartedPage() {
   const navigate = useNavigate();
+  const isLgUp = useIsLgUp();
   const [searchParams] = useSearchParams();
   const initialPlan = (searchParams.get('plan') as SignupTierId | null) ?? 'professional';
   const initialWebsiteOption = websiteOptionFromParams({
@@ -631,7 +761,7 @@ export function GetStartedPage() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-stone-950">
+    <div className={cn('min-h-screen bg-stone-50 dark:bg-stone-950', !isLgUp && 'pb-44')}>
       <PageSeo {...marketingSeo.getStarted} />
       <MarketingHeader />
 
@@ -1016,39 +1146,48 @@ export function GetStartedPage() {
             </CardContent>
           </Card>
 
-          <aside>
-            <Card className="sticky top-6">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Your cart</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <TrialCodeField
-                  trialCode={trialCode}
-                  trialCodeStatus={trialCodeStatus}
-                  trialOffer={trialOffer}
-                  useHomepageCampaign={useHomepageCampaign}
-                  homepageTrial={homepageTrial}
-                  onChange={setTrialCode}
-                  onCommit={() => void commitTrialCode(trialCode)}
-                />
-                <div className="border-t border-stone-200 pt-4 dark:border-stone-700">
-                  {loadingCart && !cart ? (
-                    <Loader2 className="h-5 w-5 animate-spin text-stone-400" />
-                  ) : (
-                    <CartSummary cart={cart} compact />
-                  )}
-                  {loadingCart && cart && (
-                    <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">
-                      <Loader2 className="mr-1 inline h-3 w-3 animate-spin" />
-                      Updating amounts…
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </aside>
+          {isLgUp ? (
+            <aside>
+              <SignupCartPanel
+                variant="sidebar"
+                cart={cart}
+                loadingCart={loadingCart}
+                trialCode={trialCode}
+                trialCodeStatus={trialCodeStatus}
+                trialOffer={trialOffer}
+                useHomepageCampaign={useHomepageCampaign}
+                homepageTrial={homepageTrial}
+                onTrialCodeChange={setTrialCode}
+                onTrialCodeCommit={() => void commitTrialCode(trialCode)}
+                inputId="trialCode"
+              />
+            </aside>
+          ) : null}
         </div>
       </div>
+
+      {!isLgUp && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-white/95 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] backdrop-blur dark:border-stone-700 dark:bg-stone-950/95 dark:shadow-[0_-8px_30px_rgba(0,0,0,0.35)]">
+          <div className="mx-auto max-w-6xl px-4 py-3 sm:px-6">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
+              Your cart
+            </p>
+            <SignupCartPanel
+              variant="mobileBar"
+              cart={cart}
+              loadingCart={loadingCart}
+              trialCode={trialCode}
+              trialCodeStatus={trialCodeStatus}
+              trialOffer={trialOffer}
+              useHomepageCampaign={useHomepageCampaign}
+              homepageTrial={homepageTrial}
+              onTrialCodeChange={setTrialCode}
+              onTrialCodeCommit={() => void commitTrialCode(trialCode)}
+              inputId="trialCode-mobile"
+            />
+          </div>
+        </div>
+      )}
 
       <MarketingFooter />
     </div>
