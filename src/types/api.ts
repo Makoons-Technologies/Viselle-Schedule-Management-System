@@ -641,8 +641,11 @@ export interface CreateServiceInput {
 export interface CreateOrganizationInput {
   name: string;
   slug: string;
+  /** Optional — not used by platform create; signup may still send a tier. */
   tier?: Exclude<SubscriptionTier, 'custom'>;
   monthlyPriceCents?: number;
+  /** Optional trial campaign; omit/null = no trial (owner chooses plan on first login). */
+  trialCampaignId?: string | null;
   ownerEmail: string;
 }
 
