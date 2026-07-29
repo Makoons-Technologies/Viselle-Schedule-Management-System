@@ -8,7 +8,7 @@ import { resolvePathBookingUrl } from '@/lib/public-booking';
 import { cn, formatDate } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
-import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
+import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import type { SiteTemplate } from '@/types/api';
 import { BookingPagePreview } from '@/components/booking/BookingPagePreview';
 import { BookingBrandingSection } from '@/components/settings/BookingBrandingSection';
@@ -25,7 +25,7 @@ import { Label } from '@/components/ui/label';
 export function BookingWebsitePage() {
   const orgId = useOrgId();
   const { user } = useAuth();
-  const trialExpired = useOrgTrialExpired();
+  const trialExpired = useOrgWriteLocked();
   const queryClient = useQueryClient();
   const isPlatformOwner = user?.role === 'platform_owner';
 

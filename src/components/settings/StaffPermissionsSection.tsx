@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import type { StaffPermissions } from '@/types/api';
-import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
+import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { TRIAL_LOCKED_MESSAGE } from '@/lib/trial';
 
 interface StaffPermissionsSectionProps {
@@ -54,7 +54,7 @@ const PERMISSION_ITEMS: Array<{
 
 export function StaffPermissionsSection({ orgId }: StaffPermissionsSectionProps) {
   const queryClient = useQueryClient();
-  const trialExpired = useOrgTrialExpired();
+  const trialExpired = useOrgWriteLocked();
 
   const { data, isLoading } = useQuery({
     queryKey: ['staff-permissions', orgId],

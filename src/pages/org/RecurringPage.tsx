@@ -6,7 +6,7 @@ import { orgApi } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgPlan } from '@/hooks/useOrgPlan';
-import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
+import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import type { RecurringAppointmentRule } from '@/types/api';
 import { PlanUpsell } from '@/components/common/PlanUpsell';
 import { EditRecurringDialog } from '@/components/appointments/EditRecurringDialog';
@@ -209,7 +209,7 @@ function RecurringRulesList({
 export function RecurringPage() {
   const orgId = useOrgId();
   const { plan, isLoading: planLoading } = useOrgPlan(orgId);
-  const trialExpired = useOrgTrialExpired();
+  const trialExpired = useOrgWriteLocked();
   const queryClient = useQueryClient();
   const [editingRule, setEditingRule] = useState<RecurringAppointmentRule | null>(null);
   const [deletingRule, setDeletingRule] = useState<RecurringAppointmentRule | null>(null);

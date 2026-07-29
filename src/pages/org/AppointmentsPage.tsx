@@ -12,7 +12,7 @@ import { useAuth } from '@/context/AuthContext';
 
 import { useOrgId } from '@/hooks/useOrgId';
 import { useStaffPermissions } from '@/hooks/useStaffPermissions';
-import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
+import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 
 import type { Appointment, Account, Customer, Service } from '@/types/api';
 
@@ -165,7 +165,7 @@ export function AppointmentsPage() {
 
   const orgId = useOrgId();
   const { permissions } = useStaffPermissions(orgId);
-  const trialExpired = useOrgTrialExpired();
+  const trialExpired = useOrgWriteLocked();
 
   const { user } = useAuth();
 

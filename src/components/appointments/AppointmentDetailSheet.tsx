@@ -29,7 +29,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
 import { useStaffPermissions } from '@/hooks/useStaffPermissions';
-import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
+import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { TRIAL_LOCKED_MESSAGE } from '@/lib/trial';
 
 
@@ -63,7 +63,7 @@ export function AppointmentDetailSheet({
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { permissions, isManager } = useStaffPermissions(orgId);
-  const trialExpired = useOrgTrialExpired();
+  const trialExpired = useOrgWriteLocked();
 
   const [recurringOpen, setRecurringOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);

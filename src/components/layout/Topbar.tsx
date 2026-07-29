@@ -8,7 +8,8 @@ import { useMobileNav } from '@/context/MobileNavContext';
 import { useOrg } from '@/context/OrgContext';
 import { orgApi } from '@/lib/api';
 import { useOrgId } from '@/hooks/useOrgId';
-import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
+import { useOrgMustChoosePlan } from '@/hooks/useOrgMustChoosePlan';
+import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import {
   getPlatformContextFromPath,
   getPlatformOrgBase,
@@ -34,7 +35,8 @@ export function Topbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const routeOrgId = useOrgId();
-  const trialExpired = useOrgTrialExpired();
+  const writeLocked = useOrgWriteLocked();
+  const mustChoosePlan = useOrgMustChoosePlan();
 
   const orgIdForQuery =
     user?.role === 'platform_owner' ? routeOrgId : user?.organizationId ?? routeOrgId;
@@ -91,14 +93,18 @@ export function Topbar() {
       : routeOrgId
         ? user?.role === 'staff'
           ? `/orgs/${routeOrgId}/settings/account`
-          : `/orgs/${routeOrgId}/settings`
+          : mustChoosePlan
+            ? `/orgs/${routeOrgId}/settings/plan`
+            : `/orgs/${routeOrgId}/settings`
         : null;
 
   const showSettingsButton =
     !!orgSettingsPath &&
     (user?.role === 'platform_owner'
       ? true
-      : !trialExpired && (user?.role === 'org_owner' || user?.role === 'staff'));
+      : mustChoosePlan && user?.role === 'org_owner'
+        ? true
+        : !writeLocked && (user?.role === 'org_owner' || user?.role === 'staff'));
 
   const onSettingsPage = !orgSettingsPath
     ? false
@@ -106,7 +112,9 @@ export function Topbar() {
       ? location.pathname.startsWith(orgSettingsPath)
       : user?.role === 'staff'
         ? location.pathname.includes('/settings/account')
-        : !!routeOrgId && isOrgSettingsPath(location.pathname, `/orgs/${routeOrgId}`);
+        : mustChoosePlan
+          ? location.pathname.includes('/settings/plan')
+          : !!routeOrgId && isOrgSettingsPath(location.pathname, `/orgs/${routeOrgId}`);
 
   const handleLogout = () => {
     setLogoutOpen(false);

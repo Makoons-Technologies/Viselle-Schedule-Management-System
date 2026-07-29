@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { orgApi } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
 import { useOrgId } from '@/hooks/useOrgId';
-import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
+import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import type { Product } from '@/types/api';
 import { CreateProductDialog } from '@/components/products/CreateProductDialog';
 import { AdjustStockDialog } from '@/components/products/AdjustStockDialog';
@@ -27,7 +27,7 @@ function isLowStock(product: Product): boolean {
 
 export function ProductsPage() {
   const orgId = useOrgId();
-  const trialExpired = useOrgTrialExpired();
+  const trialExpired = useOrgWriteLocked();
   const [createOpen, setCreateOpen] = useState(false);
   const [adjustProduct, setAdjustProduct] = useState<Product | null>(null);
 

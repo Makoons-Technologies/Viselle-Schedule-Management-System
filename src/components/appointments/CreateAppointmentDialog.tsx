@@ -28,7 +28,7 @@ import { CustomerFieldChangesList } from '@/components/customers/CustomerFieldCh
 import { helperTextClass } from '@/components/common/Panel';
 import { useRecurringDaySchedule } from '@/hooks/useRecurringDaySchedule';
 import { useOrgPlan } from '@/hooks/useOrgPlan';
-import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
+import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -93,7 +93,7 @@ export function CreateAppointmentDialog({
 }: CreateAppointmentDialogProps) {
   const queryClient = useQueryClient();
   const { plan } = useOrgPlan(orgId);
-  const trialExpired = useOrgTrialExpired();
+  const trialExpired = useOrgWriteLocked();
   const today = todayDateOnlyLocal();
   const initialDate =
     defaultDate && defaultDate >= today ? defaultDate : today;

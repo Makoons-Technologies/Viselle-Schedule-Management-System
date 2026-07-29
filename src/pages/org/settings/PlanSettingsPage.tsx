@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useOrgId } from '@/hooks/useOrgId';
+import { useOrgMustChoosePlan } from '@/hooks/useOrgMustChoosePlan';
 import { useOrgPlan } from '@/hooks/useOrgPlan';
 import { orgApi } from '@/lib/api';
 import { LoadingState } from '@/components/common/LoadingState';
@@ -14,6 +15,7 @@ import { getPlanTier, type PlanTierId } from '@/lib/plan-features';
 export function PlanSettingsPage() {
   const orgId = useOrgId();
   const { plan, isLoading } = useOrgPlan(orgId);
+  const mustChoosePlan = useOrgMustChoosePlan();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const checkoutHandled = useRef(false);
@@ -85,6 +87,16 @@ export function PlanSettingsPage() {
 
   return (
     <div className="space-y-6">
+      {mustChoosePlan && !plan.hasStripeSubscription && (
+        <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+          <p className="font-semibold">Subscribe to unlock your salon</p>
+          <p className="mt-1">
+            Your trial is not active and billing is not linked yet. Choose a plan below to pay with
+            Stripe Checkout — you can use Viselle again as soon as payment succeeds.
+          </p>
+        </div>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Current plan</CardTitle>
@@ -92,7 +104,7 @@ export function PlanSettingsPage() {
         <CardContent className="text-sm text-stone-600 dark:text-stone-300">
           <p>
             <span className="font-medium text-stone-900 dark:text-stone-100">{plan.tierName}</span>
-            {' · '}${centsToDollars(plan.monthlyPriceCents)}/month
+            {' · '}${centsToDollars(plan.monthlyPriceCents)}/mo
           </p>
           {marketing && (
             <p className="mt-1 text-stone-500 dark:text-stone-400">{marketing.tagline}</p>

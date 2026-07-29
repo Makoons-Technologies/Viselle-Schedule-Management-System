@@ -5,6 +5,7 @@ import {
   Clock,
   LayoutDashboard,
   Settings,
+  Sparkles,
   TicketPercent,
   UserCircle,
 } from 'lucide-react';
@@ -12,6 +13,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useOrg } from '@/context/OrgContext';
 import { useOrgId } from '@/hooks/useOrgId';
+import { useOrgMustChoosePlan } from '@/hooks/useOrgMustChoosePlan';
 import { isOrgSettingsPath } from '@/components/layout/org-navigation';
 import { getPlatformOrgBase, isPlatformOrgAdminPath } from '@/components/layout/platform-navigation';
 import { cn } from '@/lib/utils';
@@ -45,6 +47,7 @@ export function MobileBottomNav() {
   const location = useLocation();
   const routeOrgId = useOrgId();
   const { selectedOrgId } = useOrg();
+  const mustChoosePlan = useOrgMustChoosePlan();
 
   if (!user) return null;
 
@@ -178,36 +181,54 @@ export function MobileBottomNav() {
 
   const orgBase = `/orgs/${orgId}`;
 
-  const items: BottomNavItem[] = [
-    {
-      key: 'dashboard',
-      label: 'Home',
-      to: `${orgBase}/dashboard`,
-      icon: LayoutDashboard,
-      match: (p, base) => p === `${base}/dashboard`,
-    },
-    {
-      key: 'calendar',
-      label: 'Calendar',
-      to: `${orgBase}/calendar`,
-      icon: CalendarDays,
-      match: (p, base) => p.startsWith(`${base}/calendar`),
-    },
-    {
-      key: 'appointments',
-      label: 'Appts',
-      to: `${orgBase}/appointments`,
-      icon: Calendar,
-      match: (p, base) => p.startsWith(`${base}/appointments`),
-    },
-    {
-      key: 'customers',
-      label: 'Clients',
-      to: `${orgBase}/customers`,
-      icon: UserCircle,
-      match: (p, base) => p.startsWith(`${base}/customers`),
-    },
-  ];
+  const items: BottomNavItem[] =
+    mustChoosePlan && user.role === 'org_owner'
+      ? [
+          {
+            key: 'plan',
+            label: 'Plan',
+            to: `${orgBase}/settings/plan`,
+            icon: Sparkles,
+            match: (p, base) => p.startsWith(`${base}/settings/plan`),
+          },
+          {
+            key: 'account',
+            label: 'Account',
+            to: `${orgBase}/settings/account`,
+            icon: UserCircle,
+            match: (p, base) => p.startsWith(`${base}/settings/account`),
+          },
+        ]
+      : [
+          {
+            key: 'dashboard',
+            label: 'Home',
+            to: `${orgBase}/dashboard`,
+            icon: LayoutDashboard,
+            match: (p, base) => p === `${base}/dashboard`,
+          },
+          {
+            key: 'calendar',
+            label: 'Calendar',
+            to: `${orgBase}/calendar`,
+            icon: CalendarDays,
+            match: (p, base) => p.startsWith(`${base}/calendar`),
+          },
+          {
+            key: 'appointments',
+            label: 'Appts',
+            to: `${orgBase}/appointments`,
+            icon: Calendar,
+            match: (p, base) => p.startsWith(`${base}/appointments`),
+          },
+          {
+            key: 'customers',
+            label: 'Clients',
+            to: `${orgBase}/customers`,
+            icon: UserCircle,
+            match: (p, base) => p.startsWith(`${base}/customers`),
+          },
+        ];
 
   return (
     <nav
@@ -219,7 +240,12 @@ export function MobileBottomNav() {
           <BottomNavLink
             key={item.key}
             item={item}
-            active={item.match(location.pathname, orgBase) && !isOrgSettingsPath(location.pathname, orgBase)}
+            active={
+              mustChoosePlan && user.role === 'org_owner'
+                ? item.match(location.pathname, orgBase)
+                : item.match(location.pathname, orgBase) &&
+                  !isOrgSettingsPath(location.pathname, orgBase)
+            }
           />
         ))}
       </div>

@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { orgApi, ownerApi } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { useOrgPlan } from '@/hooks/useOrgPlan';
-import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
+import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { OrganizationStatusBadge } from '@/components/common/StatusBadge';
 import { LoadingState } from '@/components/common/LoadingState';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,7 +39,7 @@ export function OrganizationSettingsSection({ orgId }: OrganizationSettingsSecti
   const queryClient = useQueryClient();
   const isPlatformOwner = user?.role === 'platform_owner';
   const { plan } = useOrgPlan(orgId);
-  const trialExpired = useOrgTrialExpired();
+  const trialExpired = useOrgWriteLocked();
 
   const { data, isLoading } = useQuery({
     queryKey: ['organization', orgId, user?.role],

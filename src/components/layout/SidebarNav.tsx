@@ -3,6 +3,7 @@ import {
   Clock,
   LayoutDashboard,
   Shield,
+  Sparkles,
   UserCircle,
 } from 'lucide-react';
 
@@ -16,7 +17,8 @@ import { useOrgPlan } from '@/hooks/useOrgPlan';
 
 import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgAdminAccess } from '@/hooks/useOrgAdminAccess';
-import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
+import { useOrgMustChoosePlan } from '@/hooks/useOrgMustChoosePlan';
+import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 
 import { getOrgNavigation } from '@/components/layout/org-navigation';
 import {
@@ -251,11 +253,10 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
 
   const showRecurring = plan ? plan.recurringAppointmentsEnabled : true;
   const canManageStaff = useOrgAdminAccess(effectiveOrgId ?? undefined);
-  const trialExpired = useOrgTrialExpired();
+  const writeLocked = useOrgWriteLocked();
+  const mustChoosePlan = useOrgMustChoosePlan();
 
   if (!user) return null;
-
-
 
   if (user.role === 'staff') {
     const orgId = user.organizationId;
@@ -272,7 +273,7 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
       { label: 'My Availability', to: '/staff/availability', icon: Clock },
     ];
 
-    if (canManageStaff && !trialExpired) {
+    if (canManageStaff && !writeLocked) {
       staffItems.push({
         label: 'Staff permissions',
         to: '/staff/settings/staff-permissions',
@@ -315,7 +316,7 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
           mobile={mobile}
           title={`${selectedOrg?.name ?? 'Salon'} · Operations`}
           mainItems={orgNav.main}
-          settingsItems={trialExpired ? [] : orgNav.settings}
+          settingsItems={writeLocked ? [] : orgNav.settings}
         />
       );
     }
@@ -360,32 +361,34 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
 
   if (!orgId) return null;
 
-  const orgNav = getOrgNavigation(`/orgs/${orgId}`, {
-
+  const orgBase = `/orgs/${orgId}`;
+  const orgNav = getOrgNavigation(orgBase, {
     showAdminSettings: true,
-
     showRecurring,
-
   });
 
-
+  if (mustChoosePlan) {
+    return (
+      <NavSectionWithGroups
+        onNavigate={onNavigate}
+        mobile={mobile}
+        mainItems={[
+          { label: 'Plan', to: `${orgBase}/settings/plan`, icon: Sparkles },
+          { label: 'Account', to: `${orgBase}/settings/account`, icon: UserCircle },
+        ]}
+        settingsItems={[]}
+      />
+    );
+  }
 
   return (
-
     <NavSectionWithGroups
-
       onNavigate={onNavigate}
-
       mobile={mobile}
-
       mainItems={orgNav.main}
-
-      settingsItems={trialExpired ? [] : orgNav.settings}
-
+      settingsItems={writeLocked ? [] : orgNav.settings}
     />
-
   );
-
 }
 
 

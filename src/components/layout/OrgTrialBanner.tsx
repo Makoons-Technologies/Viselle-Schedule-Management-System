@@ -3,16 +3,17 @@ import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useOrg } from '@/context/OrgContext';
 import { useOrgId } from '@/hooks/useOrgId';
+import { useOrgPlan } from '@/hooks/useOrgPlan';
 import { orgApi } from '@/lib/api';
-import { isOrgTrialExpired } from '@/lib/trial';
+import { isOrgTrialExpired, orgMustChoosePlan } from '@/lib/trial';
 import { getPlatformContextFromPath, PLATFORM_CONTEXT } from '@/components/layout/platform-navigation';
 import { TrialExpiredBanner } from '@/components/common/TrialExpiredBanner';
+import { PlanRequiredBanner } from '@/components/common/PlanRequiredBanner';
 
 /**
- * Persistent expired-trial banner (red soft-lock notice) for the current org
- * context. Active-trial countdown lives in SidebarTrialStatus under the brand.
+ * Persistent org billing/trial banners for the current org context.
  * Shares the organization query key with Topbar so no extra network requests
- * are made.
+ * are made. Active-trial countdown lives in SidebarTrialStatus under the brand.
  */
 export function OrgTrialBanner() {
   const { user } = useAuth();
@@ -29,6 +30,8 @@ export function OrgTrialBanner() {
     enabled: !!orgIdForQuery && !isPlatformOwner,
   });
 
+  const { plan } = useOrgPlan(orgIdForQuery ?? undefined);
+
   const contextValue = isPlatformOwner ? getPlatformContextFromPath(location.pathname) : null;
   const selectedOrgFromContext =
     contextValue && contextValue !== PLATFORM_CONTEXT
@@ -41,6 +44,16 @@ export function OrgTrialBanner() {
 
   if (isOrgTrialExpired(organization)) {
     return <TrialExpiredBanner organization={organization} isPlatformOwner={isPlatformOwner} />;
+  }
+
+  if (orgMustChoosePlan(organization, plan?.hasStripeSubscription)) {
+    return (
+      <PlanRequiredBanner
+        organization={organization}
+        isStaff={user?.role === 'staff'}
+        isPlatformOwner={isPlatformOwner}
+      />
+    );
   }
 
   return null;
