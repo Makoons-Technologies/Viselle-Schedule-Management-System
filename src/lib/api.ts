@@ -15,6 +15,7 @@ import type {
   Customer,
   ImpersonateOwnerResponse,
   CustomerServiceNote,
+  LeaveOrDeleteOrgResponse,
   LoginResponse,
   Organization,
   OrganizationOwnerSummary,
@@ -148,6 +149,10 @@ export const authApi = {
     apiClient.post<{ message: string }>('/auth/forgot-password', { email }).then((r) => r.data),
   switchOrganization: (organizationId: string) =>
     apiClient.post<LoginResponse>('/auth/switch-organization', { organizationId }).then((r) => r.data),
+  leaveOrganization: (organizationId: string) =>
+    apiClient
+      .post<LeaveOrDeleteOrgResponse>('/auth/leave-organization', { organizationId })
+      .then((r) => r.data),
 };
 
 export const ownerApi = {
@@ -343,6 +348,8 @@ export const orgApi = {
       .then((r) => r.data),
   updateOrganization: (orgId: string, data: Pick<Partial<Organization>, 'name' | 'slug' | 'publicBookingEnabled' | 'batchCheckoutEnabled' | 'emailRemindersOptIn' | 'smsRemindersOptIn' | 'emailReminderHoursBefore' | 'smsReminderHoursBefore' | 'confirmationRequestsOptIn' | 'confirmationDaysBefore' | 'city' | 'address' | 'phone'>) =>
     apiClient.patch<{ organization: Organization }>(`/organizations/${orgId}`, data).then((r) => r.data),
+  deleteOrganization: (orgId: string) =>
+    apiClient.delete<LeaveOrDeleteOrgResponse>(`/organizations/${orgId}`).then((r) => r.data),
   getWebsite: (orgId: string) =>
     apiClient.get<WebsiteSettingsResponse>(`/organizations/${orgId}/website`).then((r) => r.data),
   updateWebsite: (orgId: string, data: UpdateWebsiteInput) =>

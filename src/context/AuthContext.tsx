@@ -8,7 +8,7 @@ import {
   setImpersonationOriginToken,
   setStoredToken,
 } from '@/lib/api';
-import type { AuthUser, StaffMembership } from '@/types/api';
+import type { AuthUser, LeaveOrDeleteOrgResponse, StaffMembership } from '@/types/api';
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -20,6 +20,8 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<AuthUser>;
   completePasswordSetup: (token: string, password: string) => Promise<AuthUser>;
   switchOrganization: (organizationId: string) => Promise<AuthUser>;
+  leaveOrganization: (organizationId: string) => Promise<LeaveOrDeleteOrgResponse>;
+  applyLeaveOrDeleteResult: (result: LeaveOrDeleteOrgResponse) => void;
   loginAsOwner: (organizationId: string) => Promise<{ user: AuthUser; organization: { id: string; name: string } }>;
   exitImpersonation: () => void;
   logout: () => void;
@@ -72,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const switchOrganization = useCallback(async (organizationId: string) => {
     const result = await authApi.switchOrganization(organizationId);
     setToken(result.token);
+    queryClient.clear();
     return applyAuthSession(queryClient, result);
   }, [queryClient]);
 
@@ -81,6 +84,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
     queryClient.clear();
   }, [queryClient]);
+
+  const applyLeaveOrDeleteResult = useCallback(
+    (result: LeaveOrDeleteOrgResponse) => {
+      if (result.outcome === 'logged_out') {
+        logout();
+        return;
+      }
+      setToken(result.token);
+      queryClient.clear();
+      applyAuthSession(queryClient, result);
+    },
+    [logout, queryClient],
+  );
+
+  const leaveOrganization = useCallback(
+    async (organizationId: string) => {
+      const result = await authApi.leaveOrganization(organizationId);
+      applyLeaveOrDeleteResult(result);
+      return result;
+    },
+    [applyLeaveOrDeleteResult],
+  );
 
   const loginAsOwner = useCallback(async (organizationId: string) => {
     const originToken = getStoredToken();
@@ -119,6 +144,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       completePasswordSetup,
       switchOrganization,
+      leaveOrganization,
+      applyLeaveOrDeleteResult,
       loginAsOwner,
       exitImpersonation,
       logout,
@@ -132,6 +159,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       completePasswordSetup,
       switchOrganization,
+      leaveOrganization,
+      applyLeaveOrDeleteResult,
       loginAsOwner,
       exitImpersonation,
       logout,

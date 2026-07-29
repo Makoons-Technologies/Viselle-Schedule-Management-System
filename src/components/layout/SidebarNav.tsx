@@ -3,6 +3,7 @@ import {
   Clock,
   LayoutDashboard,
   Shield,
+  UserCircle,
 } from 'lucide-react';
 
 import { Link, NavLink, useLocation } from 'react-router-dom';
@@ -278,6 +279,12 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
         icon: Shield,
       });
     }
+
+    staffItems.push({
+      label: 'Account',
+      to: `${orgBase}/settings/account`,
+      icon: UserCircle,
+    });
 
     return (
       <NavSectionWithGroups

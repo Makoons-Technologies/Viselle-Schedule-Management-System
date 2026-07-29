@@ -36,6 +36,7 @@ import { SettingsDetailLayout } from '@/pages/org/settings/SettingsDetailLayout'
 import { GeneralSettingsPage } from '@/pages/org/settings/GeneralSettingsPage';
 import { PlanSettingsPage } from '@/pages/org/settings/PlanSettingsPage';
 import { OrgSettingsPage } from '@/pages/org/settings/OrgSettingsPage';
+import { AccountSettingsPage } from '@/pages/org/settings/AccountSettingsPage';
 import { PaymentsSettingsPage } from '@/pages/org/settings/PaymentsSettingsPage';
 import { StaffPermissionsSettingsPage } from '@/pages/org/settings/StaffPermissionsSettingsPage';
 import { RecurringPage } from '@/pages/org/RecurringPage';
@@ -126,6 +127,7 @@ export const appRoutes = [
                   { path: 'calendar', element: <CalendarPage /> },
                   { path: 'appointments', element: <AppointmentsPage /> },
                   { path: 'customers', element: <CustomersPage /> },
+                  { path: 'settings/account', element: <AccountSettingsPage /> },
                   {
                     element: <ProtectedRoute roles={['platform_owner', 'org_owner']} />,
                     children: [

@@ -90,6 +90,11 @@ export interface LoginResponse {
   memberships?: StaffMembership[];
 }
 
+/** Result of leave-organization or owner self-delete. */
+export type LeaveOrDeleteOrgResponse =
+  | { outcome: 'switched'; token: string; user: AuthUser; memberships?: StaffMembership[] }
+  | { outcome: 'logged_out' };
+
 export interface ImpersonateOwnerResponse {
   token: string;
   user: AuthUser;

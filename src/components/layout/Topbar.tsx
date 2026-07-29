@@ -62,14 +62,21 @@ export function Topbar() {
         : selectedOrgFromContext?.name
       : orgData?.organization.name;
 
-  const handleStaffOrgChange = async (organizationId: string) => {
+  const handleOrgChange = async (organizationId: string) => {
     try {
-      await switchOrganization(organizationId);
-      navigate(`/orgs/${organizationId}/calendar`);
+      const nextUser = await switchOrganization(organizationId);
+      const home =
+        nextUser.role === 'org_owner'
+          ? `/orgs/${organizationId}/dashboard`
+          : `/orgs/${organizationId}/calendar`;
+      navigate(home);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not switch organization');
     }
   };
+
+  const showOrgSwitcher =
+    user?.role !== 'platform_owner' && memberships.length > 1;
 
   const platformOrgId =
     user?.role === 'platform_owner' && contextValue && contextValue !== PLATFORM_CONTEXT
@@ -82,20 +89,24 @@ export function Topbar() {
         ? `${getPlatformOrgBase(platformOrgId)}/settings`
         : null
       : routeOrgId
-        ? `/orgs/${routeOrgId}/settings`
+        ? user?.role === 'staff'
+          ? `/orgs/${routeOrgId}/settings/account`
+          : `/orgs/${routeOrgId}/settings`
         : null;
 
   const showSettingsButton =
     !!orgSettingsPath &&
     (user?.role === 'platform_owner'
       ? true
-      : !trialExpired && user?.role === 'org_owner');
+      : !trialExpired && (user?.role === 'org_owner' || user?.role === 'staff'));
 
   const onSettingsPage = !orgSettingsPath
     ? false
     : user?.role === 'platform_owner'
       ? location.pathname.startsWith(orgSettingsPath)
-      : !!routeOrgId && isOrgSettingsPath(location.pathname, `/orgs/${routeOrgId}`);
+      : user?.role === 'staff'
+        ? location.pathname.includes('/settings/account')
+        : !!routeOrgId && isOrgSettingsPath(location.pathname, `/orgs/${routeOrgId}`);
 
   const handleLogout = () => {
     setLogoutOpen(false);
@@ -120,9 +131,9 @@ export function Topbar() {
           <Menu className="h-5 w-5" />
         </Button>
 
-        {user?.role === 'staff' && memberships.length > 1 ? (
+        {showOrgSwitcher ? (
           <div className="flex min-w-0 flex-1 items-center gap-2">
-            <Select value={user.organizationId ?? undefined} onValueChange={handleStaffOrgChange}>
+            <Select value={user?.organizationId ?? undefined} onValueChange={handleOrgChange}>
               <SelectTrigger className="h-10 w-full min-w-0 max-w-[11rem] text-xs sm:max-w-xs sm:text-sm md:max-w-sm">
                 <SelectValue placeholder="Select workplace" />
               </SelectTrigger>
