@@ -23,6 +23,7 @@ import { Label } from '@/components/ui/label';
 import { PasswordInput } from '@/components/ui/password-input';
 import { cn } from '@/lib/utils';
 import { contactPath } from '@/lib/contact';
+import { redirectToStripeUrl } from '@/lib/safe-redirect';
 import {
   checkSlugAvailable,
   createSignupCheckout,
@@ -664,7 +665,11 @@ export function GetStartedPage() {
         return;
       }
 
-      window.location.href = result.checkoutUrl!;
+      if (!result.checkoutUrl || !redirectToStripeUrl(result.checkoutUrl)) {
+        setError('Checkout is unavailable right now. Please contact us to get started.');
+        setSubmitting(false);
+        return;
+      }
     } catch (err) {
       const message =
         err instanceof ApiError

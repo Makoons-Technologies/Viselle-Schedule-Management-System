@@ -13,6 +13,7 @@ import {
 } from '@/lib/plan-features';
 import { contactPath } from '@/lib/contact';
 import { cn } from '@/lib/utils';
+import { redirectToStripeUrl } from '@/lib/safe-redirect';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { SubscriptionTier } from '@/types/api';
@@ -70,7 +71,9 @@ export function PlanComparisonSection({
         toast.error('Checkout could not be started. Please try again or contact support.');
         return;
       }
-      window.location.assign(result.checkoutUrl);
+      if (!redirectToStripeUrl(result.checkoutUrl)) {
+        toast.error('Received an unexpected checkout URL');
+      }
     },
     onError: (err: Error) => toast.error(err.message),
   });
