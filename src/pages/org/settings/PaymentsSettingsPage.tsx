@@ -7,6 +7,7 @@ import { orgApi } from '@/lib/api';
 import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { cn } from '@/lib/utils';
+import { redirectToStripeUrl } from '@/lib/safe-redirect';
 import { Panel, sectionMutedClass } from '@/components/common/Panel';
 import { LoadingState } from '@/components/common/LoadingState';
 import { TrialLockedControl } from '@/components/common/TrialLockedControl';
@@ -46,7 +47,9 @@ export function PaymentsSettingsPage() {
   const onboardMutation = useMutation({
     mutationFn: () => orgApi.startStripeConnectOnboarding(orgId),
     onSuccess: (result) => {
-      window.location.href = result.url;
+      if (!redirectToStripeUrl(result.url)) {
+        toast.error('Received an unexpected onboarding URL');
+      }
     },
     onError: (err: Error) => toast.error(err.message),
   });
