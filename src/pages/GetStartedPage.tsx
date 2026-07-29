@@ -281,8 +281,10 @@ export function GetStartedPage() {
   const [homepageTrial, setHomepageTrial] = useState<TrialCampaign | null>(null);
   const [provisionedResult, setProvisionedResult] = useState<{ organizationId: string; slug: string } | null>(null);
   const committedTrialCodeRef = useRef(committedTrialCode);
+  const trialOfferRef = useRef(trialOffer);
   const trialValidateSeq = useRef(0);
   committedTrialCodeRef.current = committedTrialCode;
+  trialOfferRef.current = trialOffer;
 
   const { subdomainAddon, customWebsiteAddon } = websiteOptionToAddons(websiteOption);
 
@@ -315,6 +317,11 @@ export function GetStartedPage() {
     }
 
     if (trimmed === committedTrialCodeRef.current) {
+      // Cancel any in-flight validation for a different draft.
+      trialValidateSeq.current += 1;
+      setTrialCodeStatus(
+        trialOfferRef.current ? 'valid' : committedTrialCodeRef.current ? 'invalid' : 'idle',
+      );
       return;
     }
 
@@ -1015,27 +1022,27 @@ export function GetStartedPage() {
                 <CardTitle className="text-base">Your cart</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {loadingCart && !cart ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-stone-400" />
-                ) : (
-                  <CartSummary cart={cart} compact />
-                )}
-                {loadingCart && cart && (
-                  <p className="text-xs text-stone-500 dark:text-stone-400">
-                    <Loader2 className="mr-1 inline h-3 w-3 animate-spin" />
-                    Updating amounts…
-                  </p>
-                )}
+                <TrialCodeField
+                  trialCode={trialCode}
+                  trialCodeStatus={trialCodeStatus}
+                  trialOffer={trialOffer}
+                  useHomepageCampaign={useHomepageCampaign}
+                  homepageTrial={homepageTrial}
+                  onChange={setTrialCode}
+                  onCommit={() => void commitTrialCode(trialCode)}
+                />
                 <div className="border-t border-stone-200 pt-4 dark:border-stone-700">
-                  <TrialCodeField
-                    trialCode={trialCode}
-                    trialCodeStatus={trialCodeStatus}
-                    trialOffer={trialOffer}
-                    useHomepageCampaign={useHomepageCampaign}
-                    homepageTrial={homepageTrial}
-                    onChange={setTrialCode}
-                    onCommit={() => void commitTrialCode(trialCode)}
-                  />
+                  {loadingCart && !cart ? (
+                    <Loader2 className="h-5 w-5 animate-spin text-stone-400" />
+                  ) : (
+                    <CartSummary cart={cart} compact />
+                  )}
+                  {loadingCart && cart && (
+                    <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">
+                      <Loader2 className="mr-1 inline h-3 w-3 animate-spin" />
+                      Updating amounts…
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
