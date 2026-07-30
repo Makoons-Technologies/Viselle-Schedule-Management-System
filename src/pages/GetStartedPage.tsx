@@ -510,7 +510,7 @@ export function GetStartedPage() {
     trialCodeStatus === 'valid' && trialOffer
       ? trialOffer.lockedTier
       : useHomepageCampaign && homepageTrial
-        ? homepageTrial.lockedTier
+        ? (homepageTrial.lockedTier ?? 'professional')
         : null;
   const planLocked = Boolean(lockedTier);
 
