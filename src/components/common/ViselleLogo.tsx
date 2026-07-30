@@ -5,13 +5,22 @@ import { cn } from '@/lib/utils';
  * baked-in grey disc (see commits that temporarily added a disc fill).
  * Bump when the mark asset changes.
  */
-export const VISELLE_LOGO_CACHE_BUST = '20260730c';
+export const VISELLE_LOGO_CACHE_BUST = '20260730d';
+
+/** Flattened SVG (paths with inline gradient fills) — no background rect/disc. */
+export const VISELLE_LOGO_SVG_SRC = `/viselle-logo.svg?v=${VISELLE_LOGO_CACHE_BUST}`;
 
 /**
- * Flattened SVG (paths with inline gradient fills) — no background rect/disc.
- * Prefer SVG over PNG so a URL change forces a fresh fetch after prior PNG disc assets.
+ * High-res transparent PNG (1024×1024). Prefer for large display sizes where
+ * Illustrator metallic SVG strokes soft-antialias and look blurry.
  */
-export const VISELLE_LOGO_SRC = `/viselle-logo.svg?v=${VISELLE_LOGO_CACHE_BUST}`;
+export const VISELLE_LOGO_PNG_SRC = `/viselle-logo.png?v=${VISELLE_LOGO_CACHE_BUST}`;
+
+/** @deprecated Prefer VISELLE_LOGO_SVG_SRC; kept for any external imports. */
+export const VISELLE_LOGO_SRC = VISELLE_LOGO_SVG_SRC;
+
+/** Above this CSS size, use the 1024 PNG so retina/large heroes stay sharp. */
+const RASTER_MIN_SIZE = 96;
 
 type ViselleLogoProps = {
   className?: string;
@@ -20,11 +29,13 @@ type ViselleLogoProps = {
   alt?: string;
 };
 
-/** Product logo. Transparent SVG so gold reads on any chrome without a baked-in disc. */
+/** Product logo. Transparent mark — SVG for small chrome, PNG for large/hero. */
 export function ViselleLogo({ className, size = 36, alt = 'Viselle' }: ViselleLogoProps) {
+  const useRaster = size >= RASTER_MIN_SIZE;
+
   return (
     <img
-      src={VISELLE_LOGO_SRC}
+      src={useRaster ? VISELLE_LOGO_PNG_SRC : VISELLE_LOGO_SVG_SRC}
       alt={alt}
       width={size}
       height={size}
