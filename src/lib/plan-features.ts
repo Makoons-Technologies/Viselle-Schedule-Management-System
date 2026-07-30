@@ -79,18 +79,6 @@ export const PLAN_FEATURES: PlanFeature[] = [
     description: 'No staff seat cap — add as many team members as you need.',
     tiers: ['business'],
   },
-  {
-    id: 'priority_support',
-    name: 'Priority support',
-    description: 'Faster responses when you need help from the Viselle team.',
-    tiers: ['business'],
-  },
-  {
-    id: 'advanced_booking',
-    name: 'Advanced booking controls',
-    description: 'Higher limits and controls suited to busy multi-staff operations.',
-    tiers: ['business'],
-  },
 ];
 
 export const PLAN_TIERS: PlanTierMarketing[] = [
