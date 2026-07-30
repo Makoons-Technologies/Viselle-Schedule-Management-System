@@ -1,11 +1,13 @@
 import { useEffect, useRef } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgMustChoosePlan } from '@/hooks/useOrgMustChoosePlan';
 import { useOrgPlan } from '@/hooks/useOrgPlan';
 import { orgApi } from '@/lib/api';
+import { isOrgInActiveTrial } from '@/lib/trial';
 import { LoadingState } from '@/components/common/LoadingState';
 import { PlanComparisonSection } from '@/components/settings/PlanComparisonSection';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,11 +16,19 @@ import { getPlanTier, type PlanTierId } from '@/lib/plan-features';
 
 export function PlanSettingsPage() {
   const orgId = useOrgId();
+  const { user } = useAuth();
   const { plan, isLoading } = useOrgPlan(orgId);
   const mustChoosePlan = useOrgMustChoosePlan();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const checkoutHandled = useRef(false);
+
+  const { data: orgData } = useQuery({
+    queryKey: ['organization', orgId, user?.role],
+    queryFn: () => orgApi.getOrganization(orgId!),
+    enabled: !!orgId && user?.role !== 'platform_owner',
+  });
+  const isOnActiveTrial = isOrgInActiveTrial(orgData?.organization);
 
   useEffect(() => {
     if (!orgId || checkoutHandled.current) return;
@@ -133,6 +143,7 @@ export function PlanSettingsPage() {
         orgId={orgId}
         currentTier={plan.subscriptionTier}
         hasStripeSubscription={plan.hasStripeSubscription}
+        isOnActiveTrial={isOnActiveTrial}
       />
     </div>
   );

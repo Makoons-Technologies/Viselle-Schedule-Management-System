@@ -22,17 +22,29 @@ interface PlanComparisonSectionProps {
   orgId: string;
   currentTier: SubscriptionTier | null | undefined;
   hasStripeSubscription: boolean;
+  /** Active (non-expired) trial — lower tiers cannot be selected. */
+  isOnActiveTrial?: boolean;
 }
+
+type PlanCtaLabel =
+  | 'Current plan'
+  | 'Upgrade'
+  | 'Downgrade'
+  | 'Switch plan'
+  | 'Subscribe'
+  | 'Unavailable';
 
 function ctaLabel(
   current: PlanTierId | null,
   target: PlanTierId,
   hasStripeSubscription: boolean,
-): 'Current plan' | 'Upgrade' | 'Downgrade' | 'Switch plan' | 'Subscribe' {
+  isOnActiveTrial: boolean,
+): PlanCtaLabel {
   if (current === target) {
     return hasStripeSubscription ? 'Current plan' : 'Subscribe';
   }
   const change = compareTierChange(current, target);
+  if (change === 'downgrade' && isOnActiveTrial) return 'Unavailable';
   if (change === 'upgrade') return 'Upgrade';
   if (change === 'downgrade') return 'Downgrade';
   return 'Switch plan';
@@ -42,6 +54,7 @@ export function PlanComparisonSection({
   orgId,
   currentTier,
   hasStripeSubscription,
+  isOnActiveTrial = false,
 }: PlanComparisonSectionProps) {
   const queryClient = useQueryClient();
   const normalizedCurrent: PlanTierId | null =
@@ -87,8 +100,8 @@ export function PlanComparisonSection({
       : undefined;
 
   function confirmAndChange(tier: PlanTierId) {
-    const label = ctaLabel(normalizedCurrent, tier, hasStripeSubscription);
-    if (label === 'Current plan') return;
+    const label = ctaLabel(normalizedCurrent, tier, hasStripeSubscription, isOnActiveTrial);
+    if (label === 'Current plan' || label === 'Unavailable') return;
     const tierMeta = PLAN_TIERS.find((t) => t.id === tier)!;
 
     if (!hasStripeSubscription) {
@@ -115,9 +128,11 @@ export function PlanComparisonSection({
         <CardHeader>
           <CardTitle className="text-base">Compare plans</CardTitle>
           <CardDescription>
-            {hasStripeSubscription
-              ? 'Checkmarks show what each tier includes. Upgrade or downgrade anytime — feature access updates immediately.'
-              : 'Checkmarks show what each tier includes. Choose a plan to pay with Stripe Checkout and activate your account.'}
+            {isOnActiveTrial
+              ? 'Checkmarks show what each tier includes. During your trial you can subscribe to your current plan or upgrade — downgrades are unavailable until the trial ends.'
+              : hasStripeSubscription
+                ? 'Checkmarks show what each tier includes. Upgrade or downgrade anytime — feature access updates immediately.'
+                : 'Checkmarks show what each tier includes. Choose a plan to pay with Stripe Checkout and activate your account.'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -187,15 +202,37 @@ export function PlanComparisonSection({
                 <tr>
                   <td className="pt-4" />
                   {PLAN_TIERS.map((tier) => {
-                    const label = ctaLabel(normalizedCurrent, tier.id, hasStripeSubscription);
+                    const label = ctaLabel(
+                      normalizedCurrent,
+                      tier.id,
+                      hasStripeSubscription,
+                      isOnActiveTrial,
+                    );
                     const isCurrent = label === 'Current plan';
+                    const isUnavailable = label === 'Unavailable';
+                    const isDisabled = isCurrent || isUnavailable || pending;
                     return (
                       <td key={tier.id} className="px-2 pt-4 text-center">
                         <Button
                           size="sm"
-                          variant={isCurrent ? 'secondary' : tier.highlighted ? 'default' : 'outline'}
-                          disabled={isCurrent || pending}
-                          className={cn('w-full min-w-[7.5rem]', isCurrent && 'cursor-default')}
+                          variant={
+                            isCurrent || isUnavailable
+                              ? 'secondary'
+                              : tier.highlighted
+                                ? 'default'
+                                : 'outline'
+                          }
+                          disabled={isDisabled}
+                          title={
+                            isUnavailable
+                              ? 'Downgrades are not available while your trial is active'
+                              : undefined
+                          }
+                          className={cn(
+                            'w-full min-w-[7.5rem]',
+                            (isCurrent || isUnavailable) && 'cursor-default',
+                            isUnavailable && 'opacity-60',
+                          )}
                           onClick={() => confirmAndChange(tier.id)}
                         >
                           {pending && pendingTier === tier.id
