@@ -85,7 +85,7 @@ export function LandingPage() {
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
         <div className="mx-auto max-w-3xl text-center">
           <div className="flex flex-col items-center gap-4">
-            <ViselleLogo size={88} />
+            <ViselleLogo size={144} className="size-28 sm:size-36" />
             <p className="text-3xl font-semibold tracking-tight text-brand-700 dark:text-stone-100 sm:text-4xl">
               Viselle
             </p>
