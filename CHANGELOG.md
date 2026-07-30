@@ -21,4 +21,3 @@ Initial alpha baseline of the Viselle scheduling platform.
 ### Notes
 
 - Still in **alpha**. APIs and UX may change without a major bump until beta/GA.
-- Staging and production use **separate databases** — never share one Supabase project between them.
