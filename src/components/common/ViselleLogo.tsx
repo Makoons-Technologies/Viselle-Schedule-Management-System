@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 
 /**
- * Official Viselle mark as PNG — gold V on a light grey disc.
+ * Official Viselle mark as PNG — gold artwork on a transparent square.
  * SVG is kept for favicon; Illustrator CSS/xlink gradients do not paint under <img>.
  */
 export const VISELLE_LOGO_SRC = '/viselle-logo.png';
@@ -13,10 +13,7 @@ type ViselleLogoProps = {
   alt?: string;
 };
 
-/**
- * Product logo. PNG includes its own light disc so gold stays readable on
- * dark chrome and light marketing pages.
- */
+/** Product logo. Transparent PNG so gold reads on any chrome without a baked-in disc. */
 export function ViselleLogo({ className, size = 36, alt = 'Viselle' }: ViselleLogoProps) {
   return (
     <img
@@ -24,7 +21,7 @@ export function ViselleLogo({ className, size = 36, alt = 'Viselle' }: ViselleLo
       alt={alt}
       width={size}
       height={size}
-      className={cn('shrink-0 rounded-full object-contain', className)}
+      className={cn('shrink-0 object-contain', className)}
       decoding="async"
     />
   );
