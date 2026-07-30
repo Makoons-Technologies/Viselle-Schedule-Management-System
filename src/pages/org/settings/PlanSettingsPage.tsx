@@ -127,7 +127,11 @@ export function PlanSettingsPage() {
           <ul className="mt-3 list-inside list-disc space-y-1">
             <li>
               Staff limit:{' '}
-              {plan.maxStaffAccounts >= 999 ? 'Unlimited' : `Up to ${plan.maxStaffAccounts}`}
+              {plan.maxStaffAccounts >= 999
+                ? 'Unlimited'
+                : plan.maxStaffAccounts === 0
+                  ? 'Owner only'
+                  : `Up to ${plan.maxStaffAccounts}`}
             </li>
             <li>Email reminders: {plan.emailRemindersEnabled ? 'Included' : 'Not included'}</li>
             <li>Text (SMS) reminders: {plan.smsRemindersEnabled ? 'Included' : 'Not included'}</li>

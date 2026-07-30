@@ -83,18 +83,22 @@ export function StaffPage() {
           </TrialLockedControl>
         }
       />
-      {staffLimit ? (
+      {staffLimit !== null ? (
         <p className="-mt-2 mb-4 text-sm text-stone-500">
-          {activeStaffCount} of {staffLimit >= 999 ? 'unlimited' : staffLimit} staff accounts used
+          {staffLimit === 0
+            ? 'Owner only — additional staff aren’t included on this plan.'
+            : `${activeStaffCount} of ${staffLimit >= 999 ? 'unlimited' : staffLimit} staff accounts used`}
         </p>
       ) : null}
       {atStaffLimit && (
         <p className="mb-4 text-sm text-amber-800">
-          You&apos;ve reached your staff limit on the {plan?.tierName ?? 'current'} plan.{' '}
+          {staffLimit === 0
+            ? 'Your plan only includes the organization owner.'
+            : `You've reached your staff limit on the ${plan?.tierName ?? 'current'} plan.`}{' '}
           <a href="/#pricing" className="font-medium text-brand-700 hover:underline">
             Upgrade your plan
           </a>{' '}
-          to add more team members.
+          to add {staffLimit === 0 ? 'team members' : 'more team members'}.
         </p>
       )}
       {accounts.length === 0 ? (

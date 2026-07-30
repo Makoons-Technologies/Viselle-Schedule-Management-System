@@ -13,8 +13,6 @@ import { useAuth } from '@/context/AuthContext';
 
 import { useOrg } from '@/context/OrgContext';
 
-import { useOrgPlan } from '@/hooks/useOrgPlan';
-
 import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgAdminAccess } from '@/hooks/useOrgAdminAccess';
 import { useOrgMustChoosePlan } from '@/hooks/useOrgMustChoosePlan';
@@ -247,11 +245,9 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
 
   const effectiveOrgId = user?.role === 'platform_owner' ? selectedOrgId : user?.organizationId ?? routeOrgId;
 
-  const { plan } = useOrgPlan(effectiveOrgId ?? undefined);
-
   const location = useLocation();
 
-  const showRecurring = plan ? plan.recurringAppointmentsEnabled : true;
+  const showRecurring = true;
   const canManageStaff = useOrgAdminAccess(effectiveOrgId ?? undefined);
   const writeLocked = useOrgWriteLocked();
   const mustChoosePlan = useOrgMustChoosePlan();

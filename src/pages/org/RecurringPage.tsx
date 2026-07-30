@@ -68,14 +68,14 @@ function RecurringRuleActions({
   trialLocked,
 }: {
   rule: RecurringAppointmentRule;
-  onEdit: (rule: RecurringAppointmentRule) => void;
+  onEdit?: (rule: RecurringAppointmentRule) => void;
   onDelete: (rule: RecurringAppointmentRule) => void;
   compact?: boolean;
   trialLocked: boolean;
 }) {
   return (
     <TableRowActions className={compact ? 'w-full' : undefined}>
-      {rule.status !== 'cancelled' && (
+      {onEdit && rule.status !== 'cancelled' && (
         <TrialLockedControl locked={trialLocked}>
           <TableIconButton
             icon={Wrench}
@@ -105,7 +105,7 @@ function RecurringRuleCard({
   trialLocked,
 }: {
   rule: RecurringAppointmentRule;
-  onEdit: (rule: RecurringAppointmentRule) => void;
+  onEdit?: (rule: RecurringAppointmentRule) => void;
   onDelete: (rule: RecurringAppointmentRule) => void;
   trialLocked: boolean;
 }) {
@@ -131,7 +131,7 @@ function RecurringRulesTable({
   trialLocked,
 }: {
   rules: RecurringAppointmentRule[];
-  onEdit: (rule: RecurringAppointmentRule) => void;
+  onEdit?: (rule: RecurringAppointmentRule) => void;
   onDelete: (rule: RecurringAppointmentRule) => void;
   trialLocked: boolean;
 }) {
@@ -188,7 +188,7 @@ function RecurringRulesList({
   trialLocked,
 }: {
   rules: RecurringAppointmentRule[];
-  onEdit: (rule: RecurringAppointmentRule) => void;
+  onEdit?: (rule: RecurringAppointmentRule) => void;
   onDelete: (rule: RecurringAppointmentRule) => void;
   trialLocked: boolean;
 }) {
@@ -233,7 +233,13 @@ export function RecurringPage() {
 
   if (isLoading || planLoading) return <LoadingState />;
 
-  if (plan && !plan.recurringAppointmentsEnabled) {
+  const rules = data?.recurringAppointmentRules ?? [];
+  const activeRules = rules.filter((rule) => rule.status === 'active' || rule.status === 'paused');
+  const endedRules = rules.filter((rule) => rule.status === 'cancelled');
+  const recurringEnabled = !plan || plan.recurringAppointmentsEnabled;
+  const hasExistingRules = rules.length > 0;
+
+  if (!recurringEnabled && !hasExistingRules) {
     return (
       <div className="space-y-6">
         <PageHeader
@@ -249,16 +255,23 @@ export function RecurringPage() {
     );
   }
 
-  const rules = data?.recurringAppointmentRules ?? [];
-  const activeRules = rules.filter((rule) => rule.status === 'active' || rule.status === 'paused');
-  const endedRules = rules.filter((rule) => rule.status === 'cancelled');
-
   return (
     <div className="space-y-8">
       <PageHeader
         title="Recurring Appointments"
-        description="Active series appear on the calendar. Cancel on an appointment skips only that date; Delete Series stops the whole schedule."
+        description={
+          recurringEnabled
+            ? 'Active series appear on the calendar. Cancel on an appointment skips only that date; Delete Series stops the whole schedule.'
+            : 'Recurring appointments aren’t on your current plan. Existing series are frozen (no new visits). Cancel or delete a series below, or upgrade to manage them again.'
+        }
       />
+      {!recurringEnabled && hasExistingRules && (
+        <PlanUpsell
+          title="Recurring appointments are frozen on this plan"
+          description="Upgrade to Professional or Business to create new series and resume automatic scheduling. You can still cancel or delete the series listed below."
+          featureLabel="Recurring appointments"
+        />
+      )}
       {rules.length === 0 ? (
         <EmptyState
           icon={Repeat}
@@ -272,7 +285,7 @@ export function RecurringPage() {
               <h2 className={sectionHeadingClass}>Active series</h2>
               <RecurringRulesList
                 rules={activeRules}
-                onEdit={setEditingRule}
+                onEdit={recurringEnabled ? setEditingRule : undefined}
                 onDelete={setDeletingRule}
                 trialLocked={trialExpired}
               />
@@ -288,7 +301,7 @@ export function RecurringPage() {
               </div>
               <RecurringRulesList
                 rules={endedRules}
-                onEdit={setEditingRule}
+                onEdit={recurringEnabled ? setEditingRule : undefined}
                 onDelete={setDeletingRule}
                 trialLocked={trialExpired}
               />

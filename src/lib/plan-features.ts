@@ -18,6 +18,11 @@ export interface PlanTierMarketing {
   name: string;
   tagline: string;
   monthlyPriceCents: number;
+  /**
+   * Max active non-owner accounts (matches backend pricing-tiers presets).
+   * Starter is 0 — organization owner only.
+   */
+  maxStaffAccounts: number;
   staffLimitLabel: string;
   highlighted?: boolean;
 }
@@ -85,15 +90,17 @@ export const PLAN_TIERS: PlanTierMarketing[] = [
   {
     id: 'starter',
     name: 'Starter',
-    tagline: 'Solo stylists & small booths',
+    tagline: 'Solo stylists',
     monthlyPriceCents: 2000,
-    staffLimitLabel: 'Up to 2 staff',
+    maxStaffAccounts: 0,
+    staffLimitLabel: 'Owner only',
   },
   {
     id: 'professional',
     name: 'Professional',
     tagline: 'Growing salons & spas',
     monthlyPriceCents: 4900,
+    maxStaffAccounts: 10,
     staffLimitLabel: 'Up to 10 staff',
     highlighted: true,
   },
@@ -102,9 +109,19 @@ export const PLAN_TIERS: PlanTierMarketing[] = [
     name: 'Business',
     tagline: 'Busy teams & multi-location',
     monthlyPriceCents: 9900,
+    maxStaffAccounts: 999,
     staffLimitLabel: 'Unlimited staff',
   },
 ];
+
+/** Features included on `from` but not on `to` (empty if upgrading or unknown from). */
+export function featuresLostOnChange(
+  from: PlanTierId | null | undefined,
+  to: PlanTierId,
+): PlanFeature[] {
+  if (!from || from === to) return [];
+  return PLAN_FEATURES.filter((f) => f.tiers.includes(from) && !f.tiers.includes(to));
+}
 
 export function tierIncludesFeature(tier: PlanTierId, featureId: string): boolean {
   const feature = PLAN_FEATURES.find((f) => f.id === featureId);

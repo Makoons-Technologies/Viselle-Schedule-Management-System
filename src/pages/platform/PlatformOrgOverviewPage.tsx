@@ -124,7 +124,11 @@ export function PlatformOrgOverviewPage() {
                 <ul className="list-inside list-disc space-y-1">
                   <li>
                     Staff limit:{' '}
-                    {plan.maxStaffAccounts >= 999 ? 'Unlimited' : `Up to ${plan.maxStaffAccounts}`}
+                    {plan.maxStaffAccounts >= 999
+                      ? 'Unlimited'
+                      : plan.maxStaffAccounts === 0
+                        ? 'Owner only'
+                        : `Up to ${plan.maxStaffAccounts}`}
                   </li>
                   <li>Email reminders: {plan.emailRemindersEnabled ? 'Yes' : 'No'}</li>
                   <li>SMS reminders: {plan.smsRemindersEnabled ? 'Yes' : 'No'}</li>
