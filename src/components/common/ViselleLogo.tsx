@@ -11,8 +11,8 @@ type ViselleLogoProps = {
 };
 
 /**
- * Product logo. Neutral grey disc behind the transparent SVG so the gold mark
- * stays visible on both light and dark chrome (pure black reads as empty).
+ * Product logo. Light stone disc behind the transparent SVG so the gold mark
+ * stays visible on both dark chrome and light pages (charcoal discs vanish).
  */
 export function ViselleLogo({ className, size = 36, alt = 'Viselle' }: ViselleLogoProps) {
   return (
@@ -22,7 +22,7 @@ export function ViselleLogo({ className, size = 36, alt = 'Viselle' }: ViselleLo
       width={size}
       height={size}
       className={cn(
-        'shrink-0 rounded-full object-contain bg-stone-600 p-[12%] ring-1 ring-stone-400/40',
+        'shrink-0 rounded-full object-contain bg-stone-300 p-[12%] ring-1 ring-stone-500/35',
         className,
       )}
       decoding="async"
