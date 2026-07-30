@@ -1,7 +1,7 @@
 {
   "rewrites": [
     {
-      "source": "/((?!robots\\.txt|sitemap\\.xml|llms\\.txt|favicon\\.png|apple-touch-icon\\.png|viselle-logo\\.png|icons\\.svg).*)",
+      "source": "/((?!robots\\.txt|sitemap\\.xml|llms\\.txt|favicon\\.png|apple-touch-icon\\.png|viselle-logo\\.png|viselle-logo\\.svg|icons\\.svg).*)",
       "destination": "/index.html"
     }
   ]

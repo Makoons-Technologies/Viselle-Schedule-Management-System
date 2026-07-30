@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 
-/** Official Viselle mark — gold serif V in circular frame (asset has a black background). */
-export const VISELLE_LOGO_SRC = '/viselle-logo.png';
+/** Official Viselle mark — gold serif V in circular frame (vector SVG, transparent bg). */
+export const VISELLE_LOGO_SRC = '/viselle-logo.svg';
 
 type ViselleLogoProps = {
   className?: string;
@@ -11,8 +11,8 @@ type ViselleLogoProps = {
 };
 
 /**
- * Product logo. Clipped to a circle so the source black square reads as a
- * circular mark on light chrome (matches the logo's circular frame).
+ * Product logo. Black circular disc behind the transparent SVG so the mark
+ * matches the gold-on-black brand lockup on light chrome.
  */
 export function ViselleLogo({ className, size = 36, alt = 'Viselle' }: ViselleLogoProps) {
   return (
@@ -21,7 +21,7 @@ export function ViselleLogo({ className, size = 36, alt = 'Viselle' }: ViselleLo
       alt={alt}
       width={size}
       height={size}
-      className={cn('shrink-0 rounded-full object-cover bg-black', className)}
+      className={cn('shrink-0 rounded-full object-contain bg-black p-[12%]', className)}
       decoding="async"
     />
   );
