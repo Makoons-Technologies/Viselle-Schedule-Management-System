@@ -71,7 +71,7 @@ function mapLinearStateToFilterStatus(stateName: string): SupportTicketStatus | 
   const n = stateName.toLowerCase();
   if (n === 'todo' || n === 'backlog' || n === 'triage') return 'open';
   if (n === 'in progress') return 'in_progress';
-  if (n === 'in review') return 'qa_ready';
+  if (n === 'in review') return 'in_review';
   if (n === 'done') return 'done';
   if (n === 'canceled' || n === 'cancelled' || n === 'duplicate') return 'canceled';
   return null;

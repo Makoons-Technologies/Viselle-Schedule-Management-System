@@ -11,7 +11,7 @@ export const SUPPORT_TICKET_TYPE_LABELS: Record<SupportTicketType, string> = {
 export const SUPPORT_TICKET_STATUSES: SupportTicketStatus[] = [
   'open',
   'in_progress',
-  'qa_ready',
+  'in_review',
   'done',
   'canceled',
 ];
@@ -19,7 +19,7 @@ export const SUPPORT_TICKET_STATUSES: SupportTicketStatus[] = [
 export const SUPPORT_TICKET_STATUS_LABELS: Record<SupportTicketStatus, string> = {
   open: 'Open',
   in_progress: 'In Progress',
-  qa_ready: 'QA Ready',
+  in_review: 'In Review',
   done: 'Done',
   canceled: 'Canceled',
 };
@@ -28,7 +28,7 @@ export const SUPPORT_TICKET_STATUS_LABELS: Record<SupportTicketStatus, string> =
 export const INBOX_STATUS_TO_LINEAR: Record<SupportTicketStatus, string> = {
   open: 'Todo',
   in_progress: 'In Progress',
-  qa_ready: 'In Review',
+  in_review: 'In Review',
   done: 'Done',
   canceled: 'Canceled',
 };

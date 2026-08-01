@@ -655,8 +655,8 @@ export interface InviteOrgOwnerInput {
   email: string;
 }
 
-/** Aligned with Linear: Open → In Progress → QA Ready → Done. */
-export type SupportTicketStatus = 'open' | 'in_progress' | 'qa_ready' | 'done' | 'canceled';
+/** Aligned with Linear: Open → In Progress → In Review → Done. */
+export type SupportTicketStatus = 'open' | 'in_progress' | 'in_review' | 'done' | 'canceled';
 export type SupportTicketType = 'support' | 'feature_request' | 'bug';
 
 export interface SupportTicket {
