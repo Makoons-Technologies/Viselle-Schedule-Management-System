@@ -13,7 +13,8 @@ export function ThemeSettingsSection() {
             Appearance
           </CardTitle>
           <p className="text-sm text-stone-500 dark:text-stone-300">
-            Defaults to your device setting. Choose light or dark to override.
+            Follow system is on by default so the schedule page and app chrome track your device
+            light/dark mode. Turn it off to lock light or dark manually.
           </p>
         </CardHeader>
         <CardContent>
@@ -28,7 +29,8 @@ export function ThemeSettingsSection() {
             Color theme
           </CardTitle>
           <p className="text-sm text-stone-500 dark:text-stone-300">
-            Choose an accent color for buttons, navigation, and highlights across the platform.
+            Accent colors for buttons, navigation, and highlights. These stay independent of
+            light/dark — they do not override system backgrounds or text.
           </p>
         </CardHeader>
         <CardContent>

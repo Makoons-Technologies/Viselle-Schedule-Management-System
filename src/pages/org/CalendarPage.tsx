@@ -15,6 +15,7 @@ import { AppointmentDetailSheet } from '@/components/appointments/AppointmentDet
 import { BatchCheckoutSheet, type BatchCheckoutItem } from '@/components/appointments/BatchCheckoutSheet';
 import { CreateAppointmentDialog } from '@/components/appointments/CreateAppointmentDialog';
 import { HideCancelledToggle } from '@/components/appointments/HideCancelledToggle';
+import { FollowSystemToggle } from '@/components/calendar/FollowSystemToggle';
 import { StaffScheduleFilter } from '@/components/calendar/StaffScheduleFilter';
 import { WeekAppointmentTimeGrid } from '@/components/calendar/WeekAppointmentTimeGrid';
 import { CalendarAppointmentChip } from '@/components/calendar/CalendarAppointmentChip';
@@ -317,6 +318,7 @@ export function CalendarPage() {
               onSelectedIdsChange={setSelectedStaffIds}
             />
             <HideCancelledToggle checked={hideCancelled} onCheckedChange={setHideCancelled} />
+            <FollowSystemToggle />
           </div>
         }
         trailing={

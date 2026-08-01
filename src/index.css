@@ -34,6 +34,18 @@
     font-family: var(--font-sans);
   }
 
+  /*
+   * iOS Safari zooms focused inputs under 16px. Keep 16px on small screens even when
+   * components use text-sm; desktop can stay denser.
+   */
+  @media (max-width: 767px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
+
   /* Keep autofilled fields readable in light and dark themes */
   input:-webkit-autofill,
   input:-webkit-autofill:hover,
