@@ -243,10 +243,13 @@ export function BusinessCardPage() {
 
 const businessCardCss = `
 .bc-page {
-  --bc-magenta: #c0267a;
-  --bc-magenta-deep: #9b2c77;
-  --bc-indigo: #1e1b4b;
-  --bc-navy: #0f172a;
+  /* Homepage marketing brand scale (src/index.css --color-brand-*) */
+  --bc-rose: #c45b8a;       /* brand-500 */
+  --bc-rose-deep: #a84372;  /* brand-600 */
+  --bc-plum: #8a335d;       /* brand-700 */
+  --bc-plum-mid: #5a2240;   /* brand-800 */
+  --bc-plum-dark: #4a1a32;  /* brand-900 */
+  --bc-ink: #2a0f1e;        /* brand-950 */
   --bc-foil-1: #fdda74;
   --bc-foil-2: #b38524;
   --bc-foil-3: #ecd068;
@@ -259,9 +262,9 @@ const businessCardCss = `
   color: #fff;
   font-family: Outfit, ui-sans-serif, system-ui, sans-serif;
   background:
-    radial-gradient(120% 80% at 10% 0%, rgba(192, 38, 122, 0.45), transparent 55%),
-    radial-gradient(100% 70% at 100% 100%, rgba(30, 27, 75, 0.9), transparent 50%),
-    linear-gradient(160deg, #2a0f1e 0%, #0f172a 55%, #1e1b4b 100%);
+    radial-gradient(120% 80% at 10% 0%, rgba(196, 91, 138, 0.42), transparent 55%),
+    radial-gradient(100% 70% at 100% 100%, rgba(74, 26, 50, 0.85), transparent 50%),
+    linear-gradient(160deg, #2a0f1e 0%, #4a1a32 48%, #5a2240 100%);
   overflow-x: hidden;
 }
 
@@ -350,11 +353,23 @@ const businessCardCss = `
 }
 
 .bc-face-front {
-  background: linear-gradient(135deg, var(--bc-magenta) 0%, var(--bc-magenta-deep) 28%, var(--bc-indigo) 72%, var(--bc-navy) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--bc-rose) 0%,
+    var(--bc-rose-deep) 26%,
+    var(--bc-plum) 58%,
+    var(--bc-ink) 100%
+  );
 }
 
 .bc-face-back {
-  background: linear-gradient(105deg, var(--bc-indigo) 0%, #4c1d95 42%, var(--bc-magenta) 100%);
+  background: linear-gradient(
+    105deg,
+    var(--bc-ink) 0%,
+    var(--bc-plum-mid) 38%,
+    var(--bc-plum) 68%,
+    var(--bc-rose) 100%
+  );
   transform: rotateY(180deg);
 }
 
@@ -363,7 +378,7 @@ const businessCardCss = `
   inset: -20%;
   background:
     radial-gradient(circle at 20% 30%, rgba(253, 218, 116, 0.12), transparent 42%),
-    radial-gradient(circle at 80% 70%, rgba(192, 38, 122, 0.35), transparent 45%);
+    radial-gradient(circle at 80% 70%, rgba(196, 91, 138, 0.32), transparent 45%);
   animation: bc-drift 14s ease-in-out infinite alternate;
   pointer-events: none;
 }
@@ -371,7 +386,7 @@ const businessCardCss = `
 .bc-gradient-drift-back {
   background:
     radial-gradient(circle at 75% 40%, rgba(253, 218, 116, 0.1), transparent 40%),
-    radial-gradient(circle at 20% 80%, rgba(99, 102, 241, 0.28), transparent 48%);
+    radial-gradient(circle at 20% 80%, rgba(138, 51, 93, 0.34), transparent 48%);
 }
 
 @keyframes bc-drift {
