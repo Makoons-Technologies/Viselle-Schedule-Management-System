@@ -676,9 +676,22 @@ export interface SupportTicket {
   updatedAt: string;
 }
 
+/** Pure Linear project issue (not submitted via Viselle Inbox). */
+export interface InboxLinearIssue {
+  source: 'linear';
+  id: string;
+  identifier: string;
+  title: string;
+  description: string | null;
+  url: string;
+  stateName: string;
+  updatedAt: string;
+}
+
 export interface SupportTicketAgentBrief {
   prompt: string;
   tickets: SupportTicket[];
+  linearIssues?: InboxLinearIssue[];
   linearSyncConfigured: boolean;
   linearSynced: boolean;
   statusLabels: Record<SupportTicketStatus, string>;

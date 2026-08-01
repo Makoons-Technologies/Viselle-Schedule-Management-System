@@ -25,7 +25,9 @@ import type {
   MrrReport,
   PlatformStats,
   StaffPermissions,
+  InboxLinearIssue,
   SupportTicket,
+  SupportTicketAgentBrief,
   SupportTicketMessage,
   SupportTicketStatus,
   SupportTicketType,
@@ -277,6 +279,13 @@ export const ownerApi = {
     organizationId?: string;
     type?: SupportTicketType;
   }) => apiClient.get<{ tickets: SupportTicket[] }>('/owner/support-tickets', { params }).then((r) => r.data),
+  /** Pure Linear project issues not already mirrored onto Viselle Inbox tickets. */
+  listLinearInboxBacklog: () =>
+    apiClient
+      .get<{ issues: InboxLinearIssue[]; linearSyncConfigured: boolean }>(
+        '/owner/support-tickets/linear-backlog',
+      )
+      .then((r) => r.data),
   getSupportTicket: (ticketId: string) =>
     apiClient
       .get<{ ticket: SupportTicket; messages: SupportTicketMessage[] }>(`/owner/support-tickets/${ticketId}`)
@@ -284,6 +293,10 @@ export const ownerApi = {
   updateSupportTicketStatus: (ticketId: string, status: SupportTicketStatus) =>
     apiClient
       .patch<{ ticket: SupportTicket }>(`/owner/support-tickets/${ticketId}`, { status })
+      .then((r) => r.data),
+  prepareSupportTicketAgentBrief: (data: { ticketIds?: string[]; linearIssueIds?: string[] }) =>
+    apiClient
+      .post<SupportTicketAgentBrief>('/owner/support-tickets/agent-brief', data)
       .then((r) => r.data),
   replySupportTicket: (ticketId: string, data: { body: string; isInternalNote?: boolean }) =>
     apiClient
