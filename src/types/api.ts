@@ -186,7 +186,7 @@ export interface PlatformTrialSettings {
   /** Signup plan locked when a referral trial offer applies. */
   referralLockedTier: TrialLockedTier;
   /** Code-type campaign shown on `/business-card`. Null = unassigned. */
-  businessCardCampaignId?: string | null;
+  businessCardCampaignId: string | null;
   updatedAt: string;
 }
 
@@ -655,7 +655,8 @@ export interface InviteOrgOwnerInput {
   email: string;
 }
 
-export type SupportTicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
+/** Aligned with Linear: Open → In Progress → QA Ready → Done. */
+export type SupportTicketStatus = 'open' | 'in_progress' | 'qa_ready' | 'done' | 'canceled';
 export type SupportTicketType = 'support' | 'feature_request' | 'bug';
 
 export interface SupportTicket {
@@ -668,8 +669,20 @@ export interface SupportTicket {
   subject: string;
   body: string;
   status: SupportTicketStatus;
+  linearIssueId?: string | null;
+  linearIssueIdentifier?: string | null;
+  linearIssueUrl?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SupportTicketAgentBrief {
+  prompt: string;
+  tickets: SupportTicket[];
+  linearSyncConfigured: boolean;
+  linearSynced: boolean;
+  statusLabels: Record<SupportTicketStatus, string>;
+  instructions: string[];
 }
 
 export interface SupportTicketMessage {

@@ -23,7 +23,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import type { TrialCampaign, TrialCampaignType, TrialLockedTier, TrialPaymentMode } from '@/types/api';
+import type {
+  PlatformTrialSettings,
+  TrialCampaign,
+  TrialCampaignType,
+  TrialLockedTier,
+  TrialPaymentMode,
+} from '@/types/api';
 
 const PAYMENT_MODE_LABEL: Record<TrialPaymentMode, string> = {
   stripe_trial: 'Stripe trial (card now)',
@@ -765,21 +771,44 @@ function SettingsTab() {
     [campaignsData],
   );
 
-  const mutation = useMutation({
+  const applySettingsCache = (payload: { settings: PlatformTrialSettings }) => {
+    queryClient.setQueryData(['owner', 'trials', 'settings'], payload);
+  };
+
+  /** Saves only the business-card assignment; verifies the API echoed the value back. */
+  const businessCardMutation = useMutation({
+    mutationFn: (campaignId: string | null) =>
+      ownerApi.updateTrialSettings({ businessCardCampaignId: campaignId }),
+    onSuccess: (payload, campaignId) => {
+      const saved = payload.settings.businessCardCampaignId ?? null;
+      if (saved !== campaignId) {
+        // Old API builds strip unknown keys via Zod and still return 200.
+        toast.error(
+          'Business card campaign was not saved. Redeploy the API with business card support (migration 036).',
+        );
+        return;
+      }
+      applySettingsCache(payload);
+      setBusinessCardTouched(false);
+      setBusinessCardCampaignId(null);
+      toast.success('Business card campaign saved');
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const referralMutation = useMutation({
     mutationFn: () =>
       ownerApi.updateTrialSettings({
         referralDurationDays: Number(effectiveDuration),
         referralPaymentMode: effectivePaymentMode,
         referralLockedTier: effectiveLockedTier,
-        businessCardCampaignId: effectiveBusinessCardCampaignId,
       }),
-    onSuccess: () => {
-      toast.success('Trial settings saved');
-      queryClient.invalidateQueries({ queryKey: ['owner', 'trials', 'settings'] });
+    onSuccess: (payload) => {
+      applySettingsCache(payload);
       setDurationDays(null);
       setPaymentMode(null);
       setLockedTier(null);
-      setBusinessCardTouched(false);
+      toast.success('Trial settings saved');
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -788,6 +817,7 @@ function SettingsTab() {
 
   const businessCardUrl =
     typeof window !== 'undefined' ? `${window.location.origin}/business-card` : '/business-card';
+  const settingsBusy = businessCardMutation.isPending || referralMutation.isPending;
 
   return (
     <div className="space-y-6">
@@ -827,8 +857,8 @@ function SettingsTab() {
           </div>
           <Button
             type="button"
-            disabled={mutation.isPending}
-            onClick={() => mutation.mutate()}
+            disabled={settingsBusy}
+            onClick={() => businessCardMutation.mutate(effectiveBusinessCardCampaignId)}
           >
             Save business card campaign
           </Button>
@@ -844,7 +874,7 @@ function SettingsTab() {
           className="mt-4 space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
-            mutation.mutate();
+            referralMutation.mutate();
           }}
         >
           <div>
@@ -888,7 +918,7 @@ function SettingsTab() {
             <Label>Referral rewards</Label>
             <p className={sectionMutedClass}>TBD — no payout logic yet.</p>
           </div>
-          <Button type="submit" disabled={mutation.isPending}>
+          <Button type="submit" disabled={settingsBusy}>
             Save settings
           </Button>
         </form>
