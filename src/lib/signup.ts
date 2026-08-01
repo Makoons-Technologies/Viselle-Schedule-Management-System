@@ -171,6 +171,14 @@ export async function fetchLiveHomepageTrial() {
   return data.campaign;
 }
 
+/** Platform-assigned (or `?code=` override) campaign for the digital business card. */
+export async function fetchBusinessCardCampaign(code?: string | null) {
+  const { data } = await signupClient.get<{ campaign: TrialCampaign | null }>('/signup/trials/business-card', {
+    params: code ? { code } : undefined,
+  });
+  return data.campaign;
+}
+
 export async function getSignupSessionStatus(sessionId: string) {
   const { data } = await signupClient.get<{
     status: 'pending' | 'completed' | 'expired' | 'failed';

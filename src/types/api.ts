@@ -185,6 +185,8 @@ export interface PlatformTrialSettings {
   referralPaymentMode: TrialPaymentMode;
   /** Signup plan locked when a referral trial offer applies. */
   referralLockedTier: TrialLockedTier;
+  /** Code-type campaign shown on `/business-card`. Null = unassigned. */
+  businessCardCampaignId?: string | null;
   updatedAt: string;
 }
 

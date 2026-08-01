@@ -261,7 +261,15 @@ export const ownerApi = {
   getTrialSettings: () =>
     apiClient.get<{ settings: PlatformTrialSettings }>('/owner/trials/settings').then((r) => r.data),
   updateTrialSettings: (
-    data: Partial<Pick<PlatformTrialSettings, 'referralDurationDays' | 'referralPaymentMode' | 'referralLockedTier'>>,
+    data: Partial<
+      Pick<
+        PlatformTrialSettings,
+        | 'referralDurationDays'
+        | 'referralPaymentMode'
+        | 'referralLockedTier'
+        | 'businessCardCampaignId'
+      >
+    >,
   ) => apiClient.patch<{ settings: PlatformTrialSettings }>('/owner/trials/settings', data).then((r) => r.data),
 
   listSupportTickets: (params?: {
