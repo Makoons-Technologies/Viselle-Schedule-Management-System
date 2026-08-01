@@ -1,65 +1,68 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-
-import { Pencil, Repeat } from 'lucide-react';
-
-import { useEffect, useMemo, useState } from 'react';
-
+import { CheckCircle2, Pencil, Repeat } from 'lucide-react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
-
 import { appointmentApi, orgApi } from '@/lib/api';
-
-import { formatDateTime } from '@/lib/utils';
-
+import { cn, formatLongDate, formatTime } from '@/lib/utils';
 import { MakeRecurringDialog } from '@/components/appointments/MakeRecurringDialog';
 import { EditRecurringDialog } from '@/components/appointments/EditRecurringDialog';
 import { AppointmentCheckoutSheet } from '@/components/appointments/AppointmentCheckoutSheet';
 import { EditAppointmentDialog } from '@/components/appointments/EditAppointmentDialog';
 import { NoteHistoryList } from '@/components/appointments/CustomerServiceNoteHistory';
-
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
-
-import { AppointmentStatusBadge } from '@/components/common/StatusBadge';
-
 import { LoadingState } from '@/components/common/LoadingState';
-
 import { Button } from '@/components/ui/button';
-
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
 import { useStaffPermissions } from '@/hooks/useStaffPermissions';
 import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { TRIAL_LOCKED_MESSAGE } from '@/lib/trial';
 
-
-
 interface AppointmentDetailSheetProps {
-
   appointmentId: string | null;
-
   occurrenceStartTime?: string | null;
-
   orgId: string;
-
   onClose: () => void;
-
 }
 
+function visitStatusLabel(status: string) {
+  switch (status) {
+    case 'scheduled':
+      return 'Confirmed';
+    case 'arrived':
+      return 'Checked in';
+    case 'cancelled':
+      return 'Cancelled';
+    case 'missed':
+      return 'Missed';
+    default:
+      return status.charAt(0).toUpperCase() + status.slice(1);
+  }
+}
 
+function DetailRow({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="py-3.5">
+      <dt className="text-xs font-medium uppercase tracking-wide text-stone-500 dark:text-stone-400">
+        {label}
+      </dt>
+      <dd className="mt-1 text-base font-medium text-stone-900 dark:text-stone-50">{value}</dd>
+    </div>
+  );
+}
+
+const pillOutline =
+  'h-10 rounded-full border border-stone-300 bg-transparent px-5 text-sm font-semibold text-stone-900 hover:bg-stone-50 dark:border-stone-600 dark:text-stone-100 dark:hover:bg-stone-800';
+const pillPrimary =
+  'h-10 rounded-full bg-brand-600 px-5 text-sm font-semibold text-white hover:bg-brand-700';
 
 export function AppointmentDetailSheet({
-
   appointmentId,
-
   occurrenceStartTime,
-
   orgId,
-
   onClose,
-
 }: AppointmentDetailSheetProps) {
-
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { permissions, isManager } = useStaffPermissions(orgId);
@@ -67,9 +70,7 @@ export function AppointmentDetailSheet({
 
   const [recurringOpen, setRecurringOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-
   const [editRecurringOpen, setEditRecurringOpen] = useState(false);
-
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [deleteSeriesOpen, setDeleteSeriesOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -90,8 +91,7 @@ export function AppointmentDetailSheet({
 
   const { data, isLoading } = useQuery({
     queryKey: ['appointment', appointmentId, 'info', occurrenceDateFromProps],
-    queryFn: () =>
-      appointmentApi.getInfo(appointmentId!, occurrenceDateFromProps),
+    queryFn: () => appointmentApi.getInfo(appointmentId!, occurrenceDateFromProps),
     enabled: !!appointmentId,
   });
 
@@ -111,23 +111,14 @@ export function AppointmentDetailSheet({
   }, [data?.appointment, displayStartTime, occurrenceStartTime]);
 
   const occurrenceDate = displayStartTime?.slice(0, 10);
-
   const isRecurring = !!data?.appointment.recurringAppointmentRuleId;
 
-
-
   const cancelMutation = useMutation({
-
     mutationFn: (scope?: 'single' | 'future') =>
-
       orgApi.cancelAppointment(orgId, appointmentId!, {
-
         scope: isRecurring ? scope : undefined,
-
         occurrenceDate: isRecurring ? occurrenceDate : undefined,
-
       }),
-
     onSuccess: (_result, scope) => {
       toast.success(
         scope === 'single' ? 'Appointment occurrence cancelled' : 'Appointment cancelled',
@@ -137,36 +128,20 @@ export function AppointmentDetailSheet({
       setCancelConfirmOpen(false);
       onClose();
     },
-
     onError: (err: Error) => toast.error(err.message),
-
   });
-
-
 
   const deleteSeriesMutation = useMutation({
-
     mutationFn: (ruleId: string) => orgApi.deleteRecurring(orgId, ruleId),
-
     onSuccess: () => {
-
       toast.success('Recurring series deleted');
-
       queryClient.invalidateQueries({ queryKey: ['appointments', orgId] });
-
       queryClient.invalidateQueries({ queryKey: ['recurring', orgId] });
-
       setDeleteSeriesOpen(false);
-
       onClose();
-
     },
-
     onError: (err: Error) => toast.error(err.message),
-
   });
-
-
 
   const visitStatusMutation = useMutation({
     mutationFn: (visitStatus: 'arrived' | 'missed') =>
@@ -196,54 +171,29 @@ export function AppointmentDetailSheet({
   });
 
   const sendSmsMutation = useMutation({
-
     mutationFn: () => orgApi.sendReminder(orgId, appointmentId!, 'sms'),
-
     onSuccess: () => {
-
       toast.success('SMS reminder sent');
-
       queryClient.invalidateQueries({ queryKey: ['reminders', appointmentId] });
-
     },
-
     onError: (err: Error) => toast.error(err.message),
-
   });
-
-
 
   const { data: remindersData } = useQuery({
-
     queryKey: ['reminders', appointmentId],
-
     queryFn: () => orgApi.listReminders(orgId, appointmentId!),
-
     enabled: !!appointmentId,
-
   });
-
-
 
   const { data: recurringData } = useQuery({
-
     queryKey: ['recurring', orgId],
-
     queryFn: () => orgApi.listRecurring(orgId),
-
     enabled: !!orgId && !!data?.appointment.recurringAppointmentRuleId,
-
   });
 
-
-
   const recurringRule = recurringData?.recurringAppointmentRules.find(
-
     (rule) => rule.id === data?.appointment.recurringAppointmentRuleId,
-
   );
-
-
 
   const recurringSeriesActive = Boolean(
     recurringRule && (recurringRule.status === 'active' || recurringRule.status === 'paused'),
@@ -256,232 +206,265 @@ export function AppointmentDetailSheet({
     !data.appointment.recurringAppointmentRuleId &&
     (isManager || data.appointment.accountId === user?.accountId);
 
+  const isCancelled = data?.appointment.visitStatus === 'cancelled';
+  const isPast = displayEndTime ? new Date(displayEndTime).getTime() <= Date.now() : false;
+  const isUpcoming = !!data && !isCancelled && !isPast && data.appointment.visitStatus === 'scheduled';
 
+  const locationLine = useMemo(() => {
+    const org = data?.organization;
+    if (!org) return null;
+    const parts = [org.address, org.city].filter(Boolean);
+    return parts.length > 0 ? parts.join(', ') : null;
+  }, [data?.organization]);
 
-  const handleCancelClick = () => setCancelConfirmOpen(true);
-
-
+  const detailHeadline = (() => {
+    if (!data) return '';
+    if (isCancelled) return 'Appointment cancelled';
+    if (data.appointment.visitStatus === 'missed') return 'Missed appointment';
+    if (data.appointment.visitStatus === 'arrived') {
+      return data.appointment.paymentStatus === 'paid' ? 'Appointment complete' : 'Client checked in';
+    }
+    if (isPast) return 'Past appointment';
+    return 'Looking forward to our appointment';
+  })();
 
   return (
-
     <Sheet open={!!appointmentId} onOpenChange={(open) => !open && onClose()}>
-
-      <SheetContent className="overflow-y-auto">
-
-        <SheetHeader>
-
-          <SheetTitle>Appointment Details</SheetTitle>
-
+      <SheetContent className="overflow-y-auto sm:max-w-md">
+        <SheetHeader className="sr-only">
+          <SheetTitle>Appointment details</SheetTitle>
           <SheetDescription>View and manage appointment information</SheetDescription>
-
         </SheetHeader>
 
         {isLoading && <LoadingState />}
 
         {data && displayStartTime && displayEndTime && (
-
-          <div className="space-y-6">
-
-            <div className="flex items-center gap-2">
-
-              <AppointmentStatusBadge
-                visitStatus={data.appointment.visitStatus}
-                paymentStatus={data.appointment.paymentStatus}
-                recurringAppointmentRuleId={data.appointment.recurringAppointmentRuleId}
-                recurringSeriesActive={recurringSeriesActive}
-              />
-
-              <span className="text-sm text-stone-500">{data.appointment.timezone}</span>
-
-            </div>
-
-            <div className="space-y-3 text-sm">
-
-              <div>
-
-                <p className="font-medium text-stone-500">When</p>
-
-                <p>{formatDateTime(displayStartTime)} – {formatDateTime(displayEndTime)}</p>
-
-              </div>
-
-              <div>
-
-                <p className="font-medium text-stone-500">Customer</p>
-
-                <p>{data.customer ? `${data.customer.firstName} ${data.customer.lastName}` : '—'}</p>
-
-                {data.customer?.email && <p className="text-stone-500">{data.customer.email}</p>}
-                {data.customer?.phone && <p className="text-stone-500">{data.customer.phone}</p>}
-
-              </div>
-
-              <div>
-
-                <p className="font-medium text-stone-500">Staff</p>
-
-                <p>{data.account ? `${data.account.firstName} ${data.account.lastName}` : '—'}</p>
-
-              </div>
-
-              <div>
-
-                <p className="font-medium text-stone-500">Service</p>
-
-                <p>{data.service?.name ?? '—'}</p>
-
-              </div>
-
-              {data.appointment.appointmentNotes && (
-
-                <div>
-
-                  <p className="font-medium text-stone-500">Notes</p>
-
-                  <p>{data.appointment.appointmentNotes}</p>
-
-                </div>
-
+          <div className="pb-6">
+            <div className={cn('mb-6 text-center', isUpcoming && 'pt-2')}>
+              {isUpcoming && (
+                <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-brand-600 dark:text-brand-400" />
               )}
-
+              <h2 className="text-xl font-semibold tracking-tight text-stone-900 dark:text-stone-50">
+                {detailHeadline}
+              </h2>
+              {isUpcoming && (
+                <p className="mt-1.5 text-sm text-stone-500 dark:text-stone-400">
+                  Please see your details below.
+                </p>
+              )}
             </div>
+
+            <dl className="divide-y divide-stone-200 dark:divide-stone-700/80">
+              <DetailRow label="Status" value={visitStatusLabel(data.appointment.visitStatus)} />
+              <DetailRow label="Date" value={formatLongDate(displayStartTime)} />
+              <DetailRow
+                label="Time"
+                value={`${formatTime(displayStartTime)} – ${formatTime(displayEndTime)}`}
+              />
+              <DetailRow label="Service" value={data.service?.name ?? '—'} />
+              <DetailRow
+                label="Professional"
+                value={
+                  data.account ? `${data.account.firstName} ${data.account.lastName}` : '—'
+                }
+              />
+              <DetailRow
+                label="Customer"
+                value={
+                  data.customer ? (
+                    <span className="block">
+                      <span className="block">
+                        {data.customer.firstName} {data.customer.lastName}
+                      </span>
+                      {data.customer.email && (
+                        <span className="mt-0.5 block text-sm font-normal text-stone-500 dark:text-stone-400">
+                          {data.customer.email}
+                        </span>
+                      )}
+                      {data.customer.phone && (
+                        <span className="mt-0.5 block text-sm font-normal text-stone-500 dark:text-stone-400">
+                          {data.customer.phone}
+                        </span>
+                      )}
+                    </span>
+                  ) : (
+                    '—'
+                  )
+                }
+              />
+              {locationLine && <DetailRow label="Location" value={locationLine} />}
+              {data.appointment.visitStatus === 'arrived' && (
+                <DetailRow
+                  label="Payment"
+                  value={
+                    data.appointment.paymentStatus.charAt(0).toUpperCase() +
+                    data.appointment.paymentStatus.slice(1)
+                  }
+                />
+              )}
+              {data.appointment.appointmentNotes && (
+                <DetailRow label="Notes" value={data.appointment.appointmentNotes} />
+              )}
+              {recurringSeriesActive && (
+                <DetailRow label="Series" value="Part of a recurring series" />
+              )}
+            </dl>
 
             {data.customerServiceNotes && data.customerServiceNotes.length > 0 && (
-              <NoteHistoryList notes={data.customerServiceNotes} />
+              <div className="mt-5">
+                <NoteHistoryList notes={data.customerServiceNotes} />
+              </div>
             )}
 
             {remindersData && remindersData.reminders.length > 0 && (
-
-              <div>
-
-                <p className="mb-2 text-sm font-medium text-stone-500">Reminders</p>
-
-                <div className="space-y-2">
-
+              <div className="mt-6">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-stone-500 dark:text-stone-400">
+                  Reminders
+                </p>
+                <ul className="divide-y divide-stone-200 dark:divide-stone-700/80">
                   {remindersData.reminders.map((r) => (
-
-                    <div key={r.id} className="flex items-center justify-between rounded-lg border border-stone-200 px-3 py-2 text-sm">
-
-                      <span className="capitalize">{r.type}</span>
-
+                    <li key={r.id} className="flex items-center justify-between py-2.5 text-sm">
+                      <span className="capitalize text-stone-900 dark:text-stone-100">{r.type}</span>
                       <Badge variant={r.status === 'sent' ? 'success' : 'secondary'}>{r.status}</Badge>
-
-                    </div>
-
+                    </li>
                   ))}
-
-                </div>
-
+                </ul>
               </div>
-
             )}
 
             {trialExpired ? (
-              <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200">
+              <p className="mt-6 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200">
                 {TRIAL_LOCKED_MESSAGE}
               </p>
             ) : (
-            <div className="flex flex-wrap gap-2">
-              {permissions.canManageVisitPayment && data.appointment.visitStatus === 'scheduled' && (
-                <>
-                  <Button
-                    size="sm"
-                    onClick={() => visitStatusMutation.mutate('arrived')}
-                    disabled={visitStatusMutation.isPending}
-                  >
-                    Check in
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setMissedConfirmOpen(true)}
-                    disabled={visitStatusMutation.isPending}
-                  >
-                    Mark missed
-                  </Button>
-                </>
-              )}
+              <>
+                {data.appointment.visitStatus !== 'cancelled' && (
+                  <div className="mt-6 flex flex-col gap-2.5">
+                    {permissions.canManageVisitPayment && data.appointment.visitStatus === 'scheduled' && (
+                      <div className="flex flex-col gap-2.5 sm:flex-row">
+                        <Button
+                          className={cn(pillPrimary, 'w-full sm:flex-1')}
+                          onClick={() => visitStatusMutation.mutate('arrived')}
+                          disabled={visitStatusMutation.isPending}
+                        >
+                          Check in
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className={cn(pillOutline, 'w-full sm:flex-1')}
+                          onClick={() => setMissedConfirmOpen(true)}
+                          disabled={visitStatusMutation.isPending}
+                        >
+                          Mark missed
+                        </Button>
+                      </div>
+                    )}
 
-              {permissions.canManageVisitPayment &&
-                data.appointment.visitStatus === 'arrived' &&
-                data.appointment.paymentStatus === 'unpaid' && (
-                <>
-                  <Button size="sm" onClick={() => setCheckoutOpen(true)}>
-                    Checkout
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => undoCheckInMutation.mutate()}
-                    disabled={undoCheckInMutation.isPending}
-                  >
-                    Undo check-in
-                  </Button>
-                </>
-              )}
+                    {permissions.canManageVisitPayment &&
+                      data.appointment.visitStatus === 'arrived' &&
+                      data.appointment.paymentStatus === 'unpaid' && (
+                        <div className="flex flex-col gap-2.5 sm:flex-row">
+                          <Button
+                            className={cn(pillPrimary, 'w-full sm:flex-1')}
+                            onClick={() => setCheckoutOpen(true)}
+                          >
+                            Checkout
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className={cn(pillOutline, 'w-full sm:flex-1')}
+                            onClick={() => undoCheckInMutation.mutate()}
+                            disabled={undoCheckInMutation.isPending}
+                          >
+                            Undo check-in
+                          </Button>
+                        </div>
+                      )}
 
-              {data.appointment.visitStatus !== 'cancelled' && (
-                <>
-                  {canEdit && (
-                    <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-                      <Pencil className="h-4 w-4" /> Edit
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      {!recurringSeriesActive && (
+                        <Button
+                          variant="outline"
+                          className={pillOutline}
+                          onClick={() => setRecurringOpen(true)}
+                        >
+                          <Repeat className="h-4 w-4" /> Make recurring
+                        </Button>
+                      )}
+
+                      {data.appointment.recurringAppointmentRuleId &&
+                        recurringRule &&
+                        recurringSeriesActive && (
+                          <Button
+                            variant="outline"
+                            className={pillOutline}
+                            onClick={() => setEditRecurringOpen(true)}
+                          >
+                            <Repeat className="h-4 w-4" /> Edit series
+                          </Button>
+                        )}
+
+                      {data.appointment.recurringAppointmentRuleId && recurringRule && (
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            pillOutline,
+                            'border-red-300 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/40',
+                          )}
+                          onClick={() => setDeleteSeriesOpen(true)}
+                          disabled={deleteSeriesMutation.isPending}
+                        >
+                          Delete series
+                        </Button>
+                      )}
+
+                      <Button
+                        variant="outline"
+                        className={pillOutline}
+                        onClick={() => sendSmsMutation.mutate()}
+                        disabled={sendSmsMutation.isPending || !data.customer?.phone?.trim()}
+                        title={
+                          data.customer?.phone?.trim()
+                            ? undefined
+                            : 'Add a phone number for this customer to send SMS'
+                        }
+                      >
+                        Send SMS
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {(canEdit || permissions.canCancelAppointments) &&
+                  data.appointment.visitStatus !== 'cancelled' && (
+                    <div className="mt-8 space-y-3 text-center">
+                      {canEdit && (
+                        <button
+                          type="button"
+                          onClick={() => setEditOpen(true)}
+                          className="block w-full text-sm font-semibold text-brand-700 underline-offset-2 hover:underline dark:text-brand-400"
+                        >
+                          <span className="inline-flex items-center gap-1.5">
+                            <Pencil className="h-3.5 w-3.5" />
+                            Edit appointment
+                          </span>
+                        </button>
+                      )}
+                      {permissions.canCancelAppointments && (
+                        <button
+                          type="button"
+                          onClick={() => setCancelConfirmOpen(true)}
+                          disabled={cancelMutation.isPending}
+                          className="block w-full text-sm font-semibold text-stone-500 underline-offset-2 hover:underline dark:text-stone-400"
+                        >
+                          Cancel appointment
+                        </button>
+                      )}
+                    </div>
                   )}
-
-                  {!recurringSeriesActive && (
-                    <Button variant="outline" size="sm" onClick={() => setRecurringOpen(true)}>
-                      <Repeat className="h-4 w-4" /> Make Recurring
-                    </Button>
-                  )}
-
-                  {data.appointment.recurringAppointmentRuleId && recurringRule && recurringSeriesActive && (
-                    <Button variant="outline" size="sm" onClick={() => setEditRecurringOpen(true)}>
-                      <Repeat className="h-4 w-4" /> Edit Series
-                    </Button>
-                  )}
-
-                  {data.appointment.recurringAppointmentRuleId && recurringRule && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-red-700 hover:bg-red-50 hover:text-red-800"
-                      onClick={() => setDeleteSeriesOpen(true)}
-                      disabled={deleteSeriesMutation.isPending}
-                    >
-                      Delete Series
-                    </Button>
-                  )}
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => sendSmsMutation.mutate()}
-                    disabled={sendSmsMutation.isPending || !data.customer?.phone?.trim()}
-                    title={
-                      data.customer?.phone?.trim()
-                        ? undefined
-                        : 'Add a phone number for this customer to send SMS'
-                    }
-                  >
-                    Send SMS
-                  </Button>
-
-                  {permissions.canCancelAppointments && (
-                    <Button variant="destructive" size="sm" onClick={handleCancelClick} disabled={cancelMutation.isPending}>
-                      Cancel
-                    </Button>
-                  )}
-                </>
-              )}
-
-              {data.appointment.recurringAppointmentRuleId && recurringSeriesActive && (
-                <Badge variant="secondary">Part of recurring series</Badge>
-              )}
-            </div>
+              </>
             )}
-
           </div>
-
         )}
 
         {appointmentId && data && (
@@ -507,43 +490,26 @@ export function AppointmentDetailSheet({
                 queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId, 'info'] });
               }}
             />
-
             <MakeRecurringDialog
-
               orgId={orgId}
-
               appointmentId={appointmentId}
-
               appointmentStartTime={displayStartTime ?? data.appointment.startTime}
-
               accountId={data.appointment.accountId}
-
               serviceId={data.appointment.serviceId}
-
               timezone={data.appointment.timezone}
-
               open={recurringOpen}
-
               onOpenChange={setRecurringOpen}
-
-              onSuccess={() => queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId, 'info'] })}
-
+              onSuccess={() =>
+                queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId, 'info'] })
+              }
             />
-
             <EditRecurringDialog
-
               orgId={orgId}
-
               rule={recurringRule ?? null}
-
               open={editRecurringOpen}
-
               onOpenChange={setEditRecurringOpen}
-
             />
-
           </>
-
         )}
 
         <ConfirmDialog
@@ -560,53 +526,31 @@ export function AppointmentDetailSheet({
         <ConfirmDialog
           open={cancelConfirmOpen}
           onOpenChange={setCancelConfirmOpen}
-
           title="Cancel appointment?"
-
           description={
             isRecurring && recurringSeriesActive
               ? 'Only this occurrence will be cancelled. Use Delete Series to remove the entire recurring schedule.'
               : 'This appointment will be marked as cancelled and any pending reminders will be stopped. This action cannot be undone.'
           }
-
           confirmLabel="Cancel Appointment"
-
           destructive
-
           loading={cancelMutation.isPending}
-
           onConfirm={() =>
             cancelMutation.mutate(isRecurring && recurringSeriesActive ? 'single' : undefined)
           }
-
         />
 
         <ConfirmDialog
-
           open={deleteSeriesOpen}
-
           onOpenChange={setDeleteSeriesOpen}
-
           title="Delete recurring series?"
-
           description="This permanently removes the recurring rule and cancels all linked appointments. This cannot be undone."
-
           confirmLabel="Delete Series"
-
           destructive
-
           loading={deleteSeriesMutation.isPending}
-
           onConfirm={() => recurringRule && deleteSeriesMutation.mutate(recurringRule.id)}
-
         />
-
       </SheetContent>
-
     </Sheet>
-
   );
-
 }
-
-

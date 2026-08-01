@@ -64,6 +64,19 @@ export function formatDate(iso: string) {
   });
 }
 
+/** Long weekday + month date for appointment detail views (UTC wall-clock date). */
+export function formatLongDate(iso: string) {
+  const dateStr = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : iso.slice(0, 10);
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
 export function formatTime(iso: string) {
   const start = new Date(iso);
   const hours = start.getUTCHours();
