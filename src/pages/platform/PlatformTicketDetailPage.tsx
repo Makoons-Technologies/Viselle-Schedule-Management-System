@@ -25,7 +25,8 @@ import {
   SUPPORT_TICKET_STATUS_LABELS,
   SUPPORT_TICKET_STATUSES,
 } from '@/components/support/ticket-types';
-import type { SupportTicketAgentBrief, SupportTicketStatus } from '@/types/api';
+import type { SupportAttachmentUpload, SupportTicketAgentBrief, SupportTicketStatus } from '@/types/api';
+import { AttachmentList } from '@/components/support/AttachmentExtras';
 
 export function PlatformTicketDetailPage() {
   const { ticketId } = useParams<{ ticketId: string }>();
@@ -54,8 +55,11 @@ export function PlatformTicketDetailPage() {
   });
 
   const replyMutation = useMutation({
-    mutationFn: (data: { body: string; isInternalNote: boolean }) =>
-      ownerApi.replySupportTicket(ticketId!, data),
+    mutationFn: (data: {
+      body: string;
+      isInternalNote: boolean;
+      attachments?: SupportAttachmentUpload[];
+    }) => ownerApi.replySupportTicket(ticketId!, data),
     onSuccess: () => invalidate(),
     onError: (err: Error) => toast.error(err.message),
   });
@@ -136,12 +140,15 @@ export function PlatformTicketDetailPage() {
           ) : null}
         </p>
         <p className="mt-3 whitespace-pre-wrap text-sm text-stone-800 dark:text-stone-100">{ticket.body}</p>
+        <AttachmentList attachments={ticket.attachments} />
       </Panel>
 
       <TicketThread
         messages={messages}
         currentUserEmail={user?.email}
-        onSubmit={(body, isInternalNote) => replyMutation.mutate({ body, isInternalNote })}
+        onSubmit={(body, isInternalNote, attachments) =>
+          replyMutation.mutate({ body, isInternalNote, attachments })
+        }
         isSubmitting={replyMutation.isPending}
         showInternalNoteToggle
       />

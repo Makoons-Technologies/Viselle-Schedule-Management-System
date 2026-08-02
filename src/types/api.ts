@@ -674,6 +674,7 @@ export interface SupportTicket {
   linearIssueUrl?: string | null;
   createdAt: string;
   updatedAt: string;
+  attachments?: SupportTicketAttachment[];
 }
 
 /** Pure Linear project issue (not submitted via Viselle Inbox). */
@@ -698,6 +699,25 @@ export interface SupportTicketAgentBrief {
   instructions: string[];
 }
 
+export interface SupportTicketAttachment {
+  id: string;
+  ticketId: string;
+  messageId?: string | null;
+  uploaderUserId?: string | null;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  storagePath: string;
+  createdAt: string;
+  url?: string;
+}
+
+export interface SupportAttachmentUpload {
+  fileName: string;
+  contentType: string;
+  dataBase64: string;
+}
+
 export interface SupportTicketMessage {
   id: string;
   ticketId: string;
@@ -706,6 +726,7 @@ export interface SupportTicketMessage {
   isInternalNote: boolean;
   body: string;
   createdAt: string;
+  attachments?: SupportTicketAttachment[];
 }
 
 export type CustomWebsiteRequestStatus = 'open' | 'in_progress' | 'done' | 'closed';

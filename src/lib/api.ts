@@ -31,6 +31,7 @@ import type {
   SupportTicketMessage,
   SupportTicketStatus,
   SupportTicketType,
+  SupportAttachmentUpload,
   CustomWebsiteRequest,
   CustomWebsiteRequestNote,
   CustomWebsiteRequestStatus,
@@ -298,7 +299,10 @@ export const ownerApi = {
     apiClient
       .post<SupportTicketAgentBrief>('/owner/support-tickets/agent-brief', data)
       .then((r) => r.data),
-  replySupportTicket: (ticketId: string, data: { body: string; isInternalNote?: boolean }) =>
+  replySupportTicket: (
+    ticketId: string,
+    data: { body: string; isInternalNote?: boolean; attachments?: SupportAttachmentUpload[] },
+  ) =>
     apiClient
       .post<{ message: SupportTicketMessage }>(`/owner/support-tickets/${ticketId}/messages`, data)
       .then((r) => r.data),
@@ -326,17 +330,21 @@ export const ownerApi = {
 };
 
 export const supportApi = {
-  createTicket: (data: { subject: string; body: string; type: SupportTicketType }) =>
-    apiClient.post<{ ticket: SupportTicket }>('/support-tickets', data).then((r) => r.data),
+  createTicket: (data: {
+    subject: string;
+    body: string;
+    type: SupportTicketType;
+    attachments?: SupportAttachmentUpload[];
+  }) => apiClient.post<{ ticket: SupportTicket }>('/support-tickets', data).then((r) => r.data),
   listMyTickets: (params?: { type?: SupportTicketType }) =>
     apiClient.get<{ tickets: SupportTicket[] }>('/support-tickets', { params }).then((r) => r.data),
   getMyTicket: (ticketId: string) =>
     apiClient
       .get<{ ticket: SupportTicket; messages: SupportTicketMessage[] }>(`/support-tickets/${ticketId}`)
       .then((r) => r.data),
-  replyToTicket: (ticketId: string, body: string) =>
+  replyToTicket: (ticketId: string, data: { body: string; attachments?: SupportAttachmentUpload[] }) =>
     apiClient
-      .post<{ message: SupportTicketMessage }>(`/support-tickets/${ticketId}/messages`, { body })
+      .post<{ message: SupportTicketMessage }>(`/support-tickets/${ticketId}/messages`, data)
       .then((r) => r.data),
 };
 
