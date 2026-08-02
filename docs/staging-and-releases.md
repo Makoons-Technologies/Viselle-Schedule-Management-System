@@ -38,9 +38,14 @@ Phases: alpha → beta (3-month trials) → GA (`1.0.0+`).
 2. Production: deploy **`main`** with production env (`VITE_API_BASE_URL` → production API).
 3. Staging: deploy the **`staging`** branch (second project **or** configure the staging branch as a dedicated environment).
 4. Staging env — copy from `.env.staging.example`:
-   - `VITE_API_BASE_URL` = staging API base ending in `/api/v1`
-   - `VITE_BOOKING_BASE_URL` = staging site origin
+   - `VITE_API_BASE_URL` = `https://staging-api.viselle.net/api/v1`
+   - `VITE_BOOKING_BASE_URL` = `https://staging.viselle.net`
    - Stripe publishable key = **test** mode preferred
+5. After changing `VITE_*`, redeploy (Vite embeds them at build time).
+
+### CORS / login failures on staging
+
+If Network shows `login` as **CORS error** / preflight `(failed)`, the usual cause is **not** missing app CORS allowlist — the API uses open CORS. Check that the **staging API** Vercel project (`staging-api.viselle.net`) has **Deployment Protection disabled**. With Vercel Authentication on, `OPTIONS` redirects to SSO and the browser reports CORS. Details: Beauty-Backend-API `docs/staging-and-releases.md` (section “disable Vercel Deployment Protection”).
 
 ## Cut release (required before staging → main)
 
