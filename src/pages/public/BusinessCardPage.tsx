@@ -156,6 +156,8 @@ export function BusinessCardPage() {
   const codeParam = searchParams.get('code') ?? searchParams.get('campaign');
   const [campaign, setCampaign] = useState<TrialCampaign | null>(null);
   const [flipped, setFlipped] = useState(false);
+  /** Card aspect: landscape is the default everywhere this page is used. */
+  const [orientation, setOrientation] = useState<'landscape' | 'portrait'>('landscape');
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showMotionFallback, setShowMotionFallback] = useState(false);
@@ -259,7 +261,11 @@ export function BusinessCardPage() {
       >
         <button
           type="button"
-          className={cn('bc-card-scene', flipped && 'is-flipped')}
+          className={cn(
+            'bc-card-scene',
+            orientation === 'landscape' ? 'is-landscape' : 'is-portrait',
+            flipped && 'is-flipped',
+          )}
           aria-label={flipped ? 'Show front of business card' : 'Show back of business card'}
           onClick={() => {
             setFlipped((v) => !v);
@@ -275,7 +281,22 @@ export function BusinessCardPage() {
           </div>
         </button>
 
-        <p className="bc-hint">{loading ? 'Loading campaign…' : 'Tap the card to flip'}</p>
+        <div className="bc-controls">
+          <p className="bc-hint">{loading ? 'Loading campaign…' : 'Tap the card to flip'}</p>
+          <button
+            type="button"
+            className="bc-orient-toggle"
+            aria-pressed={orientation === 'landscape'}
+            aria-label={
+              orientation === 'landscape' ? 'Switch to portrait card' : 'Switch to landscape card'
+            }
+            onClick={() =>
+              setOrientation((o) => (o === 'landscape' ? 'portrait' : 'landscape'))
+            }
+          >
+            {orientation === 'landscape' ? 'Landscape' : 'Portrait'}
+          </button>
+        </div>
         {showMotionFallback && needsPermission && (
           <button type="button" className="bc-motion-fallback" onClick={() => void enableMotion()}>
             Allow motion for tilt
@@ -377,11 +398,19 @@ const businessCardCss = `
   background: transparent;
   padding: 0;
   cursor: pointer;
-  width: min(92vw, 560px);
-  aspect-ratio: 1.75 / 1;
   perspective: 1400px;
   -webkit-perspective: 1400px;
   -webkit-tap-highlight-color: transparent;
+}
+
+.bc-card-scene.is-landscape {
+  width: min(92vw, 560px);
+  aspect-ratio: 1.75 / 1;
+}
+
+.bc-card-scene.is-portrait {
+  width: min(72vw, 340px);
+  aspect-ratio: 1 / 1.55;
 }
 
 .bc-card {
@@ -624,8 +653,6 @@ const businessCardCss = `
   position: relative;
   isolation: isolate;
   flex-shrink: 0;
-  /* Soft shadow without CSS filter (avoids backface bugs) */
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
   border-radius: 50%;
 }
 
@@ -671,6 +698,13 @@ const businessCardCss = `
   to { opacity: 1; }
 }
 
+.bc-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+}
+
 .bc-hint {
   margin: 0;
   font-size: 0.75rem;
@@ -679,10 +713,41 @@ const businessCardCss = `
   color: rgba(255, 255, 255, 0.55);
 }
 
+.bc-orient-toggle {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.82);
+  font-family: inherit;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 0.4rem 0.85rem;
+  cursor: pointer;
+  transition: background 180ms ease, border-color 180ms ease;
+}
+
+.bc-orient-toggle:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.bc-orient-toggle[aria-pressed='true'] {
+  border-color: rgba(253, 235, 131, 0.45);
+  color: rgba(253, 235, 131, 0.92);
+}
+
 @media (max-width: 520px) {
-  .bc-card-scene {
+  .bc-card-scene.is-landscape {
     width: min(94vw, 420px);
     aspect-ratio: 1.55 / 1;
+  }
+
+  .bc-card-scene.is-portrait {
+    width: min(78vw, 300px);
+    aspect-ratio: 1 / 1.45;
   }
 
   .bc-face-inner {
