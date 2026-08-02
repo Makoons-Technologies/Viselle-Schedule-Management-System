@@ -6,6 +6,7 @@ import { PageSeo } from '@/components/seo/PageSeo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { marketingSeo } from '@/content/marketing-seo';
+import { MARKETING_SHELL_CLASS } from '@/lib/marketing-theme';
 import { getSignupSessionStatus } from '@/lib/signup';
 
 const SHOP_LOADING_LINES = [
@@ -90,12 +91,12 @@ export function GetStartedSuccessPage() {
   const isBusy = status === 'loading' || status === 'pending';
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-stone-950">
+    <div className={MARKETING_SHELL_CLASS}>
       <PageSeo {...marketingSeo.getStartedSuccess} />
       <MarketingHeader />
 
       <div className="mx-auto max-w-lg px-4 py-16 sm:px-6">
-        <Card>
+        <Card className="border-white/15 bg-white/95 shadow-2xl">
           <CardHeader className="text-center">
             {isBusy ? (
               <Loader2 className="mx-auto h-12 w-12 animate-spin text-brand-600" />

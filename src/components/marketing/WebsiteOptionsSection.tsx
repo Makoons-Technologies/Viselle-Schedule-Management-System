@@ -54,17 +54,17 @@ const WEBSITE_OPTIONS = [
 
 export function WebsiteOptionsSection() {
   return (
-    <section id="websites" className="scroll-mt-20 border-y border-stone-200 bg-stone-50 py-16 dark:border-stone-800 dark:bg-stone-900 sm:py-24">
+    <section id="websites" className="scroll-mt-20 border-y border-white/10 bg-black/15 py-16 sm:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-sm font-medium text-brand-700 shadow-sm dark:bg-stone-800 dark:text-brand-200">
-            <Globe className="h-4 w-4" />
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-sm font-medium text-white/90 backdrop-blur-sm">
+            <Globe className="h-4 w-4 text-[#fdeb83]" />
             Online booking for clients
           </div>
-          <h2 className="text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100 sm:text-4xl">
+          <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
             A booking page comes with your plan
           </h2>
-          <p className="mt-4 text-lg text-stone-600 dark:text-stone-300">
+          <p className="mt-4 text-lg text-white/70">
             You don&apos;t need a separate website product to start taking appointments online. Every plan
             includes a shareable booking page. Add a hosted subdomain, have us build a custom site, or connect
             your existing website later.

@@ -158,24 +158,39 @@ export function BusinessCardPage() {
   const [flipped, setFlipped] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showMotionFallback, setShowMotionFallback] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLElement>(null);
   const { tilt, onPointerMove, onPointerLeave, enableMotion, needsPermission } = useFoilTilt(true);
 
-  // Request orientation ASAP on first user gesture (not only on flip).
+  // iOS: request on earliest contact with the card stage (not only on flip).
+  // Mount-time request is handled inside useFoilTilt; this covers the gesture path.
   useEffect(() => {
-    const onFirstGesture = () => {
+    const stage = stageRef.current;
+    const onFirstContact = () => {
       void enableMotion();
     };
-    // Capture early interactions anywhere on the page (chrome, card, prompt).
-    window.addEventListener('pointerdown', onFirstGesture, { capture: true, once: true });
-    window.addEventListener('touchstart', onFirstGesture, { capture: true, once: true, passive: true });
-    window.addEventListener('click', onFirstGesture, { capture: true, once: true });
+    window.addEventListener('pointerdown', onFirstContact, { capture: true, once: true });
+    window.addEventListener('touchstart', onFirstContact, { capture: true, once: true, passive: true });
+    stage?.addEventListener('pointerdown', onFirstContact, { once: true });
+    stage?.addEventListener('touchstart', onFirstContact, { once: true, passive: true });
     return () => {
-      window.removeEventListener('pointerdown', onFirstGesture, true);
-      window.removeEventListener('touchstart', onFirstGesture, true);
-      window.removeEventListener('click', onFirstGesture, true);
+      window.removeEventListener('pointerdown', onFirstContact, true);
+      window.removeEventListener('touchstart', onFirstContact, true);
+      stage?.removeEventListener('pointerdown', onFirstContact);
+      stage?.removeEventListener('touchstart', onFirstContact);
     };
   }, [enableMotion]);
+
+  // Subtle fallback only if iOS still needs a deliberate grant after a short wait.
+  useEffect(() => {
+    if (!needsPermission) {
+      setShowMotionFallback(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setShowMotionFallback(true), 2200);
+    return () => window.clearTimeout(timer);
+  }, [needsPermission]);
 
   useEffect(() => {
     let cancelled = false;
@@ -222,7 +237,7 @@ export function BusinessCardPage() {
   };
 
   return (
-    <div className="bc-page">
+    <div className="bc-page bg-marketing">
       <PageSeo {...marketingSeo.businessCard} />
       <style>{businessCardCss}</style>
 
@@ -236,13 +251,12 @@ export function BusinessCardPage() {
         </Link>
       </header>
 
-      {needsPermission && (
-        <button type="button" className="bc-motion-prompt" onClick={() => void enableMotion()}>
-          Enable motion tilt
-        </button>
-      )}
-
-      <main className="bc-stage">
+      <main
+        ref={stageRef}
+        className="bc-stage"
+        onPointerDown={() => void enableMotion()}
+        onTouchStart={() => void enableMotion()}
+      >
         <button
           type="button"
           className={cn('bc-card-scene', flipped && 'is-flipped')}
@@ -251,6 +265,7 @@ export function BusinessCardPage() {
             setFlipped((v) => !v);
             void enableMotion();
           }}
+          onPointerDown={() => void enableMotion()}
           onPointerMove={handlePointer}
           onPointerLeave={onPointerLeave}
         >
@@ -261,6 +276,11 @@ export function BusinessCardPage() {
         </button>
 
         <p className="bc-hint">{loading ? 'Loading campaign…' : 'Tap the card to flip'}</p>
+        {showMotionFallback && needsPermission && (
+          <button type="button" className="bc-motion-fallback" onClick={() => void enableMotion()}>
+            Allow motion for tilt
+          </button>
+        )}
       </main>
     </div>
   );
@@ -268,11 +288,11 @@ export function BusinessCardPage() {
 
 const businessCardCss = `
 .bc-page {
-  /* Original vibrant purple → magenta card palette (not homepage rose) */
-  --bc-magenta: #c0267a;
-  --bc-magenta-deep: #9b2c77;
-  --bc-indigo: #1e1b4b;
-  --bc-navy: #0f172a;
+  /* Tokens align with index.css --color-bc-* / bg-marketing */
+  --bc-magenta: var(--color-bc-magenta, #c0267a);
+  --bc-magenta-deep: var(--color-bc-magenta-deep, #9b2c77);
+  --bc-indigo: var(--color-bc-indigo, #1e1b4b);
+  --bc-navy: var(--color-bc-navy, #0f172a);
   --bc-foil-1: #fdda74;
   --bc-foil-2: #b38524;
   --bc-foil-3: #ecd068;
@@ -285,10 +305,6 @@ const businessCardCss = `
   flex-direction: column;
   color: #fff;
   font-family: Outfit, ui-sans-serif, system-ui, sans-serif;
-  background:
-    radial-gradient(120% 80% at 10% 0%, rgba(192, 38, 122, 0.45), transparent 55%),
-    radial-gradient(100% 70% at 100% 100%, rgba(30, 27, 75, 0.9), transparent 50%),
-    linear-gradient(160deg, #2a0f1e 0%, #0f172a 55%, #1e1b4b 100%);
   overflow-x: hidden;
 }
 
@@ -329,23 +345,20 @@ const businessCardCss = `
   border-color: rgba(255, 255, 255, 0.45);
 }
 
-.bc-motion-prompt {
+.bc-motion-fallback {
   appearance: none;
-  align-self: center;
-  margin: 0 1rem;
-  z-index: 3;
-  border: 1px solid rgba(253, 218, 116, 0.45);
-  background: rgba(15, 23, 42, 0.72);
-  color: #fdeb83;
+  border: 0;
+  background: transparent;
+  color: rgba(253, 235, 131, 0.72);
   font-family: inherit;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  border-radius: 999px;
-  padding: 0.5rem 1rem;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
   cursor: pointer;
-  backdrop-filter: blur(8px);
+  padding: 0.15rem 0.35rem;
 }
 
 .bc-stage {
@@ -413,7 +426,7 @@ const businessCardCss = `
 }
 
 .bc-face-back {
-  background: linear-gradient(105deg, var(--bc-indigo) 0%, #4c1d95 42%, var(--bc-magenta) 100%);
+  background: linear-gradient(105deg, var(--bc-indigo) 0%, var(--color-bc-violet, #4c1d95) 42%, var(--bc-magenta) 100%);
   transform: rotateY(180deg);
   -webkit-transform: rotateY(180deg);
   z-index: 1;

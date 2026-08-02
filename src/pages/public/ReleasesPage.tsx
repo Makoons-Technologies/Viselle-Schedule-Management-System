@@ -6,6 +6,7 @@ import { MarketingFooter, MarketingHeader } from '@/components/marketing/Marketi
 import { PageSeo } from '@/components/seo/PageSeo';
 import { marketingSeo } from '@/content/marketing-seo';
 import releasesMarkdown from '@/content/releases.md?raw';
+import { MARKETING_SHELL_CLASS } from '@/lib/marketing-theme';
 
 const markdownComponents = {
   h1: ({ children }: { children?: ReactNode }) => (
@@ -96,18 +97,18 @@ const markdownComponents = {
 
 export function ReleasesPage() {
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-stone-950">
+    <div className={MARKETING_SHELL_CLASS}>
       <PageSeo {...marketingSeo.releases} />
       <MarketingHeader />
       <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-        <p className="text-sm text-stone-500 dark:text-stone-400">
-          <Link to="/" className="hover:text-brand-700 dark:hover:text-brand-300">
+        <p className="text-sm text-white/60">
+          <Link to="/" className="hover:text-white">
             Home
           </Link>
           <span className="mx-2">/</span>
           <span>Release notes</span>
         </p>
-        <article className="mt-6">
+        <article className="mt-6 rounded-2xl border border-white/15 bg-white/95 p-6 shadow-2xl sm:p-8">
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
             {releasesMarkdown}
           </ReactMarkdown>

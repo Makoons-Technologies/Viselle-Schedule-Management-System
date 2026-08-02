@@ -21,6 +21,7 @@ import {
   parseContactInterest,
   type ContactInterest,
 } from '@/lib/contact';
+import { MARKETING_SHELL_CLASS } from '@/lib/marketing-theme';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -77,7 +78,7 @@ export function ContactPage() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-100">
+    <div className={MARKETING_SHELL_CLASS}>
       <PageSeo {...marketingSeo.contact} />
       <MarketingHeader />
 

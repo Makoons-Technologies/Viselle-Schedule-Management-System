@@ -22,11 +22,37 @@ export function deviceOrientationNeedsGesture(): boolean {
 }
 
 /**
+ * Best-effort DeviceOrientation permission request.
+ * Safe to call on mount (no-ops / soft-fails without a gesture on iOS).
+ * Call again from pointerdown/touchstart for iOS Safari.
+ */
+export async function requestDeviceOrientationPermission(): Promise<'granted' | 'denied' | 'unavailable'> {
+  if (typeof window === 'undefined') return 'unavailable';
+
+  const DOE = getOrientationCtor();
+  if (DOE && typeof DOE.requestPermission === 'function') {
+    try {
+      const result = await DOE.requestPermission();
+      return result === 'granted' ? 'granted' : 'denied';
+    } catch {
+      // No user gesture yet (common on iOS) — caller may retry.
+      return 'unavailable';
+    }
+  }
+
+  if (typeof window.DeviceOrientationEvent !== 'undefined') {
+    return 'granted';
+  }
+
+  return 'unavailable';
+}
+
+/**
  * Maps device orientation (or pointer position) to a 0–1 foil highlight.
  * Falls back to pointer parallax when DeviceOrientation is unavailable or denied.
  *
  * On iOS, call `enableMotion()` from a user gesture as early as possible
- * (page chrome / first tap) — not only when flipping the card.
+ * (card mount contact / first tap) — not only when flipping the card.
  */
 export function useFoilTilt(enabled = true) {
   const [tilt, setTilt] = useState<FoilTilt>(DEFAULT_TILT);
@@ -36,7 +62,8 @@ export function useFoilTilt(enabled = true) {
   const pointerActive = useRef(false);
   const sourceRef = useRef(source);
   const orientationAttached = useRef(false);
-  const permissionRequested = useRef(false);
+  const permissionInFlight = useRef(false);
+  const permanentlyDenied = useRef(false);
   sourceRef.current = source;
 
   const onOrientation = useCallback((event: DeviceOrientationEvent) => {
@@ -58,12 +85,56 @@ export function useFoilTilt(enabled = true) {
     setNeedsPermission(false);
   }, [onOrientation]);
 
+  /**
+   * Request orientation permission (iOS) or attach listener.
+   * Safe to call repeatedly; retries after soft failures (no gesture).
+   * Must be invoked from a user gesture on iOS for the prompt to appear.
+   */
+  const enableMotion = useCallback(async () => {
+    if (!enabled || typeof window === 'undefined') return;
+    if (orientationAttached.current) {
+      setNeedsPermission(false);
+      setMotionReady(true);
+      return;
+    }
+    if (permanentlyDenied.current || permissionInFlight.current) return;
+
+    const DOE = getOrientationCtor();
+    if (DOE && typeof DOE.requestPermission === 'function') {
+      permissionInFlight.current = true;
+      try {
+        const result = await DOE.requestPermission();
+        if (result === 'granted') {
+          attachOrientation();
+        } else {
+          permanentlyDenied.current = true;
+          setNeedsPermission(false);
+        }
+      } catch {
+        // Likely missing user gesture — keep needsPermission so first contact / fallback can retry.
+        setNeedsPermission(true);
+      } finally {
+        permissionInFlight.current = false;
+      }
+      return;
+    }
+
+    if (typeof window.DeviceOrientationEvent !== 'undefined') {
+      attachOrientation();
+    } else {
+      setNeedsPermission(false);
+    }
+  }, [enabled, attachOrientation]);
+
   useEffect(() => {
     if (!enabled || typeof window === 'undefined') return;
 
-    // Non-iOS: attach immediately on mount (no permission prompt).
+    // Non-iOS / already-granted: attach immediately on mount.
     if (!deviceOrientationNeedsGesture() && typeof window.DeviceOrientationEvent !== 'undefined') {
       attachOrientation();
+    } else {
+      // Best effort on mount (succeeds if previously granted; soft-fails without gesture on iOS).
+      void enableMotion();
     }
 
     return () => {
@@ -72,7 +143,7 @@ export function useFoilTilt(enabled = true) {
         orientationAttached.current = false;
       }
     };
-  }, [enabled, attachOrientation, onOrientation]);
+  }, [enabled, attachOrientation, onOrientation, enableMotion]);
 
   const onPointerMove = (clientX: number, clientY: number, rect: DOMRect) => {
     pointerActive.current = true;
@@ -90,41 +161,6 @@ export function useFoilTilt(enabled = true) {
     }
   };
 
-  /**
-   * Request orientation permission (iOS) or attach listener.
-   * Safe to call repeatedly; only requests once.
-   * Must be invoked from a user gesture on iOS.
-   */
-  const enableMotion = useCallback(async () => {
-    if (!enabled || typeof window === 'undefined') return;
-    if (orientationAttached.current) {
-      setNeedsPermission(false);
-      setMotionReady(true);
-      return;
-    }
-
-    const DOE = getOrientationCtor();
-    if (DOE && typeof DOE.requestPermission === 'function') {
-      if (permissionRequested.current) return;
-      permissionRequested.current = true;
-      try {
-        const result = await DOE.requestPermission();
-        if (result === 'granted') {
-          attachOrientation();
-        } else {
-          setNeedsPermission(false);
-        }
-      } catch {
-        setNeedsPermission(false);
-      }
-      return;
-    }
-
-    if (typeof window.DeviceOrientationEvent !== 'undefined') {
-      attachOrientation();
-    }
-  }, [enabled, attachOrientation]);
-
   return {
     tilt,
     source,
@@ -134,6 +170,33 @@ export function useFoilTilt(enabled = true) {
     onPointerLeave,
     enableMotion,
   };
+}
+
+/**
+ * Auto-request DeviceOrientation when a marketing / card experience mounts,
+ * and again on the earliest user gesture (required on iOS Safari).
+ */
+export function useAutoMotionPermission(enabled = true) {
+  const requestedViaGesture = useRef(false);
+
+  useEffect(() => {
+    if (!enabled || typeof window === 'undefined') return;
+
+    void requestDeviceOrientationPermission();
+
+    const onFirstGesture = () => {
+      if (requestedViaGesture.current) return;
+      requestedViaGesture.current = true;
+      void requestDeviceOrientationPermission();
+    };
+
+    window.addEventListener('pointerdown', onFirstGesture, { capture: true, once: true });
+    window.addEventListener('touchstart', onFirstGesture, { capture: true, once: true, passive: true });
+    return () => {
+      window.removeEventListener('pointerdown', onFirstGesture, true);
+      window.removeEventListener('touchstart', onFirstGesture, true);
+    };
+  }, [enabled]);
 }
 
 function clamp01(value: number) {

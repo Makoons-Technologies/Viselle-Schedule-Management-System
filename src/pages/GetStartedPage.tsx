@@ -21,6 +21,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PasswordInput } from '@/components/ui/password-input';
+import { MARKETING_SHELL_CLASS } from '@/lib/marketing-theme';
 import { cn } from '@/lib/utils';
 import { contactPath } from '@/lib/contact';
 import { redirectToStripeUrl } from '@/lib/safe-redirect';
@@ -327,7 +328,7 @@ function SignupCartPanel({
   }
 
   return (
-    <Card className="sticky top-6">
+    <Card className="sticky top-6 border-white/15 bg-white/95 shadow-xl">
       <CardHeader className="pb-3">
         <CardTitle className="text-base">Your cart</CardTitle>
       </CardHeader>
@@ -765,11 +766,11 @@ export function GetStartedPage() {
 
   if (provisionedResult) {
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-stone-950">
+      <div className={MARKETING_SHELL_CLASS}>
         <PageSeo {...marketingSeo.getStartedSuccess} />
         <MarketingHeader />
         <div className="mx-auto max-w-lg px-4 py-16 sm:px-6">
-          <Card>
+          <Card className="border-white/15 bg-white/95 shadow-2xl">
             <CardHeader className="text-center">
               <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-600 dark:text-emerald-400" />
               <CardTitle className="mt-4">Your free trial is ready!</CardTitle>
@@ -785,16 +786,16 @@ export function GetStartedPage() {
   }
 
   return (
-    <div className={cn('min-h-screen bg-stone-50 dark:bg-stone-950', !isLgUp && 'pb-44')}>
+    <div className={cn(MARKETING_SHELL_CLASS, !isLgUp && 'pb-44')}>
       <PageSeo {...marketingSeo.getStarted} />
       <MarketingHeader />
 
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
+          <h1 className="text-3xl font-bold tracking-tight text-white">
             Get started with Viselle
           </h1>
-          <p className="mt-2 text-stone-600 dark:text-stone-300">
+          <p className="mt-2 text-white/70">
             Set up your salon or spa in a few steps — plan, website options, and secure checkout.
           </p>
         </div>
@@ -819,17 +820,17 @@ export function GetStartedPage() {
                   disabled={index > stepIndex}
                   className={cn(
                     'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors',
-                    active && 'bg-brand-50 font-medium text-brand-900 dark:bg-brand-950/50 dark:text-brand-100',
-                    done && !active && 'text-stone-700 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-900',
-                    !done && !active && 'cursor-not-allowed text-stone-400 dark:text-stone-600',
+                    active && 'bg-white/15 font-medium text-white',
+                    done && !active && 'text-white/80 hover:bg-white/10',
+                    !done && !active && 'cursor-not-allowed text-white/40',
                   )}
                 >
                   <span
                     className={cn(
                       'flex h-8 w-8 items-center justify-center rounded-full border',
-                      active && 'border-brand-600 bg-brand-600 text-white',
-                      done && !active && 'border-brand-600 bg-white text-brand-600 dark:bg-stone-900',
-                      !done && !active && 'border-stone-200 bg-white text-stone-400 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-500',
+                      active && 'border-bc-magenta bg-bc-magenta text-white',
+                      done && !active && 'border-[#fdeb83]/70 bg-white/10 text-[#fdeb83]',
+                      !done && !active && 'border-white/25 bg-white/5 text-white/45',
                     )}
                   >
                     {done ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
@@ -840,7 +841,7 @@ export function GetStartedPage() {
             })}
           </nav>
 
-          <Card>
+          <Card className="border-white/15 bg-white/95 shadow-xl">
             <CardHeader>
               <CardTitle>{STEPS[stepIndex].label}</CardTitle>
               <CardDescription>
