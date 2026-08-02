@@ -11,6 +11,9 @@ import type { TrialCampaign } from '@/types/api';
 
 const GET_STARTED_DISPLAY = 'VISELLE.NET/GET-STARTED';
 
+/** Same viewBox as viselle-logo — white V only, for foil sheen mask. */
+const VISELLE_V_MASK_SRC = '/viselle-v-mask.svg';
+
 function formatRedeemBy(iso?: string | null): string | null {
   if (!iso) return null;
   const date = new Date(iso);
@@ -156,7 +159,23 @@ export function BusinessCardPage() {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const cardRef = useRef<HTMLDivElement>(null);
-  const { tilt, onPointerMove, onPointerLeave, enableMotion } = useFoilTilt(true);
+  const { tilt, onPointerMove, onPointerLeave, enableMotion, needsPermission } = useFoilTilt(true);
+
+  // Request orientation ASAP on first user gesture (not only on flip).
+  useEffect(() => {
+    const onFirstGesture = () => {
+      void enableMotion();
+    };
+    // Capture early interactions anywhere on the page (chrome, card, prompt).
+    window.addEventListener('pointerdown', onFirstGesture, { capture: true, once: true });
+    window.addEventListener('touchstart', onFirstGesture, { capture: true, once: true, passive: true });
+    window.addEventListener('click', onFirstGesture, { capture: true, once: true });
+    return () => {
+      window.removeEventListener('pointerdown', onFirstGesture, true);
+      window.removeEventListener('touchstart', onFirstGesture, true);
+      window.removeEventListener('click', onFirstGesture, true);
+    };
+  }, [enableMotion]);
 
   useEffect(() => {
     let cancelled = false;
@@ -217,6 +236,12 @@ export function BusinessCardPage() {
         </Link>
       </header>
 
+      {needsPermission && (
+        <button type="button" className="bc-motion-prompt" onClick={() => void enableMotion()}>
+          Enable motion tilt
+        </button>
+      )}
+
       <main className="bc-stage">
         <button
           type="button"
@@ -243,28 +268,27 @@ export function BusinessCardPage() {
 
 const businessCardCss = `
 .bc-page {
-  /* Homepage marketing brand scale (src/index.css --color-brand-*) */
-  --bc-rose: #c45b8a;       /* brand-500 */
-  --bc-rose-deep: #a84372;  /* brand-600 */
-  --bc-plum: #8a335d;       /* brand-700 */
-  --bc-plum-mid: #5a2240;   /* brand-800 */
-  --bc-plum-dark: #4a1a32;  /* brand-900 */
-  --bc-ink: #2a0f1e;        /* brand-950 */
+  /* Original vibrant purple → magenta card palette (not homepage rose) */
+  --bc-magenta: #c0267a;
+  --bc-magenta-deep: #9b2c77;
+  --bc-indigo: #1e1b4b;
+  --bc-navy: #0f172a;
   --bc-foil-1: #fdda74;
   --bc-foil-2: #b38524;
   --bc-foil-3: #ecd068;
   --bc-foil-4: #9f690a;
   --bc-foil-5: #fdeb83;
   --bc-foil-6: #b88017;
+  --bc-v-mask: url('${VISELLE_V_MASK_SRC}');
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
   color: #fff;
   font-family: Outfit, ui-sans-serif, system-ui, sans-serif;
   background:
-    radial-gradient(120% 80% at 10% 0%, rgba(196, 91, 138, 0.42), transparent 55%),
-    radial-gradient(100% 70% at 100% 100%, rgba(74, 26, 50, 0.85), transparent 50%),
-    linear-gradient(160deg, #2a0f1e 0%, #4a1a32 48%, #5a2240 100%);
+    radial-gradient(120% 80% at 10% 0%, rgba(192, 38, 122, 0.45), transparent 55%),
+    radial-gradient(100% 70% at 100% 100%, rgba(30, 27, 75, 0.9), transparent 50%),
+    linear-gradient(160deg, #2a0f1e 0%, #0f172a 55%, #1e1b4b 100%);
   overflow-x: hidden;
 }
 
@@ -305,6 +329,25 @@ const businessCardCss = `
   border-color: rgba(255, 255, 255, 0.45);
 }
 
+.bc-motion-prompt {
+  appearance: none;
+  align-self: center;
+  margin: 0 1rem;
+  z-index: 3;
+  border: 1px solid rgba(253, 218, 116, 0.45);
+  background: rgba(15, 23, 42, 0.72);
+  color: #fdeb83;
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+}
+
 .bc-stage {
   flex: 1;
   display: flex;
@@ -324,6 +367,7 @@ const businessCardCss = `
   width: min(92vw, 560px);
   aspect-ratio: 1.75 / 1;
   perspective: 1400px;
+  -webkit-perspective: 1400px;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -332,6 +376,7 @@ const businessCardCss = `
   width: 100%;
   height: 100%;
   transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
   transition: transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
   border-radius: clamp(12px, 2.2vw, 18px);
   box-shadow:
@@ -343,34 +388,35 @@ const businessCardCss = `
   transform: rotateY(180deg);
 }
 
+/*
+ * Root cause of mirrored bleed-through on iOS Safari:
+ * child \`transform\` / \`filter\` create stacking contexts that ignore
+ * backface-visibility. Keep faces flat, force a transform on each face,
+ * and avoid persistent transforms/filters on face descendants.
+ */
 .bc-face {
   position: absolute;
   inset: 0;
   border-radius: inherit;
   overflow: hidden;
-  backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-transform-style: flat;
+  transform-style: flat;
 }
 
 .bc-face-front {
-  background: linear-gradient(
-    135deg,
-    var(--bc-rose) 0%,
-    var(--bc-rose-deep) 26%,
-    var(--bc-plum) 58%,
-    var(--bc-ink) 100%
-  );
+  background: linear-gradient(135deg, var(--bc-magenta) 0%, var(--bc-magenta-deep) 28%, var(--bc-indigo) 72%, var(--bc-navy) 100%);
+  transform: rotateY(0deg);
+  -webkit-transform: rotateY(0deg);
+  z-index: 2;
 }
 
 .bc-face-back {
-  background: linear-gradient(
-    105deg,
-    var(--bc-ink) 0%,
-    var(--bc-plum-mid) 38%,
-    var(--bc-plum) 68%,
-    var(--bc-rose) 100%
-  );
+  background: linear-gradient(105deg, var(--bc-indigo) 0%, #4c1d95 42%, var(--bc-magenta) 100%);
   transform: rotateY(180deg);
+  -webkit-transform: rotateY(180deg);
+  z-index: 1;
 }
 
 .bc-gradient-drift {
@@ -378,7 +424,8 @@ const businessCardCss = `
   inset: -20%;
   background:
     radial-gradient(circle at 20% 30%, rgba(253, 218, 116, 0.12), transparent 42%),
-    radial-gradient(circle at 80% 70%, rgba(196, 91, 138, 0.32), transparent 45%);
+    radial-gradient(circle at 80% 70%, rgba(192, 38, 122, 0.35), transparent 45%);
+  /* Opacity only — transform on face children breaks Safari backface-visibility */
   animation: bc-drift 14s ease-in-out infinite alternate;
   pointer-events: none;
 }
@@ -386,12 +433,12 @@ const businessCardCss = `
 .bc-gradient-drift-back {
   background:
     radial-gradient(circle at 75% 40%, rgba(253, 218, 116, 0.1), transparent 40%),
-    radial-gradient(circle at 20% 80%, rgba(138, 51, 93, 0.34), transparent 48%);
+    radial-gradient(circle at 20% 80%, rgba(99, 102, 241, 0.28), transparent 48%);
 }
 
 @keyframes bc-drift {
-  from { transform: translate3d(-2%, -1%, 0) scale(1.02); }
-  to { transform: translate3d(3%, 2%, 0) scale(1.08); }
+  from { opacity: 0.85; }
+  to { opacity: 1; }
 }
 
 .bc-face-inner {
@@ -402,8 +449,8 @@ const businessCardCss = `
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: clamp(0.75rem, 2.5vw, 1.4rem);
-  padding: clamp(1rem, 3vw, 1.75rem);
+  gap: clamp(0.55rem, 2vw, 1.25rem);
+  padding: clamp(0.85rem, 2.8vw, 1.75rem);
   text-align: center;
 }
 
@@ -411,15 +458,17 @@ const businessCardCss = `
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.45rem;
+  max-width: 100%;
 }
 
 .bc-headline {
   margin: 0;
-  font-size: clamp(1.05rem, 3.4vw, 1.65rem);
+  font-size: clamp(0.92rem, 3.2vw, 1.65rem);
   font-weight: 700;
-  letter-spacing: 0.14em;
-  line-height: 1.15;
+  letter-spacing: 0.12em;
+  line-height: 1.2;
+  max-width: 100%;
 }
 
 .bc-keywords {
@@ -427,15 +476,22 @@ const businessCardCss = `
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: clamp(0.65rem, 2.4vw, 1.35rem);
-  font-size: clamp(0.58rem, 1.7vw, 0.78rem);
+  row-gap: 0.35rem;
+  column-gap: clamp(0.55rem, 2vw, 1.25rem);
+  font-size: clamp(0.52rem, 1.55vw, 0.78rem);
   font-weight: 500;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.14em;
   color: rgba(255, 255, 255, 0.88);
+  max-width: 100%;
+  padding-inline: 0.25rem;
+}
+
+.bc-keywords span {
+  white-space: nowrap;
 }
 
 .bc-keywords-second {
-  gap: clamp(1rem, 3vw, 1.75rem);
+  column-gap: clamp(0.85rem, 2.8vw, 1.75rem);
 }
 
 .bc-back-layout {
@@ -455,27 +511,31 @@ const businessCardCss = `
   flex-direction: column;
   align-items: center;
   gap: 0.35rem;
+  min-width: 0;
 }
 
 .bc-back-kicker {
   margin: 0 0 0.35rem;
-  font-size: clamp(0.78rem, 2.2vw, 1.05rem);
+  font-size: clamp(0.7rem, 2vw, 1.05rem);
   font-weight: 700;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.14em;
+  line-height: 1.25;
 }
 
 .bc-back-hint {
   margin: 0;
-  font-size: clamp(0.58rem, 1.6vw, 0.72rem);
+  font-size: clamp(0.55rem, 1.5vw, 0.72rem);
   letter-spacing: 0.06em;
   color: rgba(255, 255, 255, 0.82);
 }
 
 .bc-back-url {
   margin: 0.15rem 0 0.55rem;
-  font-size: clamp(0.72rem, 2vw, 0.98rem);
+  font-size: clamp(0.62rem, 1.8vw, 0.98rem);
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
+  word-break: break-word;
+  max-width: 100%;
 }
 
 .bc-access-block {
@@ -522,6 +582,7 @@ const businessCardCss = `
   background: rgba(255, 255, 255, 0.85);
 }
 
+/* No filter here — filters on face children break Safari backface-visibility */
 .bc-foil-text {
   background-image: linear-gradient(
     115deg,
@@ -539,40 +600,51 @@ const businessCardCss = `
   background-clip: text;
   color: transparent;
   animation: bc-foil-shimmer 5.5s ease-in-out infinite alternate;
-  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.18));
 }
 
 @keyframes bc-foil-shimmer {
-  from { filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.18)) brightness(1); }
-  to { filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.18)) brightness(1.18); }
+  from { opacity: 0.92; }
+  to { opacity: 1; }
 }
 
 .bc-foil-logo {
   position: relative;
   isolation: isolate;
-  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.28));
+  flex-shrink: 0;
+  /* Soft shadow without CSS filter (avoids backface bugs) */
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+  border-radius: 50%;
 }
 
 .bc-foil-sheen {
   position: absolute;
-  inset: -8%;
-  border-radius: 50%;
+  inset: 0;
   background: radial-gradient(
     circle at var(--foil-x, 50%) var(--foil-y, 50%),
-    rgba(253, 235, 131, 0.55) 0%,
-    rgba(179, 133, 36, 0.18) 28%,
-    transparent 58%
+    rgba(253, 235, 131, 0.7) 0%,
+    rgba(179, 133, 36, 0.28) 22%,
+    transparent 48%
   );
   mix-blend-mode: soft-light;
   pointer-events: none;
   animation: bc-sheen-pulse 4.5s ease-in-out infinite alternate;
+  /* Clip shine to the serif V only (wreath stays un-sheened) */
+  -webkit-mask-image: var(--bc-v-mask);
+  mask-image: var(--bc-v-mask);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
 }
 
 @keyframes bc-sheen-pulse {
-  from { opacity: 0.55; transform: scale(0.96); }
-  to { opacity: 0.95; transform: scale(1.04); }
+  from { opacity: 0.55; }
+  to { opacity: 0.95; }
 }
 
+/* Opacity-only enter — transforms on descendants break flip backface on WebKit */
 .bc-enter-logo {
   animation: bc-enter 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -582,8 +654,8 @@ const businessCardCss = `
 }
 
 @keyframes bc-enter {
-  from { opacity: 0; transform: translateY(12px) scale(0.96); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .bc-hint {
@@ -600,19 +672,58 @@ const businessCardCss = `
     aspect-ratio: 1.55 / 1;
   }
 
+  .bc-face-inner {
+    gap: 0.4rem;
+    padding: 0.7rem 0.65rem 0.8rem;
+  }
+
+  .bc-foil-logo {
+    width: 88px !important;
+    height: 88px !important;
+  }
+
+  .bc-headline {
+    font-size: clamp(0.78rem, 3.6vw, 1rem);
+    letter-spacing: 0.08em;
+  }
+
+  .bc-keywords {
+    font-size: clamp(0.48rem, 2.2vw, 0.62rem);
+    letter-spacing: 0.1em;
+    column-gap: 0.55rem;
+    row-gap: 0.28rem;
+  }
+
+  .bc-keywords-second {
+    column-gap: 0.85rem;
+  }
+
   .bc-back-layout {
-    grid-template-columns: 1fr auto;
-    gap: 0.65rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.55rem;
+    padding: 0.75rem 0.7rem;
+  }
+
+  .bc-back-kicker {
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.2rem;
+  }
+
+  .bc-back-url {
+    font-size: 0.58rem;
+    letter-spacing: 0.06em;
+  }
+
+  .bc-access-code {
+    font-size: 0.95rem;
+    letter-spacing: 0.14em;
   }
 
   .bc-qr {
-    width: 96px;
-    padding: 6px;
+    width: 88px;
+    padding: 5px;
     border-radius: 8px;
-  }
-
-  .bc-face-inner {
-    gap: 0.55rem;
   }
 }
 
