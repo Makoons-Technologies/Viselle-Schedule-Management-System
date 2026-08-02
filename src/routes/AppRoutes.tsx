@@ -10,6 +10,7 @@ import { NotFoundPage } from '@/pages/NotFoundPage';
 import { ContactPage } from '@/pages/public/ContactPage';
 import { PublicApiDocsPage } from '@/pages/public/PublicApiDocsPage';
 import { ReleasesPage } from '@/pages/public/ReleasesPage';
+import { BusinessCardPage } from '@/pages/public/BusinessCardPage';
 import { GetStartedPage } from '@/pages/GetStartedPage';
 import { GetStartedSuccessPage } from '@/pages/GetStartedSuccessPage';
 import { PublicBookingPage } from '@/pages/public/PublicBookingPage';
@@ -78,6 +79,7 @@ export const appRoutes = [
   { path: '/contact', element: <ContactPage /> },
   { path: '/docs/api', element: <PublicApiDocsPage /> },
   { path: '/releases', element: <ReleasesPage /> },
+  { path: '/business-card', element: <BusinessCardPage /> },
   { path: '/release-notes', element: <Navigate to="/releases" replace /> },
   { path: '/developers', element: <Navigate to="/docs/api" replace /> },
   { path: '/get-started', element: <GetStartedPage /> },

@@ -96,6 +96,13 @@ export const marketingSeo = {
     path: '/releases',
     image: defaultOgImage,
   },
+  businessCard: {
+    title: 'Digital business card',
+    description:
+      'Exclusive Viselle beta access — scan or visit viselle.net/get-started with your campaign access code.',
+    path: '/business-card',
+    image: defaultOgImage,
+  },
   login: {
     title: 'Sign in',
     description: 'Sign in to your Viselle account to manage appointments, staff, and booking settings.',

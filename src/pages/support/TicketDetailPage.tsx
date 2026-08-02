@@ -6,9 +6,11 @@ import { useAuth } from '@/context/AuthContext';
 import { SettingsBackHeader } from '@/components/settings/SettingsBackHeader';
 import { Panel } from '@/components/common/Panel';
 import { LoadingState } from '@/components/common/LoadingState';
+import { AttachmentList } from '@/components/support/AttachmentExtras';
 import { TicketStatusBadge } from '@/components/support/TicketStatusBadge';
 import { TicketTypeBadge } from '@/components/support/TicketTypeBadge';
 import { TicketThread } from '@/components/support/TicketThread';
+import type { SupportAttachmentUpload } from '@/types/api';
 
 export function TicketDetailPage() {
   const { ticketId } = useParams<{ ticketId: string }>();
@@ -22,7 +24,8 @@ export function TicketDetailPage() {
   });
 
   const replyMutation = useMutation({
-    mutationFn: (body: string) => supportApi.replyToTicket(ticketId!, body),
+    mutationFn: (payload: { body: string; attachments: SupportAttachmentUpload[] }) =>
+      supportApi.replyToTicket(ticketId!, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['support-tickets', 'mine', ticketId] });
       queryClient.invalidateQueries({ queryKey: ['support-tickets', 'mine'] });
@@ -50,12 +53,15 @@ export function TicketDetailPage() {
           Submitted {new Date(ticket.createdAt).toLocaleString()}
         </p>
         <p className="mt-3 whitespace-pre-wrap text-sm text-stone-800 dark:text-stone-100">{ticket.body}</p>
+        <AttachmentList attachments={ticket.attachments} />
       </Panel>
 
       <TicketThread
         messages={messages}
         currentUserEmail={user?.email}
-        onSubmit={(body) => replyMutation.mutate(body)}
+        onSubmit={(body, _isInternalNote, attachments) =>
+          replyMutation.mutate({ body, attachments })
+        }
         isSubmitting={replyMutation.isPending}
       />
     </div>

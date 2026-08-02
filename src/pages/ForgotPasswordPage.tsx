@@ -12,6 +12,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { marketingSeo } from '@/content/marketing-seo';
+import { MARKETING_SHELL_CLASS } from '@/lib/marketing-theme';
+import { cn } from '@/lib/utils';
 
 const schema = z.object({
   email: z.string().email(),
@@ -40,9 +42,9 @@ export function ForgotPasswordPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-50 to-stone-100 p-4 dark:from-stone-950 dark:to-stone-900">
+    <div className={cn(MARKETING_SHELL_CLASS, 'flex items-center justify-center p-4')}>
       <PageSeo {...marketingSeo.forgotPassword} />
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md border-white/15 bg-white/95 shadow-2xl">
         <CardHeader className="text-center">
           <div className="mb-3 flex justify-center">
             <ViselleLogo size={56} />

@@ -185,6 +185,8 @@ export interface PlatformTrialSettings {
   referralPaymentMode: TrialPaymentMode;
   /** Signup plan locked when a referral trial offer applies. */
   referralLockedTier: TrialLockedTier;
+  /** Code-type campaign shown on `/business-card`. Null = unassigned. */
+  businessCardCampaignId: string | null;
   updatedAt: string;
 }
 
@@ -653,7 +655,8 @@ export interface InviteOrgOwnerInput {
   email: string;
 }
 
-export type SupportTicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
+/** Aligned with Linear: Open → In Progress → In Review → Done. */
+export type SupportTicketStatus = 'open' | 'in_progress' | 'in_review' | 'done' | 'canceled';
 export type SupportTicketType = 'support' | 'feature_request' | 'bug';
 
 export interface SupportTicket {
@@ -666,8 +669,53 @@ export interface SupportTicket {
   subject: string;
   body: string;
   status: SupportTicketStatus;
+  linearIssueId?: string | null;
+  linearIssueIdentifier?: string | null;
+  linearIssueUrl?: string | null;
   createdAt: string;
   updatedAt: string;
+  attachments?: SupportTicketAttachment[];
+}
+
+/** Pure Linear project issue (not submitted via Viselle Inbox). */
+export interface InboxLinearIssue {
+  source: 'linear';
+  id: string;
+  identifier: string;
+  title: string;
+  description: string | null;
+  url: string;
+  stateName: string;
+  updatedAt: string;
+}
+
+export interface SupportTicketAgentBrief {
+  prompt: string;
+  tickets: SupportTicket[];
+  linearIssues?: InboxLinearIssue[];
+  linearSyncConfigured: boolean;
+  linearSynced: boolean;
+  statusLabels: Record<SupportTicketStatus, string>;
+  instructions: string[];
+}
+
+export interface SupportTicketAttachment {
+  id: string;
+  ticketId: string;
+  messageId?: string | null;
+  uploaderUserId?: string | null;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  storagePath: string;
+  createdAt: string;
+  url?: string;
+}
+
+export interface SupportAttachmentUpload {
+  fileName: string;
+  contentType: string;
+  dataBase64: string;
 }
 
 export interface SupportTicketMessage {
@@ -678,6 +726,7 @@ export interface SupportTicketMessage {
   isInternalNote: boolean;
   body: string;
   createdAt: string;
+  attachments?: SupportTicketAttachment[];
 }
 
 export type CustomWebsiteRequestStatus = 'open' | 'in_progress' | 'done' | 'closed';

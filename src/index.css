@@ -13,7 +13,21 @@
   --color-brand-800: #5a2240;
   --color-brand-900: #4a1a32;
   --color-brand-950: #2a0f1e;
+  /* Business-card palette (magenta → indigo) — marketing shell + flip card */
+  --color-bc-magenta: #c0267a;
+  --color-bc-magenta-deep: #9b2c77;
+  --color-bc-indigo: #1e1b4b;
+  --color-bc-navy: #0f172a;
+  --color-bc-violet: #4c1d95;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Page atmosphere shared by landing, auth chrome, and /business-card */
+@utility bg-marketing {
+  background:
+    radial-gradient(120% 80% at 10% 0%, rgba(192, 38, 122, 0.45), transparent 55%),
+    radial-gradient(100% 70% at 100% 100%, rgba(30, 27, 75, 0.9), transparent 50%),
+    linear-gradient(160deg, #2a0f1e 0%, #0f172a 55%, #1e1b4b 100%);
 }
 
 @layer base {
@@ -32,6 +46,18 @@
   body {
     @apply bg-stone-50 text-stone-900 antialiased dark:bg-stone-950 dark:text-stone-100;
     font-family: var(--font-sans);
+  }
+
+  /*
+   * iOS Safari zooms focused inputs under 16px. Keep 16px on small screens even when
+   * components use text-sm; desktop can stay denser.
+   */
+  @media (max-width: 767px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px;
+    }
   }
 
   /* Keep autofilled fields readable in light and dark themes */

@@ -109,6 +109,7 @@ export function PlatformCustomWebsiteDetailPage() {
         currentUserEmail={user?.email}
         onSubmit={(body) => noteMutation.mutate(body)}
         isSubmitting={noteMutation.isPending}
+        allowAttachments={false}
       />
     </div>
   );

@@ -9,6 +9,8 @@ import { WebsiteOptionsSection } from '@/components/marketing/WebsiteOptionsSect
 import { PageSeo } from '@/components/seo/PageSeo';
 import { Button } from '@/components/ui/button';
 import { marketingSeo } from '@/content/marketing-seo';
+import { useAutoMotionPermission } from '@/hooks/useFoilTilt';
+import { MARKETING_SHELL_CLASS } from '@/lib/marketing-theme';
 import { fetchLiveHomepageTrial, getStartedPath } from '@/lib/signup';
 import type { TrialCampaign } from '@/types/api';
 
@@ -46,6 +48,9 @@ export function LandingPage() {
     typeof window !== 'undefined' ? window.location.hash : '',
   );
 
+  // Pre-request motion on homepage so /business-card tilt is ready after first tap.
+  useAutoMotionPermission(true);
+
   useEffect(() => {
     const onHashChange = () => setHash(window.location.hash);
     window.addEventListener('hashchange', onHashChange);
@@ -78,26 +83,26 @@ export function LandingPage() {
         : marketingSeo.home;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-brand-50 via-white to-stone-50 dark:from-stone-950 dark:via-stone-900 dark:to-stone-950">
+    <div className={MARKETING_SHELL_CLASS}>
       <PageSeo {...seo} />
       <MarketingHeader />
 
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
         <div className="mx-auto max-w-3xl text-center">
           <div className="flex flex-col items-center gap-4">
-            <ViselleLogo size={88} />
-            <p className="text-3xl font-semibold tracking-tight text-brand-700 dark:text-stone-100 sm:text-4xl">
+            <ViselleLogo size={144} className="size-28 sm:size-36" />
+            <p className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
               Viselle
             </p>
           </div>
-          <p className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-brand-100 px-3 py-1 text-sm font-medium text-brand-700 dark:bg-brand-900/60 dark:text-brand-200">
-            <Sparkles className="h-4 w-4" />
+          <p className="mt-5 inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-sm font-medium text-white/90 backdrop-blur-sm">
+            <Sparkles className="h-4 w-4 text-[#fdeb83]" />
             For salons, spas &amp; beauty studios
           </p>
-          <h1 className="mt-6 text-4xl font-bold tracking-tight text-stone-900 dark:text-stone-100 sm:text-5xl">
+          <h1 className="mt-6 text-4xl font-bold tracking-tight text-white sm:text-5xl">
             Scheduling that lets you focus on your clients
           </h1>
-          <p className="mt-6 text-lg leading-relaxed text-stone-600 dark:text-stone-300">
+          <p className="mt-6 text-lg leading-relaxed text-white/75">
             Viselle helps beauty and wellness businesses manage appointments, staff schedules, and
             client reminders — without spreadsheets or sticky notes. Run your chair, room, or booth
             with tools made for this industry.
@@ -106,13 +111,18 @@ export function LandingPage() {
             <Button asChild size="lg">
               <Link to={getStartedPath()}>Get started</Link>
             </Button>
-            <Button asChild variant="outline" size="lg">
+            <Button
+              asChild
+              variant="outline"
+              size="lg"
+              className="border-white/30 bg-white/5 text-white hover:bg-white/15 hover:text-white"
+            >
               <a href="#pricing">See plans &amp; pricing</a>
             </Button>
           </div>
           {homepageTrial && (
             <div className="mt-4 flex justify-center">
-              <Button asChild variant="ghost" size="lg" className="text-brand-700 hover:text-brand-800 dark:text-brand-300">
+              <Button asChild variant="ghost" size="lg" className="text-[#fdeb83] hover:bg-white/10 hover:text-[#fdeb83]">
                 <Link to={getStartedPath({ trial: true })}>
                   <Sparkles className="h-4 w-4" />
                   Start a {homepageTrial.durationDays}-day free trial — no commitment
@@ -120,16 +130,21 @@ export function LandingPage() {
               </Button>
             </div>
           )}
+          <p className="mt-6 text-sm text-white/55">
+            <Link to="/business-card" className="underline-offset-2 hover:text-white hover:underline">
+              View the digital business card
+            </Link>
+          </p>
         </div>
       </section>
 
-      <section className="border-y border-stone-200 bg-white py-16 dark:border-stone-800 dark:bg-stone-900">
+      <section className="border-y border-white/10 bg-white/5 py-16 backdrop-blur-[2px]">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-2xl font-bold text-stone-900 dark:text-stone-100 sm:text-3xl">
+            <h2 className="text-2xl font-bold text-white sm:text-3xl">
               What salon owners actually need
             </h2>
-            <p className="mt-3 text-stone-600 dark:text-stone-300">
+            <p className="mt-3 text-white/70">
               You didn&apos;t open a business to wrestle with software. Viselle keeps the busywork
               off your plate.
             </p>
@@ -137,12 +152,12 @@ export function LandingPage() {
           <div className="mt-12 grid gap-8 sm:grid-cols-2">
             {INDUSTRY_FEATURES.map(({ icon: Icon, title, description }) => (
               <div key={title} className="flex gap-4">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-900/50 dark:text-brand-200">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-bc-magenta/30 text-[#fdeb83] ring-1 ring-white/15">
                   <Icon className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-stone-900 dark:text-stone-100">{title}</h3>
-                  <p className="mt-1 text-sm leading-relaxed text-stone-600 dark:text-stone-300">{description}</p>
+                  <h3 className="font-semibold text-white">{title}</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-white/70">{description}</p>
                 </div>
               </div>
             ))}

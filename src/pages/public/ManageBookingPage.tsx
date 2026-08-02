@@ -27,6 +27,7 @@ import {
   filterFutureAppointmentSlots,
   formatDate,
   formatDateTime,
+  formatLongDate,
   formatTime,
   cn,
 } from '@/lib/utils';
@@ -44,18 +45,6 @@ const TABS: { id: CustomerAppointmentTab; label: string }[] = [
 
 interface ManageBookingPageProps {
   slugOverride?: string;
-}
-
-function formatLongDate(iso: string) {
-  const dateStr = iso.slice(0, 10);
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString(undefined, {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
 }
 
 function visitStatusLabel(status: string) {
@@ -469,21 +458,21 @@ export function ManageBookingPage({ slugOverride }: ManageBookingPageProps = {})
         ) : (
           <ul className="divide-y divide-[var(--booking-muted)]/20">
             {tabItems.map((item) => (
-              <li key={item.id} className="flex items-center justify-between gap-3 py-4">
+              <li key={item.id} className="flex items-center justify-between gap-4 py-5">
                 <div className="min-w-0">
-                  <p className="truncate text-base font-semibold text-[var(--booking-text)]">
+                  <p className="truncate text-[15px] font-semibold leading-snug text-[var(--booking-text)]">
                     {formatDate(item.startTime)}
                   </p>
-                  <p className={cn('truncate text-sm', theme.mutedText)}>{item.serviceName}</p>
+                  <p className={cn('mt-0.5 truncate text-sm', theme.mutedText)}>{item.serviceName}</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => openAppointment(item)}
                   className={cn(
-                    'shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-colors',
+                    'shrink-0 rounded-full px-5 py-2.5 text-sm font-semibold transition-colors',
                     item.action === 'receipt'
                       ? theme.primaryBtn
-                      : 'border border-[var(--booking-text)]/30 text-[var(--booking-text)] hover:bg-black/5',
+                      : 'border border-[var(--booking-text)]/35 text-[var(--booking-text)] hover:bg-black/5',
                   )}
                 >
                   {item.action === 'receipt' ? 'Receipt' : 'View'}
@@ -564,11 +553,13 @@ export function ManageBookingPage({ slugOverride }: ManageBookingPageProps = {})
 
         <dl className="divide-y divide-[var(--booking-muted)]/20">
           {detailRows.map((row) => (
-            <div key={row.label} className="py-3">
+            <div key={row.label} className="py-3.5">
               <dt className={cn('text-xs font-medium uppercase tracking-wide', theme.mutedText)}>
                 {row.label}
               </dt>
-              <dd className="mt-1 text-base font-medium text-[var(--booking-text)]">{row.value}</dd>
+              <dd className="mt-1 text-base font-medium leading-snug text-[var(--booking-text)]">
+                {row.value}
+              </dd>
             </div>
           ))}
         </dl>
@@ -580,8 +571,8 @@ export function ManageBookingPage({ slugOverride }: ManageBookingPageProps = {})
         {!isCancelled && !isPast && (
           <div className="mt-6 space-y-3">
             {isCustomerConfirmed ? (
-              <p className={cn('text-center text-sm font-medium', theme.accent)}>
-                You’re confirmed — thank you!
+              <p className={cn('text-center text-sm', theme.mutedText)}>
+                This appointment has been confirmed.
               </p>
             ) : (
               <BookingStickyAction siteTemplate={siteTemplate} branding={branding}>

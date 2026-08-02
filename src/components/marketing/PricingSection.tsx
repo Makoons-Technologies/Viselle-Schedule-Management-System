@@ -16,13 +16,13 @@ function TierCard({ tier }: { tier: PlanTierMarketing }) {
   return (
     <Card
       className={cn(
-        'relative flex flex-col border-stone-200 dark:border-stone-700',
-        tier.highlighted && 'border-brand-400 shadow-md ring-1 ring-brand-100 dark:ring-brand-800',
+        'relative flex flex-col border-stone-200 bg-white/95 shadow-lg',
+        tier.highlighted && 'border-bc-magenta shadow-xl ring-1 ring-bc-magenta/30',
       )}
     >
       {tier.highlighted && (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <span className="rounded-full bg-brand-600 px-3 py-1 text-xs font-medium text-white">
+          <span className="rounded-full bg-bc-magenta px-3 py-1 text-xs font-medium text-white">
             Most popular
           </span>
         </div>
@@ -68,16 +68,16 @@ function TierCard({ tier }: { tier: PlanTierMarketing }) {
 
 export function PricingSection() {
   return (
-    <section id="pricing" className="scroll-mt-20 bg-white py-16 dark:bg-stone-950 sm:py-24">
+    <section id="pricing" className="scroll-mt-20 bg-white/5 py-16 sm:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100 sm:text-4xl">
+          <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
             Scheduling plans
           </h2>
-          <p className="mt-4 text-lg text-stone-600 dark:text-stone-300">
+          <p className="mt-4 text-lg text-white/70">
             Pick the features your team needs. Every plan includes scheduling plus a free online booking
             page — see{' '}
-            <a href="#websites" className="font-medium text-brand-700 hover:underline dark:text-brand-300">
+            <a href="#websites" className="font-medium text-[#fdeb83] hover:underline">
               booking page options
             </a>{' '}
             above.
@@ -90,9 +90,9 @@ export function PricingSection() {
           ))}
         </div>
 
-        <p className="mt-10 text-center text-sm text-stone-500 dark:text-stone-400">
+        <p className="mt-10 text-center text-sm text-white/55">
           Not sure which plan fits?{' '}
-          <Link to="/contact" className="font-medium text-brand-700 hover:underline dark:text-brand-300">
+          <Link to="/contact" className="font-medium text-[#fdeb83] hover:underline">
             Contact us
           </Link>{' '}
           and we&apos;ll walk you through it.

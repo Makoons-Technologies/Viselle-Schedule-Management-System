@@ -28,9 +28,13 @@ Phases: **alpha** (0.x) → **beta** (3-month trials) → **GA** (1.0.0+).
 
 Public page: `/releases` (no auth). Source of truth: `CHANGELOG.md` (also rendered via `src/content/releases.md`). Keep them in sync when cutting a release. Link lives in the marketing footer.
 
-## Release cut
+## Release cut (required for every staging → main)
 
-Use `npm run cut-release -- --bump patch|minor|major` (see `docs/staging-and-releases.md`). Bump both this repo and Beauty-Backend-API to the same version when promoting.
+Never merge `staging` → `main` without bumping. Use:
+
+`npm run cut-release -- --bump patch|minor|major` (or on Windows: `node scripts/cut-release.mjs --bump=patch`).
+
+The script auto-gathers commit subjects since the last `vX.Y.Z` tag (or `origin/main`), writes VERSION / package.json / CHANGELOG / `src/content/releases.md`, and (when the sibling API repo is present) includes API commits under an **API** section. Preview with `--dry-run`. Bump **both** this repo and Beauty-Backend-API to the same version, then merge, tag `vX.Y.Z`, and deploy.
 
 ## Environments (separate DBs)
 

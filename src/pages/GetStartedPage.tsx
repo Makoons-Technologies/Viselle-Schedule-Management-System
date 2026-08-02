@@ -21,6 +21,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PasswordInput } from '@/components/ui/password-input';
+import { MARKETING_SHELL_CLASS } from '@/lib/marketing-theme';
 import { cn } from '@/lib/utils';
 import { contactPath } from '@/lib/contact';
 import { redirectToStripeUrl } from '@/lib/safe-redirect';
@@ -33,7 +34,6 @@ import {
   previewSignupCart,
   slugifyBusinessName,
   validateTrialCode,
-  websiteOptionFromParams,
   websiteOptionToAddons,
   type SignupCart,
   type SignupCatalogAddon,
@@ -169,6 +169,7 @@ function TrialCodeField({
   trialOffer,
   useHomepageCampaign,
   homepageTrial,
+  disabled = false,
   onChange,
   onCommit,
   compact,
@@ -179,6 +180,7 @@ function TrialCodeField({
   trialOffer: ResolvedTrialOffer | null;
   useHomepageCampaign: boolean;
   homepageTrial: TrialCampaign | null;
+  disabled?: boolean;
   onChange: (value: string) => void;
   onCommit: () => void;
   compact?: boolean;
@@ -194,7 +196,9 @@ function TrialCodeField({
           id={id}
           value={trialCode}
           onChange={(e) => onChange(e.target.value.toUpperCase())}
-          onBlur={() => onCommit()}
+          onBlur={() => {
+            if (!disabled) onCommit();
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
@@ -205,6 +209,8 @@ function TrialCodeField({
           className="pl-9"
           autoComplete="off"
           spellCheck={false}
+          disabled={disabled}
+          title={disabled ? 'A homepage trial is already applied' : undefined}
         />
       </div>
       {trialCodeStatus === 'checking' && (
@@ -274,6 +280,7 @@ type SignupCartPanelProps = {
   trialOffer: ResolvedTrialOffer | null;
   useHomepageCampaign: boolean;
   homepageTrial: TrialCampaign | null;
+  trialCodeDisabled?: boolean;
   onTrialCodeChange: (value: string) => void;
   onTrialCodeCommit: () => void;
   inputId: string;
@@ -288,6 +295,7 @@ function SignupCartPanel({
   trialOffer,
   useHomepageCampaign,
   homepageTrial,
+  trialCodeDisabled = false,
   onTrialCodeChange,
   onTrialCodeCommit,
   inputId,
@@ -301,6 +309,7 @@ function SignupCartPanel({
       trialOffer={trialOffer}
       useHomepageCampaign={useHomepageCampaign}
       homepageTrial={homepageTrial}
+      disabled={trialCodeDisabled}
       onChange={onTrialCodeChange}
       onCommit={onTrialCodeCommit}
       compact={variant === 'mobileBar'}
@@ -319,7 +328,7 @@ function SignupCartPanel({
   }
 
   return (
-    <Card className="sticky top-6">
+    <Card className="sticky top-6 border-white/15 bg-white/95 shadow-xl">
       <CardHeader className="pb-3">
         <CardTitle className="text-base">Your cart</CardTitle>
       </CardHeader>
@@ -364,10 +373,6 @@ export function GetStartedPage() {
   const isLgUp = useIsLgUp();
   const [searchParams] = useSearchParams();
   const initialPlan = (searchParams.get('plan') as SignupTierId | null) ?? 'professional';
-  const initialWebsiteOption = websiteOptionFromParams({
-    subdomain: searchParams.get('subdomain') === '1',
-    customWebsite: searchParams.get('customWebsite') === '1',
-  });
   const cancelled = searchParams.get('cancelled') === '1';
   const initialCode = searchParams.get('code') ?? '';
   const trialParam = searchParams.get('trial') === '1';
@@ -403,7 +408,7 @@ export function GetStartedPage() {
   const [tier, setTier] = useState<SignupTierId>(
     ['starter', 'professional', 'business'].includes(initialPlan) ? initialPlan : 'professional',
   );
-  const [websiteOption, setWebsiteOption] = useState<SignupWebsiteOption>(initialWebsiteOption);
+  const [websiteOption, setWebsiteOption] = useState<SignupWebsiteOption>('free');
 
   const [trialCode, setTrialCode] = useState(initialCode);
   const [trialCodeStatus, setTrialCodeStatus] = useState<TrialCodeStatus>('idle');
@@ -428,7 +433,7 @@ export function GetStartedPage() {
   }, []);
 
   useEffect(() => {
-    if (!trialParam || initialCode) return;
+    if (!trialParam) return;
     fetchLiveHomepageTrial()
       .then((campaign) => setHomepageTrial(campaign))
       .catch(() => setHomepageTrial(null));
@@ -473,15 +478,27 @@ export function GetStartedPage() {
     }
   }, []);
 
-  // Validate ?code= from the URL once on mount.
+  // Validate ?code= from the URL once on mount (skipped when homepage trial is selected).
   useEffect(() => {
-    if (!initialCode.trim()) return;
+    if (!initialCode.trim() || trialParam) return;
     void commitTrialCode(initialCode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const homepageTrialSelected = trialParam && Boolean(homepageTrial);
+
+  // Homepage trial wins over any typed/URL referral code so it cannot affect checkout.
+  useEffect(() => {
+    if (!homepageTrialSelected) return;
+    trialValidateSeq.current += 1;
+    setTrialCode('');
+    setCommittedTrialCode('');
+    setTrialCodeStatus('idle');
+    setTrialOffer(null);
+  }, [homepageTrialSelected]);
+
   const useHomepageCampaign =
-    trialParam && trialCodeStatus === 'idle' && committedTrialCode.length === 0 && Boolean(homepageTrial);
+    homepageTrialSelected && trialCodeStatus === 'idle' && committedTrialCode.length === 0;
   const activeTrialPaymentMode =
     trialCodeStatus === 'valid' && trialOffer
       ? trialOffer.paymentMode
@@ -494,7 +511,7 @@ export function GetStartedPage() {
     trialCodeStatus === 'valid' && trialOffer
       ? trialOffer.lockedTier
       : useHomepageCampaign && homepageTrial
-        ? homepageTrial.lockedTier
+        ? (homepageTrial.lockedTier ?? 'professional')
         : null;
   const planLocked = Boolean(lockedTier);
 
@@ -714,6 +731,7 @@ export function GetStartedPage() {
     price: string;
     description: string;
     highlight?: boolean;
+    disabled?: boolean;
   }> = [
     {
       id: 'free',
@@ -732,6 +750,7 @@ export function GetStartedPage() {
       description:
         subdomainAddonInfo?.description ??
         'Your own address like yourspa.sites.viselle.net on Viselle.',
+      disabled: true,
     },
     {
       id: 'custom_website',
@@ -741,16 +760,17 @@ export function GetStartedPage() {
         customWebsiteAddonInfo?.description ??
         'We design and launch a branded site for your salon. Until it is ready, you can take bookings on your free booking page. We will reach out after signup to discuss details.',
       highlight: true,
+      disabled: true,
     },
   ];
 
   if (provisionedResult) {
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-stone-950">
+      <div className={MARKETING_SHELL_CLASS}>
         <PageSeo {...marketingSeo.getStartedSuccess} />
         <MarketingHeader />
         <div className="mx-auto max-w-lg px-4 py-16 sm:px-6">
-          <Card>
+          <Card className="border-white/15 bg-white/95 shadow-2xl">
             <CardHeader className="text-center">
               <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-600 dark:text-emerald-400" />
               <CardTitle className="mt-4">Your free trial is ready!</CardTitle>
@@ -766,16 +786,16 @@ export function GetStartedPage() {
   }
 
   return (
-    <div className={cn('min-h-screen bg-stone-50 dark:bg-stone-950', !isLgUp && 'pb-44')}>
+    <div className={cn(MARKETING_SHELL_CLASS, !isLgUp && 'pb-44')}>
       <PageSeo {...marketingSeo.getStarted} />
       <MarketingHeader />
 
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
+          <h1 className="text-3xl font-bold tracking-tight text-white">
             Get started with Viselle
           </h1>
-          <p className="mt-2 text-stone-600 dark:text-stone-300">
+          <p className="mt-2 text-white/70">
             Set up your salon or spa in a few steps — plan, website options, and secure checkout.
           </p>
         </div>
@@ -800,17 +820,17 @@ export function GetStartedPage() {
                   disabled={index > stepIndex}
                   className={cn(
                     'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors',
-                    active && 'bg-brand-50 font-medium text-brand-900 dark:bg-brand-950/50 dark:text-brand-100',
-                    done && !active && 'text-stone-700 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-900',
-                    !done && !active && 'cursor-not-allowed text-stone-400 dark:text-stone-600',
+                    active && 'bg-white/15 font-medium text-white',
+                    done && !active && 'text-white/80 hover:bg-white/10',
+                    !done && !active && 'cursor-not-allowed text-white/40',
                   )}
                 >
                   <span
                     className={cn(
                       'flex h-8 w-8 items-center justify-center rounded-full border',
-                      active && 'border-brand-600 bg-brand-600 text-white',
-                      done && !active && 'border-brand-600 bg-white text-brand-600 dark:bg-stone-900',
-                      !done && !active && 'border-stone-200 bg-white text-stone-400 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-500',
+                      active && 'border-bc-magenta bg-bc-magenta text-white',
+                      done && !active && 'border-[#fdeb83]/70 bg-white/10 text-[#fdeb83]',
+                      !done && !active && 'border-white/25 bg-white/5 text-white/45',
                     )}
                   >
                     {done ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
@@ -821,7 +841,7 @@ export function GetStartedPage() {
             })}
           </nav>
 
-          <Card>
+          <Card className="border-white/15 bg-white/95 shadow-xl">
             <CardHeader>
               <CardTitle>{STEPS[stepIndex].label}</CardTitle>
               <CardDescription>
@@ -1041,42 +1061,64 @@ export function GetStartedPage() {
 
               {currentStep === 'website' && (
                 <div className="space-y-3" role="radiogroup" aria-label="Website option">
-                  {websiteChoices.map((choice) => (
-                    <label
-                      key={choice.id}
-                      className={cn(
-                        'flex cursor-pointer gap-3 rounded-lg border p-4 transition-colors',
-                        websiteOption === choice.id
-                          ? 'border-brand-500 bg-brand-50 ring-1 ring-brand-200 dark:bg-brand-950/40 dark:ring-brand-800'
-                          : choice.highlight
-                            ? 'border-brand-200 bg-brand-50/30 hover:bg-brand-50/50 dark:border-brand-800 dark:bg-brand-950/20 dark:hover:bg-brand-950/30'
-                            : 'border-stone-200 hover:bg-stone-50 dark:border-stone-700 dark:hover:bg-stone-800/50',
-                      )}
-                    >
-                      <input
-                        type="radio"
-                        name="websiteOption"
-                        className="mt-1"
-                        checked={websiteOption === choice.id}
-                        onChange={() => setWebsiteOption(choice.id)}
-                      />
-                      <div className="flex-1">
-                        <p className="font-medium text-stone-900 dark:text-stone-100">
-                          {choice.title}
-                          <span className="ml-2 text-sm font-normal text-stone-500 dark:text-stone-400">{choice.price}</span>
-                        </p>
-                        <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">{choice.description}</p>
-                        {choice.id === 'custom_website' && (
-                          <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">
-                            No charge at checkout — our team will contact you to scope the project. You can use your
-                            free booking page in the meantime.
-                          </p>
+                  {websiteChoices.map((choice) => {
+                    const choiceDisabled = Boolean(choice.disabled);
+                    return (
+                      <label
+                        key={choice.id}
+                        aria-disabled={choiceDisabled}
+                        className={cn(
+                          'flex gap-3 rounded-lg border p-4 transition-colors',
+                          choiceDisabled
+                            ? 'cursor-not-allowed opacity-60'
+                            : 'cursor-pointer',
+                          !choiceDisabled && websiteOption === choice.id
+                            ? 'border-brand-500 bg-brand-50 ring-1 ring-brand-200 dark:bg-brand-950/40 dark:ring-brand-800'
+                            : !choiceDisabled && choice.highlight
+                              ? 'border-brand-200 bg-brand-50/30 hover:bg-brand-50/50 dark:border-brand-800 dark:bg-brand-950/20 dark:hover:bg-brand-950/30'
+                              : 'border-stone-200 dark:border-stone-700',
+                          !choiceDisabled &&
+                            websiteOption !== choice.id &&
+                            !choice.highlight &&
+                            'hover:bg-stone-50 dark:hover:bg-stone-800/50',
                         )}
-                      </div>
-                    </label>
-                  ))}
+                      >
+                        <input
+                          type="radio"
+                          name="websiteOption"
+                          className="mt-1"
+                          disabled={choiceDisabled}
+                          checked={websiteOption === choice.id}
+                          onChange={() => {
+                            if (!choiceDisabled) setWebsiteOption(choice.id);
+                          }}
+                        />
+                        <div className="flex-1">
+                          <p className="font-medium text-stone-900 dark:text-stone-100">
+                            {choice.title}
+                            <span className="ml-2 text-sm font-normal text-stone-500 dark:text-stone-400">
+                              {choice.price}
+                            </span>
+                            {choiceDisabled && (
+                              <span className="ml-2 text-xs font-medium text-stone-500 dark:text-stone-400">
+                                Unavailable
+                              </span>
+                            )}
+                          </p>
+                          <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">{choice.description}</p>
+                          {choice.id === 'custom_website' && !choiceDisabled && (
+                            <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">
+                              No charge at checkout — our team will contact you to scope the project. You can use your
+                              free booking page in the meantime.
+                            </p>
+                          )}
+                        </div>
+                      </label>
+                    );
+                  })}
 
                   <p className="pt-1 text-sm text-stone-500 dark:text-stone-400">
+                    Hosted subdomain and custom website options are temporarily unavailable.{' '}
                     Already have your own site?{' '}
                     <Link to={contactPath({ interest: 'api' })} className="font-medium text-brand-700 hover:underline dark:text-brand-300">
                       Contact us about API access
@@ -1162,6 +1204,7 @@ export function GetStartedPage() {
                 trialOffer={trialOffer}
                 useHomepageCampaign={useHomepageCampaign}
                 homepageTrial={homepageTrial}
+                trialCodeDisabled={homepageTrialSelected}
                 onTrialCodeChange={setTrialCode}
                 onTrialCodeCommit={() => void commitTrialCode(trialCode)}
                 inputId="trialCode"
@@ -1186,6 +1229,7 @@ export function GetStartedPage() {
               trialOffer={trialOffer}
               useHomepageCampaign={useHomepageCampaign}
               homepageTrial={homepageTrial}
+              trialCodeDisabled={homepageTrialSelected}
               onTrialCodeChange={setTrialCode}
               onTrialCodeCommit={() => void commitTrialCode(trialCode)}
               inputId="trialCode-mobile"

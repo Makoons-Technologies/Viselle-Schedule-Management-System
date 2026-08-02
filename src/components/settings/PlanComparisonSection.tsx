@@ -1,8 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Check, X } from 'lucide-react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { orgApi } from '@/lib/api';
+import { ApiError, orgApi } from '@/lib/api';
 import {
   PLAN_FEATURES,
   PLAN_TIERS,
@@ -16,23 +17,36 @@ import { cn } from '@/lib/utils';
 import { redirectToStripeUrl } from '@/lib/safe-redirect';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  PlanChangeDialog,
+  type PlanChangeCtaLabel,
+} from '@/components/settings/PlanChangeDialog';
 import type { SubscriptionTier } from '@/types/api';
 
 interface PlanComparisonSectionProps {
   orgId: string;
   currentTier: SubscriptionTier | null | undefined;
   hasStripeSubscription: boolean;
+  /** Active (non-expired) trial — lower tiers cannot be selected. */
+  isOnActiveTrial?: boolean;
 }
+
+type PlanCtaLabel =
+  | 'Current plan'
+  | PlanChangeCtaLabel
+  | 'Unavailable';
 
 function ctaLabel(
   current: PlanTierId | null,
   target: PlanTierId,
   hasStripeSubscription: boolean,
-): 'Current plan' | 'Upgrade' | 'Downgrade' | 'Switch plan' | 'Subscribe' {
+  isOnActiveTrial: boolean,
+): PlanCtaLabel {
   if (current === target) {
     return hasStripeSubscription ? 'Current plan' : 'Subscribe';
   }
   const change = compareTierChange(current, target);
+  if (change === 'downgrade' && isOnActiveTrial) return 'Unavailable';
   if (change === 'upgrade') return 'Upgrade';
   if (change === 'downgrade') return 'Downgrade';
   return 'Switch plan';
@@ -42,8 +56,11 @@ export function PlanComparisonSection({
   orgId,
   currentTier,
   hasStripeSubscription,
+  isOnActiveTrial = false,
 }: PlanComparisonSectionProps) {
   const queryClient = useQueryClient();
+  const [pendingTier, setPendingTier] = useState<PlanTierId | null>(null);
+
   const normalizedCurrent: PlanTierId | null =
     currentTier === 'starter' || currentTier === 'professional' || currentTier === 'business'
       ? currentTier
@@ -55,13 +72,21 @@ export function PlanComparisonSection({
       queryClient.invalidateQueries({ queryKey: ['org-plan', orgId] });
       queryClient.invalidateQueries({ queryKey: ['owner-settings', orgId] });
       queryClient.invalidateQueries({ queryKey: ['organization', orgId] });
+      setPendingTier(null);
       if (result.billingMode === 'settings_only_stripe_failed') {
         toast.warning(result.message);
       } else {
         toast.success(result.message);
       }
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => {
+      toast.error(err.message);
+      if (err instanceof ApiError && err.code === 'STAFF_LIMIT_REACHED') {
+        // Keep dialog open so they can trim staff.
+        return;
+      }
+      setPendingTier(null);
+    },
   });
 
   const checkoutMutation = useMutation({
@@ -69,44 +94,37 @@ export function PlanComparisonSection({
     onSuccess: (result) => {
       if (!result.checkoutUrl) {
         toast.error('Checkout could not be started. Please try again or contact support.');
+        setPendingTier(null);
         return;
       }
       if (!redirectToStripeUrl(result.checkoutUrl)) {
         toast.error('Received an unexpected checkout URL');
+        setPendingTier(null);
       }
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => {
+      toast.error(err.message);
+      if (err instanceof ApiError && err.code === 'STAFF_LIMIT_REACHED') {
+        return;
+      }
+      setPendingTier(null);
+    },
   });
 
-  const pending =
-    changeMutation.isPending || checkoutMutation.isPending;
-  const pendingTier = changeMutation.isPending
-    ? changeMutation.variables
-    : checkoutMutation.isPending
-      ? checkoutMutation.variables
-      : undefined;
+  const pending = changeMutation.isPending || checkoutMutation.isPending;
+  const dialogOpen = pendingTier !== null;
+  const dialogLabel =
+    pendingTier != null
+      ? (ctaLabel(normalizedCurrent, pendingTier, hasStripeSubscription, isOnActiveTrial) as
+          | PlanChangeCtaLabel
+          | 'Current plan'
+          | 'Unavailable')
+      : null;
 
-  function confirmAndChange(tier: PlanTierId) {
-    const label = ctaLabel(normalizedCurrent, tier, hasStripeSubscription);
-    if (label === 'Current plan') return;
-    const tierMeta = PLAN_TIERS.find((t) => t.id === tier)!;
-
-    if (!hasStripeSubscription) {
-      const ok = window.confirm(
-        `${label} to ${tierMeta.name} ($${priceMonthlyDollars(tierMeta)}/mo)?\n\n` +
-          'You will be taken to Stripe Checkout to enter your card and activate billing. Features unlock after payment succeeds.',
-      );
-      if (!ok) return;
-      checkoutMutation.mutate(tier);
-      return;
-    }
-
-    const ok = window.confirm(
-      `${label} to ${tierMeta.name} ($${priceMonthlyDollars(tierMeta)}/mo)?\n\n` +
-        'Features unlock or lock immediately. Your Stripe subscription price updates with proration.',
-    );
-    if (!ok) return;
-    changeMutation.mutate(tier);
+  function openPlanChange(tier: PlanTierId) {
+    const label = ctaLabel(normalizedCurrent, tier, hasStripeSubscription, isOnActiveTrial);
+    if (label === 'Current plan' || label === 'Unavailable') return;
+    setPendingTier(tier);
   }
 
   return (
@@ -115,9 +133,11 @@ export function PlanComparisonSection({
         <CardHeader>
           <CardTitle className="text-base">Compare plans</CardTitle>
           <CardDescription>
-            {hasStripeSubscription
-              ? 'Checkmarks show what each tier includes. Upgrade or downgrade anytime — feature access updates immediately.'
-              : 'Checkmarks show what each tier includes. Choose a plan to pay with Stripe Checkout and activate your account.'}
+            {isOnActiveTrial
+              ? 'Checkmarks show what each tier includes. During your trial you can subscribe to your current plan or upgrade — downgrades are unavailable until the trial ends.'
+              : hasStripeSubscription
+                ? 'Checkmarks show what each tier includes. Upgrade or downgrade anytime — feature access updates immediately. You’ll be asked to trim staff if the new plan has a lower seat limit.'
+                : 'Checkmarks show what each tier includes. Choose a plan to pay with Stripe Checkout and activate your account.'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -187,16 +207,38 @@ export function PlanComparisonSection({
                 <tr>
                   <td className="pt-4" />
                   {PLAN_TIERS.map((tier) => {
-                    const label = ctaLabel(normalizedCurrent, tier.id, hasStripeSubscription);
+                    const label = ctaLabel(
+                      normalizedCurrent,
+                      tier.id,
+                      hasStripeSubscription,
+                      isOnActiveTrial,
+                    );
                     const isCurrent = label === 'Current plan';
+                    const isUnavailable = label === 'Unavailable';
+                    const isDisabled = isCurrent || isUnavailable || pending;
                     return (
                       <td key={tier.id} className="px-2 pt-4 text-center">
                         <Button
                           size="sm"
-                          variant={isCurrent ? 'secondary' : tier.highlighted ? 'default' : 'outline'}
-                          disabled={isCurrent || pending}
-                          className={cn('w-full min-w-[7.5rem]', isCurrent && 'cursor-default')}
-                          onClick={() => confirmAndChange(tier.id)}
+                          variant={
+                            isCurrent || isUnavailable
+                              ? 'secondary'
+                              : tier.highlighted
+                                ? 'default'
+                                : 'outline'
+                          }
+                          disabled={isDisabled}
+                          title={
+                            isUnavailable
+                              ? 'Downgrades are not available while your trial is active'
+                              : undefined
+                          }
+                          className={cn(
+                            'w-full min-w-[7.5rem]',
+                            (isCurrent || isUnavailable) && 'cursor-default',
+                            isUnavailable && 'opacity-60',
+                          )}
+                          onClick={() => openPlanChange(tier.id)}
                         >
                           {pending && pendingTier === tier.id
                             ? hasStripeSubscription
@@ -221,6 +263,26 @@ export function PlanComparisonSection({
           </p>
         </CardContent>
       </Card>
+
+      {pendingTier &&
+        dialogLabel &&
+        dialogLabel !== 'Current plan' &&
+        dialogLabel !== 'Unavailable' && (
+          <PlanChangeDialog
+            open={dialogOpen}
+            onOpenChange={(open) => {
+              if (!open && !pending) setPendingTier(null);
+            }}
+            orgId={orgId}
+            currentTier={normalizedCurrent}
+            targetTier={pendingTier}
+            ctaLabel={dialogLabel}
+            hasStripeSubscription={hasStripeSubscription}
+            confirming={pending}
+            onConfirmStripeChange={(tier) => changeMutation.mutate(tier)}
+            onConfirmCheckout={(tier) => checkoutMutation.mutate(tier)}
+          />
+        )}
     </div>
   );
 }

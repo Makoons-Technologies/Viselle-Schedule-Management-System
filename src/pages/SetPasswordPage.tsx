@@ -78,9 +78,9 @@ export function SetPasswordPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-50 to-stone-100 p-4 dark:from-stone-950 dark:to-stone-900">
+    <div className="flex min-h-screen items-center justify-center bg-marketing p-4 text-white">
       <PageSeo {...marketingSeo.setPassword} />
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md border-white/15 bg-white/95 shadow-2xl">
         <CardHeader className="text-center">
           <div className="mb-3 flex justify-center">
             <ViselleLogo size={56} />

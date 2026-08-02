@@ -10,6 +10,6 @@ alwaysApply: true
 | Environment | Frontend | API |
 |---|---|---|
 | Production | `viselle.net` / `www.viselle.net` | `api.viselle.net` |
-| Staging (planned) | `staging.viselle.net` | `api-staging.viselle.net` |
+| Staging | `staging.viselle.net` | `staging-api.viselle.net` |
 
 Related: paid booking subdomains use `sites.viselle.net` (e.g. `yourspa.sites.viselle.net`). Contact: `hello@viselle.net`.

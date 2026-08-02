@@ -3,25 +3,32 @@ import { MarketingFooter, MarketingHeader } from '@/components/marketing/Marketi
 import { PageSeo } from '@/components/seo/PageSeo';
 import { Button } from '@/components/ui/button';
 import { marketingSeo } from '@/content/marketing-seo';
+import { MARKETING_SHELL_CLASS } from '@/lib/marketing-theme';
+import { cn } from '@/lib/utils';
 
 export function NotFoundPage() {
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-b from-brand-50 via-white to-stone-50 dark:from-stone-950 dark:via-stone-900 dark:to-stone-950">
+    <div className={cn(MARKETING_SHELL_CLASS, 'flex flex-col')}>
       <PageSeo {...marketingSeo.notFound} />
       <MarketingHeader />
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col items-center justify-center px-4 py-16 text-center sm:px-6">
-        <p className="text-sm font-medium tracking-wide text-brand-700 dark:text-brand-300">404</p>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100 sm:text-4xl">
+        <p className="text-sm font-medium tracking-wide text-[#fdeb83]">404</p>
+        <h1 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">
           Page not found
         </h1>
-        <p className="mt-4 max-w-md text-stone-600 dark:text-stone-300">
+        <p className="mt-4 max-w-md text-white/70">
           That link doesn&apos;t go anywhere. Head home or sign in to your account.
         </p>
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row">
           <Button asChild size="lg">
             <Link to="/">Back to home</Link>
           </Button>
-          <Button asChild variant="outline" size="lg">
+          <Button
+            asChild
+            variant="outline"
+            size="lg"
+            className="border-white/30 bg-white/5 text-white hover:bg-white/15 hover:text-white"
+          >
             <Link to="/login">Sign in</Link>
           </Button>
         </div>

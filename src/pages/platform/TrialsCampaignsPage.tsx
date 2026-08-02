@@ -23,7 +23,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import type { TrialCampaign, TrialCampaignType, TrialLockedTier, TrialPaymentMode } from '@/types/api';
+import type {
+  PlatformTrialSettings,
+  TrialCampaign,
+  TrialCampaignType,
+  TrialLockedTier,
+  TrialPaymentMode,
+} from '@/types/api';
 
 const PAYMENT_MODE_LABEL: Record<TrialPaymentMode, string> = {
   stripe_trial: 'Stripe trial (card now)',
@@ -741,94 +747,183 @@ function SettingsTab() {
     queryKey: ['owner', 'trials', 'settings'],
     queryFn: ownerApi.getTrialSettings,
   });
+  const { data: campaignsData } = useQuery({
+    queryKey: ['owner', 'trials', 'campaigns'],
+    queryFn: ownerApi.listTrialCampaigns,
+  });
 
   const [durationDays, setDurationDays] = useState<string | null>(null);
   const [paymentMode, setPaymentMode] = useState<TrialPaymentMode | null>(null);
   const [lockedTier, setLockedTier] = useState<TrialLockedTier | null>(null);
+  const [businessCardCampaignId, setBusinessCardCampaignId] = useState<string | null>(null);
+  const [businessCardTouched, setBusinessCardTouched] = useState(false);
 
   const settings = data?.settings;
   const effectiveDuration = durationDays ?? (settings ? String(settings.referralDurationDays) : '14');
   const effectivePaymentMode = paymentMode ?? settings?.referralPaymentMode ?? 'free_no_card';
   const effectiveLockedTier = lockedTier ?? settings?.referralLockedTier ?? 'professional';
+  const effectiveBusinessCardCampaignId = businessCardTouched
+    ? businessCardCampaignId
+    : (settings?.businessCardCampaignId ?? null);
 
-  const mutation = useMutation({
+  const codeCampaigns = useMemo(
+    () => (campaignsData?.campaigns ?? []).filter((c) => c.type === 'code'),
+    [campaignsData],
+  );
+
+  const applySettingsCache = (payload: { settings: PlatformTrialSettings }) => {
+    queryClient.setQueryData(['owner', 'trials', 'settings'], payload);
+  };
+
+  /** Saves only the business-card assignment; verifies the API echoed the value back. */
+  const businessCardMutation = useMutation({
+    mutationFn: (campaignId: string | null) =>
+      ownerApi.updateTrialSettings({ businessCardCampaignId: campaignId }),
+    onSuccess: (payload, campaignId) => {
+      const saved = payload.settings.businessCardCampaignId ?? null;
+      if (saved !== campaignId) {
+        // Old API builds strip unknown keys via Zod and still return 200.
+        toast.error(
+          'Business card campaign was not saved. Redeploy the API with business card support (migration 036).',
+        );
+        return;
+      }
+      applySettingsCache(payload);
+      setBusinessCardTouched(false);
+      setBusinessCardCampaignId(null);
+      toast.success('Business card campaign saved');
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const referralMutation = useMutation({
     mutationFn: () =>
       ownerApi.updateTrialSettings({
         referralDurationDays: Number(effectiveDuration),
         referralPaymentMode: effectivePaymentMode,
         referralLockedTier: effectiveLockedTier,
       }),
-    onSuccess: () => {
-      toast.success('Referral settings saved');
-      queryClient.invalidateQueries({ queryKey: ['owner', 'trials', 'settings'] });
+    onSuccess: (payload) => {
+      applySettingsCache(payload);
       setDurationDays(null);
       setPaymentMode(null);
       setLockedTier(null);
+      toast.success('Trial settings saved');
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
   if (isLoading) return <LoadingState />;
 
+  const businessCardUrl =
+    typeof window !== 'undefined' ? `${window.location.origin}/business-card` : '/business-card';
+  const settingsBusy = businessCardMutation.isPending || referralMutation.isPending;
+
   return (
-    <Panel className="max-w-lg p-6">
-      <h2 className="text-sm font-semibold text-stone-900 dark:text-stone-100">Org referral defaults</h2>
-      <p className={`${sectionMutedClass} mt-1`}>
-        Applied when a new signup uses another organization&apos;s referral code instead of a campaign code.
-      </p>
-      <form
-        className="mt-4 space-y-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          mutation.mutate();
-        }}
-      >
-        <div>
-          <Label>Trial duration (days)</Label>
-          <Input
-            type="number"
-            min={1}
-            value={effectiveDuration}
-            onChange={(e) => setDurationDays(e.target.value)}
-          />
+    <div className="space-y-6">
+      <Panel className="max-w-lg p-6">
+        <h2 className="text-sm font-semibold text-stone-900 dark:text-stone-100">Digital business card</h2>
+        <p className={`${sectionMutedClass} mt-1`}>
+          Assign a shared-code campaign to{' '}
+          <a href={businessCardUrl} className="underline underline-offset-2" target="_blank" rel="noreferrer">
+            /business-card
+          </a>
+          . Optional <code className="text-xs">?code=</code> on that page overrides for previews.
+        </p>
+        <div className="mt-4 space-y-3">
+          <div>
+            <Label>Campaign access code</Label>
+            <Select
+              value={effectiveBusinessCardCampaignId ?? '__none__'}
+              onValueChange={(v) => {
+                setBusinessCardTouched(true);
+                setBusinessCardCampaignId(v === '__none__' ? null : v);
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a code campaign" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">None</SelectItem>
+                {codeCampaigns.map((campaign) => (
+                  <SelectItem key={campaign.id} value={campaign.id}>
+                    {campaign.name}
+                    {campaign.code ? ` (${campaign.code})` : ''}
+                    {!campaign.enabled ? ' — off' : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            type="button"
+            disabled={settingsBusy}
+            onClick={() => businessCardMutation.mutate(effectiveBusinessCardCampaignId)}
+          >
+            Save business card campaign
+          </Button>
         </div>
-        <div>
-          <Label>Payment mode</Label>
-          <Select value={effectivePaymentMode} onValueChange={(v) => setPaymentMode(v as TrialPaymentMode)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="free_no_card">Free (no card)</SelectItem>
-              <SelectItem value="stripe_trial">Stripe trial (card now)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Locked plan</Label>
-          <Select value={effectiveLockedTier} onValueChange={(v) => setLockedTier(v as TrialLockedTier)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="starter">Starter</SelectItem>
-              <SelectItem value="professional">Professional</SelectItem>
-              <SelectItem value="business">Business</SelectItem>
-            </SelectContent>
-          </Select>
-          <p className={`${sectionMutedClass} mt-1`}>
-            Referral signups lock to this plan — the Get Started plan picker is disabled.
-          </p>
-        </div>
-        <div>
-          <Label>Referral rewards</Label>
-          <p className={sectionMutedClass}>TBD — no payout logic yet.</p>
-        </div>
-        <Button type="submit" disabled={mutation.isPending}>
-          Save settings
-        </Button>
-      </form>
-    </Panel>
+      </Panel>
+
+      <Panel className="max-w-lg p-6">
+        <h2 className="text-sm font-semibold text-stone-900 dark:text-stone-100">Org referral defaults</h2>
+        <p className={`${sectionMutedClass} mt-1`}>
+          Applied when a new signup uses another organization&apos;s referral code instead of a campaign code.
+        </p>
+        <form
+          className="mt-4 space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            referralMutation.mutate();
+          }}
+        >
+          <div>
+            <Label>Trial duration (days)</Label>
+            <Input
+              type="number"
+              min={1}
+              value={effectiveDuration}
+              onChange={(e) => setDurationDays(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label>Payment mode</Label>
+            <Select value={effectivePaymentMode} onValueChange={(v) => setPaymentMode(v as TrialPaymentMode)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="free_no_card">Free (no card)</SelectItem>
+                <SelectItem value="stripe_trial">Stripe trial (card now)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Locked plan</Label>
+            <Select value={effectiveLockedTier} onValueChange={(v) => setLockedTier(v as TrialLockedTier)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="starter">Starter</SelectItem>
+                <SelectItem value="professional">Professional</SelectItem>
+                <SelectItem value="business">Business</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className={`${sectionMutedClass} mt-1`}>
+              Referral signups lock to this plan — the Get Started plan picker is disabled.
+            </p>
+          </div>
+          <div>
+            <Label>Referral rewards</Label>
+            <p className={sectionMutedClass}>TBD — no payout logic yet.</p>
+          </div>
+          <Button type="submit" disabled={settingsBusy}>
+            Save settings
+          </Button>
+        </form>
+      </Panel>
+    </div>
   );
 }
 
@@ -837,7 +932,7 @@ export function TrialsCampaignsPage() {
     <div>
       <PageHeader
         title="Trials & Campaigns"
-        description="Run timed free trials via shared codes and the homepage CTA, and track org-to-org referrals."
+        description="Run timed free trials via shared codes and the homepage CTA, assign the digital business card campaign, and track org-to-org referrals."
       />
       <Tabs defaultValue="campaigns">
         <TabsList>

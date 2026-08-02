@@ -5,15 +5,15 @@ import { ViselleLogo } from '@/components/common/ViselleLogo';
 import { cn } from '@/lib/utils';
 
 const navLinkClassName =
-  'text-sm font-medium text-stone-600 transition-colors hover:text-brand-700 dark:text-stone-300 dark:hover:text-brand-300';
+  'text-sm font-medium text-white/75 transition-colors hover:text-white';
 
 export function MarketingHeader() {
   return (
-    <header className="border-b border-stone-200/80 bg-white/80 backdrop-blur-sm dark:border-stone-800 dark:bg-stone-950/90">
+    <header className="border-b border-white/10 bg-[#0f172a]/45 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
         <Link to="/" className="flex items-center gap-2.5">
           <ViselleLogo size={36} />
-          <span className="text-xl font-semibold text-brand-700 dark:text-stone-100">Viselle</span>
+          <span className="text-xl font-semibold text-white">Viselle</span>
         </Link>
         <nav className="flex items-center gap-5 sm:gap-6">
           <div className="flex items-center gap-5 sm:gap-6">
@@ -31,7 +31,12 @@ export function MarketingHeader() {
             <Button asChild size="sm">
               <Link to="/get-started">Get started</Link>
             </Button>
-            <Button asChild variant="outline" size="sm">
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="border-white/30 bg-white/5 text-white hover:bg-white/15 hover:text-white"
+            >
               <Link to="/login">Sign in</Link>
             </Button>
           </div>
@@ -43,7 +48,7 @@ export function MarketingHeader() {
 
 export function MarketingFooter() {
   return (
-    <footer className="border-t border-stone-200 bg-stone-900 py-10 text-stone-400">
+    <footer className="border-t border-white/10 bg-[#0f172a]/70 py-10 text-white/60">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 sm:flex-row sm:px-6">
         <div className="flex items-center gap-3">
           <ViselleLogo size={28} />
@@ -65,7 +70,7 @@ export function MarketingFooter() {
         </p>
       </div>
       <div className="mx-auto mt-4 max-w-6xl px-4 sm:px-6">
-        <PoweredByMakoons className="text-stone-600" />
+        <PoweredByMakoons className="text-white/35" />
       </div>
     </footer>
   );

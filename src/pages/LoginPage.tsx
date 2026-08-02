@@ -16,6 +16,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PasswordInput } from '@/components/ui/password-input';
 import { marketingSeo } from '@/content/marketing-seo';
+import { MARKETING_SHELL_CLASS } from '@/lib/marketing-theme';
+import { cn } from '@/lib/utils';
 
 const schema = z.object({
   email: z.string().email(),
@@ -61,9 +63,9 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gradient-to-br from-brand-50 to-stone-100 p-4 dark:from-stone-950 dark:to-stone-900">
+    <div className={cn(MARKETING_SHELL_CLASS, 'flex flex-col items-center justify-center gap-4 p-4')}>
       <PageSeo {...marketingSeo.login} />
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md border-white/15 bg-white/95 shadow-2xl">
         <CardHeader className="text-center">
           <div className="mb-3 flex justify-center">
             <ViselleLogo size={64} />
@@ -99,7 +101,7 @@ export function LoginPage() {
           </form>
         </CardContent>
       </Card>
-      <PoweredByMakoons />
+      <PoweredByMakoons className="text-white/40" />
     </div>
   );
 }

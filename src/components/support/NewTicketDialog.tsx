@@ -1,11 +1,17 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { supportApi } from '@/lib/api';
+import { fileToSupportAttachmentUpload } from '@/lib/support-attachments';
 import { SUPPORT_TICKET_TYPES, SUPPORT_TICKET_TYPE_LABELS } from '@/components/support/ticket-types';
+import {
+  AttachmentPicker,
+  type PendingSupportFile,
+} from '@/components/support/AttachmentExtras';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -29,6 +35,7 @@ interface NewTicketDialogProps {
 export function NewTicketDialog({ open, onOpenChange }: NewTicketDialogProps) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [pendingFiles, setPendingFiles] = useState<PendingSupportFile[]>([]);
   const {
     register,
     handleSubmit,
@@ -41,11 +48,18 @@ export function NewTicketDialog({ open, onOpenChange }: NewTicketDialogProps) {
   });
 
   const mutation = useMutation({
-    mutationFn: (data: FormData) => supportApi.createTicket(data),
+    mutationFn: async (data: FormData) => {
+      const attachments = await Promise.all(
+        pendingFiles.map((item) => fileToSupportAttachmentUpload(item.file)),
+      );
+      return supportApi.createTicket({ ...data, attachments });
+    },
     onSuccess: ({ ticket }) => {
       toast.success('Ticket submitted');
       queryClient.invalidateQueries({ queryKey: ['support-tickets', 'mine'] });
       reset({ type: 'support', subject: '', body: '' });
+      pendingFiles.forEach((f) => f.previewUrl && URL.revokeObjectURL(f.previewUrl));
+      setPendingFiles([]);
       onOpenChange(false);
       navigate(`/support/${ticket.id}`);
     },
@@ -53,7 +67,16 @@ export function NewTicketDialog({ open, onOpenChange }: NewTicketDialogProps) {
   });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) {
+          pendingFiles.forEach((f) => f.previewUrl && URL.revokeObjectURL(f.previewUrl));
+          setPendingFiles([]);
+        }
+        onOpenChange(next);
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Submit a ticket</DialogTitle>
@@ -90,11 +113,16 @@ export function NewTicketDialog({ open, onOpenChange }: NewTicketDialogProps) {
             <Label>What's going on?</Label>
             <Textarea
               rows={6}
-              placeholder="Describe the issue, idea, or bug in as much detail as you can. Screenshots aren't supported yet — just describe what you see."
+              placeholder="Describe the issue, idea, or bug in as much detail as you can. You can attach screenshots or files below."
               {...register('body')}
             />
             {errors.body && <p className="mt-1 text-xs text-red-600">{errors.body.message}</p>}
           </div>
+          <AttachmentPicker
+            files={pendingFiles}
+            onChange={setPendingFiles}
+            disabled={mutation.isPending}
+          />
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel

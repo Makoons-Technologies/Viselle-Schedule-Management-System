@@ -1,11 +1,18 @@
 import { useState } from 'react';
 import { Send } from 'lucide-react';
+import { toast } from 'sonner';
 import { Panel } from '@/components/common/Panel';
+import {
+  AttachmentList,
+  AttachmentPicker,
+  type PendingSupportFile,
+} from '@/components/support/AttachmentExtras';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { fileToSupportAttachmentUpload } from '@/lib/support-attachments';
 import { cn } from '@/lib/utils';
-import type { SupportTicketMessage } from '@/types/api';
+import type { SupportAttachmentUpload, SupportTicketMessage } from '@/types/api';
 
 function formatTimestamp(iso: string) {
   return new Date(iso).toLocaleString(undefined, {
@@ -19,10 +26,12 @@ function formatTimestamp(iso: string) {
 interface TicketThreadProps {
   messages: SupportTicketMessage[];
   currentUserEmail?: string;
-  onSubmit: (body: string, isInternalNote: boolean) => void;
+  onSubmit: (body: string, isInternalNote: boolean, attachments: SupportAttachmentUpload[]) => void;
   isSubmitting?: boolean;
   showInternalNoteToggle?: boolean;
   disabled?: boolean;
+  /** When false, hide attach UI (e.g. custom website notes). Default true. */
+  allowAttachments?: boolean;
 }
 
 export function TicketThread({
@@ -32,16 +41,31 @@ export function TicketThread({
   isSubmitting,
   showInternalNoteToggle,
   disabled,
+  allowAttachments = true,
 }: TicketThreadProps) {
   const [body, setBody] = useState('');
   const [isInternalNote, setIsInternalNote] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<PendingSupportFile[]>([]);
+  const [encoding, setEncoding] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const trimmed = body.trim();
     if (!trimmed) return;
-    onSubmit(trimmed, isInternalNote);
-    setBody('');
-    setIsInternalNote(false);
+    setEncoding(true);
+    try {
+      const attachments = await Promise.all(
+        pendingFiles.map((item) => fileToSupportAttachmentUpload(item.file)),
+      );
+      onSubmit(trimmed, isInternalNote, attachments);
+      setBody('');
+      setIsInternalNote(false);
+      pendingFiles.forEach((f) => f.previewUrl && URL.revokeObjectURL(f.previewUrl));
+      setPendingFiles([]);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not attach files');
+    } finally {
+      setEncoding(false);
+    }
   };
 
   return (
@@ -68,6 +92,7 @@ export function TicketThread({
                   </span>
                 </div>
                 <p className="whitespace-pre-wrap text-sm text-stone-800 dark:text-stone-100">{message.body}</p>
+                <AttachmentList attachments={message.attachments} />
               </Panel>
             );
           })}
@@ -82,6 +107,13 @@ export function TicketThread({
             value={body}
             onChange={(e) => setBody(e.target.value)}
           />
+          {allowAttachments && (
+            <AttachmentPicker
+              files={pendingFiles}
+              onChange={setPendingFiles}
+              disabled={isSubmitting || encoding}
+            />
+          )}
           <div className="flex flex-wrap items-center justify-between gap-2">
             {showInternalNoteToggle ? (
               <label className="flex items-center gap-2 text-xs text-stone-500 dark:text-stone-400">
@@ -96,7 +128,7 @@ export function TicketThread({
             ) : (
               <span />
             )}
-            <Button onClick={handleSubmit} disabled={isSubmitting || !body.trim()}>
+            <Button onClick={handleSubmit} disabled={isSubmitting || encoding || !body.trim()}>
               <Send className="h-4 w-4" />
               {isInternalNote ? 'Add note' : 'Send reply'}
             </Button>
