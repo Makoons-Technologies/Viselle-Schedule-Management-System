@@ -7,6 +7,8 @@ alwaysApply: true
 
 After meaningful implementation work in this repo (features, fixes, config, docs you were asked to add), **immediately commit and push to `staging`**. Do not wait for the user to ask. This is the default day-to-day workflow.
 
+**Multitask exception:** When Multitask Mode (or multiple parallel agents) has an open batch, **commit locally** as usual but **defer `git push`** until the whole batch is done — see `multitask-staging-push`. Single-task sessions still push immediately after verify.
+
 ## Branch policy
 
 - **`staging`** is the integration target — day-to-day work lands there first (see `staging-and-releases`).
