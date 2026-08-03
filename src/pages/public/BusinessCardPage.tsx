@@ -5,6 +5,7 @@ import { PageSeo } from '@/components/seo/PageSeo';
 import { ViselleLogo, VISELLE_LOGO_PNG_SRC } from '@/components/common/ViselleLogo';
 import { marketingSeo } from '@/content/marketing-seo';
 import { useFoilTilt } from '@/hooks/useFoilTilt';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { fetchBusinessCardCampaign } from '@/lib/signup';
 import { cn } from '@/lib/utils';
 import type { TrialCampaign } from '@/types/api';
@@ -156,14 +157,23 @@ export function BusinessCardPage() {
   const codeParam = searchParams.get('code') ?? searchParams.get('campaign');
   const [campaign, setCampaign] = useState<TrialCampaign | null>(null);
   const [flipped, setFlipped] = useState(false);
-  /** Card aspect: landscape is the default everywhere this page is used. */
-  const [orientation, setOrientation] = useState<'landscape' | 'portrait'>('landscape');
+  /** Follow viewport/device orientation; manual toggle overrides until the device rotates again. */
+  const deviceLandscape = useMediaQuery('(orientation: landscape)');
+  const [orientationOverride, setOrientationOverride] = useState<'landscape' | 'portrait' | null>(
+    null,
+  );
+  const orientation = orientationOverride ?? (deviceLandscape ? 'landscape' : 'portrait');
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showMotionFallback, setShowMotionFallback] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLElement>(null);
   const { tilt, onPointerMove, onPointerLeave, enableMotion, needsPermission } = useFoilTilt(true);
+
+  // Resume following the device after a rotate / viewport aspect change.
+  useEffect(() => {
+    setOrientationOverride(null);
+  }, [deviceLandscape]);
 
   // iOS: request on earliest contact with the card stage (not only on flip).
   // Mount-time request is handled inside useFoilTilt; this covers the gesture path.
@@ -291,7 +301,7 @@ export function BusinessCardPage() {
               orientation === 'landscape' ? 'Switch to portrait card' : 'Switch to landscape card'
             }
             onClick={() =>
-              setOrientation((o) => (o === 'landscape' ? 'portrait' : 'landscape'))
+              setOrientationOverride(orientation === 'landscape' ? 'portrait' : 'landscape')
             }
           >
             {orientation === 'landscape' ? 'Landscape' : 'Portrait'}
