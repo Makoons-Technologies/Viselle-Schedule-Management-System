@@ -5,7 +5,6 @@ import { PageSeo } from '@/components/seo/PageSeo';
 import { ViselleLogo, VISELLE_LOGO_PNG_SRC } from '@/components/common/ViselleLogo';
 import { marketingSeo } from '@/content/marketing-seo';
 import { useFoilTilt } from '@/hooks/useFoilTilt';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { fetchBusinessCardCampaign } from '@/lib/signup';
 import { cn } from '@/lib/utils';
 import type { TrialCampaign } from '@/types/api';
@@ -157,23 +156,12 @@ export function BusinessCardPage() {
   const codeParam = searchParams.get('code') ?? searchParams.get('campaign');
   const [campaign, setCampaign] = useState<TrialCampaign | null>(null);
   const [flipped, setFlipped] = useState(false);
-  /** Follow viewport/device orientation; manual toggle overrides until the device rotates again. */
-  const deviceLandscape = useMediaQuery('(orientation: landscape)');
-  const [orientationOverride, setOrientationOverride] = useState<'landscape' | 'portrait' | null>(
-    null,
-  );
-  const orientation = orientationOverride ?? (deviceLandscape ? 'landscape' : 'portrait');
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showMotionFallback, setShowMotionFallback] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLElement>(null);
   const { tilt, onPointerMove, onPointerLeave, enableMotion, needsPermission } = useFoilTilt(true);
-
-  // Resume following the device after a rotate / viewport aspect change.
-  useEffect(() => {
-    setOrientationOverride(null);
-  }, [deviceLandscape]);
 
   // iOS: request on earliest contact with the card stage (not only on flip).
   // Mount-time request is handled inside useFoilTilt; this covers the gesture path.
@@ -245,7 +233,7 @@ export function BusinessCardPage() {
   const handlePointer = (event: PointerEvent<HTMLButtonElement>) => {
     const el = cardRef.current;
     if (!el) return;
-    onPointerMove(event.clientX, event.clientY, el.getBoundingClientRect());
+    onPointerMove(event.clientX, event.clientY, el.getBoundingClientRect(), event.pointerType);
   };
 
   return (
@@ -271,11 +259,7 @@ export function BusinessCardPage() {
       >
         <button
           type="button"
-          className={cn(
-            'bc-card-scene',
-            orientation === 'landscape' ? 'is-landscape' : 'is-portrait',
-            flipped && 'is-flipped',
-          )}
+          className={cn('bc-card-scene is-landscape', flipped && 'is-flipped')}
           aria-label={flipped ? 'Show front of business card' : 'Show back of business card'}
           onClick={() => {
             setFlipped((v) => !v);
@@ -293,19 +277,6 @@ export function BusinessCardPage() {
 
         <div className="bc-controls">
           <p className="bc-hint">{loading ? 'Loading campaign…' : 'Tap the card to flip'}</p>
-          <button
-            type="button"
-            className="bc-orient-toggle"
-            aria-pressed={orientation === 'landscape'}
-            aria-label={
-              orientation === 'landscape' ? 'Switch to portrait card' : 'Switch to landscape card'
-            }
-            onClick={() =>
-              setOrientationOverride(orientation === 'landscape' ? 'portrait' : 'landscape')
-            }
-          >
-            {orientation === 'landscape' ? 'Landscape' : 'Portrait'}
-          </button>
         </div>
         {showMotionFallback && needsPermission && (
           <button type="button" className="bc-motion-fallback" onClick={() => void enableMotion()}>
@@ -416,11 +387,6 @@ const businessCardCss = `
 .bc-card-scene.is-landscape {
   width: min(92vw, 560px);
   aspect-ratio: 1.75 / 1;
-}
-
-.bc-card-scene.is-portrait {
-  width: min(72vw, 340px);
-  aspect-ratio: 1 / 1.55;
 }
 
 .bc-card {
@@ -637,21 +603,22 @@ const businessCardCss = `
 /* No filter here — filters on face children break Safari backface-visibility */
 .bc-foil-text {
   background-image: linear-gradient(
-    115deg,
+    105deg,
     var(--bc-foil-1) 0%,
-    var(--bc-foil-2) 18%,
-    var(--bc-foil-3) 34%,
-    var(--bc-foil-4) 52%,
-    var(--bc-foil-5) 72%,
-    var(--bc-foil-6) 88%,
+    var(--bc-foil-2) 16%,
+    var(--bc-foil-3) 32%,
+    var(--bc-foil-4) 50%,
+    var(--bc-foil-5) 68%,
+    var(--bc-foil-6) 84%,
     var(--bc-foil-1) 100%
   );
-  background-size: 220% 220%;
+  background-size: 280% 220%;
   background-position: var(--foil-x, 50%) var(--foil-y, 50%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   animation: bc-foil-shimmer 5.5s ease-in-out infinite alternate;
+  will-change: background-position;
 }
 
 @keyframes bc-foil-shimmer {
@@ -671,9 +638,10 @@ const businessCardCss = `
   inset: 0;
   background: radial-gradient(
     circle at var(--foil-x, 50%) var(--foil-y, 50%),
-    rgba(253, 235, 131, 0.7) 0%,
-    rgba(179, 133, 36, 0.28) 22%,
-    transparent 48%
+    rgba(253, 235, 131, 0.85) 0%,
+    rgba(253, 218, 116, 0.45) 18%,
+    rgba(179, 133, 36, 0.22) 34%,
+    transparent 52%
   );
   mix-blend-mode: soft-light;
   pointer-events: none;
@@ -687,6 +655,7 @@ const businessCardCss = `
   mask-repeat: no-repeat;
   -webkit-mask-position: center;
   mask-position: center;
+  will-change: background;
 }
 
 @keyframes bc-sheen-pulse {
@@ -723,41 +692,10 @@ const businessCardCss = `
   color: rgba(255, 255, 255, 0.55);
 }
 
-.bc-orient-toggle {
-  appearance: none;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.82);
-  font-family: inherit;
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  border-radius: 999px;
-  padding: 0.4rem 0.85rem;
-  cursor: pointer;
-  transition: background 180ms ease, border-color 180ms ease;
-}
-
-.bc-orient-toggle:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.4);
-}
-
-.bc-orient-toggle[aria-pressed='true'] {
-  border-color: rgba(253, 235, 131, 0.45);
-  color: rgba(253, 235, 131, 0.92);
-}
-
 @media (max-width: 520px) {
   .bc-card-scene.is-landscape {
     width: min(94vw, 420px);
     aspect-ratio: 1.55 / 1;
-  }
-
-  .bc-card-scene.is-portrait {
-    width: min(78vw, 300px);
-    aspect-ratio: 1 / 1.45;
   }
 
   .bc-face-inner {

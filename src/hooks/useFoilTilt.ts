@@ -47,6 +47,51 @@ export async function requestDeviceOrientationPermission(): Promise<'granted' | 
   return 'unavailable';
 }
 
+/** Clockwise degrees from portrait-primary (0 | 90 | 180 | 270). */
+function getScreenOrientationAngle(): number {
+  if (typeof window === 'undefined') return 0;
+  const angle = window.screen?.orientation?.angle;
+  if (typeof angle === 'number' && Number.isFinite(angle)) {
+    return ((angle % 360) + 360) % 360;
+  }
+  const legacy = (window as Window & { orientation?: number }).orientation;
+  if (typeof legacy === 'number' && Number.isFinite(legacy)) {
+    return ((legacy % 360) + 360) % 360;
+  }
+  return window.matchMedia('(orientation: landscape)').matches ? 90 : 0;
+}
+
+/**
+ * DeviceOrientation beta/gamma are locked to the device's natural portrait axes.
+ * Remap into screen space so left/right on the display always drives tilt.x.
+ */
+export function deviceTiltToScreen(beta: number, gamma: number, orientAngle = getScreenOrientationAngle()): {
+  x: number;
+  y: number;
+} {
+  const angle = ((orientAngle % 360) + 360) % 360;
+  switch (angle) {
+    case 90:
+      return { x: beta, y: -gamma };
+    case 180:
+      return { x: -gamma, y: -beta };
+    case 270:
+      return { x: -beta, y: gamma };
+    default:
+      return { x: gamma, y: beta };
+  }
+}
+
+/** Map screen-relative degrees into a 0–1 foil highlight. */
+function screenDegreesToFoil(screenX: number, screenY: number): FoilTilt {
+  // x: ±45° left/right covers full travel (side-to-side shine)
+  // y: centered around a natural ~45° phone hold angle
+  return {
+    x: clamp01(0.5 + screenX / 90),
+    y: clamp01(0.5 + (screenY - 45) / 90),
+  };
+}
+
 /**
  * Maps device orientation (or pointer position) to a 0–1 foil highlight.
  * Falls back to pointer parallax when DeviceOrientation is unavailable or denied.
@@ -64,18 +109,35 @@ export function useFoilTilt(enabled = true) {
   const orientationAttached = useRef(false);
   const permissionInFlight = useRef(false);
   const permanentlyDenied = useRef(false);
+  const rafId = useRef(0);
+  const pendingTilt = useRef<FoilTilt | null>(null);
+  const pendingSource = useRef<'orientation' | 'pointer'>('orientation');
   sourceRef.current = source;
 
-  const onOrientation = useCallback((event: DeviceOrientationEvent) => {
-    if (pointerActive.current) return;
-    const gamma = event.gamma ?? 0;
-    const beta = event.beta ?? 0;
-    setTilt({
-      x: clamp01((gamma + 45) / 90),
-      y: clamp01((beta + 20) / 90),
+  const publishTilt = useCallback((next: FoilTilt, nextSource: 'orientation' | 'pointer') => {
+    pendingTilt.current = next;
+    pendingSource.current = nextSource;
+    if (rafId.current) return;
+    rafId.current = window.requestAnimationFrame(() => {
+      rafId.current = 0;
+      const value = pendingTilt.current;
+      if (!value) return;
+      setTilt(value);
+      setSource(pendingSource.current);
     });
-    setSource('orientation');
   }, []);
+
+  const onOrientation = useCallback(
+    (event: DeviceOrientationEvent) => {
+      // Mouse hover owns the foil while active; touch never sets pointerActive.
+      if (pointerActive.current) return;
+      const beta = event.beta ?? 0;
+      const gamma = event.gamma ?? 0;
+      const screen = deviceTiltToScreen(beta, gamma);
+      publishTilt(screenDegreesToFoil(screen.x, screen.y), 'orientation');
+    },
+    [publishTilt],
+  );
 
   const attachOrientation = useCallback(() => {
     if (orientationAttached.current || typeof window === 'undefined') return;
@@ -142,15 +204,25 @@ export function useFoilTilt(enabled = true) {
         window.removeEventListener('deviceorientation', onOrientation);
         orientationAttached.current = false;
       }
+      if (rafId.current) {
+        window.cancelAnimationFrame(rafId.current);
+        rafId.current = 0;
+      }
     };
   }, [enabled, attachOrientation, onOrientation, enableMotion]);
 
-  const onPointerMove = (clientX: number, clientY: number, rect: DOMRect) => {
+  const onPointerMove = (
+    clientX: number,
+    clientY: number,
+    rect: DOMRect,
+    pointerType: string = 'mouse',
+  ) => {
+    // Touch: keep device orientation in control (tap/flip must not freeze the shine).
+    if (pointerType === 'touch') return;
     pointerActive.current = true;
     const x = clamp01((clientX - rect.left) / Math.max(rect.width, 1));
     const y = clamp01((clientY - rect.top) / Math.max(rect.height, 1));
-    setTilt({ x, y });
-    setSource('pointer');
+    publishTilt({ x, y }, 'pointer');
   };
 
   const onPointerLeave = () => {
