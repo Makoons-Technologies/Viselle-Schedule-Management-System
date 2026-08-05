@@ -1,8 +1,9 @@
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Globe } from 'lucide-react';
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ownerApi } from '@/lib/api';
+import { ListToolbar, matchesSearch } from '@/components/common/ListToolbar';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Panel } from '@/components/common/Panel';
 import { EmptyState } from '@/components/common/EmptyState';
@@ -22,6 +23,7 @@ const STATUS_FILTERS: Array<{ value: CustomWebsiteRequestStatus | 'all'; label: 
 
 export function PlatformCustomWebsitesPage() {
   const [status, setStatus] = useState<CustomWebsiteRequestStatus | 'all'>('open');
+  const [search, setSearch] = useState('');
 
   const { data, isLoading } = useQuery({
     queryKey: ['custom-website-requests', 'inbox', status],
@@ -29,6 +31,18 @@ export function PlatformCustomWebsitesPage() {
   });
 
   const requests = data?.requests ?? [];
+  const filtered = useMemo(
+    () =>
+      requests.filter((request) =>
+        matchesSearch(
+          search,
+          request.businessName,
+          request.contactName,
+          request.contactEmail,
+        ),
+      ),
+    [requests, search],
+  );
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -37,25 +51,38 @@ export function PlatformCustomWebsitesPage() {
         description="Build requests from Get Started when someone selects the custom website option."
       />
 
-      <div className="flex items-center gap-2">
-        <Select value={status} onValueChange={(v) => setStatus(v as CustomWebsiteRequestStatus | 'all')}>
-          <SelectTrigger className="w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {STATUS_FILTERS.map((filter) => (
-              <SelectItem key={filter.value} value={filter.value}>
-                {filter.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <ListToolbar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search business, contact…"
+        filters={
+          <Select value={status} onValueChange={(v) => setStatus(v as CustomWebsiteRequestStatus | 'all')}>
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_FILTERS.map((filter) => (
+                <SelectItem key={filter.value} value={filter.value}>
+                  {filter.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        }
+      />
 
       {isLoading ? (
         <LoadingState />
-      ) : requests.length === 0 ? (
-        <EmptyState icon={Globe} title="No requests" description="Nothing matches this filter right now." />
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon={Globe}
+          title="No requests"
+          description={
+            requests.length === 0
+              ? 'Nothing matches this filter right now.'
+              : 'Try a different search.'
+          }
+        />
       ) : (
         <Panel>
           <Table>
@@ -68,7 +95,7 @@ export function PlatformCustomWebsitesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {requests.map((request) => (
+              {filtered.map((request) => (
                 <TableRow key={request.id}>
                   <TableCell className="font-medium">
                     <Link to={`/platform/custom-websites/${request.id}`} className="block hover:underline">

@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ownerApi } from '@/lib/api';
+import { ListToolbar, matchesSearch } from '@/components/common/ListToolbar';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Panel } from '@/components/common/Panel';
 import { EmptyState } from '@/components/common/EmptyState';
@@ -81,6 +82,7 @@ export function PlatformSupportInboxPage() {
   const queryClient = useQueryClient();
   const [type, setType] = useState<SupportTicketType | 'all' | 'linear'>('all');
   const [status, setStatus] = useState<SupportTicketStatus | 'all'>('open');
+  const [search, setSearch] = useState('');
   const [showLinear, setShowLinear] = useState(readShowLinearPreference);
   const [selectedViselle, setSelectedViselle] = useState<string[]>([]);
   const [selectedLinear, setSelectedLinear] = useState<string[]>([]);
@@ -120,8 +122,25 @@ export function PlatformSupportInboxPage() {
       type === 'linear' || type === 'all'
         ? linearIssues.map((issue) => ({ kind: 'linear', key: `l:${issue.id}`, issue }))
         : [];
-    return [...viselleRows, ...linearRows];
-  }, [tickets, linearIssues, type]);
+    const combined = [...viselleRows, ...linearRows];
+    if (!search.trim()) return combined;
+    return combined.filter((row) => {
+      if (row.kind === 'viselle') {
+        const t = row.ticket;
+        return matchesSearch(
+          search,
+          t.subject,
+          t.body,
+          t.type,
+          t.status,
+          t.creatorEmail,
+          t.linearIssueIdentifier,
+        );
+      }
+      const issue = row.issue;
+      return matchesSearch(search, issue.title, issue.identifier, issue.stateName, issue.url);
+    });
+  }, [tickets, linearIssues, type, search]);
 
   const selectedCount = selectedViselle.length + selectedLinear.length;
 
@@ -260,6 +279,13 @@ export function PlatformSupportInboxPage() {
           {briefMutation.isPending ? 'Preparing…' : `Send to Cursor agent (${selectedCount})`}
         </Button>
       </div>
+
+      <ListToolbar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search subject, email…"
+        className="mb-0"
+      />
 
       {showLinear && !linearQuery.isLoading ? (
         <p className="text-xs text-stone-500 dark:text-stone-400">

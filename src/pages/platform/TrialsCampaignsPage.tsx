@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { ownerApi } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
+import { ListToolbar, matchesSearch } from '@/components/common/ListToolbar';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Panel, sectionMutedClass } from '@/components/common/Panel';
 import { LoadingState } from '@/components/common/LoadingState';
@@ -614,6 +615,8 @@ function CampaignDetailDialog({ campaignId, onOpenChange }: { campaignId: string
 function CampaignsTab() {
   const [createOpen, setCreateOpen] = useState(false);
   const [detailCampaignId, setDetailCampaignId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'live' | 'off' | 'expired'>('all');
 
   const { data, isLoading } = useQuery({
     queryKey: ['owner', 'trials', 'campaigns'],
@@ -625,6 +628,18 @@ function CampaignsTab() {
     [data],
   );
 
+  const filtered = useMemo(
+    () =>
+      campaigns.filter((campaign) => {
+        const expired = isCampaignExpired(campaign);
+        if (statusFilter === 'live' && (!campaign.enabled || expired)) return false;
+        if (statusFilter === 'off' && campaign.enabled) return false;
+        if (statusFilter === 'expired' && !expired) return false;
+        return matchesSearch(search, campaign.name, campaign.code, campaign.type);
+      }),
+    [campaigns, search, statusFilter],
+  );
+
   if (isLoading) return <LoadingState />;
 
   return (
@@ -634,6 +649,26 @@ function CampaignsTab() {
           <Plus className="h-4 w-4" /> New campaign
         </Button>
       </div>
+      {campaigns.length > 0 && (
+        <ListToolbar
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search name, code…"
+          filters={
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="live">Live</SelectItem>
+                <SelectItem value="off">Off</SelectItem>
+                <SelectItem value="expired">Expired</SelectItem>
+              </SelectContent>
+            </Select>
+          }
+        />
+      )}
       <Panel>
         <Table>
           <TableHeader>
@@ -650,14 +685,16 @@ function CampaignsTab() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {campaigns.length === 0 && (
+            {filtered.length === 0 && (
               <TableRow>
                 <TableCell colSpan={9} className="text-center text-stone-500">
-                  No campaigns yet — create one to start offering timed trials.
+                  {campaigns.length === 0
+                    ? 'No campaigns yet — create one to start offering timed trials.'
+                    : 'No campaigns match your search or filter.'}
                 </TableCell>
               </TableRow>
             )}
-            {campaigns.map((campaign: TrialCampaign) => (
+            {filtered.map((campaign: TrialCampaign) => (
               <TableRow
                 key={campaign.id}
                 className="cursor-pointer"
@@ -697,47 +734,61 @@ function CampaignsTab() {
 }
 
 function ReferralsTab() {
+  const [search, setSearch] = useState('');
   const { data, isLoading } = useQuery({
     queryKey: ['owner', 'trials', 'referrals'],
     queryFn: ownerApi.listReferrals,
   });
 
+  const referrals = data?.referrals ?? [];
+  const filtered = useMemo(
+    () => referrals.filter((r) => matchesSearch(search, r.name, r.referralCode)),
+    [referrals, search],
+  );
+
   if (isLoading) return <LoadingState />;
 
-  const referrals = data?.referrals ?? [];
-
   return (
-    <Panel>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Organization</TableHead>
-            <TableHead>Referral code</TableHead>
-            <TableHead>Attributed signups</TableHead>
-            <TableHead>Reward</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {referrals.length === 0 && (
+    <div>
+      {referrals.length > 0 && (
+        <ListToolbar
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search org, referral code…"
+        />
+      )}
+      <Panel>
+        <Table>
+          <TableHeader>
             <TableRow>
-              <TableCell colSpan={4} className="text-center text-stone-500">
-                No organizations yet.
-              </TableCell>
+              <TableHead>Organization</TableHead>
+              <TableHead>Referral code</TableHead>
+              <TableHead>Attributed signups</TableHead>
+              <TableHead>Reward</TableHead>
             </TableRow>
-          )}
-          {referrals.map((r) => (
-            <TableRow key={r.organizationId}>
-              <TableCell className="font-medium">{r.name}</TableCell>
-              <TableCell className="text-stone-500">{r.referralCode}</TableCell>
-              <TableCell className="text-stone-500">{r.attributedSignupCount}</TableCell>
-              <TableCell>
-                <Badge variant="secondary">TBD</Badge>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Panel>
+          </TableHeader>
+          <TableBody>
+            {filtered.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center text-stone-500">
+                  {referrals.length === 0 ? 'No organizations yet.' : 'No referrals match your search.'}
+                </TableCell>
+              </TableRow>
+            )}
+            {filtered.map((r) => (
+              <TableRow key={r.organizationId}>
+                <TableCell className="font-medium">{r.name}</TableCell>
+                <TableCell className="text-stone-500">{r.referralCode}</TableCell>
+                <TableCell className="text-stone-500">{r.attributedSignupCount}</TableCell>
+                <TableCell>
+                  <Badge variant="secondary">TBD</Badge>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Panel>
+    </div>
   );
 }
 
