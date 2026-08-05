@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 875 500" fill="none">
+<defs>
+  <linearGradient id="foilGrad" x1="0" y1="0" x2="875" y2="500" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#fdda74"/>
+    <stop offset="0.12" stop-color="#b38524"/>
+    <stop offset="0.27" stop-color="#ecd068"/>
+    <stop offset="0.56" stop-color="#9f690a"/>
+    <stop offset="0.79" stop-color="#fdeb83"/>
+    <stop offset="1" stop-color="#b88017"/>
+  </linearGradient>
+</defs>
+<g aria-hidden="true">
+  <g fill="none" stroke="#ecd068" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M885,70 C845,55 823,24 797,-8"/>
+    <path d="M885,88 C837,70 809,34 777,-8"/>
+    <path d="M885,106 C829,86 793,44 757,0"/>
+    <path d="M869,122 C821,100 783,56 751,18"/>
+    <path d="M849,134 C805,112 773,72 747,38"/>
+  </g>
+  <g fill="none" stroke="#ecd068" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M-8,505 C28,448 52,395 68,348 C80,315 90,288 100,265"/>
+    <path d="M68,348 C42,342 20,358 8,385 C32,374 52,360 68,348"/>
+    <path d="M68,348 C80,324 74,294 52,278 C58,306 64,330 68,348"/>
+    <path d="M90,302 C66,294 48,310 40,334 C62,324 80,312 90,302"/>
+    <path d="M90,302 C98,278 90,250 68,236 C76,262 84,286 90,302"/>
+    <path d="M100,272 C80,264 64,278 58,298 C76,288 90,278 100,272"/>
+    <path d="M58,365 C40,374 22,386 10,398" stroke-width="1"/>
+    <path d="M74,336 C80,314 78,294 68,282" stroke-width="1"/>
+    <path d="M84,308 C70,314 56,324 44,334" stroke-width="1"/>
+  </g>
+</g>
+</svg>

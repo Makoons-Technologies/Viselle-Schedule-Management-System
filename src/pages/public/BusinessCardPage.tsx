@@ -5,33 +5,19 @@ import { PageSeo } from '@/components/seo/PageSeo';
 import { ViselleLogo } from '@/components/common/ViselleLogo';
 import { marketingSeo } from '@/content/marketing-seo';
 import { useFoilTilt } from '@/hooks/useFoilTilt';
+import {
+  FOIL_BACK_MASK_SRC,
+  FOIL_BACK_SRC,
+  FOIL_FRONT_MASK_SRC,
+  FOIL_FRONT_SRC,
+  GET_STARTED_DISPLAY,
+  formatRedeemBy,
+  getStartedUrl,
+  socialUrl,
+} from '@/lib/businessCardAssets';
 import { fetchBusinessCardCampaign } from '@/lib/signup';
 import { cn } from '@/lib/utils';
 import type { TrialCampaign } from '@/types/api';
-
-const GET_STARTED_DISPLAY = 'VISELLE.NET/GET-STARTED';
-
-/** MOO gold special-finish plates (black→transparent) + shine cutout masks. */
-const FOIL_FRONT_SRC = '/bc-foil-front.png';
-const FOIL_FRONT_MASK_SRC = '/bc-foil-front-mask.png';
-const FOIL_BACK_SRC = '/bc-foil-back.png';
-const FOIL_BACK_MASK_SRC = '/bc-foil-back-mask.png';
-
-function formatRedeemBy(iso?: string | null): string | null {
-  if (!iso) return null;
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return null;
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const year = date.getFullYear();
-  return `${month}/${day}/${year}`;
-}
-
-function getStartedUrl(code?: string | null) {
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://viselle.net';
-  if (!code) return `${origin}/get-started`;
-  return `${origin}/get-started?code=${encodeURIComponent(code)}`;
-}
 
 function FoilPlate({
   face,
@@ -67,6 +53,7 @@ function CardFront({ tilt }: { tilt: { x: number; y: number } }) {
     <div className="bc-face bc-face-front">
       <div className="bc-gradient-drift" aria-hidden />
       <FoilPlate face="front" tilt={tilt} />
+      <p className="bc-wordmark bc-enter-logo">Viselle</p>
       <div className="bc-face-inner bc-face-inner-front">
         <div className="bc-front-copy bc-enter-copy">
           <h1 className="bc-headline">SCHEDULING, SIMPLIFIED</h1>
@@ -103,6 +90,7 @@ function CardBack({
       <FoilPlate face="back" tilt={tilt} />
       <div className="bc-back-layout">
         <div className="bc-back-copy bc-enter-copy">
+          <p className="bc-script">Enjoy Three Months Free</p>
           <p className="bc-back-kicker">EXCLUSIVE BETA ACCESS</p>
           <p className="bc-back-hint">Scan the QR code or visit</p>
           <p className="bc-back-url">{GET_STARTED_DISPLAY}</p>
@@ -113,11 +101,13 @@ function CardBack({
           {redeemBy && <p className="bc-redeem-by">REDEEM BY {redeemBy}</p>}
         </div>
         <div className="bc-qr-wrap">
-          {qrDataUrl ? (
-            <img src={qrDataUrl} alt="QR code to get started with Viselle" className="bc-qr" />
-          ) : (
-            <div className="bc-qr bc-qr-placeholder" aria-hidden />
-          )}
+          <div className="bc-qr-frame">
+            {qrDataUrl ? (
+              <img src={qrDataUrl} alt="QR code to get started with Viselle" className="bc-qr" />
+            ) : (
+              <div className="bc-qr bc-qr-placeholder" aria-hidden />
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -136,8 +126,6 @@ export function BusinessCardPage() {
   const stageRef = useRef<HTMLElement>(null);
   const { tilt, onPointerMove, onPointerLeave, enableMotion, needsPermission } = useFoilTilt(true);
 
-  // iOS: request on earliest contact with the card stage (not only on flip).
-  // Mount-time request is handled inside useFoilTilt; this covers the gesture path.
   useEffect(() => {
     const stage = stageRef.current;
     const onFirstContact = () => {
@@ -155,7 +143,6 @@ export function BusinessCardPage() {
     };
   }, [enableMotion]);
 
-  // Subtle fallback only if iOS still needs a deliberate grant after a short wait.
   useEffect(() => {
     if (!needsPermission) {
       setShowMotionFallback(false);
@@ -209,6 +196,8 @@ export function BusinessCardPage() {
     onPointerMove(event.clientX, event.clientY, el.getBoundingClientRect(), event.pointerType);
   };
 
+  const shareHref = socialUrl(campaign?.code ?? codeParam);
+
   return (
     <div className="bc-page bg-marketing">
       <PageSeo {...marketingSeo.businessCard} />
@@ -219,9 +208,14 @@ export function BusinessCardPage() {
           <ViselleLogo size={28} />
           <span>Viselle</span>
         </Link>
-        <Link to={getStartedUrl(campaign?.code)} className="bc-chrome-cta">
-          Get started
-        </Link>
+        <div className="bc-chrome-actions">
+          <Link to={shareHref} className="bc-chrome-link">
+            Social
+          </Link>
+          <Link to={getStartedUrl(campaign?.code)} className="bc-chrome-cta">
+            Get started
+          </Link>
+        </div>
       </header>
 
       <main
@@ -263,7 +257,6 @@ export function BusinessCardPage() {
 
 const businessCardCss = `
 .bc-page {
-  /* Tokens align with index.css --color-bc-* / bg-marketing */
   --bc-magenta: var(--color-bc-magenta, #c0267a);
   --bc-magenta-deep: var(--color-bc-magenta-deep, #9b2c77);
   --bc-indigo: var(--color-bc-indigo, #1e1b4b);
@@ -299,6 +292,26 @@ const businessCardCss = `
   font-weight: 600;
   letter-spacing: 0.04em;
   font-size: 0.95rem;
+}
+
+.bc-chrome-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.bc-chrome-link {
+  color: rgba(253, 235, 131, 0.88);
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.45rem;
+}
+
+.bc-chrome-link:hover {
+  color: #fdeb83;
 }
 
 .bc-chrome-cta {
@@ -378,12 +391,6 @@ const businessCardCss = `
   transform: rotateY(180deg);
 }
 
-/*
- * Root cause of mirrored bleed-through on iOS Safari:
- * child \`transform\` / \`filter\` create stacking contexts that ignore
- * backface-visibility. Keep faces flat, force a transform on each face,
- * and avoid persistent transforms/filters on face descendants.
- */
 .bc-face {
   position: absolute;
   inset: 0;
@@ -415,7 +422,6 @@ const businessCardCss = `
   background:
     radial-gradient(circle at 20% 30%, rgba(253, 218, 116, 0.12), transparent 42%),
     radial-gradient(circle at 80% 70%, rgba(192, 38, 122, 0.35), transparent 45%);
-  /* Opacity only — transform on face children breaks Safari backface-visibility */
   animation: bc-drift 14s ease-in-out infinite alternate;
   pointer-events: none;
 }
@@ -433,22 +439,42 @@ const businessCardCss = `
 
 .bc-face-inner {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: clamp(0.55rem, 2vw, 1.25rem);
+  gap: clamp(0.35rem, 1.5vw, 0.75rem);
   padding: clamp(0.85rem, 2.8vw, 1.75rem);
   text-align: center;
 }
 
-/* MOO color layer sits under the crest — push print copy to the lower third */
 .bc-face-inner-front {
   justify-content: flex-end;
-  padding-bottom: clamp(0.75rem, 3.5vw, 1.35rem);
-  padding-top: clamp(38%, 42%, 46%);
+  padding-bottom: clamp(0.7rem, 3.2vw, 1.2rem);
+  padding-top: clamp(34%, 38%, 42%);
+}
+
+.bc-wordmark {
+  position: absolute;
+  top: 36%;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  margin: 0;
+  text-align: center;
+  font-family: "Cormorant Garamond", "Times New Roman", serif;
+  font-style: italic;
+  font-weight: 600;
+  font-size: clamp(1.35rem, 4.6vw, 2.35rem);
+  letter-spacing: 0.04em;
+  line-height: 1;
+  background: linear-gradient(115deg, var(--bc-foil-1), var(--bc-foil-2) 22%, var(--bc-foil-3) 45%, var(--bc-foil-4) 68%, var(--bc-foil-5));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  pointer-events: none;
 }
 
 .bc-foil-plate {
@@ -519,7 +545,7 @@ const businessCardCss = `
   grid-template-columns: 1.35fr 0.85fr;
   align-items: center;
   gap: clamp(0.75rem, 2vw, 1.25rem);
-  padding: clamp(1rem, 3vw, 1.6rem) clamp(1rem, 3vw, 1.5rem);
+  padding: clamp(0.85rem, 2.6vw, 1.4rem) clamp(1rem, 3vw, 1.5rem);
 }
 
 .bc-back-copy {
@@ -527,14 +553,25 @@ const businessCardCss = `
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.3rem;
   min-width: 0;
-  /* Leave room for foil script (“Enjoy Three Months Free”) at the top */
-  padding-top: clamp(1.6rem, 6vw, 2.75rem);
+}
+
+.bc-script {
+  margin: 0 0 0.45rem;
+  font-family: "Great Vibes", "Segoe Script", cursive;
+  font-size: clamp(1.15rem, 3.8vw, 1.95rem);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  line-height: 1.15;
+  background: linear-gradient(115deg, var(--bc-foil-1), var(--bc-foil-2) 22%, var(--bc-foil-3) 45%, var(--bc-foil-4) 68%, var(--bc-foil-5));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .bc-back-kicker {
-  margin: 0 0 0.35rem;
+  margin: 0 0 0.25rem;
   font-size: clamp(0.7rem, 2vw, 1.05rem);
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -550,7 +587,7 @@ const businessCardCss = `
 }
 
 .bc-back-url {
-  margin: 0.15rem 0 0.55rem;
+  margin: 0.15rem 0 0.45rem;
   font-size: clamp(0.62rem, 1.8vw, 0.98rem);
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -578,7 +615,7 @@ const businessCardCss = `
 }
 
 .bc-redeem-by {
-  margin: 0.65rem 0 0;
+  margin: 0.55rem 0 0;
   font-size: clamp(0.55rem, 1.5vw, 0.68rem);
   letter-spacing: 0.16em;
   color: rgba(255, 255, 255, 0.78);
@@ -592,13 +629,24 @@ const businessCardCss = `
   align-self: end;
 }
 
+.bc-qr-frame {
+  border: 2px solid var(--bc-foil-3);
+  border-radius: 14px;
+  padding: 5px;
+  background: rgba(15, 23, 42, 0.18);
+  box-shadow:
+    0 0 0 1px rgba(253, 218, 116, 0.28),
+    inset 0 0 0 1px rgba(253, 235, 131, 0.18);
+}
+
 .bc-qr {
-  width: min(100%, 132px);
+  width: min(100%, 124px);
   aspect-ratio: 1;
-  border-radius: 12px;
+  border-radius: 10px;
   background: #fff;
-  padding: 7px;
+  padding: 6px;
   box-sizing: border-box;
+  display: block;
 }
 
 .bc-qr-placeholder {
@@ -618,7 +666,6 @@ const businessCardCss = `
   mix-blend-mode: soft-light;
   pointer-events: none;
   animation: bc-sheen-pulse 4.5s ease-in-out infinite alternate;
-  /* Full MOO gold plate cutout */
   -webkit-mask-image: var(--bc-foil-mask);
   mask-image: var(--bc-foil-mask);
   -webkit-mask-size: cover;
@@ -635,7 +682,6 @@ const businessCardCss = `
   to { opacity: 0.95; }
 }
 
-/* Opacity-only enter — transforms on descendants break flip backface on WebKit */
 .bc-enter-logo {
   animation: bc-enter 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -671,13 +717,18 @@ const businessCardCss = `
   }
 
   .bc-face-inner {
-    gap: 0.4rem;
+    gap: 0.3rem;
     padding: 0.7rem 0.65rem 0.8rem;
   }
 
   .bc-face-inner-front {
-    padding-top: 36%;
-    padding-bottom: 0.65rem;
+    padding-top: 32%;
+    padding-bottom: 0.55rem;
+  }
+
+  .bc-wordmark {
+    top: 34%;
+    font-size: clamp(1.15rem, 5.2vw, 1.55rem);
   }
 
   .bc-headline {
@@ -699,13 +750,18 @@ const businessCardCss = `
   .bc-back-layout {
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 0.55rem;
-    padding: 0.75rem 0.7rem;
+    padding: 0.7rem 0.65rem;
+  }
+
+  .bc-script {
+    font-size: clamp(1rem, 4.5vw, 1.35rem);
+    margin-bottom: 0.3rem;
   }
 
   .bc-back-kicker {
     font-size: 0.68rem;
     letter-spacing: 0.1em;
-    margin-bottom: 0.2rem;
+    margin-bottom: 0.15rem;
   }
 
   .bc-back-url {
@@ -718,10 +774,15 @@ const businessCardCss = `
     letter-spacing: 0.14em;
   }
 
+  .bc-qr-frame {
+    border-radius: 10px;
+    padding: 4px;
+  }
+
   .bc-qr {
-    width: 88px;
-    padding: 5px;
-    border-radius: 8px;
+    width: 84px;
+    padding: 4px;
+    border-radius: 7px;
   }
 }
 
