@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { PageSeo } from '@/components/seo/PageSeo';
-import { ViselleLogo, VISELLE_LOGO_PNG_SRC } from '@/components/common/ViselleLogo';
+import { ViselleLogo } from '@/components/common/ViselleLogo';
 import { marketingSeo } from '@/content/marketing-seo';
 import { useFoilTilt } from '@/hooks/useFoilTilt';
 import { fetchBusinessCardCampaign } from '@/lib/signup';
@@ -11,8 +11,11 @@ import type { TrialCampaign } from '@/types/api';
 
 const GET_STARTED_DISPLAY = 'VISELLE.NET/GET-STARTED';
 
-/** Same viewBox as viselle-logo — white V only, for foil sheen mask. */
-const VISELLE_V_MASK_SRC = '/viselle-v-mask.svg';
+/** MOO gold special-finish plates (black→transparent) + shine cutout masks. */
+const FOIL_FRONT_SRC = '/bc-foil-front.png';
+const FOIL_FRONT_MASK_SRC = '/bc-foil-front-mask.png';
+const FOIL_BACK_SRC = '/bc-foil-back.png';
+const FOIL_BACK_MASK_SRC = '/bc-foil-back-mask.png';
 
 function formatRedeemBy(iso?: string | null): string | null {
   if (!iso) return null;
@@ -30,56 +33,31 @@ function getStartedUrl(code?: string | null) {
   return `${origin}/get-started?code=${encodeURIComponent(code)}`;
 }
 
-function FoilText({
-  children,
+function FoilPlate({
+  face,
   tilt,
-  className,
 }: {
-  children: ReactNode;
+  face: 'front' | 'back';
   tilt: { x: number; y: number };
-  className?: string;
 }) {
   const posX = Math.round(tilt.x * 100);
   const posY = Math.round(tilt.y * 100);
-  return (
-    <span
-      className={cn('bc-foil-text', className)}
-      style={
-        {
-          '--foil-x': `${posX}%`,
-          '--foil-y': `${posY}%`,
-        } as CSSProperties
-      }
-    >
-      {children}
-    </span>
-  );
-}
-
-function FoilLogo({ tilt, size }: { tilt: { x: number; y: number }; size: number }) {
-  const posX = Math.round(tilt.x * 100);
-  const posY = Math.round(tilt.y * 100);
+  const goldSrc = face === 'front' ? FOIL_FRONT_SRC : FOIL_BACK_SRC;
+  const maskSrc = face === 'front' ? FOIL_FRONT_MASK_SRC : FOIL_BACK_MASK_SRC;
   return (
     <div
-      className="bc-foil-logo bc-enter-logo"
+      className="bc-foil-plate bc-enter-logo"
       style={
         {
-          width: size,
-          height: size,
           '--foil-x': `${posX}%`,
           '--foil-y': `${posY}%`,
+          '--bc-foil-mask': `url('${maskSrc}')`,
         } as CSSProperties
       }
+      aria-hidden
     >
-      <img
-        src={VISELLE_LOGO_PNG_SRC}
-        alt="Viselle"
-        width={size}
-        height={size}
-        className="h-full w-full object-contain"
-        decoding="async"
-      />
-      <div className="bc-foil-sheen" aria-hidden />
+      <img src={goldSrc} alt="" className="bc-foil-plate-img" decoding="async" draggable={false} />
+      <div className="bc-foil-sheen" />
     </div>
   );
 }
@@ -88,12 +66,10 @@ function CardFront({ tilt }: { tilt: { x: number; y: number } }) {
   return (
     <div className="bc-face bc-face-front">
       <div className="bc-gradient-drift" aria-hidden />
-      <div className="bc-face-inner">
-        <FoilLogo tilt={tilt} size={132} />
+      <FoilPlate face="front" tilt={tilt} />
+      <div className="bc-face-inner bc-face-inner-front">
         <div className="bc-front-copy bc-enter-copy">
-          <h1 className="bc-headline">
-            <FoilText tilt={tilt}>SCHEDULING, SIMPLIFIED</FoilText>
-          </h1>
+          <h1 className="bc-headline">SCHEDULING, SIMPLIFIED</h1>
           <p className="bc-keywords">
             <span>APPOINTMENTS</span>
             <span>CLIENTS</span>
@@ -124,15 +100,12 @@ function CardBack({
   return (
     <div className="bc-face bc-face-back">
       <div className="bc-gradient-drift bc-gradient-drift-back" aria-hidden />
+      <FoilPlate face="back" tilt={tilt} />
       <div className="bc-back-layout">
-        <div className="bc-back-copy">
-          <p className="bc-back-kicker">
-            <FoilText tilt={tilt}>EXCLUSIVE BETA ACCESS</FoilText>
-          </p>
+        <div className="bc-back-copy bc-enter-copy">
+          <p className="bc-back-kicker">EXCLUSIVE BETA ACCESS</p>
           <p className="bc-back-hint">Scan the QR code or visit</p>
-          <p className="bc-back-url">
-            <FoilText tilt={tilt}>{GET_STARTED_DISPLAY}</FoilText>
-          </p>
+          <p className="bc-back-url">{GET_STARTED_DISPLAY}</p>
           <div className="bc-access-block">
             <p className="bc-access-label">ACCESS CODE</p>
             <p className="bc-access-code">{code ?? '————'}</p>
@@ -301,7 +274,6 @@ const businessCardCss = `
   --bc-foil-4: #9f690a;
   --bc-foil-5: #fdeb83;
   --bc-foil-6: #b88017;
-  --bc-v-mask: url('${VISELLE_V_MASK_SRC}');
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
@@ -472,12 +444,38 @@ const businessCardCss = `
   text-align: center;
 }
 
+/* MOO color layer sits under the crest — push print copy to the lower third */
+.bc-face-inner-front {
+  justify-content: flex-end;
+  padding-bottom: clamp(0.75rem, 3.5vw, 1.35rem);
+  padding-top: clamp(38%, 42%, 46%);
+}
+
+.bc-foil-plate {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.bc-foil-plate-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  user-select: none;
+}
+
 .bc-front-copy {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.45rem;
   max-width: 100%;
+  position: relative;
+  z-index: 2;
 }
 
 .bc-headline {
@@ -487,6 +485,7 @@ const businessCardCss = `
   letter-spacing: 0.12em;
   line-height: 1.2;
   max-width: 100%;
+  color: rgba(255, 255, 255, 0.96);
 }
 
 .bc-keywords {
@@ -514,7 +513,7 @@ const businessCardCss = `
 
 .bc-back-layout {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   height: 100%;
   display: grid;
   grid-template-columns: 1.35fr 0.85fr;
@@ -530,6 +529,8 @@ const businessCardCss = `
   align-items: center;
   gap: 0.35rem;
   min-width: 0;
+  /* Leave room for foil script (“Enjoy Three Months Free”) at the top */
+  padding-top: clamp(1.6rem, 6vw, 2.75rem);
 }
 
 .bc-back-kicker {
@@ -538,6 +539,7 @@ const businessCardCss = `
   font-weight: 700;
   letter-spacing: 0.14em;
   line-height: 1.25;
+  color: rgba(255, 255, 255, 0.96);
 }
 
 .bc-back-hint {
@@ -554,6 +556,7 @@ const businessCardCss = `
   letter-spacing: 0.08em;
   word-break: break-word;
   max-width: 100%;
+  color: rgba(255, 255, 255, 0.96);
 }
 
 .bc-access-block {
@@ -584,53 +587,22 @@ const businessCardCss = `
 .bc-qr-wrap {
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-end;
+  padding-bottom: clamp(0.15rem, 1vw, 0.45rem);
+  align-self: end;
 }
 
 .bc-qr {
-  width: min(100%, 148px);
+  width: min(100%, 132px);
   aspect-ratio: 1;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #fff;
-  padding: 8px;
+  padding: 7px;
   box-sizing: border-box;
 }
 
 .bc-qr-placeholder {
   background: rgba(255, 255, 255, 0.85);
-}
-
-/* No filter here — filters on face children break Safari backface-visibility */
-.bc-foil-text {
-  background-image: linear-gradient(
-    105deg,
-    var(--bc-foil-1) 0%,
-    var(--bc-foil-2) 16%,
-    var(--bc-foil-3) 32%,
-    var(--bc-foil-4) 50%,
-    var(--bc-foil-5) 68%,
-    var(--bc-foil-6) 84%,
-    var(--bc-foil-1) 100%
-  );
-  background-size: 280% 220%;
-  background-position: var(--foil-x, 50%) var(--foil-y, 50%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: bc-foil-shimmer 5.5s ease-in-out infinite alternate;
-  will-change: background-position;
-}
-
-@keyframes bc-foil-shimmer {
-  from { opacity: 0.92; }
-  to { opacity: 1; }
-}
-
-.bc-foil-logo {
-  position: relative;
-  isolation: isolate;
-  flex-shrink: 0;
-  border-radius: 50%;
 }
 
 .bc-foil-sheen {
@@ -646,11 +618,11 @@ const businessCardCss = `
   mix-blend-mode: soft-light;
   pointer-events: none;
   animation: bc-sheen-pulse 4.5s ease-in-out infinite alternate;
-  /* Clip shine to the serif V only (wreath stays un-sheened) */
-  -webkit-mask-image: var(--bc-v-mask);
-  mask-image: var(--bc-v-mask);
-  -webkit-mask-size: contain;
-  mask-size: contain;
+  /* Full MOO gold plate cutout */
+  -webkit-mask-image: var(--bc-foil-mask);
+  mask-image: var(--bc-foil-mask);
+  -webkit-mask-size: cover;
+  mask-size: cover;
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
   -webkit-mask-position: center;
@@ -703,9 +675,9 @@ const businessCardCss = `
     padding: 0.7rem 0.65rem 0.8rem;
   }
 
-  .bc-foil-logo {
-    width: 88px !important;
-    height: 88px !important;
+  .bc-face-inner-front {
+    padding-top: 36%;
+    padding-bottom: 0.65rem;
   }
 
   .bc-headline {
@@ -756,7 +728,6 @@ const businessCardCss = `
 @media (prefers-reduced-motion: reduce) {
   .bc-card,
   .bc-gradient-drift,
-  .bc-foil-text,
   .bc-foil-sheen,
   .bc-enter-logo,
   .bc-enter-copy {
