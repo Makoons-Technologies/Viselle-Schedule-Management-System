@@ -1,4 +1,4 @@
-import type { ReactElement, ReactNode } from 'react';
+import { useEffect, type ReactElement, type ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Link } from 'react-router-dom';
@@ -29,27 +29,59 @@ export function slugifyHeading(text: string): string {
     .replace(/^-|-$/g, '');
 }
 
-/** Major doc sections from `##` headings (h1 is the page title). */
-export function extractDocSections(markdown: string): { id: string; label: string }[] {
-  const sections: { id: string; label: string }[] = [];
-  const seen = new Set<string>();
+export type DocSectionLink = {
+  id: string;
+  label: string;
+  /** 2 = major `##` section; 3 = endpoint `###` under Endpoints */
+  level: 2 | 3;
+};
 
-  for (const line of markdown.split('\n')) {
-    const match = /^##\s+(.+)$/.exec(line);
-    if (!match) continue;
-    const label = match[1].trim();
+const MAX_QUICK_LINKS = 20;
+
+/**
+ * Quick-link targets: every `##`, plus `###` under Endpoints.
+ * Caps at MAX_QUICK_LINKS (drops deepest endpoint links first if over).
+ */
+export function extractDocSections(markdown: string): DocSectionLink[] {
+  const sections: DocSectionLink[] = [];
+  const seen = new Set<string>();
+  let underEndpoints = false;
+
+  const push = (label: string, level: 2 | 3) => {
     let id = slugifyHeading(label);
-    if (!id) continue;
+    if (!id) return;
     if (seen.has(id)) {
       let n = 2;
       while (seen.has(`${id}-${n}`)) n += 1;
       id = `${id}-${n}`;
     }
     seen.add(id);
-    sections.push({ id, label });
+    sections.push({ id, label, level });
+  };
+
+  for (const line of markdown.split(/\r?\n/)) {
+    const h2 = /^##\s+(.+)$/.exec(line);
+    if (h2) {
+      const label = h2[1].trim();
+      underEndpoints = /^endpoints$/i.test(label);
+      push(label, 2);
+      continue;
+    }
+    const h3 = /^###\s+(.+)$/.exec(line);
+    if (h3 && underEndpoints) {
+      push(h3[1].trim(), 3);
+    }
   }
 
-  return sections;
+  if (sections.length <= MAX_QUICK_LINKS) return sections;
+
+  const h2Only = sections.filter((s) => s.level === 2);
+  if (h2Only.length >= MAX_QUICK_LINKS) return h2Only.slice(0, MAX_QUICK_LINKS);
+
+  const room = MAX_QUICK_LINKS - h2Only.length;
+  const h3s = sections.filter((s) => s.level === 3).slice(0, room);
+  const h3Ids = new Set(h3s.map((s) => s.id));
+  return sections.filter((s) => s.level === 2 || h3Ids.has(s.id));
 }
 
 /**
@@ -151,26 +183,21 @@ const markdownComponents = {
 
 const docSections = extractDocSections(docsMarkdown);
 
-function DocsQuickLinks({ sections }: { sections: { id: string; label: string }[] }) {
+function DocsQuickLinks({ sections }: { sections: DocSectionLink[] }) {
   if (sections.length === 0) return null;
 
   return (
-    <nav
-      aria-label="On this page"
-      className="sticky top-0 z-10 -mx-8 mb-2 border-b border-stone-200 bg-white/95 px-8 py-4 backdrop-blur-sm sm:-mx-10 sm:px-10"
-    >
-      <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">On this page</p>
-      <ul className="mt-3 flex flex-wrap gap-x-1 gap-y-1.5">
-        {sections.map((section, index) => (
-          <li key={section.id} className="flex items-center text-sm">
-            {index > 0 && (
-              <span className="mx-2 hidden text-stone-300 sm:inline" aria-hidden>
-                ·
-              </span>
-            )}
+    <nav aria-label="Quick links" className="mb-8 border-b border-stone-200 pb-6">
+      <p className="text-sm font-semibold text-stone-900">Quick links</p>
+      <ul className="mt-3 list-disc space-y-1.5 pl-5 marker:text-stone-400">
+        {sections.map((section) => (
+          <li
+            key={section.id}
+            className={section.level === 3 ? 'ml-4 marker:text-stone-300' : undefined}
+          >
             <a
               href={`#${section.id}`}
-              className="rounded-md px-1.5 py-0.5 font-medium text-brand-700 underline-offset-2 hover:bg-brand-50 hover:text-brand-800 hover:underline"
+              className="text-[15px] font-medium text-brand-800 underline-offset-2 hover:text-brand-900 hover:underline"
             >
               {section.label}
             </a>
@@ -182,6 +209,15 @@ function DocsQuickLinks({ sections }: { sections: { id: string; label: string }[
 }
 
 export function PublicApiDocsPage() {
+  useEffect(() => {
+    const root = document.documentElement;
+    const previous = root.style.scrollBehavior;
+    root.style.scrollBehavior = 'smooth';
+    return () => {
+      root.style.scrollBehavior = previous;
+    };
+  }, []);
+
   return (
     <div className={MARKETING_SHELL_CLASS}>
       <PageSeo {...marketingSeo.docsApi} />
