@@ -1,12 +1,10 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { PageSeo } from '@/components/seo/PageSeo';
 import { ViselleLogo } from '@/components/common/ViselleLogo';
 import { marketingSeo } from '@/content/marketing-seo';
 import {
-  FOIL_FRONT_MASK_SRC,
-  FOIL_FRONT_SRC,
   GET_STARTED_DISPLAY,
   businessCardUrl,
   formatRedeemBy,
@@ -17,25 +15,6 @@ import { cn } from '@/lib/utils';
 import type { TrialCampaign } from '@/types/api';
 
 type SocialMode = 'story' | 'square';
-
-function SocialFoilDecor({ tiltX = 52, tiltY = 38 }: { tiltX?: number; tiltY?: number }) {
-  return (
-    <div
-      className="soc-foil"
-      style={
-        {
-          '--foil-x': `${tiltX}%`,
-          '--foil-y': `${tiltY}%`,
-          '--bc-foil-mask': `url('${FOIL_FRONT_MASK_SRC}')`,
-        } as CSSProperties
-      }
-      aria-hidden
-    >
-      <img src={FOIL_FRONT_SRC} alt="" className="soc-foil-img" decoding="async" draggable={false} />
-      <div className="soc-foil-sheen" />
-    </div>
-  );
-}
 
 export function SocialSharePage() {
   const [searchParams] = useSearchParams();
@@ -127,29 +106,42 @@ export function SocialSharePage() {
         <div className={cn('soc-frame', mode === 'square' ? 'is-square' : 'is-story')}>
           <div className="soc-art">
             <div className="soc-gradient" aria-hidden />
-            <SocialFoilDecor />
             <div className="soc-content">
-              <h1 className="soc-headline">SCHEDULING, SIMPLIFIED</h1>
-              <p className="soc-keywords">
-                <span>APPOINTMENTS</span>
-                <span>CLIENTS</span>
-                <span>INVENTORY</span>
-                <span>GROWTH</span>
-                <span>SALES</span>
-              </p>
-              <p className="soc-kicker">EXCLUSIVE BETA ACCESS</p>
-              <p className="soc-hint">Scan or visit</p>
-              <p className="soc-url">{GET_STARTED_DISPLAY}</p>
-              <div className="soc-access">
-                <p className="soc-access-label">ACCESS CODE</p>
-                <p className="soc-access-code">{loading ? '…' : (code ?? '————')}</p>
+              <div className="soc-brand">
+                <ViselleLogo size={mode === 'square' ? 112 : 140} className="soc-crest" />
+                <p className="soc-name">Viselle</p>
               </div>
-              {redeemBy && <p className="soc-redeem">REDEEM BY {redeemBy}</p>}
-              {qrDataUrl ? (
-                <img src={qrDataUrl} alt="QR code to get started with Viselle" className="soc-qr" />
-              ) : (
-                <div className="soc-qr soc-qr-placeholder" aria-hidden />
-              )}
+
+              <div className="soc-copy">
+                <p className="soc-offer">Enjoy three months free</p>
+                <h1 className="soc-headline">SCHEDULING, SIMPLIFIED</h1>
+                <p className="soc-keywords">
+                  <span>Appointments</span>
+                  <span>Clients</span>
+                  <span>Inventory</span>
+                  <span>Growth</span>
+                  <span>Sales</span>
+                </p>
+              </div>
+
+              <div className="soc-cta">
+                <p className="soc-kicker">Exclusive beta access</p>
+                <p className="soc-hint">Scan or visit</p>
+                <p className="soc-url">{GET_STARTED_DISPLAY}</p>
+                <div className="soc-access">
+                  <p className="soc-access-label">Access code</p>
+                  <p className="soc-access-code">{loading ? '…' : (code ?? '————')}</p>
+                </div>
+                {redeemBy && <p className="soc-redeem">Redeem by {redeemBy}</p>}
+              </div>
+
+              <div className="soc-qr-wrap">
+                {qrDataUrl ? (
+                  <img src={qrDataUrl} alt="QR code to get started with Viselle" className="soc-qr" />
+                ) : (
+                  <div className="soc-qr soc-qr-placeholder" aria-hidden />
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -168,8 +160,6 @@ const socialCss = `
   --bc-foil-1: #fdda74;
   --bc-foil-2: #b38524;
   --bc-foil-3: #ecd068;
-  --bc-foil-4: #9f690a;
-  --bc-foil-5: #fdeb83;
   height: 100dvh;
   max-height: 100dvh;
   display: flex;
@@ -221,7 +211,7 @@ const socialCss = `
   background: transparent;
   color: rgba(255, 255, 255, 0.7);
   font-family: inherit;
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -230,22 +220,13 @@ const socialCss = `
 }
 
 .soc-mode-btn.is-active {
-  background: rgba(253, 218, 116, 0.18);
-  color: #fdeb83;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
 }
 
-.soc-chrome-link {
-  color: rgba(253, 235, 131, 0.88);
-  text-decoration: none;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  padding: 0.3rem 0.35rem;
-}
-
+.soc-chrome-link,
 .soc-chrome-cta {
-  color: rgba(255, 255, 255, 0.92);
+  color: rgba(255, 255, 255, 0.9);
   text-decoration: none;
   font-size: 0.72rem;
   font-weight: 600;
@@ -256,188 +237,194 @@ const socialCss = `
   padding: 0.4rem 0.75rem;
 }
 
+.soc-chrome-cta {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .soc-stage {
-  flex: 1 1 auto;
+  flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 0.35rem 0.75rem 0.65rem;
-  gap: 0.45rem;
-  overflow: hidden;
+  gap: 0.65rem;
+  padding: 0 0.75rem 0.85rem;
 }
 
 .soc-frame {
-  flex: 1 1 auto;
-  min-height: 0;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: min(100%, 420px);
+  max-height: 100%;
 }
 
-.soc-frame.is-story .soc-art {
-  width: min(100%, calc((100dvh - 7.5rem) * 9 / 16), 420px);
+.soc-frame.is-story {
   aspect-ratio: 9 / 16;
-  max-height: calc(100dvh - 7.5rem);
 }
 
-.soc-frame.is-square .soc-art {
-  width: min(100%, calc(100dvh - 7.5rem), 520px);
+.soc-frame.is-square {
   aspect-ratio: 1 / 1;
-  max-height: calc(100dvh - 7.5rem);
+  width: min(100%, min(420px, 78dvh));
 }
 
 .soc-art {
   position: relative;
-  border-radius: clamp(14px, 2.5vw, 22px);
+  width: 100%;
+  height: 100%;
+  border-radius: clamp(16px, 3vw, 22px);
   overflow: hidden;
   box-shadow:
-    0 24px 50px rgba(0, 0, 0, 0.45),
+    0 28px 56px rgba(0, 0, 0, 0.45),
     0 0 0 1px rgba(255, 255, 255, 0.06);
-  background: linear-gradient(155deg, var(--bc-magenta) 0%, var(--bc-magenta-deep) 26%, var(--bc-indigo) 68%, var(--bc-navy) 100%);
 }
 
 .soc-gradient {
   position: absolute;
-  inset: -15%;
-  background:
-    radial-gradient(circle at 22% 28%, rgba(253, 218, 116, 0.14), transparent 42%),
-    radial-gradient(circle at 78% 72%, rgba(192, 38, 122, 0.32), transparent 46%);
-  pointer-events: none;
-}
-
-.soc-foil {
-  position: absolute;
   inset: 0;
-  pointer-events: none;
-  opacity: 0.92;
-}
-
-.soc-foil-img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center top;
-  user-select: none;
-}
-
-.soc-foil-sheen {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    circle at var(--foil-x, 50%) var(--foil-y, 40%),
-    rgba(253, 235, 131, 0.8) 0%,
-    rgba(253, 218, 116, 0.4) 18%,
-    rgba(179, 133, 36, 0.2) 34%,
-    transparent 52%
+  background: linear-gradient(
+    160deg,
+    var(--bc-magenta) 0%,
+    var(--bc-magenta-deep) 28%,
+    var(--bc-indigo) 72%,
+    var(--bc-navy) 100%
   );
-  mix-blend-mode: soft-light;
-  -webkit-mask-image: var(--bc-foil-mask);
-  mask-image: var(--bc-foil-mask);
-  -webkit-mask-size: cover;
-  mask-size: cover;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center top;
-  mask-position: center top;
-  pointer-events: none;
 }
 
 .soc-content {
   position: relative;
-  z-index: 2;
+  z-index: 1;
   height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
   text-align: center;
-  padding: clamp(0.85rem, 3.5vw, 1.5rem) clamp(0.75rem, 3vw, 1.25rem);
+  padding: clamp(1.1rem, 4vw, 1.75rem) clamp(1rem, 4vw, 1.5rem);
   box-sizing: border-box;
-  /* Leave vertical room for the MOO crest + Viselle wordmark on the foil plate */
-  padding-top: clamp(28%, 32%, 36%);
+  gap: 0.65rem;
 }
 
-.soc-headline {
-  margin: 0.35rem 0 0;
-  font-size: clamp(0.72rem, 2.6vw, 1.05rem);
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  color: rgba(255, 255, 255, 0.96);
-}
-
-.soc-keywords {
-  margin: 0.25rem 0 0;
+.soc-brand {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.35rem 0.65rem;
-  font-size: clamp(0.48rem, 1.6vw, 0.68rem);
-  font-weight: 500;
-  letter-spacing: 0.12em;
-  color: rgba(255, 255, 255, 0.86);
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.soc-crest {
+  display: block;
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.28));
+}
+
+.soc-name {
+  margin: 0;
+  font-family: "Cormorant Garamond", "Times New Roman", Georgia, serif;
+  font-style: italic;
+  font-weight: 600;
+  font-size: clamp(1.35rem, 4.5vw, 1.85rem);
+  letter-spacing: 0.06em;
+  background: linear-gradient(115deg, var(--bc-foil-1), var(--bc-foil-2) 40%, var(--bc-foil-3));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.soc-copy,
+.soc-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
   max-width: 100%;
 }
 
-.soc-kicker {
-  margin: 0.55rem 0 0;
-  font-size: clamp(0.62rem, 2.1vw, 0.88rem);
+.soc-offer {
+  margin: 0;
+  font-size: clamp(0.72rem, 2.4vw, 0.92rem);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: rgba(253, 235, 131, 0.92);
+}
+
+.soc-headline {
+  margin: 0;
+  font-size: clamp(0.78rem, 2.8vw, 1.05rem);
   font-weight: 700;
   letter-spacing: 0.14em;
   color: rgba(255, 255, 255, 0.96);
 }
 
+.soc-keywords {
+  margin: 0.15rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.3rem 0.7rem;
+  font-size: clamp(0.55rem, 1.8vw, 0.7rem);
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.soc-kicker {
+  margin: 0;
+  font-size: clamp(0.68rem, 2.2vw, 0.88rem);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.96);
+}
+
 .soc-hint {
-  margin: 0.2rem 0 0;
-  font-size: clamp(0.5rem, 1.5vw, 0.68rem);
-  letter-spacing: 0.06em;
-  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+  font-size: clamp(0.55rem, 1.7vw, 0.7rem);
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .soc-url {
-  margin: 0.15rem 0 0;
-  font-size: clamp(0.58rem, 2vw, 0.85rem);
+  margin: 0;
+  font-size: clamp(0.65rem, 2.1vw, 0.88rem);
   font-weight: 700;
   letter-spacing: 0.08em;
   color: rgba(255, 255, 255, 0.96);
 }
 
-.soc-access {
-  margin-top: 0.35rem;
-}
-
 .soc-access-label {
-  margin: 0;
-  font-size: clamp(0.48rem, 1.4vw, 0.62rem);
+  margin: 0.35rem 0 0;
+  font-size: clamp(0.5rem, 1.5vw, 0.62rem);
   letter-spacing: 0.16em;
-  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.65);
 }
 
 .soc-access-code {
   margin: 0.15rem 0 0;
-  font-size: clamp(0.85rem, 3vw, 1.25rem);
+  font-size: clamp(1rem, 3.4vw, 1.35rem);
   font-weight: 700;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.14em;
 }
 
 .soc-redeem {
-  margin: 0.3rem 0 0;
-  font-size: clamp(0.48rem, 1.4vw, 0.62rem);
-  letter-spacing: 0.14em;
-  color: rgba(255, 255, 255, 0.78);
+  margin: 0.25rem 0 0;
+  font-size: clamp(0.5rem, 1.5vw, 0.62rem);
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.soc-qr-wrap {
+  flex-shrink: 0;
+  margin-top: auto;
+  padding-top: 0.35rem;
 }
 
 .soc-qr {
-  margin-top: 0.45rem;
-  width: clamp(88px, 22vw, 132px);
+  width: clamp(96px, 24vw, 128px);
   aspect-ratio: 1;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #fff;
-  padding: 6px;
+  padding: 8px;
   box-sizing: border-box;
   display: block;
 }
@@ -456,10 +443,8 @@ const socialCss = `
 }
 
 .soc-frame.is-square .soc-content {
-  justify-content: center;
-  gap: 0.2rem;
-  padding: clamp(0.7rem, 2.5vw, 1.15rem);
-  padding-top: clamp(22%, 26%, 30%);
+  gap: 0.45rem;
+  padding: clamp(0.9rem, 3vw, 1.25rem);
 }
 
 .soc-frame.is-square .soc-keywords {
@@ -467,20 +452,21 @@ const socialCss = `
 }
 
 .soc-frame.is-square .soc-qr {
-  width: clamp(78px, 16vw, 110px);
+  width: clamp(84px, 20vw, 108px);
 }
 
-@media (max-width: 520px) {
-  .soc-chrome {
-    padding: 0.55rem 0.7rem;
+@media (max-height: 720px) {
+  .soc-crest {
+    width: 100px !important;
+    height: 100px !important;
   }
 
-  .soc-chrome-brand span {
-    display: none;
+  .soc-name {
+    font-size: 1.25rem;
   }
 
-  .soc-chrome-cta {
-    display: none;
+  .soc-qr {
+    width: 88px;
   }
 }
 `;
