@@ -622,12 +622,12 @@ const businessCardCss = `
 
 .bc-offer {
   margin: 0;
-  font-family: "Cormorant Garamond", "Times New Roman", Georgia, serif;
-  font-style: italic;
-  font-weight: 600;
-  font-size: clamp(1.3rem, 3.8vw, 1.95rem);
-  line-height: 1.12;
-  letter-spacing: 0.015em;
+  font-family: "Great Vibes", cursive;
+  font-style: normal;
+  font-weight: 400;
+  font-size: clamp(1.55rem, 4.4vw, 2.25rem);
+  line-height: 1.18;
+  letter-spacing: 0.04em;
   max-width: 100%;
   background-image:
     radial-gradient(
@@ -838,7 +838,8 @@ const businessCardCss = `
   }
 
   .bc-offer {
-    font-size: clamp(1.12rem, 4.5vw, 1.4rem);
+    font-size: clamp(1.28rem, 5.2vw, 1.6rem);
+    letter-spacing: 0.045em;
   }
 
   .bc-back-kicker {

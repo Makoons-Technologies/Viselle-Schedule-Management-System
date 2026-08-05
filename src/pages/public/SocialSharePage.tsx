@@ -430,12 +430,12 @@ const socialCss = `
 
 .soc-offer {
   margin: 0;
-  font-family: "Cormorant Garamond", "Times New Roman", Georgia, serif;
-  font-style: italic;
-  font-weight: 600;
-  font-size: clamp(1.15rem, 3.8vw, 1.55rem);
-  line-height: 1.15;
-  letter-spacing: 0.015em;
+  font-family: "Great Vibes", cursive;
+  font-style: normal;
+  font-weight: 400;
+  font-size: clamp(1.35rem, 4.4vw, 1.8rem);
+  line-height: 1.2;
+  letter-spacing: 0.04em;
   background-image: var(--bc-foil-grad);
   background-size: 280% 280%;
   background-position: 0% 50%;
@@ -585,7 +585,8 @@ const socialCss = `
 }
 
 .soc-frame.is-square .soc-offer {
-  font-size: clamp(1.05rem, 3.4vw, 1.35rem);
+  font-size: clamp(1.2rem, 3.9vw, 1.55rem);
+  letter-spacing: 0.045em;
 }
 
 .soc-frame.is-square .soc-headline {
