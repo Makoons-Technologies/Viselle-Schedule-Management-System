@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Link } from 'react-router-dom';
@@ -8,6 +8,50 @@ import { marketingSeo } from '@/content/marketing-seo';
 import docsMarkdown from '@/content/public-booking-api.md?raw';
 import { MARKETING_SHELL_CLASS } from '@/lib/marketing-theme';
 
+function plainText(node: ReactNode): string {
+  if (node == null || typeof node === 'boolean') return '';
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(plainText).join('');
+  if (typeof node === 'object' && 'props' in node) {
+    return plainText((node as ReactElement<{ children?: ReactNode }>).props.children);
+  }
+  return '';
+}
+
+/** Stable URL slug for heading anchors (matches GitHub-style kebab case). */
+export function slugifyHeading(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+/** Major doc sections from `##` headings (h1 is the page title). */
+export function extractDocSections(markdown: string): { id: string; label: string }[] {
+  const sections: { id: string; label: string }[] = [];
+  const seen = new Set<string>();
+
+  for (const line of markdown.split('\n')) {
+    const match = /^##\s+(.+)$/.exec(line);
+    if (!match) continue;
+    const label = match[1].trim();
+    let id = slugifyHeading(label);
+    if (!id) continue;
+    if (seen.has(id)) {
+      let n = 2;
+      while (seen.has(`${id}-${n}`)) n += 1;
+      id = `${id}-${n}`;
+    }
+    seen.add(id);
+    sections.push({ id, label });
+  }
+
+  return sections;
+}
+
 /**
  * Light-card prose only — no dark: variants. The marketing shell is dark and
  * often has html.dark, which would otherwise flip text to near-white on this card.
@@ -16,14 +60,28 @@ const markdownComponents = {
   h1: ({ children }: { children?: ReactNode }) => (
     <h1 className="mt-1 text-3xl font-semibold tracking-tight text-stone-900">{children}</h1>
   ),
-  h2: ({ children }: { children?: ReactNode }) => (
-    <h2 className="mt-10 border-b border-stone-200 pb-2 text-xl font-semibold text-stone-900">
-      {children}
-    </h2>
-  ),
-  h3: ({ children }: { children?: ReactNode }) => (
-    <h3 className="mt-8 text-lg font-semibold text-stone-800">{children}</h3>
-  ),
+  h2: ({ children }: { children?: ReactNode }) => {
+    const id = slugifyHeading(plainText(children));
+    return (
+      <h2
+        id={id || undefined}
+        className="mt-10 scroll-mt-28 border-b border-stone-200 pb-2 text-xl font-semibold text-stone-900 first:mt-0"
+      >
+        {children}
+      </h2>
+    );
+  },
+  h3: ({ children }: { children?: ReactNode }) => {
+    const id = slugifyHeading(plainText(children));
+    return (
+      <h3
+        id={id || undefined}
+        className="mt-8 scroll-mt-28 text-lg font-semibold text-stone-800"
+      >
+        {children}
+      </h3>
+    );
+  },
   p: ({ children }: { children?: ReactNode }) => (
     <p className="mt-4 text-[15px] leading-7 text-stone-700">{children}</p>
   ),
@@ -91,6 +149,38 @@ const markdownComponents = {
   hr: () => <hr className="my-8 border-stone-200" />,
 };
 
+const docSections = extractDocSections(docsMarkdown);
+
+function DocsQuickLinks({ sections }: { sections: { id: string; label: string }[] }) {
+  if (sections.length === 0) return null;
+
+  return (
+    <nav
+      aria-label="On this page"
+      className="sticky top-0 z-10 -mx-8 mb-2 border-b border-stone-200 bg-white/95 px-8 py-4 backdrop-blur-sm sm:-mx-10 sm:px-10"
+    >
+      <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">On this page</p>
+      <ul className="mt-3 flex flex-wrap gap-x-1 gap-y-1.5">
+        {sections.map((section, index) => (
+          <li key={section.id} className="flex items-center text-sm">
+            {index > 0 && (
+              <span className="mx-2 hidden text-stone-300 sm:inline" aria-hidden>
+                ·
+              </span>
+            )}
+            <a
+              href={`#${section.id}`}
+              className="rounded-md px-1.5 py-0.5 font-medium text-brand-700 underline-offset-2 hover:bg-brand-50 hover:text-brand-800 hover:underline"
+            >
+              {section.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
 export function PublicApiDocsPage() {
   return (
     <div className={MARKETING_SHELL_CLASS}>
@@ -105,6 +195,7 @@ export function PublicApiDocsPage() {
           <span>Developer docs</span>
         </p>
         <article className="mt-6 rounded-2xl border border-white/15 bg-white p-8 text-stone-900 shadow-2xl sm:p-10">
+          <DocsQuickLinks sections={docSections} />
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
             {docsMarkdown}
           </ReactMarkdown>
