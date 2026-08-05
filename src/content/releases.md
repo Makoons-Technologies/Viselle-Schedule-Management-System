@@ -1,12 +1,12 @@
 # Release notes
 
-All notable releases of Viselle. A production release is cut when **staging** is promoted to **main**.
+All notable releases of Viselle.
 
 Versioning: **x.y.z** — patch (z) = unnoticeable unless a bug hits you; minor (y) = noticeable but no retraining; major (x) = breaking or requires retraining.
 
-Phases: **alpha** → **beta** (3-month trials) → **GA** (1.0.0+).
+Phases: Viselle is in **beta** (3-month trials). Path: alpha → beta → **GA** (1.0.0+).
 
-## [0.1.0] — 2026-08-02 (alpha)
+## [0.1.0] — 2026-08-02 (beta)
 
 Business card, Inbox triage, appointment viewer, mobile nav/refer/theme, and calendar timezone fixes.
 
