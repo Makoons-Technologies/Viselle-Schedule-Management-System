@@ -129,8 +129,6 @@ export function SocialSharePage() {
             <div className="soc-gradient" aria-hidden />
             <SocialFoilDecor />
             <div className="soc-content">
-              <p className="soc-script">Enjoy Three Months Free</p>
-              <p className="soc-wordmark">Viselle</p>
               <h1 className="soc-headline">SCHEDULING, SIMPLIFIED</h1>
               <p className="soc-keywords">
                 <span>APPOINTMENTS</span>
@@ -147,13 +145,11 @@ export function SocialSharePage() {
                 <p className="soc-access-code">{loading ? '…' : (code ?? '————')}</p>
               </div>
               {redeemBy && <p className="soc-redeem">REDEEM BY {redeemBy}</p>}
-              <div className="soc-qr-frame">
-                {qrDataUrl ? (
-                  <img src={qrDataUrl} alt="QR code to get started with Viselle" className="soc-qr" />
-                ) : (
-                  <div className="soc-qr soc-qr-placeholder" aria-hidden />
-                )}
-              </div>
+              {qrDataUrl ? (
+                <img src={qrDataUrl} alt="QR code to get started with Viselle" className="soc-qr" />
+              ) : (
+                <div className="soc-qr soc-qr-placeholder" aria-hidden />
+              )}
             </div>
           </div>
         </div>
@@ -362,31 +358,8 @@ const socialCss = `
   text-align: center;
   padding: clamp(0.85rem, 3.5vw, 1.5rem) clamp(0.75rem, 3vw, 1.25rem);
   box-sizing: border-box;
-}
-
-.soc-script {
-  margin: 0;
-  font-family: "Great Vibes", "Segoe Script", cursive;
-  font-size: clamp(1.15rem, 4.2vw, 1.85rem);
-  line-height: 1.15;
-  background: linear-gradient(115deg, var(--bc-foil-1), var(--bc-foil-2) 22%, var(--bc-foil-3) 45%, var(--bc-foil-4) 68%, var(--bc-foil-5));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-.soc-wordmark {
-  margin: 0.15rem 0 0;
-  font-family: "Cormorant Garamond", "Times New Roman", serif;
-  font-style: italic;
-  font-weight: 600;
-  font-size: clamp(1.55rem, 5.5vw, 2.4rem);
-  letter-spacing: 0.04em;
-  line-height: 1;
-  background: linear-gradient(115deg, var(--bc-foil-1), var(--bc-foil-2) 22%, var(--bc-foil-3) 45%, var(--bc-foil-4) 68%, var(--bc-foil-5));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  /* Leave vertical room for the MOO crest + Viselle wordmark on the foil plate */
+  padding-top: clamp(28%, 32%, 36%);
 }
 
 .soc-headline {
@@ -458,18 +431,8 @@ const socialCss = `
   color: rgba(255, 255, 255, 0.78);
 }
 
-.soc-qr-frame {
-  margin-top: 0.45rem;
-  border: 2px solid var(--bc-foil-3);
-  border-radius: 14px;
-  padding: 5px;
-  background: rgba(15, 23, 42, 0.2);
-  box-shadow:
-    0 0 0 1px rgba(253, 218, 116, 0.28),
-    inset 0 0 0 1px rgba(253, 235, 131, 0.16);
-}
-
 .soc-qr {
+  margin-top: 0.45rem;
   width: clamp(88px, 22vw, 132px);
   aspect-ratio: 1;
   border-radius: 10px;
@@ -496,14 +459,7 @@ const socialCss = `
   justify-content: center;
   gap: 0.2rem;
   padding: clamp(0.7rem, 2.5vw, 1.15rem);
-}
-
-.soc-frame.is-square .soc-script {
-  font-size: clamp(1.05rem, 3.4vw, 1.55rem);
-}
-
-.soc-frame.is-square .soc-wordmark {
-  font-size: clamp(1.35rem, 4.2vw, 2rem);
+  padding-top: clamp(22%, 26%, 30%);
 }
 
 .soc-frame.is-square .soc-keywords {

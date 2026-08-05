@@ -52,8 +52,8 @@ function CardFront({ tilt }: { tilt: { x: number; y: number } }) {
   return (
     <div className="bc-face bc-face-front">
       <div className="bc-gradient-drift" aria-hidden />
+      {/* Full MOO gold plate includes crest, Viselle wordmark, and corner art */}
       <FoilPlate face="front" tilt={tilt} />
-      <p className="bc-wordmark bc-enter-logo">Viselle</p>
       <div className="bc-face-inner bc-face-inner-front">
         <div className="bc-front-copy bc-enter-copy">
           <h1 className="bc-headline">SCHEDULING, SIMPLIFIED</h1>
@@ -87,10 +87,10 @@ function CardBack({
   return (
     <div className="bc-face bc-face-back">
       <div className="bc-gradient-drift bc-gradient-drift-back" aria-hidden />
+      {/* Plate includes script, corner art, and QR frame outline */}
       <FoilPlate face="back" tilt={tilt} />
       <div className="bc-back-layout">
         <div className="bc-back-copy bc-enter-copy">
-          <p className="bc-script">Enjoy Three Months Free</p>
           <p className="bc-back-kicker">EXCLUSIVE BETA ACCESS</p>
           <p className="bc-back-hint">Scan the QR code or visit</p>
           <p className="bc-back-url">{GET_STARTED_DISPLAY}</p>
@@ -101,13 +101,11 @@ function CardBack({
           {redeemBy && <p className="bc-redeem-by">REDEEM BY {redeemBy}</p>}
         </div>
         <div className="bc-qr-wrap">
-          <div className="bc-qr-frame">
-            {qrDataUrl ? (
-              <img src={qrDataUrl} alt="QR code to get started with Viselle" className="bc-qr" />
-            ) : (
-              <div className="bc-qr bc-qr-placeholder" aria-hidden />
-            )}
-          </div>
+          {qrDataUrl ? (
+            <img src={qrDataUrl} alt="QR code to get started with Viselle" className="bc-qr" />
+          ) : (
+            <div className="bc-qr bc-qr-placeholder" aria-hidden />
+          )}
         </div>
       </div>
     </div>
@@ -456,27 +454,6 @@ const businessCardCss = `
   padding-top: clamp(34%, 38%, 42%);
 }
 
-.bc-wordmark {
-  position: absolute;
-  top: 36%;
-  left: 0;
-  right: 0;
-  z-index: 2;
-  margin: 0;
-  text-align: center;
-  font-family: "Cormorant Garamond", "Times New Roman", serif;
-  font-style: italic;
-  font-weight: 600;
-  font-size: clamp(1.35rem, 4.6vw, 2.35rem);
-  letter-spacing: 0.04em;
-  line-height: 1;
-  background: linear-gradient(115deg, var(--bc-foil-1), var(--bc-foil-2) 22%, var(--bc-foil-3) 45%, var(--bc-foil-4) 68%, var(--bc-foil-5));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  pointer-events: none;
-}
-
 .bc-foil-plate {
   position: absolute;
   inset: 0;
@@ -555,19 +532,8 @@ const businessCardCss = `
   align-items: center;
   gap: 0.3rem;
   min-width: 0;
-}
-
-.bc-script {
-  margin: 0 0 0.45rem;
-  font-family: "Great Vibes", "Segoe Script", cursive;
-  font-size: clamp(1.15rem, 3.8vw, 1.95rem);
-  font-weight: 400;
-  letter-spacing: 0.01em;
-  line-height: 1.15;
-  background: linear-gradient(115deg, var(--bc-foil-1), var(--bc-foil-2) 22%, var(--bc-foil-3) 45%, var(--bc-foil-4) 68%, var(--bc-foil-5));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  /* Leave room for foil script (“Enjoy Three Months Free”) at the top of the plate */
+  padding-top: clamp(1.5rem, 5.5vw, 2.6rem);
 }
 
 .bc-back-kicker {
@@ -627,16 +593,6 @@ const businessCardCss = `
   align-items: flex-end;
   padding-bottom: clamp(0.15rem, 1vw, 0.45rem);
   align-self: end;
-}
-
-.bc-qr-frame {
-  border: 2px solid var(--bc-foil-3);
-  border-radius: 14px;
-  padding: 5px;
-  background: rgba(15, 23, 42, 0.18);
-  box-shadow:
-    0 0 0 1px rgba(253, 218, 116, 0.28),
-    inset 0 0 0 1px rgba(253, 235, 131, 0.18);
 }
 
 .bc-qr {
@@ -726,11 +682,6 @@ const businessCardCss = `
     padding-bottom: 0.55rem;
   }
 
-  .bc-wordmark {
-    top: 34%;
-    font-size: clamp(1.15rem, 5.2vw, 1.55rem);
-  }
-
   .bc-headline {
     font-size: clamp(0.78rem, 3.6vw, 1rem);
     letter-spacing: 0.08em;
@@ -753,11 +704,6 @@ const businessCardCss = `
     padding: 0.7rem 0.65rem;
   }
 
-  .bc-script {
-    font-size: clamp(1rem, 4.5vw, 1.35rem);
-    margin-bottom: 0.3rem;
-  }
-
   .bc-back-kicker {
     font-size: 0.68rem;
     letter-spacing: 0.1em;
@@ -772,11 +718,6 @@ const businessCardCss = `
   .bc-access-code {
     font-size: 0.95rem;
     letter-spacing: 0.14em;
-  }
-
-  .bc-qr-frame {
-    border-radius: 10px;
-    padding: 4px;
   }
 
   .bc-qr {

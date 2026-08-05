@@ -1,8 +1,8 @@
-/** MOO-style gold foil plates (SVG) + shine cutout masks for /business-card and /social. */
-export const FOIL_FRONT_SRC = '/bc-foil-front.svg';
-export const FOIL_FRONT_MASK_SRC = '/bc-foil-front-mask.svg';
-export const FOIL_BACK_SRC = '/bc-foil-back.svg';
-export const FOIL_BACK_MASK_SRC = '/bc-foil-back-mask.svg';
+/** MOO gold special-finish plates (raster) + shine cutout masks for /business-card and /social. */
+export const FOIL_FRONT_SRC = '/bc-foil-front.png';
+export const FOIL_FRONT_MASK_SRC = '/bc-foil-front-mask.png';
+export const FOIL_BACK_SRC = '/bc-foil-back.png';
+export const FOIL_BACK_MASK_SRC = '/bc-foil-back-mask.png';
 
 export const GET_STARTED_DISPLAY = 'VISELLE.NET/GET-STARTED';
 
