@@ -1,4 +1,4 @@
-/** MOO gold special-finish plates (raster) + shine cutout masks for /business-card and /social. */
+/** MOO gold special-finish plates (print/production assets). Interactive /business-card uses ViselleLogo + CSS instead. */
 export const FOIL_FRONT_SRC = '/bc-foil-front.png';
 export const FOIL_FRONT_MASK_SRC = '/bc-foil-front-mask.png';
 export const FOIL_BACK_SRC = '/bc-foil-back.png';
