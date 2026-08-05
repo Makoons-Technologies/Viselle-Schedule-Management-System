@@ -4,15 +4,10 @@ import { useForm } from 'react-hook-form';
 import { Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { z } from 'zod';
-import {
-  BookingPageTitle,
-  BookingPublicShell,
-  BookingSectionLabel,
-  BookingStickyAction,
-} from '@/components/booking/BookingPublicShell';
-import { bookingTheme } from '@/components/booking/booking-theme';
-import { MarketingHeader } from '@/components/marketing/MarketingLayout';
+import { MarketingFooter, MarketingHeader } from '@/components/marketing/MarketingLayout';
 import { PageSeo } from '@/components/seo/PageSeo';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { marketingSeo } from '@/content/marketing-seo';
 import {
   CONTACT_EMAIL,
@@ -23,7 +18,6 @@ import {
 } from '@/lib/contact';
 import { MARKETING_SHELL_CLASS } from '@/lib/marketing-theme';
 import { cn } from '@/lib/utils';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const schema = z.object({
   interest: z.string().min(1),
@@ -36,14 +30,22 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
+/**
+ * Light-card controls only — no dark: variants. The marketing shell often has
+ * html.dark, which would otherwise flip inputs/labels to near-white on this card.
+ */
 const fieldClass =
-  'w-full rounded-xl border border-neutral-200 bg-white px-3 py-3 text-sm outline-none focus:border-neutral-400';
+  'w-full rounded-lg border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 caret-stone-900 placeholder:text-stone-500 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500';
+
+const labelClass = 'mb-1.5 block text-xs font-medium text-stone-600';
+
+const selectLightClass =
+  'h-11 rounded-lg border-stone-300 bg-white text-stone-900 dark:border-stone-300 dark:bg-white dark:text-stone-900';
 
 export function ContactPage() {
   const [searchParams] = useSearchParams();
   const defaultInterest = parseContactInterest(searchParams.get('interest'));
   const businessSlug = searchParams.get('slug') ?? undefined;
-  const theme = bookingTheme('modern');
 
   const interestOptions = useMemo(
     () => Object.entries(CONTACT_INTEREST_LABELS) as [ContactInterest, string][],
@@ -81,39 +83,41 @@ export function ContactPage() {
     <div className={MARKETING_SHELL_CLASS}>
       <PageSeo {...marketingSeo.contact} />
       <MarketingHeader />
-
-      <BookingPublicShell
-        subtitle="We typically reply within one business day"
-        showPoweredBy={false}
-        siteTemplate="modern"
-        footer={
-          <p className="mb-2 text-sm text-neutral-500">
-            Already use Viselle?{' '}
-            <Link to="/login" className="font-medium text-brand-700 hover:underline">
-              Sign in
-            </Link>
-          </p>
-        }
-      >
-        <BookingPageTitle>Contact us</BookingPageTitle>
-        <p className="-mt-4 mb-6 text-sm text-neutral-500">
-          Tell us about your salon, spa, or studio. For plan changes, sign in and use Settings → Plan.
+      <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+        <p className="text-sm text-white/60">
+          <Link to="/" className="hover:text-white">
+            Home
+          </Link>
+          <span className="mx-2">/</span>
+          <span>Contact</span>
         </p>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-1 flex-col">
-          <div className="space-y-4">
+        <div className="mt-6 rounded-2xl border border-white/15 bg-white p-8 text-stone-900 shadow-2xl sm:p-10">
+          <h1 className="text-3xl font-semibold tracking-tight text-stone-900">Contact us</h1>
+          <p className="mt-2 text-[15px] leading-7 text-stone-600">
+            Tell us about your salon, spa, or studio. We typically reply within one business day. For
+            plan changes, sign in and use Settings → Plan.
+          </p>
+
+          <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-4">
             <div>
-              <BookingSectionLabel>What can we help with?</BookingSectionLabel>
+              <label className={labelClass} htmlFor="interest">
+                What can we help with?
+              </label>
               <Select
                 value={interest}
                 onValueChange={(v) => setValue('interest', v, { shouldValidate: true })}
               >
-                <SelectTrigger className="h-12 rounded-xl border-neutral-200">
+                <SelectTrigger id="interest" className={selectLightClass}>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="border-stone-200 bg-white dark:border-stone-200 dark:bg-white">
                   {interestOptions.map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
+                    <SelectItem
+                      key={value}
+                      value={value}
+                      className="text-stone-900 focus:bg-brand-50 dark:text-stone-900 dark:focus:bg-brand-50"
+                    >
                       {label}
                     </SelectItem>
                   ))}
@@ -121,21 +125,27 @@ export function ContactPage() {
               </Select>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-neutral-600">Your name</label>
+                <label className={labelClass} htmlFor="name">
+                  Your name
+                </label>
                 <input id="name" className={fieldClass} {...register('name')} />
                 {errors.name && <p className="mt-1 text-xs text-red-600">{errors.name.message}</p>}
               </div>
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-neutral-600">Email</label>
+                <label className={labelClass} htmlFor="email">
+                  Email
+                </label>
                 <input id="email" type="email" className={fieldClass} {...register('email')} />
                 {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>}
               </div>
             </div>
 
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-neutral-600">Business name</label>
+              <label className={labelClass} htmlFor="businessName">
+                Business name
+              </label>
               <input
                 id="businessName"
                 placeholder="e.g. Blossom Booth Spa"
@@ -145,44 +155,53 @@ export function ContactPage() {
             </div>
 
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-neutral-600">Phone (optional)</label>
+              <label className={labelClass} htmlFor="phone">
+                Phone (optional)
+              </label>
               <input id="phone" type="tel" className={fieldClass} {...register('phone')} />
             </div>
 
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-neutral-600">Message (optional)</label>
+              <label className={labelClass} htmlFor="message">
+                Message (optional)
+              </label>
               <textarea
                 id="message"
                 rows={4}
                 placeholder="Tell us about your team size, services, or what you're looking for..."
-                className={fieldClass}
+                className={cn(fieldClass, 'resize-y')}
                 {...register('message')}
               />
             </div>
 
             {businessSlug && (
-              <p className="text-xs text-neutral-500">
-                Referring to booking page: <span className="font-mono">{businessSlug}</span>
+              <p className="text-xs text-stone-500">
+                Referring to booking page: <span className="font-mono text-stone-700">{businessSlug}</span>
               </p>
             )}
-          </div>
 
-          <BookingStickyAction>
-            <button
-              type="submit"
-              className={cn('w-full rounded-full py-4 text-base font-semibold', theme.primaryBtn)}
-            >
-              Send message
-            </button>
-            <p className="mt-3 text-center text-xs text-neutral-500">
-              Opens your email app to{' '}
-              <a href={`mailto:${CONTACT_EMAIL}`} className="text-brand-700 hover:underline">
-                {CONTACT_EMAIL}
-              </a>
-            </p>
-          </BookingStickyAction>
-        </form>
-      </BookingPublicShell>
+            <div className="pt-2">
+              <Button type="submit" size="lg" className="w-full sm:w-auto">
+                Send message
+              </Button>
+              <p className="mt-3 text-xs text-stone-500">
+                Opens your email app to{' '}
+                <a href={`mailto:${CONTACT_EMAIL}`} className="font-medium text-brand-700 hover:underline">
+                  {CONTACT_EMAIL}
+                </a>
+              </p>
+            </div>
+          </form>
+        </div>
+
+        <p className="mt-12 text-sm text-white/60">
+          Already use Viselle?{' '}
+          <Link to="/login" className="font-medium text-white/80 hover:text-white">
+            Sign in
+          </Link>
+        </p>
+      </main>
+      <MarketingFooter />
     </div>
   );
 }

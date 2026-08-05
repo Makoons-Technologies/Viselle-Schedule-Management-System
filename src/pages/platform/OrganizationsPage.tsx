@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ban, LogIn, Plus, Settings } from 'lucide-react';
-import { useState } from 'react';
+import { Ban, Building2, LogIn, Plus, Settings } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ApiError, ownerApi } from '@/lib/api';
@@ -8,6 +8,7 @@ import { formatDate } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useOrg } from '@/context/OrgContext';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { ListToolbar, matchesSearch } from '@/components/common/ListToolbar';
 import { TableIconButton, TableRowActions } from '@/components/common/TableIconButton';
 import { Panel } from '@/components/common/Panel';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -16,9 +17,15 @@ import {
   BillingStatusBadge,
   WebsiteHostingBadge,
 } from '@/components/common/StatusBadge';
+import { EmptyState } from '@/components/common/EmptyState';
 import { LoadingState } from '@/components/common/LoadingState';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import type { BillingStatus, OrganizationStatus } from '@/types/api';
+
+type StatusFilter = OrganizationStatus | 'all';
+type BillingFilter = BillingStatus | 'all';
 
 export function OrganizationsPage() {
   const { user, loginAsOwner } = useAuth();
@@ -27,6 +34,9 @@ export function OrganizationsPage() {
   const { setSelectedOrgId } = useOrg();
   const [orgToDeactivate, setOrgToDeactivate] = useState<{ id: string; name: string } | null>(null);
   const [impersonatingOrgId, setImpersonatingOrgId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [billingFilter, setBillingFilter] = useState<BillingFilter>('all');
   const isPlatformOwner = user?.role === 'platform_owner';
 
   const { data, isLoading } = useQuery({
@@ -34,6 +44,17 @@ export function OrganizationsPage() {
     queryFn: ownerApi.listOrganizations,
     enabled: isPlatformOwner,
   });
+
+  const organizations = data?.organizations ?? [];
+  const filtered = useMemo(
+    () =>
+      organizations.filter((org) => {
+        if (statusFilter !== 'all' && org.status !== statusFilter) return false;
+        if (billingFilter !== 'all' && org.billingStatus !== billingFilter) return false;
+        return matchesSearch(search, org.name, org.slug);
+      }),
+    [organizations, search, statusFilter, billingFilter],
+  );
 
   if (!isPlatformOwner) {
     if (user?.role === 'org_owner' && user.organizationId) {
@@ -90,87 +111,130 @@ export function OrganizationsPage() {
           </Button>
         }
       />
-      <Panel>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Slug</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Billing</TableHead>
-              <TableHead>Website</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {(data?.organizations ?? []).map((org) => (
-              <TableRow key={org.id}>
-                <TableCell className="font-medium">
-                  <Link
-                    to={`/platform/orgs/${org.id}`}
-                    onClick={() => setSelectedOrgId(org.id)}
-                    className="text-stone-900 hover:text-brand-700 hover:underline dark:text-stone-100 dark:hover:text-brand-300"
-                  >
-                    {org.name}
-                  </Link>
-                </TableCell>
-                <TableCell className="text-stone-500">{org.slug}</TableCell>
-                <TableCell><OrganizationStatusBadge status={org.status} /></TableCell>
-                <TableCell><BillingStatusBadge status={org.billingStatus} /></TableCell>
-                <TableCell>
-                  <WebsiteHostingBadge
-                    hostingMode={org.hostingMode}
-                    customWebsiteRequested={org.customWebsiteRequested}
-                  />
-                </TableCell>
-                <TableCell className="text-stone-500">{formatDate(org.createdAt)}</TableCell>
-                <TableCell>
-                  <TableRowActions>
-                    <TableIconButton label="Organization admin settings" asChild>
-                      <Link
-                        to={`/platform/orgs/${org.id}/settings`}
-                        onClick={() => setSelectedOrgId(org.id)}
-                      >
-                        <Settings className="h-4 w-4" />
-                      </Link>
-                    </TableIconButton>
-                    <TableIconButton
-                      icon={LogIn}
-                      label={
-                        org.hasOwner === false
-                          ? 'No owner yet — open settings to invite'
-                          : 'Log in as owner'
-                      }
-                      onClick={() => {
-                        if (org.hasOwner === false) {
-                          setSelectedOrgId(org.id);
-                          navigate(`/platform/orgs/${org.id}/settings`);
-                          toast.message('Invite an owner first', {
-                            description: 'Open Org owner on this page to send a set-password email.',
-                          });
-                          return;
-                        }
-                        impersonateMutation.mutate(org.id);
-                      }}
-                      disabled={impersonatingOrgId === org.id}
-                    />
-                    {(org.status === 'active' || org.status === 'trial') && (
-                      <TableIconButton
-                        icon={Ban}
-                        label="Deactivate organization"
-                        variant="ghost"
-                        destructive
-                        onClick={() => setOrgToDeactivate({ id: org.id, name: org.name })}
-                      />
-                    )}
-                  </TableRowActions>
-                </TableCell>
+      <ListToolbar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search name, slug…"
+        filters={
+          <>
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="trial">Trial</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="suspended">Suspended</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={billingFilter} onValueChange={(v) => setBillingFilter(v as BillingFilter)}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Billing" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All billing</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="trial">Trial</SelectItem>
+                <SelectItem value="past_due">Past due</SelectItem>
+                <SelectItem value="failed">Failed</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+          </>
+        }
+      />
+      {filtered.length === 0 ? (
+        <EmptyState
+          icon={Building2}
+          title={organizations.length === 0 ? 'No organizations' : 'No organizations match'}
+          description={organizations.length === 0 ? undefined : 'Try a different search or filter.'}
+        />
+      ) : (
+        <Panel>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Slug</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Billing</TableHead>
+                <TableHead>Website</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Panel>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((org) => (
+                <TableRow key={org.id}>
+                  <TableCell className="font-medium">
+                    <Link
+                      to={`/platform/orgs/${org.id}`}
+                      onClick={() => setSelectedOrgId(org.id)}
+                      className="text-stone-900 hover:text-brand-700 hover:underline dark:text-stone-100 dark:hover:text-brand-300"
+                    >
+                      {org.name}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="text-stone-500">{org.slug}</TableCell>
+                  <TableCell><OrganizationStatusBadge status={org.status} /></TableCell>
+                  <TableCell><BillingStatusBadge status={org.billingStatus} /></TableCell>
+                  <TableCell>
+                    <WebsiteHostingBadge
+                      hostingMode={org.hostingMode}
+                      customWebsiteRequested={org.customWebsiteRequested}
+                    />
+                  </TableCell>
+                  <TableCell className="text-stone-500">{formatDate(org.createdAt)}</TableCell>
+                  <TableCell>
+                    <TableRowActions>
+                      <TableIconButton label="Organization admin settings" asChild>
+                        <Link
+                          to={`/platform/orgs/${org.id}/settings`}
+                          onClick={() => setSelectedOrgId(org.id)}
+                        >
+                          <Settings className="h-4 w-4" />
+                        </Link>
+                      </TableIconButton>
+                      <TableIconButton
+                        icon={LogIn}
+                        label={
+                          org.hasOwner === false
+                            ? 'No owner yet — open settings to invite'
+                            : 'Log in as owner'
+                        }
+                        onClick={() => {
+                          if (org.hasOwner === false) {
+                            setSelectedOrgId(org.id);
+                            navigate(`/platform/orgs/${org.id}/settings`);
+                            toast.message('Invite an owner first', {
+                              description: 'Open Org owner on this page to send a set-password email.',
+                            });
+                            return;
+                          }
+                          impersonateMutation.mutate(org.id);
+                        }}
+                        disabled={impersonatingOrgId === org.id}
+                      />
+                      {(org.status === 'active' || org.status === 'trial') && (
+                        <TableIconButton
+                          icon={Ban}
+                          label="Deactivate organization"
+                          variant="ghost"
+                          destructive
+                          onClick={() => setOrgToDeactivate({ id: org.id, name: org.name })}
+                        />
+                      )}
+                    </TableRowActions>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Panel>
+      )}
       <ConfirmDialog
         open={!!orgToDeactivate}
         onOpenChange={(open) => !open && setOrgToDeactivate(null)}

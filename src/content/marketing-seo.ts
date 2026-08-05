@@ -103,6 +103,13 @@ export const marketingSeo = {
     path: '/business-card',
     image: defaultOgImage,
   },
+  social: {
+    title: 'Share Viselle',
+    description:
+      'Full-screen Viselle beta share image — story or square — with campaign code, QR, and get-started link.',
+    path: '/social',
+    image: defaultOgImage,
+  },
   login: {
     title: 'Sign in',
     description: 'Sign in to your Viselle account to manage appointments, staff, and booking settings.',

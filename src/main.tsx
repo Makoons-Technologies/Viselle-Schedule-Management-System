@@ -6,13 +6,16 @@ import { AuthProvider } from '@/context/AuthContext';
 import { OrgProvider } from '@/context/OrgContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { AppToaster } from '@/components/common/AppToaster';
+import { AppErrorBoundary } from '@/components/common/AppErrorBoundary';
 import App from '@/App';
 import { applyPlatformTheme, readStoredThemeId } from '@/lib/themes';
 import { initColorMode } from '@/lib/color-mode';
+import { installClientErrorListeners } from '@/lib/client-errors';
 import './index.css';
 
 applyPlatformTheme(readStoredThemeId());
 initColorMode();
+installClientErrorListeners();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,17 +28,19 @@ const queryClient = new QueryClient({
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AuthProvider>
-          <ThemeProvider>
-            <OrgProvider>
-              <App />
-              <AppToaster />
-            </OrgProvider>
-          </ThemeProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </QueryClientProvider>
+    <AppErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <AuthProvider>
+            <ThemeProvider>
+              <OrgProvider>
+                <App />
+                <AppToaster />
+              </OrgProvider>
+            </ThemeProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </AppErrorBoundary>
   </StrictMode>,
 );

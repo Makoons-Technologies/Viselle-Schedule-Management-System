@@ -1,12 +1,48 @@
 # Changelog
 
 All notable releases of Viselle (Beauty-Backend-API + Viselle Schedule Management System) are documented here.
-A release is cut when **staging** is promoted to **main** (production).
 
 Versioning: **x.y.z** — patch (z) = unnoticeable unless a bug hits you; minor (y) = noticeable but no retraining; major (x) = breaking or requires retraining.
-Phases: **alpha** → **beta** (3-month trials) → **GA** (1.0.0+).
 
-## [0.1.0] — 2026-08-02 (alpha)
+Phases: Viselle is in **beta** (3-month trials). Path: alpha → beta → **GA** (1.0.0+).
+
+## [0.2.0] — 2026-08-05 (beta)
+
+Beta polish: business card/social, API docs, contact/releases, trial expiry cron.
+
+### Frontend
+
+- Make API docs Quick links a clear top-of-card list with endpoint sections.
+- Remove digital business card link from the landing hero.
+- Add sticky on-this-page quick links to public API docs.
+- Mark Viselle as beta in release notes and drop the staging-to-main intro sentence.
+- Align Contact page with marketing shell chrome used on Releases and API docs.
+- Fix API docs card contrast when dark mode is active.
+- Fix release notes card contrast when dark mode is active.
+- Swap offer-line foil script from Cormorant to Great Vibes for sharper card elegance.
+- Enlarge business-card and social-share type, fix square canvas and QR aspect.
+- Restore business-card foil as shared silhouette masks and fill the card.
+- Fix business card layout by dropping MOO full-plate foil overlays that collided with text.
+- Clean up social share layout so the V crest is not covered by copy.
+- Revert business-card foil to MOO PNG plates (option 1).
+- Replace MOO foil PNGs with SVG and add /social share page.
+- Add consistent search and filters to dashboard tables.
+- Report SPA crashes to the API for Vercel Runtime Logs.
+- Remove Stripe from the plan-required lock banner copy.
+- Add MOO gold foil plates as business-card shine cutouts.
+- Lock business card to landscape and fix foil shine for device rotation.
+- Make business card landscape/portrait follow device orientation.
+
+### API
+
+- Expire due trials on Vercel and sync admin plan status.
+- Update business-card foil design note for SVG and /social.
+- Add vitest coverage for auth, signup, appointments, and support critical paths.
+- Add free structured error logging to Vercel Runtime Logs.
+- Drop Stripe from PLAN_REQUIRED user-facing error message.
+- Document MOO foil-layer design for digital business cards.
+
+## [0.1.0] — 2026-08-02 (beta)
 
 Business card, Inbox triage, appointment viewer, mobile nav/refer/theme, and calendar timezone fixes.
 

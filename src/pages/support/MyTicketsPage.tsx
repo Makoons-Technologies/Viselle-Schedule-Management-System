@@ -1,8 +1,9 @@
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { LifeBuoy, Plus } from 'lucide-react';
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supportApi } from '@/lib/api';
+import { ListToolbar, matchesSearch } from '@/components/common/ListToolbar';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Panel } from '@/components/common/Panel';
 import { EmptyState } from '@/components/common/EmptyState';
@@ -13,8 +14,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { TicketStatusBadge } from '@/components/support/TicketStatusBadge';
 import { TicketTypeBadge } from '@/components/support/TicketTypeBadge';
 import { NewTicketDialog } from '@/components/support/NewTicketDialog';
-import { SUPPORT_TICKET_TYPE_LABELS } from '@/components/support/ticket-types';
-import type { SupportTicketType } from '@/types/api';
+import {
+  SUPPORT_TICKET_STATUS_LABELS,
+  SUPPORT_TICKET_STATUSES,
+  SUPPORT_TICKET_TYPE_LABELS,
+} from '@/components/support/ticket-types';
+import type { SupportTicketStatus, SupportTicketType } from '@/types/api';
 
 const FAQ_ITEMS = [
   {
@@ -44,6 +49,14 @@ const TYPE_FILTERS: Array<{ value: SupportTicketType | 'all'; label: string }> =
   { value: 'bug', label: SUPPORT_TICKET_TYPE_LABELS.bug },
 ];
 
+const STATUS_FILTERS: Array<{ value: SupportTicketStatus | 'all'; label: string }> = [
+  { value: 'all', label: 'All statuses' },
+  ...SUPPORT_TICKET_STATUSES.map((status) => ({
+    value: status,
+    label: SUPPORT_TICKET_STATUS_LABELS[status],
+  })),
+];
+
 function FaqSection() {
   return (
     <Panel className="p-4 sm:p-6">
@@ -65,6 +78,8 @@ function FaqSection() {
 export function MyTicketsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [typeFilter, setTypeFilter] = useState<SupportTicketType | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<SupportTicketStatus | 'all'>('all');
+  const [search, setSearch] = useState('');
 
   const { data, isLoading } = useQuery({
     queryKey: ['support-tickets', 'mine', typeFilter],
@@ -72,6 +87,14 @@ export function MyTicketsPage() {
   });
 
   const tickets = data?.tickets ?? [];
+  const filtered = useMemo(
+    () =>
+      tickets.filter((ticket) => {
+        if (statusFilter !== 'all' && ticket.status !== statusFilter) return false;
+        return matchesSearch(search, ticket.subject, ticket.body, ticket.type, ticket.status);
+      }),
+    [tickets, search, statusFilter],
+  );
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -89,21 +112,7 @@ export function MyTicketsPage() {
       <FaqSection />
 
       <div>
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-sm font-medium text-stone-900 dark:text-stone-100">My tickets</h2>
-          <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as SupportTicketType | 'all')}>
-            <SelectTrigger className="w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {TYPE_FILTERS.map((filter) => (
-                <SelectItem key={filter.value} value={filter.value}>
-                  {filter.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <h2 className="mb-3 text-sm font-medium text-stone-900 dark:text-stone-100">My tickets</h2>
         {isLoading ? (
           <LoadingState />
         ) : tickets.length === 0 ? (
@@ -114,38 +123,80 @@ export function MyTicketsPage() {
             action={<Button onClick={() => setCreateOpen(true)}>Submit a ticket</Button>}
           />
         ) : (
-          <Panel>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Subject</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Submitted</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tickets.map((ticket) => (
-                  <TableRow key={ticket.id} className="cursor-pointer">
-                    <TableCell className="font-medium">
-                      <Link to={`/support/${ticket.id}`} className="block hover:underline">
-                        {ticket.subject}
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      <TicketTypeBadge type={ticket.type} />
-                    </TableCell>
-                    <TableCell>
-                      <TicketStatusBadge status={ticket.status} />
-                    </TableCell>
-                    <TableCell className="text-stone-500">
-                      {new Date(ticket.createdAt).toLocaleDateString()}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Panel>
+          <>
+            <ListToolbar
+              search={search}
+              onSearchChange={setSearch}
+              searchPlaceholder="Search tickets…"
+              filters={
+                <>
+                  <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as SupportTicketType | 'all')}>
+                    <SelectTrigger className="w-44">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TYPE_FILTERS.map((filter) => (
+                        <SelectItem key={filter.value} value={filter.value}>
+                          {filter.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={statusFilter}
+                    onValueChange={(v) => setStatusFilter(v as SupportTicketStatus | 'all')}
+                  >
+                    <SelectTrigger className="w-44">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STATUS_FILTERS.map((filter) => (
+                        <SelectItem key={filter.value} value={filter.value}>
+                          {filter.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </>
+              }
+            />
+            {filtered.length === 0 ? (
+              <EmptyState icon={LifeBuoy} title="No tickets match" description="Try a different search or filter." />
+            ) : (
+              <Panel>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Subject</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Submitted</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((ticket) => (
+                      <TableRow key={ticket.id} className="cursor-pointer">
+                        <TableCell className="font-medium">
+                          <Link to={`/support/${ticket.id}`} className="block hover:underline">
+                            {ticket.subject}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          <TicketTypeBadge type={ticket.type} />
+                        </TableCell>
+                        <TableCell>
+                          <TicketStatusBadge status={ticket.status} />
+                        </TableCell>
+                        <TableCell className="text-stone-500">
+                          {new Date(ticket.createdAt).toLocaleDateString()}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Panel>
+            )}
+          </>
         )}
       </div>
 

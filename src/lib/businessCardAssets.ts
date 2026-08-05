@@ -1,0 +1,43 @@
+/** MOO gold special-finish plates (print/production). */
+export const FOIL_FRONT_SRC = '/bc-foil-front.png';
+export const FOIL_FRONT_MASK_SRC = '/bc-foil-front-mask.png';
+export const FOIL_BACK_SRC = '/bc-foil-back.png';
+export const FOIL_BACK_MASK_SRC = '/bc-foil-back-mask.png';
+
+/**
+ * Interactive /business-card foil silhouettes (alpha masks).
+ * Crest SVG matches product logo paths; wordmark/script cropped from MOO plates.
+ */
+export const BC_CREST_MASK_SRC = '/bc-crest-mask.svg';
+export const BC_WORDMARK_MASK_SRC = '/bc-wordmark-mask.png';
+export const BC_SCRIPT_MASK_SRC = '/bc-script-mask.png';
+
+export const GET_STARTED_DISPLAY = 'VISELLE.NET/GET-STARTED';
+
+export function formatRedeemBy(iso?: string | null): string | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${month}/${day}/${year}`;
+}
+
+export function getStartedUrl(code?: string | null) {
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://viselle.net';
+  if (!code) return `${origin}/get-started`;
+  return `${origin}/get-started?code=${encodeURIComponent(code)}`;
+}
+
+export function businessCardUrl(code?: string | null) {
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://viselle.net';
+  if (!code) return `${origin}/business-card`;
+  return `${origin}/business-card?code=${encodeURIComponent(code)}`;
+}
+
+export function socialUrl(code?: string | null) {
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://viselle.net';
+  if (!code) return `${origin}/social`;
+  return `${origin}/social?code=${encodeURIComponent(code)}`;
+}

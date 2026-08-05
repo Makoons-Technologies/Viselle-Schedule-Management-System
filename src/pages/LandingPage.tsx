@@ -130,11 +130,6 @@ export function LandingPage() {
               </Button>
             </div>
           )}
-          <p className="mt-6 text-sm text-white/55">
-            <Link to="/business-card" className="underline-offset-2 hover:text-white hover:underline">
-              View the digital business card
-            </Link>
-          </p>
         </div>
       </section>
 
