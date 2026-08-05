@@ -6,6 +6,9 @@ import { ViselleLogo } from '@/components/common/ViselleLogo';
 import { marketingSeo } from '@/content/marketing-seo';
 import { useFoilTilt } from '@/hooks/useFoilTilt';
 import {
+  BC_CREST_MASK_SRC,
+  BC_SCRIPT_MASK_SRC,
+  BC_WORDMARK_MASK_SRC,
   GET_STARTED_DISPLAY,
   formatRedeemBy,
   getStartedUrl,
@@ -15,14 +18,33 @@ import { fetchBusinessCardCampaign } from '@/lib/signup';
 import { cn } from '@/lib/utils';
 import type { TrialCampaign } from '@/types/api';
 
-function CrestSheen({ tilt }: { tilt: { x: number; y: number } }) {
+/** Animated gold foil revealed through a silhouette mask (crest, wordmark, script). */
+function FoilMasked({
+  maskSrc,
+  tilt,
+  className,
+  label,
+}: {
+  maskSrc: string;
+  tilt: { x: number; y: number };
+  className?: string;
+  label?: string;
+}) {
   const posX = Math.round(tilt.x * 100);
   const posY = Math.round(tilt.y * 100);
   return (
     <div
-      className="bc-crest-sheen"
-      style={{ '--foil-x': `${posX}%`, '--foil-y': `${posY}%` } as CSSProperties}
-      aria-hidden
+      className={cn('bc-foil', className)}
+      style={
+        {
+          '--foil-x': `${posX}%`,
+          '--foil-y': `${posY}%`,
+          '--bc-mask': `url('${maskSrc}')`,
+        } as CSSProperties
+      }
+      role={label ? 'img' : undefined}
+      aria-label={label}
+      aria-hidden={label ? undefined : true}
     />
   );
 }
@@ -33,11 +55,18 @@ function CardFront({ tilt }: { tilt: { x: number; y: number } }) {
       <div className="bc-gradient-drift" aria-hidden />
       <div className="bc-face-inner bc-face-inner-front">
         <div className="bc-brand bc-enter-logo">
-          <div className="bc-crest-wrap">
-            <ViselleLogo size={118} className="bc-crest" />
-            <CrestSheen tilt={tilt} />
-          </div>
-          <p className="bc-wordmark">Viselle</p>
+          <FoilMasked
+            maskSrc={BC_CREST_MASK_SRC}
+            tilt={tilt}
+            className="bc-foil-crest"
+            label="Viselle crest"
+          />
+          <FoilMasked
+            maskSrc={BC_WORDMARK_MASK_SRC}
+            tilt={tilt}
+            className="bc-foil-wordmark"
+            label="Viselle"
+          />
         </div>
         <div className="bc-front-copy bc-enter-copy">
           <h1 className="bc-headline">Scheduling, Simplified</h1>
@@ -65,13 +94,20 @@ function CardBack({
 }) {
   const code = campaign?.code?.trim() || null;
   const redeemBy = formatRedeemBy(campaign?.expiresAt);
+  const posX = Math.round(tilt.x * 100);
+  const posY = Math.round(tilt.y * 100);
 
   return (
     <div className="bc-face bc-face-back">
       <div className="bc-gradient-drift bc-gradient-drift-back" aria-hidden />
       <div className="bc-back-layout">
         <div className="bc-back-copy bc-enter-copy">
-          <p className="bc-offer">Enjoy Three Months Free</p>
+          <FoilMasked
+            maskSrc={BC_SCRIPT_MASK_SRC}
+            tilt={tilt}
+            className="bc-foil-script"
+            label="Enjoy Three Months Free"
+          />
           <p className="bc-back-kicker">Exclusive Beta Access</p>
           <p className="bc-back-hint">Scan the QR code or visit</p>
           <p className="bc-back-url">{GET_STARTED_DISPLAY}</p>
@@ -82,13 +118,15 @@ function CardBack({
           {redeemBy && <p className="bc-redeem-by">Redeem by {redeemBy}</p>}
         </div>
         <div className="bc-qr-wrap bc-enter-logo">
-          <div className="bc-qr-frame">
+          <div
+            className="bc-qr-frame"
+            style={{ '--foil-x': `${posX}%`, '--foil-y': `${posY}%` } as CSSProperties}
+          >
             {qrDataUrl ? (
               <img src={qrDataUrl} alt="QR code to get started with Viselle" className="bc-qr" />
             ) : (
               <div className="bc-qr bc-qr-placeholder" aria-hidden />
             )}
-            <CrestSheen tilt={tilt} />
           </div>
         </div>
       </div>
@@ -156,7 +194,7 @@ export function BusinessCardPage() {
     let cancelled = false;
     const url = getStartedUrl(campaign?.code);
     QRCode.toDataURL(url, {
-      width: 280,
+      width: 320,
       margin: 1,
       color: { dark: '#0a0a0a', light: '#ffffff' },
       errorCorrectionLevel: 'M',
@@ -249,6 +287,17 @@ const businessCardCss = `
   --bc-foil-4: #9f690a;
   --bc-foil-5: #fdeb83;
   --bc-foil-6: #b88017;
+  --bc-foil-grad:
+    linear-gradient(
+      115deg,
+      var(--bc-foil-1) 0%,
+      var(--bc-foil-2) 16%,
+      var(--bc-foil-3) 32%,
+      var(--bc-foil-4) 48%,
+      var(--bc-foil-5) 64%,
+      var(--bc-foil-6) 80%,
+      var(--bc-foil-1) 100%
+    );
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
@@ -261,7 +310,7 @@ const businessCardCss = `
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 1.25rem;
+  padding: 0.85rem 1.15rem;
   z-index: 2;
 }
 
@@ -336,8 +385,8 @@ const businessCardCss = `
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 0.5rem 1rem 2rem;
-  gap: 1.25rem;
+  padding: 0.35rem 0.75rem 1.5rem;
+  gap: 1rem;
 }
 
 .bc-card-scene {
@@ -352,7 +401,7 @@ const businessCardCss = `
 }
 
 .bc-card-scene.is-landscape {
-  width: min(92vw, 560px);
+  width: min(96vw, 680px);
   aspect-ratio: 1.75 / 1;
 }
 
@@ -419,6 +468,52 @@ const businessCardCss = `
   to { opacity: 1; }
 }
 
+/* Shared metallic foil: silhouette mask + animated gold + tilt highlight */
+.bc-foil {
+  display: block;
+  flex-shrink: 0;
+  background-image:
+    radial-gradient(
+      circle at var(--foil-x, 50%) var(--foil-y, 50%),
+      rgba(255, 248, 210, 0.95) 0%,
+      rgba(253, 235, 131, 0.55) 18%,
+      rgba(253, 218, 116, 0.22) 34%,
+      transparent 52%
+    ),
+    var(--bc-foil-grad);
+  background-size: 160% 160%, 280% 280%;
+  background-position:
+    var(--foil-x, 50%) var(--foil-y, 50%),
+    0% 50%;
+  background-repeat: no-repeat;
+  animation: bc-foil-shift 5.5s ease-in-out infinite alternate;
+  -webkit-mask-image: var(--bc-mask);
+  mask-image: var(--bc-mask);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-mode: alpha;
+  mask-mode: alpha;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.28));
+  will-change: background-position;
+}
+
+@keyframes bc-foil-shift {
+  from {
+    background-position:
+      var(--foil-x, 50%) var(--foil-y, 50%),
+      8% 40%;
+  }
+  to {
+    background-position:
+      var(--foil-x, 50%) var(--foil-y, 50%),
+      88% 60%;
+  }
+}
+
 .bc-face-inner {
   position: relative;
   z-index: 2;
@@ -427,82 +522,53 @@ const businessCardCss = `
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: clamp(0.45rem, 1.8vw, 0.85rem);
-  padding: clamp(0.9rem, 3vw, 1.5rem) clamp(1rem, 3.2vw, 1.75rem);
+  gap: clamp(0.35rem, 1.4vw, 0.7rem);
+  padding: clamp(0.55rem, 2vw, 1rem) clamp(0.7rem, 2.4vw, 1.2rem);
   text-align: center;
   box-sizing: border-box;
 }
 
 .bc-face-inner-front {
   justify-content: center;
-  gap: clamp(0.55rem, 2vw, 1rem);
+  gap: clamp(0.4rem, 1.6vw, 0.75rem);
 }
 
 .bc-brand {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.2rem;
+  gap: clamp(0.05rem, 0.6vw, 0.2rem);
   flex-shrink: 0;
+  width: min(78%, 340px);
 }
 
-.bc-crest-wrap {
-  position: relative;
-  width: clamp(72px, 18vw, 118px);
-  height: clamp(72px, 18vw, 118px);
+.bc-foil-crest {
+  width: min(100%, clamp(118px, 30vw, 178px));
+  aspect-ratio: 710.72 / 611.16;
 }
 
-.bc-crest {
-  display: block;
-  width: 100% !important;
-  height: 100% !important;
-  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.3));
-}
-
-.bc-crest-sheen {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle at var(--foil-x, 50%) var(--foil-y, 50%),
-    rgba(253, 235, 131, 0.55) 0%,
-    rgba(253, 218, 116, 0.28) 22%,
-    transparent 48%
-  );
-  mix-blend-mode: soft-light;
-  pointer-events: none;
-  animation: bc-sheen-pulse 4.5s ease-in-out infinite alternate;
-}
-
-.bc-wordmark {
-  margin: 0;
-  font-family: "Cormorant Garamond", "Times New Roman", Georgia, serif;
-  font-style: italic;
-  font-weight: 600;
-  font-size: clamp(1.35rem, 4.2vw, 2rem);
-  letter-spacing: 0.06em;
-  line-height: 1.1;
-  background: linear-gradient(115deg, var(--bc-foil-1), var(--bc-foil-2) 40%, var(--bc-foil-3));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+.bc-foil-wordmark {
+  width: min(92%, clamp(160px, 42vw, 250px));
+  aspect-ratio: 298 / 61;
+  margin-top: -0.05rem;
 }
 
 .bc-front-copy {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.35rem;
+  width: 100%;
   max-width: 100%;
 }
 
 .bc-headline {
   margin: 0;
-  font-size: clamp(0.85rem, 2.8vw, 1.25rem);
+  font-size: clamp(0.95rem, 3.1vw, 1.4rem);
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  line-height: 1.25;
+  line-height: 1.2;
   max-width: 100%;
   color: rgba(255, 255, 255, 0.96);
 }
@@ -510,16 +576,16 @@ const businessCardCss = `
 .bc-keywords {
   margin: 0;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: center;
-  row-gap: 0.3rem;
-  column-gap: clamp(0.55rem, 1.8vw, 1rem);
-  font-size: clamp(0.52rem, 1.5vw, 0.72rem);
+  gap: clamp(0.4rem, 1.5vw, 0.85rem);
+  font-size: clamp(0.5rem, 1.45vw, 0.78rem);
   font-weight: 500;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.82);
-  max-width: 92%;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .bc-keywords span {
@@ -531,10 +597,10 @@ const businessCardCss = `
   z-index: 2;
   height: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) auto;
+  grid-template-columns: minmax(0, 1.35fr) auto;
   align-items: center;
-  gap: clamp(0.75rem, 2.4vw, 1.35rem);
-  padding: clamp(0.95rem, 2.8vw, 1.45rem) clamp(1.1rem, 3.2vw, 1.65rem);
+  gap: clamp(0.65rem, 2.2vw, 1.25rem);
+  padding: clamp(0.65rem, 2.2vw, 1.15rem) clamp(0.8rem, 2.6vw, 1.35rem);
   box-sizing: border-box;
 }
 
@@ -543,28 +609,22 @@ const businessCardCss = `
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.28rem;
+  gap: 0.22rem;
   min-width: 0;
 }
 
-.bc-offer {
-  margin: 0 0 0.2rem;
-  font-family: "Great Vibes", "Cormorant Garamond", Georgia, cursive;
-  font-size: clamp(1.35rem, 4.2vw, 2.05rem);
-  font-weight: 400;
-  letter-spacing: 0.02em;
-  line-height: 1.15;
-  background: linear-gradient(115deg, var(--bc-foil-1), var(--bc-foil-2) 45%, var(--bc-foil-3));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+.bc-foil-script {
+  width: min(100%, clamp(220px, 52vw, 340px));
+  aspect-ratio: 726 / 75;
+  margin: 0 0 0.15rem;
+  align-self: stretch;
 }
 
 .bc-back-kicker {
-  margin: 0 0 0.15rem;
-  font-size: clamp(0.68rem, 1.9vw, 0.95rem);
+  margin: 0 0 0.1rem;
+  font-size: clamp(0.78rem, 2.15vw, 1.08rem);
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   line-height: 1.25;
   color: rgba(255, 255, 255, 0.96);
@@ -572,16 +632,16 @@ const businessCardCss = `
 
 .bc-back-hint {
   margin: 0;
-  font-size: clamp(0.55rem, 1.45vw, 0.7rem);
+  font-size: clamp(0.58rem, 1.5vw, 0.75rem);
   letter-spacing: 0.04em;
   color: rgba(255, 255, 255, 0.78);
 }
 
 .bc-back-url {
-  margin: 0.05rem 0 0.35rem;
-  font-size: clamp(0.62rem, 1.75vw, 0.92rem);
+  margin: 0.05rem 0 0.3rem;
+  font-size: clamp(0.7rem, 1.9vw, 1rem);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.07em;
   word-break: break-word;
   max-width: 100%;
   color: rgba(255, 255, 255, 0.96);
@@ -601,14 +661,16 @@ const businessCardCss = `
 
 .bc-access-code {
   margin: 0.15rem 0 0;
-  font-size: clamp(0.95rem, 2.6vw, 1.3rem);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: clamp(1rem, 2.8vw, 1.4rem);
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.08em;
   color: rgba(255, 255, 255, 0.98);
+  font-variant-ligatures: none;
 }
 
 .bc-redeem-by {
-  margin: 0.4rem 0 0;
+  margin: 0.35rem 0 0;
   font-size: clamp(0.52rem, 1.4vw, 0.65rem);
   letter-spacing: 0.1em;
   color: rgba(255, 255, 255, 0.72);
@@ -623,35 +685,36 @@ const businessCardCss = `
 
 .bc-qr-frame {
   position: relative;
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 3px;
-  background: linear-gradient(145deg, var(--bc-foil-1), var(--bc-foil-2) 40%, var(--bc-foil-3));
+  background-image:
+    radial-gradient(
+      circle at var(--foil-x, 50%) var(--foil-y, 50%),
+      rgba(255, 248, 210, 0.95) 0%,
+      rgba(253, 235, 131, 0.45) 22%,
+      transparent 48%
+    ),
+    var(--bc-foil-grad);
+  background-size: 160% 160%, 280% 280%;
+  background-position:
+    var(--foil-x, 50%) var(--foil-y, 50%),
+    0% 50%;
+  animation: bc-foil-shift 5.5s ease-in-out infinite alternate;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
 }
 
-.bc-qr-frame .bc-crest-sheen {
-  border-radius: 10px;
-  mix-blend-mode: soft-light;
-  opacity: 0.55;
-}
-
 .bc-qr {
-  width: min(100%, 118px);
+  width: min(100%, clamp(112px, 28vw, 158px));
   aspect-ratio: 1;
-  border-radius: 10px;
+  border-radius: 11px;
   background: #fff;
-  padding: 6px;
+  padding: 7px;
   box-sizing: border-box;
   display: block;
 }
 
 .bc-qr-placeholder {
   background: rgba(255, 255, 255, 0.85);
-}
-
-@keyframes bc-sheen-pulse {
-  from { opacity: 0.45; }
-  to { opacity: 0.9; }
 }
 
 .bc-enter-logo {
@@ -684,68 +747,70 @@ const businessCardCss = `
 
 @media (max-width: 520px) {
   .bc-card-scene.is-landscape {
-    width: min(94vw, 420px);
+    width: min(96vw, 460px);
     aspect-ratio: 1.55 / 1;
   }
 
   .bc-face-inner {
-    gap: 0.4rem;
-    padding: 0.75rem 0.7rem;
+    gap: 0.3rem;
+    padding: 0.5rem 0.55rem;
   }
 
-  .bc-crest-wrap {
-    width: 68px;
-    height: 68px;
+  .bc-brand {
+    width: min(86%, 280px);
   }
 
-  .bc-wordmark {
-    font-size: 1.2rem;
+  .bc-foil-crest {
+    width: min(100%, 118px);
+  }
+
+  .bc-foil-wordmark {
+    width: min(96%, 168px);
   }
 
   .bc-headline {
-    font-size: clamp(0.72rem, 3.2vw, 0.9rem);
-    letter-spacing: 0.1em;
+    font-size: clamp(0.72rem, 3.1vw, 0.92rem);
+    letter-spacing: 0.09em;
   }
 
   .bc-keywords {
-    font-size: clamp(0.46rem, 2vw, 0.58rem);
-    letter-spacing: 0.08em;
-    column-gap: 0.45rem;
-    max-width: 100%;
+    font-size: clamp(0.42rem, 1.9vw, 0.55rem);
+    letter-spacing: 0.06em;
+    gap: 0.32rem;
   }
 
   .bc-back-layout {
-    gap: 0.55rem;
-    padding: 0.7rem 0.7rem;
+    gap: 0.45rem;
+    padding: 0.55rem 0.55rem;
   }
 
-  .bc-offer {
-    font-size: 1.15rem;
+  .bc-foil-script {
+    width: min(100%, 210px);
   }
 
   .bc-back-kicker {
     font-size: 0.62rem;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.09em;
   }
 
   .bc-back-url {
     font-size: 0.58rem;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.05em;
   }
 
   .bc-access-code {
-    font-size: 0.9rem;
-    letter-spacing: 0.1em;
+    font-size: 0.88rem;
+    letter-spacing: 0.06em;
   }
 
   .bc-qr {
-    width: 78px;
-    padding: 4px;
-    border-radius: 7px;
+    width: 92px;
+    padding: 5px;
+    border-radius: 8px;
   }
 
   .bc-qr-frame {
-    border-radius: 9px;
+    border-radius: 10px;
     padding: 2px;
   }
 }
@@ -753,7 +818,8 @@ const businessCardCss = `
 @media (prefers-reduced-motion: reduce) {
   .bc-card,
   .bc-gradient-drift,
-  .bc-crest-sheen,
+  .bc-foil,
+  .bc-qr-frame,
   .bc-enter-logo,
   .bc-enter-copy {
     animation: none !important;

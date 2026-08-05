@@ -1,8 +1,16 @@
-/** MOO gold special-finish plates (print/production assets). Interactive /business-card uses ViselleLogo + CSS instead. */
+/** MOO gold special-finish plates (print/production). */
 export const FOIL_FRONT_SRC = '/bc-foil-front.png';
 export const FOIL_FRONT_MASK_SRC = '/bc-foil-front-mask.png';
 export const FOIL_BACK_SRC = '/bc-foil-back.png';
 export const FOIL_BACK_MASK_SRC = '/bc-foil-back-mask.png';
+
+/**
+ * Interactive /business-card foil silhouettes (alpha masks).
+ * Crest SVG matches product logo paths; wordmark/script cropped from MOO plates.
+ */
+export const BC_CREST_MASK_SRC = '/bc-crest-mask.svg';
+export const BC_WORDMARK_MASK_SRC = '/bc-wordmark-mask.png';
+export const BC_SCRIPT_MASK_SRC = '/bc-script-mask.png';
 
 export const GET_STARTED_DISPLAY = 'VISELLE.NET/GET-STARTED';
 
