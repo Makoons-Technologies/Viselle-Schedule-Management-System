@@ -19,7 +19,7 @@ export function PlanRequiredBanner({
     ? 'This salon needs an active subscription before you can make changes. Ask the organization owner to choose a plan.'
     : isPlatformOwner
       ? 'This organization has no linked subscription — the owner must choose a plan to unlock salon use.'
-      : 'Choose a plan to continue. Your salon is locked until you subscribe with Stripe Checkout.';
+      : 'Choose a plan to continue to use Viselle.';
 
   return (
     <div className="flex shrink-0 flex-wrap items-center justify-center gap-x-3 gap-y-1.5 bg-amber-700 px-4 py-2 text-center text-sm font-medium text-white sm:flex-nowrap sm:justify-between sm:text-left">

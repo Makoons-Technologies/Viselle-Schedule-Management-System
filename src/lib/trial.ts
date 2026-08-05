@@ -69,7 +69,7 @@ export const TRIAL_LOCKED_MESSAGE = 'Subscribe or upgrade to make changes';
 export const TRIAL_SETTINGS_LOCKED_MESSAGE = 'Trial expired — upgrade to access Settings';
 
 /** Toast / copy when the org must pick a paid plan before using the app. */
-export const PLAN_REQUIRED_MESSAGE = 'Choose a plan to continue using Viselle';
+export const PLAN_REQUIRED_MESSAGE = 'Choose a plan to continue to use Viselle.';
 
 /**
  * Spread onto a `<Button>` (or other control) to lock it down when the
