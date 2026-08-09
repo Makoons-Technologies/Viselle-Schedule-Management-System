@@ -430,12 +430,12 @@ const socialCss = `
 
 .soc-offer {
   margin: 0;
-  font-family: "Great Vibes", cursive;
+  font-family: Lobster, cursive;
   font-style: normal;
   font-weight: 400;
   font-size: clamp(1.35rem, 4.4vw, 1.8rem);
   line-height: 1.2;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   background-image: var(--bc-foil-grad);
   background-size: 280% 280%;
   background-position: 0% 50%;
