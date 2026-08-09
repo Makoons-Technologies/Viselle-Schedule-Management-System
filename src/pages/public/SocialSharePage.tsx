@@ -38,13 +38,23 @@ function FoilMasked({
   );
 }
 
+function parseSocialMode(value: string | null): SocialMode | null {
+  if (value === 'story' || value === 'square') return value;
+  return null;
+}
+
 export function SocialSharePage() {
   const [searchParams] = useSearchParams();
   const codeParam = searchParams.get('code') ?? searchParams.get('campaign');
+  const modeParam = parseSocialMode(searchParams.get('mode'));
   const [campaign, setCampaign] = useState<TrialCampaign | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [mode, setMode] = useState<SocialMode>('story');
+  const [mode, setMode] = useState<SocialMode>(() => modeParam ?? 'story');
+
+  useEffect(() => {
+    if (modeParam) setMode(modeParam);
+  }, [modeParam]);
 
   useEffect(() => {
     let cancelled = false;
@@ -155,30 +165,32 @@ export function SocialSharePage() {
                 </p>
               </div>
 
-              <div className="soc-cta">
-                <p className="soc-kicker">Exclusive Beta Access</p>
-                <p className="soc-hint">Scan the QR code or visit</p>
-                <p className="soc-url">{GET_STARTED_DISPLAY}</p>
-                <div className="soc-access">
-                  <p className="soc-access-label">Access Code</p>
-                  <p className="soc-access-code">{loading ? '…' : (code ?? '————')}</p>
+              <div className="soc-footer">
+                <div className="soc-cta">
+                  <p className="soc-kicker">Exclusive Beta Access</p>
+                  <p className="soc-hint">Scan the QR code or visit</p>
+                  <p className="soc-url">{GET_STARTED_DISPLAY}</p>
+                  <div className="soc-access">
+                    <p className="soc-access-label">Access Code</p>
+                    <p className="soc-access-code">{loading ? '…' : (code ?? '————')}</p>
+                  </div>
+                  {redeemBy && <p className="soc-redeem">Redeem by {redeemBy}</p>}
                 </div>
-                {redeemBy && <p className="soc-redeem">Redeem by {redeemBy}</p>}
-              </div>
 
-              <div className="soc-qr-wrap">
-                <div className="soc-qr-frame">
-                  {qrDataUrl ? (
-                    <img
-                      src={qrDataUrl}
-                      alt="QR code to get started with Viselle"
-                      className="soc-qr"
-                      width={320}
-                      height={320}
-                    />
-                  ) : (
-                    <div className="soc-qr soc-qr-placeholder" aria-hidden />
-                  )}
+                <div className="soc-qr-wrap">
+                  <div className="soc-qr-frame">
+                    {qrDataUrl ? (
+                      <img
+                        src={qrDataUrl}
+                        alt="QR code to get started with Viselle"
+                        className="soc-qr"
+                        width={320}
+                        height={320}
+                      />
+                    ) : (
+                      <div className="soc-qr soc-qr-placeholder" aria-hidden />
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -419,13 +431,19 @@ const socialCss = `
 }
 
 .soc-copy,
-.soc-cta {
+.soc-cta,
+.soc-footer {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.3rem;
   max-width: 100%;
   width: 100%;
+}
+
+.soc-footer {
+  gap: clamp(0.45rem, 1.8vw, 0.75rem);
+  flex-shrink: 0;
 }
 
 .soc-offer {
@@ -571,35 +589,102 @@ const socialCss = `
   color: rgba(255, 255, 255, 0.5);
 }
 
+/* Square / feed: brand + offer as one hero, CTA + QR as a compact footer */
 .soc-frame.is-square .soc-content {
-  gap: 0.35rem;
-  padding: clamp(0.85rem, 3vw, 1.2rem);
+  justify-content: center;
+  gap: clamp(0.85rem, 3.2vw, 1.25rem);
+  padding:
+    clamp(1.2rem, 4.4vw, 1.7rem)
+    clamp(1.15rem, 4.2vw, 1.65rem)
+    clamp(1.3rem, 4.8vw, 1.85rem);
+}
+
+.soc-frame.is-square .soc-brand {
+  width: min(68%, 210px);
+  gap: 0.08rem;
 }
 
 .soc-frame.is-square .soc-foil-crest {
-  width: min(100%, clamp(72px, 18vw, 100px));
+  width: min(100%, clamp(82px, 21vw, 112px));
 }
 
 .soc-frame.is-square .soc-foil-wordmark {
-  width: min(92%, clamp(120px, 30vw, 168px));
+  width: min(92%, clamp(132px, 33vw, 180px));
+}
+
+.soc-frame.is-square .soc-copy {
+  flex: 0 0 auto;
+  gap: 0.4rem;
 }
 
 .soc-frame.is-square .soc-offer {
-  font-size: clamp(1.2rem, 3.9vw, 1.55rem);
-  letter-spacing: 0.045em;
+  font-size: clamp(1.45rem, 5vw, 1.95rem);
+  letter-spacing: 0.01em;
+  line-height: 1.12;
 }
 
 .soc-frame.is-square .soc-headline {
-  font-size: clamp(0.82rem, 2.6vw, 1.05rem);
+  font-size: clamp(0.74rem, 2.4vw, 0.92rem);
+  letter-spacing: 0.16em;
 }
 
 .soc-frame.is-square .soc-keywords {
-  font-size: clamp(0.62rem, 2vw, 0.78rem);
-  gap: 0.28rem 0.5rem;
+  display: none;
+}
+
+.soc-frame.is-square .soc-footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: clamp(0.75rem, 2.8vw, 1.1rem);
+  margin-top: clamp(0.1rem, 0.8vw, 0.25rem);
+  text-align: left;
+}
+
+.soc-frame.is-square .soc-cta {
+  align-items: flex-start;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.soc-frame.is-square .soc-kicker {
+  font-size: clamp(0.68rem, 2.15vw, 0.86rem);
+  letter-spacing: 0.11em;
+}
+
+.soc-frame.is-square .soc-hint {
+  display: none;
+}
+
+.soc-frame.is-square .soc-url {
+  margin-top: 0.2rem;
+  font-size: clamp(0.68rem, 2.15vw, 0.84rem);
+  letter-spacing: 0.04em;
+  word-break: break-word;
+}
+
+.soc-frame.is-square .soc-access-label {
+  margin: 0.4rem 0 0;
+  font-size: clamp(0.58rem, 1.7vw, 0.68rem);
+}
+
+.soc-frame.is-square .soc-access-code {
+  margin: 0.1rem 0 0;
+  font-size: clamp(1.05rem, 3.4vw, 1.35rem);
+}
+
+.soc-frame.is-square .soc-redeem {
+  margin: 0.18rem 0 0;
+  font-size: clamp(0.56rem, 1.6vw, 0.68rem);
+}
+
+.soc-frame.is-square .soc-qr-wrap {
+  padding-top: 0;
+  align-self: end;
 }
 
 .soc-frame.is-square .soc-qr-frame {
-  width: clamp(92px, 22vw, 118px);
+  width: clamp(102px, 25vw, 128px);
 }
 
 @media (max-height: 720px) {
