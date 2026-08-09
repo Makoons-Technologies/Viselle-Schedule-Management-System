@@ -17,7 +17,7 @@ import { fetchBusinessCardCampaign } from '@/lib/signup';
 import { cn } from '@/lib/utils';
 import type { TrialCampaign } from '@/types/api';
 
-/** Animated gold foil revealed through a silhouette mask (crest, wordmark, script). */
+/** Gold foil revealed through a silhouette mask; sheen tracks device tilt. */
 function FoilMasked({
   maskSrc,
   tilt,
@@ -473,7 +473,7 @@ const businessCardCss = `
   to { opacity: 1; }
 }
 
-/* Shared metallic foil: silhouette mask + animated gold + tilt highlight */
+/* Shared metallic foil: silhouette mask + gold sheen driven by device tilt */
 .bc-foil {
   display: block;
   flex-shrink: 0;
@@ -489,9 +489,8 @@ const businessCardCss = `
   background-size: 160% 160%, 280% 280%;
   background-position:
     var(--foil-x, 50%) var(--foil-y, 50%),
-    0% 50%;
+    var(--foil-x, 50%) var(--foil-y, 50%);
   background-repeat: no-repeat;
-  animation: bc-foil-shift 5.5s ease-in-out infinite alternate;
   -webkit-mask-image: var(--bc-mask);
   mask-image: var(--bc-mask);
   -webkit-mask-size: contain;
@@ -504,19 +503,6 @@ const businessCardCss = `
   mask-mode: alpha;
   filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.28));
   will-change: background-position;
-}
-
-@keyframes bc-foil-shift {
-  from {
-    background-position:
-      var(--foil-x, 50%) var(--foil-y, 50%),
-      8% 40%;
-  }
-  to {
-    background-position:
-      var(--foil-x, 50%) var(--foil-y, 50%),
-      88% 60%;
-  }
 }
 
 .bc-face-inner {
@@ -622,12 +608,12 @@ const businessCardCss = `
 
 .bc-offer {
   margin: 0;
-  font-family: "Great Vibes", cursive;
+  font-family: Lobster, cursive;
   font-style: normal;
   font-weight: 400;
   font-size: clamp(1.55rem, 4.4vw, 2.25rem);
   line-height: 1.18;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   max-width: 100%;
   background-image:
     radial-gradient(
@@ -641,13 +627,13 @@ const businessCardCss = `
   background-size: 160% 160%, 280% 280%;
   background-position:
     var(--foil-x, 50%) var(--foil-y, 50%),
-    0% 50%;
+    var(--foil-x, 50%) var(--foil-y, 50%);
   background-repeat: no-repeat;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation: bc-foil-shift 5.5s ease-in-out infinite alternate;
   filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.22));
+  will-change: background-position;
 }
 
 .bc-back-kicker {
@@ -744,10 +730,10 @@ const businessCardCss = `
   background-size: 160% 160%, 280% 280%;
   background-position:
     var(--foil-x, 50%) var(--foil-y, 50%),
-    0% 50%;
-  animation: bc-foil-shift 5.5s ease-in-out infinite alternate;
+    var(--foil-x, 50%) var(--foil-y, 50%);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
   overflow: hidden;
+  will-change: background-position;
 }
 
 .bc-qr {
@@ -882,9 +868,6 @@ const businessCardCss = `
 @media (prefers-reduced-motion: reduce) {
   .bc-card,
   .bc-gradient-drift,
-  .bc-foil,
-  .bc-offer,
-  .bc-qr-frame,
   .bc-enter-logo,
   .bc-enter-copy {
     animation: none !important;
