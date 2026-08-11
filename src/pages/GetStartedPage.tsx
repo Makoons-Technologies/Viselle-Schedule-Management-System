@@ -419,12 +419,24 @@ export function GetStartedPage() {
   const committedTrialCodeRef = useRef(committedTrialCode);
   const trialOfferRef = useRef(trialOffer);
   const trialValidateSeq = useRef(0);
+  const formSectionRef = useRef<HTMLDivElement>(null);
   committedTrialCodeRef.current = committedTrialCode;
   trialOfferRef.current = trialOffer;
 
   const { subdomainAddon, customWebsiteAddon } = websiteOptionToAddons(websiteOption);
 
   const currentStep = STEPS[stepIndex].id;
+
+  useEffect(() => {
+    const el = formSectionRef.current;
+    if (!el) return;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // Defer until after paint so layout (mobile cart bar, fonts) is settled.
+    const id = window.requestAnimationFrame(() => {
+      el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [stepIndex]);
 
   useEffect(() => {
     fetchSignupCatalog()
@@ -841,7 +853,10 @@ export function GetStartedPage() {
             })}
           </nav>
 
-          <Card className="border-white/15 bg-white/95 shadow-xl">
+          <Card
+            ref={formSectionRef}
+            className="scroll-mt-6 border-white/15 bg-white/95 shadow-xl"
+          >
             <CardHeader>
               <CardTitle>{STEPS[stepIndex].label}</CardTitle>
               <CardDescription>

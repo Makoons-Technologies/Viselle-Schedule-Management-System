@@ -6,6 +6,16 @@ Versioning: **x.y.z** — patch (z) = unnoticeable unless a bug hits you; minor 
 
 Phases: Viselle is in **beta** (3-month trials). Path: alpha → beta → **GA** (1.0.0+).
 
+## [0.3.0] — 2026-08-11 (beta)
+
+Business card polish, social square redesign, and smoother get-started signup.
+
+### Frontend
+
+- Auto-scroll the get-started form into view when each step loads.
+- Redesign social square mode for a clearer feed composition.
+- Drive business-card foil shine from device tilt only. (#5)
+
 ## [0.2.0] — 2026-08-05 (beta)
 
 Beta polish: business card/social, API docs, contact/releases, trial expiry cron.
