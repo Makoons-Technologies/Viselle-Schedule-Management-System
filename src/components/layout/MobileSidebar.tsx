@@ -34,7 +34,8 @@ export function MobileSidebar() {
           style={panelStyle}
           overlayStyle={overlayStyle}
           className={cn(
-            'flex h-full w-[min(100vw-1rem,18rem)] max-w-xs flex-col gap-0 p-0 touch-pan-y',
+            // Full-bleed sheet under the notch/home indicator; pad content into the safe area.
+            'flex h-full w-[min(100vw-1rem,18rem)] max-w-xs flex-col gap-0 p-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] touch-pan-y',
             panelClassName,
           )}
         >
