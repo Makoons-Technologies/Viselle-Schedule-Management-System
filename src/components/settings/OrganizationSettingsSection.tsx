@@ -29,6 +29,14 @@ type OrgUpdatePayload = {
   smsReminderHoursBefore?: number;
   confirmationRequestsOptIn?: boolean;
   confirmationDaysBefore?: number;
+  staffEmailRemindersOptIn?: boolean;
+  staffSmsRemindersOptIn?: boolean;
+  staffPushRemindersOptIn?: boolean;
+  staffReminderHoursBefore?: number;
+  lowStockAlertsOptIn?: boolean;
+  lowStockAlertEmail?: boolean;
+  lowStockAlertSms?: boolean;
+  lowStockAlertPush?: boolean;
   city?: string | null;
   address?: string | null;
   phone?: string | null;
@@ -330,6 +338,115 @@ export function OrganizationSettingsSection({ orgId }: OrganizationSettingsSecti
                 }}
               />
             </div>
+          </div>
+        </div>
+
+        <div className="space-y-4 border-t border-stone-200 pt-4 dark:border-stone-800">
+          <div>
+            <p className="text-sm font-medium text-stone-900 dark:text-stone-100">
+              Staff &amp; owner reminders
+            </p>
+            <p className={helperTextClass}>
+              Notify the assigned staff member before their appointment (email, SMS, and/or push).
+            </p>
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <Label>Staff email</Label>
+            </div>
+            <Switch
+              checked={org.staffEmailRemindersOptIn ?? true}
+              disabled={!emailPlanEnabled || updateMutation.isPending}
+              onCheckedChange={(v) => updateMutation.mutate({ staffEmailRemindersOptIn: v })}
+            />
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <Label>Staff text (SMS)</Label>
+            </div>
+            <Switch
+              checked={org.staffSmsRemindersOptIn ?? false}
+              disabled={!smsPlanEnabled || updateMutation.isPending}
+              onCheckedChange={(v) => updateMutation.mutate({ staffSmsRemindersOptIn: v })}
+            />
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <Label>Staff push notifications</Label>
+              <p className={helperTextClass}>Requires enabling notifications on each device</p>
+            </div>
+            <Switch
+              checked={org.staffPushRemindersOptIn ?? true}
+              disabled={updateMutation.isPending}
+              onCheckedChange={(v) => updateMutation.mutate({ staffPushRemindersOptIn: v })}
+            />
+          </div>
+          <div>
+            <Label htmlFor="staff-hours">Hours before (staff)</Label>
+            <Input
+              id="staff-hours"
+              key={`staff-hours-${org.staffReminderHoursBefore ?? 1}-${org.updatedAt}`}
+              type="number"
+              min={1}
+              max={168}
+              defaultValue={org.staffReminderHoursBefore ?? 1}
+              disabled={updateMutation.isPending}
+              onBlur={(e) => {
+                const next = Number(e.target.value);
+                if (!Number.isInteger(next) || next < 1 || next > 168) {
+                  toast.error('Staff hours must be between 1 and 168');
+                  e.target.value = String(org.staffReminderHoursBefore ?? 1);
+                  return;
+                }
+                if (next !== (org.staffReminderHoursBefore ?? 1)) {
+                  updateMutation.mutate({ staffReminderHoursBefore: next });
+                }
+              }}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-4 border-t border-stone-200 pt-4 dark:border-stone-800">
+          <div>
+            <p className="text-sm font-medium text-stone-900 dark:text-stone-100">Low stock alerts</p>
+            <p className={helperTextClass}>
+              When inventory crosses a product&apos;s threshold (fixed count and/or % of capacity), notify
+              owners and admins.
+            </p>
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <Label>Enable low stock alerts</Label>
+            <Switch
+              checked={org.lowStockAlertsOptIn ?? true}
+              disabled={updateMutation.isPending}
+              onCheckedChange={(v) => updateMutation.mutate({ lowStockAlertsOptIn: v })}
+            />
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <Label>Email</Label>
+            <Switch
+              checked={org.lowStockAlertEmail ?? true}
+              disabled={!(org.lowStockAlertsOptIn ?? true) || updateMutation.isPending}
+              onCheckedChange={(v) => updateMutation.mutate({ lowStockAlertEmail: v })}
+            />
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <Label>Text (SMS)</Label>
+            <Switch
+              checked={org.lowStockAlertSms ?? false}
+              disabled={
+                !(org.lowStockAlertsOptIn ?? true) || !smsPlanEnabled || updateMutation.isPending
+              }
+              onCheckedChange={(v) => updateMutation.mutate({ lowStockAlertSms: v })}
+            />
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <Label>Push</Label>
+            <Switch
+              checked={org.lowStockAlertPush ?? true}
+              disabled={!(org.lowStockAlertsOptIn ?? true) || updateMutation.isPending}
+              onCheckedChange={(v) => updateMutation.mutate({ lowStockAlertPush: v })}
+            />
           </div>
         </div>
 

@@ -382,7 +382,7 @@ export const orgApi = {
     apiClient
       .patch<{ staffPermissions: StaffPermissions }>(`/organizations/${orgId}/staff-permissions`, data)
       .then((r) => r.data),
-  updateOrganization: (orgId: string, data: Pick<Partial<Organization>, 'name' | 'slug' | 'publicBookingEnabled' | 'batchCheckoutEnabled' | 'emailRemindersOptIn' | 'smsRemindersOptIn' | 'emailReminderHoursBefore' | 'smsReminderHoursBefore' | 'confirmationRequestsOptIn' | 'confirmationDaysBefore' | 'city' | 'address' | 'phone'>) =>
+  updateOrganization: (orgId: string, data: Pick<Partial<Organization>, 'name' | 'slug' | 'publicBookingEnabled' | 'batchCheckoutEnabled' | 'emailRemindersOptIn' | 'smsRemindersOptIn' | 'emailReminderHoursBefore' | 'smsReminderHoursBefore' | 'confirmationRequestsOptIn' | 'confirmationDaysBefore' | 'staffEmailRemindersOptIn' | 'staffSmsRemindersOptIn' | 'staffPushRemindersOptIn' | 'staffReminderHoursBefore' | 'lowStockAlertsOptIn' | 'lowStockAlertEmail' | 'lowStockAlertSms' | 'lowStockAlertPush' | 'city' | 'address' | 'phone'>) =>
     apiClient.patch<{ organization: Organization }>(`/organizations/${orgId}`, data).then((r) => r.data),
   deleteOrganization: (orgId: string) =>
     apiClient.delete<LeaveOrDeleteOrgResponse>(`/organizations/${orgId}`).then((r) => r.data),
@@ -567,6 +567,8 @@ export const orgApi = {
       costCents?: number;
       stockQuantity?: number;
       lowStockThreshold?: number;
+      stockCapacity?: number;
+      lowStockAlertPercent?: number;
       trackInventory?: boolean;
     },
   ) => apiClient.post<{ product: Product }>(`/organizations/${orgId}/products`, data).then((r) => r.data),
@@ -664,4 +666,16 @@ export const appointmentApi = {
 export const scheduleApi = {
   mySchedule: (params?: { startDate?: string; endDate?: string }) =>
     apiClient.get<ScheduleResponse>('/me/schedule', { params }).then((r) => r.data),
+};
+
+export const pushApi = {
+  getVapidPublicKey: () =>
+    apiClient.get<{ publicKey: string }>('/push/vapid-public-key').then((r) => r.data),
+  subscribe: (data: {
+    endpoint: string;
+    keys: { p256dh: string; auth: string };
+    userAgent?: string;
+  }) => apiClient.post('/push/subscriptions', data).then((r) => r.data),
+  unsubscribe: (endpoint: string) =>
+    apiClient.delete('/push/subscriptions', { data: { endpoint } }).then((r) => r.data),
 };

@@ -123,6 +123,14 @@ export interface Organization {
   smsReminderHoursBefore: number;
   confirmationRequestsOptIn: boolean;
   confirmationDaysBefore: number;
+  staffEmailRemindersOptIn?: boolean;
+  staffSmsRemindersOptIn?: boolean;
+  staffPushRemindersOptIn?: boolean;
+  staffReminderHoursBefore?: number;
+  lowStockAlertsOptIn?: boolean;
+  lowStockAlertEmail?: boolean;
+  lowStockAlertSms?: boolean;
+  lowStockAlertPush?: boolean;
   city?: string | null;
   address?: string | null;
   phone?: string | null;
@@ -426,6 +434,9 @@ export interface Product {
   costCents?: number | null;
   stockQuantity: number;
   lowStockThreshold?: number | null;
+  stockCapacity?: number | null;
+  lowStockAlertPercent?: number | null;
+  lowStockNotifiedAt?: string | null;
   trackInventory: boolean;
   isActive: boolean;
   createdAt: string;
