@@ -30,17 +30,13 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-/**
- * Light-card controls only — no dark: variants. The marketing shell often has
- * html.dark, which would otherwise flip inputs/labels to near-white on this card.
- */
 const fieldClass =
-  'w-full rounded-lg border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 caret-stone-900 placeholder:text-stone-500 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500';
+  'w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2.5 text-sm text-white caret-white placeholder:text-white/40 outline-none focus:border-[#fdeb83]/60 focus:ring-2 focus:ring-[#fdeb83]/25';
 
-const labelClass = 'mb-1.5 block text-xs font-medium text-stone-600';
+const labelClass = 'mb-1.5 block text-xs font-medium text-white/70';
 
-const selectLightClass =
-  'h-11 rounded-lg border-stone-300 bg-white text-stone-900 dark:border-stone-300 dark:bg-white dark:text-stone-900';
+const selectTriggerClass =
+  'h-11 rounded-lg border-white/20 bg-white/10 text-white dark:border-white/20 dark:bg-white/10 dark:text-white';
 
 export function ContactPage() {
   const [searchParams] = useSearchParams();
@@ -92,9 +88,9 @@ export function ContactPage() {
           <span>Contact</span>
         </p>
 
-        <div className="mt-6 rounded-2xl border border-white/15 bg-white p-8 text-stone-900 shadow-2xl sm:p-10">
-          <h1 className="text-3xl font-semibold tracking-tight text-stone-900">Contact us</h1>
-          <p className="mt-2 text-[15px] leading-7 text-stone-600">
+        <div className="mt-6 rounded-2xl border border-white/15 bg-white/10 p-8 text-white shadow-none backdrop-blur-sm sm:p-10">
+          <h1 className="text-3xl font-semibold tracking-tight text-white">Contact us</h1>
+          <p className="mt-2 text-[15px] leading-7 text-white/70">
             Tell us about your salon, spa, or studio. We typically reply within one business day. For
             plan changes, sign in and use Settings → Plan.
           </p>
@@ -108,15 +104,15 @@ export function ContactPage() {
                 value={interest}
                 onValueChange={(v) => setValue('interest', v, { shouldValidate: true })}
               >
-                <SelectTrigger id="interest" className={selectLightClass}>
+                <SelectTrigger id="interest" className={selectTriggerClass}>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="border-stone-200 bg-white dark:border-stone-200 dark:bg-white">
+                <SelectContent className="border-white/15 bg-[#1e1b4b] text-white dark:border-white/15 dark:bg-[#1e1b4b]">
                   {interestOptions.map(([value, label]) => (
                     <SelectItem
                       key={value}
                       value={value}
-                      className="text-stone-900 focus:bg-brand-50 dark:text-stone-900 dark:focus:bg-brand-50"
+                      className="text-white focus:bg-white/10 focus:text-white dark:text-white dark:focus:bg-white/10"
                     >
                       {label}
                     </SelectItem>
@@ -131,14 +127,14 @@ export function ContactPage() {
                   Your name
                 </label>
                 <input id="name" className={fieldClass} {...register('name')} />
-                {errors.name && <p className="mt-1 text-xs text-red-600">{errors.name.message}</p>}
+                {errors.name && <p className="mt-1 text-xs text-red-300">{errors.name.message}</p>}
               </div>
               <div>
                 <label className={labelClass} htmlFor="email">
                   Email
                 </label>
                 <input id="email" type="email" className={fieldClass} {...register('email')} />
-                {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>}
+                {errors.email && <p className="mt-1 text-xs text-red-300">{errors.email.message}</p>}
               </div>
             </div>
 
@@ -175,8 +171,9 @@ export function ContactPage() {
             </div>
 
             {businessSlug && (
-              <p className="text-xs text-stone-500">
-                Referring to booking page: <span className="font-mono text-stone-700">{businessSlug}</span>
+              <p className="text-xs text-white/50">
+                Referring to booking page:{' '}
+                <span className="font-mono text-white/80">{businessSlug}</span>
               </p>
             )}
 
@@ -184,9 +181,12 @@ export function ContactPage() {
               <Button type="submit" size="lg" className="w-full sm:w-auto">
                 Send message
               </Button>
-              <p className="mt-3 text-xs text-stone-500">
+              <p className="mt-3 text-xs text-white/50">
                 Opens your email app to{' '}
-                <a href={`mailto:${CONTACT_EMAIL}`} className="font-medium text-brand-700 hover:underline">
+                <a
+                  href={`mailto:${CONTACT_EMAIL}`}
+                  className="font-medium text-[#fdeb83] hover:underline"
+                >
                   {CONTACT_EMAIL}
                 </a>
               </p>
