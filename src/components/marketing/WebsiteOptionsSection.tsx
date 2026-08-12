@@ -79,11 +79,7 @@ export function WebsiteOptionsSection() {
           {WEBSITE_OPTIONS.map((option) => (
             <Card
               key={option.title}
-              className={cn(
-                glassCardClass,
-                (option.variant === 'addon' || option.variant === 'build') &&
-                  'border-brand-300/50 ring-1 ring-brand-400/25',
-              )}
+              className={glassCardClass}
             >
               <CardHeader className="space-y-3">
                 <span
