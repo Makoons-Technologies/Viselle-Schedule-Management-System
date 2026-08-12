@@ -56,15 +56,7 @@ function TierCard({ tier }: { tier: PlanTierMarketing }) {
             );
           })}
         </ul>
-        <Button
-          asChild
-          className={cn(
-            'mt-auto w-full',
-            !tier.highlighted &&
-              'border-white/30 bg-white/5 text-white hover:bg-white/15 hover:text-white',
-          )}
-          variant={tier.highlighted ? 'default' : 'outline'}
-        >
+        <Button asChild variant="default" className="mt-auto w-full">
           <Link to={getStartedPath({ plan: tier.id })}>Get started</Link>
         </Button>
       </CardContent>

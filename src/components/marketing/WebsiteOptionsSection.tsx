@@ -77,10 +77,7 @@ export function WebsiteOptionsSection() {
 
         <div className="mt-12 grid gap-6 sm:grid-cols-2">
           {WEBSITE_OPTIONS.map((option) => (
-            <Card
-              key={option.title}
-              className={glassCardClass}
-            >
+            <Card key={option.title} className={cn(glassCardClass, 'flex h-full flex-col')}>
               <CardHeader className="space-y-3">
                 <span
                   className={
@@ -98,7 +95,7 @@ export function WebsiteOptionsSection() {
                   <CardTitle className="text-lg text-white">{option.title}</CardTitle>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="flex flex-1 flex-col gap-4">
                 <p className="text-sm leading-relaxed text-white/70">{option.description}</p>
                 <ul className="space-y-2 text-sm text-white/80">
                   {option.bullets.map((bullet) => (
@@ -108,16 +105,7 @@ export function WebsiteOptionsSection() {
                     </li>
                   ))}
                 </ul>
-                <Button
-                  asChild
-                  className={cn(
-                    'w-full',
-                    option.variant !== 'included' &&
-                      option.variant !== 'build' &&
-                      'border-white/30 bg-white/5 text-white hover:bg-white/15 hover:text-white',
-                  )}
-                  variant={option.variant === 'included' || option.variant === 'build' ? 'default' : 'outline'}
-                >
+                <Button asChild variant="default" className="mt-auto w-full">
                   <Link to={option.cta.to}>{option.cta.label}</Link>
                 </Button>
               </CardContent>
