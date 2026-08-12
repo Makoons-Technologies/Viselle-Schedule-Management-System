@@ -671,6 +671,19 @@ export const scheduleApi = {
 export const pushApi = {
   getVapidPublicKey: () =>
     apiClient.get<{ publicKey: string }>('/push/vapid-public-key').then((r) => r.data),
+  getStatus: () =>
+    apiClient
+      .get<{
+        configured: boolean;
+        subscriptionCount: number;
+        subscriptions: Array<{
+          id: string;
+          endpointHost: string;
+          userAgent: string | null;
+          createdAt: string;
+        }>;
+      }>('/push/status')
+      .then((r) => r.data),
   subscribe: (data: {
     endpoint: string;
     keys: { p256dh: string; auth: string };
@@ -678,4 +691,14 @@ export const pushApi = {
   }) => apiClient.post('/push/subscriptions', data).then((r) => r.data),
   unsubscribe: (endpoint: string) =>
     apiClient.delete('/push/subscriptions', { data: { endpoint } }).then((r) => r.data),
+  sendTest: () => apiClient.post<{ sent: number; targetUserId: string }>('/push/test').then((r) => r.data),
+  adminSendTest: (data?: { email?: string; title?: string; body?: string }) =>
+    apiClient
+      .post<{
+        sent: number;
+        subscriptionCount: number;
+        targetUserId: string;
+        targetEmail: string;
+      }>('/push/admin-test', data ?? {})
+      .then((r) => r.data),
 };
