@@ -1,7 +1,6 @@
 import { useAuth } from '@/context/AuthContext';
 import { ReferAFriendPanel } from '@/components/layout/ReferAFriendPanel';
 import { SidebarBrand, SidebarNav } from '@/components/layout/SidebarNav';
-import { PoweredByMakoons } from '@/components/common/PoweredByMakoons';
 
 export function Sidebar() {
   const { user } = useAuth();
@@ -18,9 +17,6 @@ export function Sidebar() {
         <div className="mt-auto border-t border-stone-200 pt-4 dark:border-stone-800">
           <ReferAFriendPanel />
         </div>
-      </div>
-      <div className="border-t border-stone-200 px-4 py-3 dark:border-stone-800">
-        <PoweredByMakoons />
       </div>
     </aside>
   );

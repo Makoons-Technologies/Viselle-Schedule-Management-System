@@ -8,7 +8,6 @@ import {
 } from '@/components/layout/ReferAFriendPanel';
 import { SidebarBrand, SidebarNav } from '@/components/layout/SidebarNav';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
-import { PoweredByMakoons } from '@/components/common/PoweredByMakoons';
 import { cn } from '@/lib/utils';
 
 export function MobileSidebar() {
@@ -31,11 +30,16 @@ export function MobileSidebar() {
         <SheetContent
           ref={panelRef}
           side="left"
-          style={panelStyle}
+          style={{
+            ...panelStyle,
+            // Inline top/bottom beat Sheet's inset-y-0 / h-full and any padding merge issues.
+            top: 'env(safe-area-inset-top, 0px)',
+            bottom: 'env(safe-area-inset-bottom, 0px)',
+            height: 'auto',
+          }}
           overlayStyle={overlayStyle}
           className={cn(
-            // Full-bleed sheet under the notch/home indicator; pad content into the safe area.
-            'flex h-full w-[min(100vw-1rem,18rem)] max-w-xs flex-col gap-0 p-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] touch-pan-y',
+            'flex w-[min(100vw-1rem,18rem)] max-w-xs flex-col gap-0 p-0 sm:p-0 touch-pan-y',
             panelClassName,
           )}
         >
@@ -52,9 +56,6 @@ export function MobileSidebar() {
                 }}
               />
             </div>
-          </div>
-          <div className="border-t border-stone-200 px-4 py-3 dark:border-stone-800">
-            <PoweredByMakoons />
           </div>
         </SheetContent>
       </Sheet>
