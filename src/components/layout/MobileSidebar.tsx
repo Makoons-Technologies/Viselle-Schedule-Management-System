@@ -33,10 +33,9 @@ export function MobileSidebar() {
           side="left"
           style={{
             ...panelStyle,
-            // Full-bleed panel; pad content so brand / Powered-by clear the bevel.
-            // Inline padding survives Sheet's default p-4/sm:p-6 merge.
+            // Full-bleed panel; top inset only — footer owns the bottom safe area so
+            // Powered-by can sit lower without leaving a maroon gap under the sheet.
             paddingTop: 'env(safe-area-inset-top, 0px)',
-            paddingBottom: 'env(safe-area-inset-bottom, 0px)',
           }}
           overlayStyle={overlayStyle}
           className={cn(
@@ -58,8 +57,11 @@ export function MobileSidebar() {
               />
             </div>
           </div>
-          <div className="border-t border-stone-200 px-4 py-3 dark:border-stone-800">
-            <PoweredByMakoons />
+          <div
+            className="shrink-0 border-t border-stone-200 px-4 pt-3 text-right dark:border-stone-800"
+            style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
+          >
+            <PoweredByMakoons className="text-right" />
           </div>
         </SheetContent>
       </Sheet>

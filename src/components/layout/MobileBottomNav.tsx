@@ -26,6 +26,10 @@ interface BottomNavItem {
   match: (pathname: string, orgBase: string) => boolean;
 }
 
+/** Opaque fill — translucent white lets the PWA maroon body show through under the home indicator. */
+const bottomNavClassName =
+  'fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-white px-2 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-1 dark:border-stone-800 dark:bg-stone-900 md:hidden';
+
 function BottomNavLink({ item, active }: { item: BottomNavItem; active: boolean }) {
   return (
     <NavLink
@@ -88,10 +92,7 @@ export function MobileBottomNav() {
     ];
 
     return (
-      <nav
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-white/95 px-2 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur-md dark:border-stone-800 dark:bg-stone-900/95 md:hidden"
-        aria-label="Primary navigation"
-      >
+      <nav className={bottomNavClassName} aria-label="Primary navigation">
         <div className="mx-auto flex max-w-lg items-stretch justify-between gap-1">
           {items.map((item) => (
             <BottomNavLink key={item.key} item={item} active={item.match(location.pathname, '')} />
@@ -124,10 +125,7 @@ export function MobileBottomNav() {
     ];
 
     return (
-      <nav
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-white/95 px-2 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur-md dark:border-stone-800 dark:bg-stone-900/95 md:hidden"
-        aria-label="Primary navigation"
-      >
+      <nav className={bottomNavClassName} aria-label="Primary navigation">
         <div className="mx-auto flex max-w-lg items-stretch justify-center gap-1">
           {items.map((item) => (
             <BottomNavLink key={item.key} item={item} active={item.match(location.pathname, platformOrgBase)} />
@@ -163,10 +161,7 @@ export function MobileBottomNav() {
     ];
 
     return (
-      <nav
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-white/95 px-2 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur-md dark:border-stone-800 dark:bg-stone-900/95 md:hidden"
-        aria-label="Primary navigation"
-      >
+      <nav className={bottomNavClassName} aria-label="Primary navigation">
         <div className="mx-auto flex max-w-lg items-stretch justify-center gap-1">
           {items.map((item) => (
             <BottomNavLink key={item.key} item={item} active={item.match(location.pathname, '')} />
@@ -231,10 +226,7 @@ export function MobileBottomNav() {
         ];
 
   return (
-    <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-white/95 px-2 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur-md dark:border-stone-800 dark:bg-stone-900/95 md:hidden"
-      aria-label="Primary navigation"
-    >
+    <nav className={bottomNavClassName} aria-label="Primary navigation">
       <div className="mx-auto flex max-w-lg items-stretch justify-between gap-1">
         {items.map((item) => (
           <BottomNavLink
