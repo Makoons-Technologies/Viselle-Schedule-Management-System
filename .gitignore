@@ -30,3 +30,6 @@ prod.env
 .env.*
 !.env.example
 !.env.staging.example
+
+# Local Vercel link (do not commit)
+.vercel
