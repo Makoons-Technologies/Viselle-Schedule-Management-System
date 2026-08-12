@@ -17,10 +17,11 @@ function AppLayoutContent() {
   }, [location.pathname, close]);
 
   return (
-    <div className="flex h-[100dvh] flex-col overflow-hidden bg-[#0f172a]">
+    // Outer fill matches app chrome so home-indicator gaps are never the PWA maroon body color.
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-stone-50 dark:bg-stone-950">
       {/* Dark band under translucent iOS status bar so icons stay readable */}
       <div className="shrink-0 bg-[#0f172a] pt-[env(safe-area-inset-top)]" aria-hidden />
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-stone-50 dark:bg-stone-950">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <ImpersonationBanner />
         <OrgTrialBanner />
         <div className="flex min-h-0 flex-1 overflow-hidden">
