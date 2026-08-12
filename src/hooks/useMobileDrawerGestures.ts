@@ -4,8 +4,11 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 /** Matches Tailwind `md` — desktop sidebar shows at 768px+. */
 const MOBILE_MAX = '(max-width: 767px)';
 
-/** Left-edge hit zone for open gesture (reduces conflict with page pan / browser back). */
-const EDGE_WIDTH_PX = 20;
+/**
+ * Edge strip where we claim horizontal swipes for the drawer and block the
+ * browser's back/forward navigation gesture (iOS Safari / Chrome).
+ */
+const EDGE_WIDTH_PX = 28;
 const LOCK_AXIS_PX = 8;
 const OPEN_DISTANCE_PX = 56;
 const OPEN_VELOCITY = 0.35;
@@ -34,11 +37,16 @@ export interface MobileDrawerGestures {
   overlayStyle: CSSProperties | undefined;
 }
 
+function isNearHorizontalEdge(clientX: number): boolean {
+  return clientX <= EDGE_WIDTH_PX || clientX >= window.innerWidth - EDGE_WIDTH_PX;
+}
+
 /**
  * Native-feeling mobile drawer gestures:
- * - swipe right from a ~20px left edge to open
+ * - swipe right from a left edge strip to open
  * - drag the open panel left past a threshold (or with velocity) to close
- * Desktop (md+) is a no-op. Overlay tap-to-dismiss stays with Radix Sheet.
+ * Edge touchstarts call preventDefault so the browser does not steal them as
+ * history back/forward. Desktop (md+) is a no-op.
  */
 export function useMobileDrawerGestures(
   open: boolean,
@@ -67,6 +75,21 @@ export function useMobileDrawerGestures(
     setIsDragging(false);
   }, [open]);
 
+  // Prefer CSS containment for trackpad / browsers that honor it for history nav.
+  useEffect(() => {
+    if (!active) return;
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtml = html.style.overscrollBehaviorX;
+    const prevBody = body.style.overscrollBehaviorX;
+    html.style.overscrollBehaviorX = 'none';
+    body.style.overscrollBehaviorX = 'none';
+    return () => {
+      html.style.overscrollBehaviorX = prevHtml;
+      body.style.overscrollBehaviorX = prevBody;
+    };
+  }, [active]);
+
   useEffect(() => {
     if (!active) {
       clearSession();
@@ -77,6 +100,12 @@ export function useMobileDrawerGestures(
       if (event.touches.length !== 1) return;
       const touch = event.touches[0];
       const target = event.target as Node | null;
+      const nearEdge = isNearHorizontalEdge(touch.clientX);
+
+      // iOS 13.4+: preventing default on edge touchstart blocks swipe-back/forward.
+      if (nearEdge && event.cancelable) {
+        event.preventDefault();
+      }
 
       if (openRef.current) {
         const panel = panelRef.current;
@@ -95,6 +124,7 @@ export function useMobileDrawerGestures(
         return;
       }
 
+      // Only the left edge opens the drawer; right edge is blocked above only.
       if (touch.clientX > EDGE_WIDTH_PX) return;
       sessionRef.current = {
         startX: touch.clientX,
@@ -194,7 +224,8 @@ export function useMobileDrawerGestures(
       setIsDragging(false);
     };
 
-    document.addEventListener('touchstart', onTouchStart, { passive: true });
+    // touchstart must be non-passive so edge preventDefault can cancel history gestures.
+    document.addEventListener('touchstart', onTouchStart, { passive: false });
     document.addEventListener('touchmove', onTouchMove, { passive: false });
     document.addEventListener('touchend', onTouchEnd, { passive: true });
     document.addEventListener('touchcancel', onTouchCancel, { passive: true });
