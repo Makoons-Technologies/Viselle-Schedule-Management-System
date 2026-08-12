@@ -17,19 +17,23 @@ function AppLayoutContent() {
   }, [location.pathname, close]);
 
   return (
-    <div className="flex h-[100dvh] flex-col overflow-hidden bg-stone-50 dark:bg-stone-950">
-      <ImpersonationBanner />
-      <OrgTrialBanner />
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        <Sidebar />
-        <MobileSidebar />
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <Topbar />
-          <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 pb-24 sm:p-6 md:pb-6">
-            <Outlet />
-          </main>
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-[#0f172a]">
+      {/* Dark band under translucent iOS status bar so icons stay readable */}
+      <div className="shrink-0 bg-[#0f172a] pt-[env(safe-area-inset-top)]" aria-hidden />
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-stone-50 dark:bg-stone-950">
+        <ImpersonationBanner />
+        <OrgTrialBanner />
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          <Sidebar />
+          <MobileSidebar />
+          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+            <Topbar />
+            <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 pb-24 sm:p-6 md:pb-6">
+              <Outlet />
+            </main>
+          </div>
+          <MobileBottomNav />
         </div>
-        <MobileBottomNav />
       </div>
     </div>
   );

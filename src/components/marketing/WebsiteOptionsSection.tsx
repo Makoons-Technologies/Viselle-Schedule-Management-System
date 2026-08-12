@@ -4,6 +4,7 @@ import { contactPath } from '@/lib/contact';
 import { getStartedPath } from '@/lib/signup';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 const WEBSITE_OPTIONS = [
   {
@@ -52,6 +53,9 @@ const WEBSITE_OPTIONS = [
   },
 ];
 
+const glassCardClass =
+  'border-white/15 bg-white/10 text-white shadow-none backdrop-blur-sm ring-0';
+
 export function WebsiteOptionsSection() {
   return (
     <section id="websites" className="scroll-mt-20 border-y border-white/10 bg-black/15 py-16 sm:py-24">
@@ -75,42 +79,47 @@ export function WebsiteOptionsSection() {
           {WEBSITE_OPTIONS.map((option) => (
             <Card
               key={option.title}
-              className={
-                option.variant === 'addon' || option.variant === 'build'
-                  ? 'border-brand-300 bg-white shadow-sm ring-1 ring-brand-100 dark:border-brand-700 dark:bg-stone-900 dark:ring-brand-900'
-                  : 'border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900'
-              }
+              className={cn(
+                glassCardClass,
+                (option.variant === 'addon' || option.variant === 'build') &&
+                  'border-brand-300/50 ring-1 ring-brand-400/25',
+              )}
             >
               <CardHeader className="space-y-3">
                 <span
                   className={
                     option.variant === 'included'
-                      ? 'inline-flex w-fit rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200'
+                      ? 'inline-flex w-fit rounded-full border border-emerald-300/30 bg-emerald-400/15 px-2.5 py-0.5 text-xs font-medium text-emerald-200'
                       : option.variant === 'addon' || option.variant === 'build'
-                        ? 'inline-flex w-fit rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-900/50 dark:text-brand-200'
-                        : 'inline-flex w-fit rounded-full bg-stone-200 px-2.5 py-0.5 text-xs font-medium text-stone-700 dark:bg-stone-700 dark:text-stone-200'
+                        ? 'inline-flex w-fit rounded-full border border-brand-300/30 bg-brand-400/15 px-2.5 py-0.5 text-xs font-medium text-brand-200'
+                        : 'inline-flex w-fit rounded-full border border-white/20 bg-white/10 px-2.5 py-0.5 text-xs font-medium text-white/80'
                   }
                 >
                   {option.badge}
                 </span>
                 <div className="flex items-center gap-2">
-                  <option.icon className="h-5 w-5 text-brand-600 dark:text-brand-400" />
-                  <CardTitle className="text-lg">{option.title}</CardTitle>
+                  <option.icon className="h-5 w-5 text-[#fdeb83]" />
+                  <CardTitle className="text-lg text-white">{option.title}</CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-sm leading-relaxed text-stone-600 dark:text-stone-300">{option.description}</p>
-                <ul className="space-y-2 text-sm text-stone-700 dark:text-stone-300">
+                <p className="text-sm leading-relaxed text-white/70">{option.description}</p>
+                <ul className="space-y-2 text-sm text-white/80">
                   {option.bullets.map((bullet) => (
                     <li key={bullet} className="flex gap-2">
-                      <span className="text-brand-600 dark:text-brand-400">·</span>
+                      <span className="text-[#fdeb83]">·</span>
                       {bullet}
                     </li>
                   ))}
                 </ul>
                 <Button
                   asChild
-                  className="w-full"
+                  className={cn(
+                    'w-full',
+                    option.variant !== 'included' &&
+                      option.variant !== 'build' &&
+                      'border-white/30 bg-white/5 text-white hover:bg-white/15 hover:text-white',
+                  )}
                   variant={option.variant === 'included' || option.variant === 'build' ? 'default' : 'outline'}
                 >
                   <Link to={option.cta.to}>{option.cta.label}</Link>

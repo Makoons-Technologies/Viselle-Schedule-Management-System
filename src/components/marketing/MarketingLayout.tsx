@@ -9,7 +9,7 @@ const navLinkClassName =
 
 export function MarketingHeader() {
   return (
-    <header className="border-b border-white/10 bg-[#0f172a]/45 backdrop-blur-md">
+    <header className="border-b border-white/10 bg-[#0f172a]/45 pt-[env(safe-area-inset-top)] backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
         <Link to="/" className="flex items-center gap-2.5">
           <ViselleLogo size={36} />
