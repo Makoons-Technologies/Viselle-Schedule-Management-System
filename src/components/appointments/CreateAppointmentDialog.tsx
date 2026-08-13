@@ -11,10 +11,11 @@ import {
   findExistingCustomerMatch,
   getCustomerFieldChanges,
 } from '@/lib/customers';
-import { formatDateTime, getDayOfWeekFromIso, todayDateOnlyLocal, filterFutureAppointmentSlots } from '@/lib/utils';
+import { cn, formatDateTime, getDayOfWeekFromIso, todayDateOnlyLocal, filterFutureAppointmentSlots } from '@/lib/utils';
 import { TRIAL_LOCKED_MESSAGE } from '@/lib/trial';
 import type { Customer, RecurringFrequency } from '@/types/api';
 import { CustomerAutocompleteFields } from '@/components/appointments/CustomerAutocompleteFields';
+import { SmsOptInCheckbox } from '@/components/booking/SmsOptInCheckbox';
 import { CustomerServiceNoteHistory } from '@/components/appointments/CustomerServiceNoteHistory';
 import { RecurringOptionsFields } from '@/components/appointments/RecurringOptionsFields';
 import {
@@ -104,6 +105,7 @@ export function CreateAppointmentDialog({
   const [endDate, setEndDate] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [mergeConfirm, setMergeConfirm] = useState<MergeConfirmState | null>(null);
+  const [smsOptIn, setSmsOptIn] = useState(false);
 
   const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -156,6 +158,13 @@ export function CreateAppointmentDialog({
     enabled: open,
   });
 
+  const { data: orgData } = useQuery({
+    queryKey: ['organization', orgId],
+    queryFn: () => orgApi.getOrganization(orgId),
+    enabled: open,
+  });
+  const org = orgData?.organization;
+
   const customers = customersData?.customers ?? [];
 
   const { data: slotsData, isLoading: slotsLoading } = useQuery({
@@ -196,6 +205,7 @@ export function CreateAppointmentDialog({
     setEndDate('');
     setSelectedCustomerId(null);
     setMergeConfirm(null);
+    setSmsOptIn(false);
     resetSchedule([], {});
     reset({ date: initialDate });
   }, [open, resetSchedule, reset, initialDate]);
@@ -237,7 +247,8 @@ export function CreateAppointmentDialog({
       withRecurring,
       customerId,
       updateCustomer,
-    }: PendingSubmit & { customerId?: string; updateCustomer?: boolean }) => {
+      smsOptIn: optedIn,
+    }: PendingSubmit & { customerId?: string; updateCustomer?: boolean; smsOptIn?: boolean }) => {
       if (customerId && updateCustomer) {
         await orgApi.updateCustomer(orgId, customerId, {
           firstName: data.firstName,
@@ -263,6 +274,7 @@ export function CreateAppointmentDialog({
         startTime: data.startTime,
         timezone: DEFAULT_TIMEZONE,
         appointmentNotes: data.appointmentNotes,
+        smsOptIn: optedIn || undefined,
       });
 
       if (withRecurring) {
@@ -299,7 +311,7 @@ export function CreateAppointmentDialog({
     customerId?: string,
     updateCustomer = false,
   ) => {
-    mutation.mutate({ ...pending, customerId, updateCustomer });
+    mutation.mutate({ ...pending, customerId, updateCustomer, smsOptIn });
   };
 
   const handleCreate = (pending: PendingSubmit) => {
@@ -436,6 +448,25 @@ export function CreateAppointmentDialog({
                 email: errors.email?.message,
               }}
             />
+            {Boolean(plan?.smsRemindersEnabled && org?.smsRemindersOptIn) &&
+              phone.trim().length > 0 &&
+              !(
+                (selectedCustomerId && customers.find((c) => c.id === selectedCustomerId)?.smsOptInAt) ||
+                findExistingCustomerMatch(customers, { email, phone })?.customer.smsOptInAt
+              ) && (
+                <div className="rounded-lg border border-stone-200 px-3 py-3 dark:border-stone-700 dark:bg-stone-800/40">
+                  <SmsOptInCheckbox
+                    brandName={org?.name ?? 'this business'}
+                    checked={smsOptIn}
+                    onCheckedChange={setSmsOptIn}
+                    id="staff-sms-opt-in"
+                    textClassName="text-stone-600 dark:text-stone-300"
+                  />
+                  <p className={cn(helperTextClass, 'mt-2')}>
+                    Optional for staff booking. If they do not opt in, they will not receive appointment texts.
+                  </p>
+                </div>
+              )}
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>

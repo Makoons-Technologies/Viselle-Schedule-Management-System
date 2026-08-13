@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
 import { orgApi } from '@/lib/api';
+import { AddToHomeScreenCard } from '@/components/settings/AddToHomeScreenCard';
 import { OrgDangerZone } from '@/components/settings/OrgDangerZone';
 import { PushNotificationsCard } from '@/components/settings/PushNotificationsCard';
 import { LoadingState } from '@/components/common/LoadingState';
@@ -33,6 +34,7 @@ export function AccountSettingsPage() {
           Manage your membership in {data?.organization.name ?? 'this organization'}.
         </p>
       </div>
+      <AddToHomeScreenCard />
       <PushNotificationsCard />
       <OrgDangerZone orgId={orgId} orgName={data?.organization.name} />
     </div>

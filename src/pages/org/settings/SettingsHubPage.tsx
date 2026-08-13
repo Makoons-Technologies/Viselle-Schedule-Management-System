@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { ChevronRight, Smartphone } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { AddToHomeScreenDialog } from '@/components/settings/AddToHomeScreenDialog';
@@ -21,16 +20,13 @@ export function SettingsHubPage() {
     showAdminSettings: showAdmin,
     showStaffPermissions,
   });
-  const { showRow, canPrompt, platform, promptInstall } = useAddToHomeScreen();
-  const [instructionsOpen, setInstructionsOpen] = useState(false);
-
-  async function handleAddToHomeScreen() {
-    if (canPrompt) {
-      const outcome = await promptInstall();
-      if (outcome !== 'unavailable') return;
-    }
-    setInstructionsOpen(true);
-  }
+  const {
+    showRow,
+    platform,
+    handleAddToHomeScreen,
+    instructionsOpen,
+    setInstructionsOpen,
+  } = useAddToHomeScreen();
 
   return (
     <div className="mx-auto max-w-lg">

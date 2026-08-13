@@ -8,6 +8,8 @@ import { SetPasswordPage } from '@/pages/SetPasswordPage';
 import { LandingPage } from '@/pages/LandingPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { ContactPage } from '@/pages/public/ContactPage';
+import { PrivacyPage } from '@/pages/public/PrivacyPage';
+import { TermsPage } from '@/pages/public/TermsPage';
 import { PublicApiDocsPage } from '@/pages/public/PublicApiDocsPage';
 import { ReleasesPage } from '@/pages/public/ReleasesPage';
 import { BusinessCardPage } from '@/pages/public/BusinessCardPage';
@@ -79,6 +81,9 @@ function ProtectedRoute({ roles }: { roles?: UserRole[] }) {
 export const appRoutes = [
   { path: '/', element: <LandingPage /> },
   { path: '/contact', element: <ContactPage /> },
+  { path: '/privacy', element: <PrivacyPage /> },
+  { path: '/terms', element: <TermsPage /> },
+  { path: '/terms-and-conditions', element: <Navigate to="/terms" replace /> },
   { path: '/docs/api', element: <PublicApiDocsPage /> },
   { path: '/releases', element: <ReleasesPage /> },
   { path: '/business-card', element: <BusinessCardPage /> },

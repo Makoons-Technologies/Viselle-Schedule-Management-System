@@ -7,6 +7,7 @@ export interface PublicOrganization {
   name: string;
   slug: string;
   publicBookingEnabled: boolean;
+  smsRemindersEnabled?: boolean;
   city?: string | null;
   address?: string | null;
   phone?: string | null;
@@ -99,6 +100,10 @@ export interface BookAppointmentResponse {
 export const publicBookingApi = {
   getOrganization: (slug: string) =>
     apiClient.get<{ organization: PublicOrganization }>(`/public/organizations/${slug}`).then((r) => r.data),
+  getSmsConsent: (slug: string, params: { email?: string; phone?: string }) =>
+    apiClient
+      .get<{ smsConsented: boolean }>(`/public/organizations/${slug}/sms-consent`, { params })
+      .then((r) => r.data),
   getServices: (slug: string) =>
     apiClient.get<{ services: Service[] }>(`/public/organizations/${slug}/services`).then((r) => r.data),
   getAccounts: (slug: string) =>
@@ -124,6 +129,7 @@ export const publicBookingApi = {
       startTime: string;
       timezone: string;
       appointmentNotes?: string;
+      smsOptIn?: boolean;
     },
   ) =>
     apiClient

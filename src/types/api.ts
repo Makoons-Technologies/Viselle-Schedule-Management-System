@@ -367,6 +367,7 @@ export interface Customer {
   lastName: string;
   email?: string | null;
   phone?: string | null;
+  smsOptInAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -638,6 +639,7 @@ export interface CreateAppointmentInput {
   startTime: string;
   timezone: string;
   appointmentNotes?: string;
+  smsOptIn?: boolean;
 }
 
 export interface CreateAccountInput {

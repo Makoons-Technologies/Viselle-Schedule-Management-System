@@ -5,17 +5,20 @@ import { useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { orgApi } from '@/lib/api';
 import { APPOINTMENT_CALENDAR_LIP_CLASS, APPOINTMENT_CALENDAR_LIP_LABEL } from '@/lib/appointment-status';
-import { cn } from '@/lib/utils';
+import { cn, formatTimeRange } from '@/lib/utils';
 import { TRIAL_LOCKED_MESSAGE } from '@/lib/trial';
+import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
 import { filterOutCancelled, useHideCancelledAppointments } from '@/hooks/useHideCancelledAppointments';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { useMyAppointmentsOnly } from '@/hooks/useMyAppointmentsOnly';
 import { useStaffPermissions } from '@/hooks/useStaffPermissions';
 import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { AppointmentDetailSheet } from '@/components/appointments/AppointmentDetailSheet';
 import { BatchCheckoutSheet, type BatchCheckoutItem } from '@/components/appointments/BatchCheckoutSheet';
 import { CreateAppointmentDialog } from '@/components/appointments/CreateAppointmentDialog';
 import { HideCancelledToggle } from '@/components/appointments/HideCancelledToggle';
-import { FollowSystemToggle } from '@/components/calendar/FollowSystemToggle';
+import { MyAppointmentsOnlyToggle } from '@/components/calendar/MyAppointmentsOnlyToggle';
 import { StaffScheduleFilter } from '@/components/calendar/StaffScheduleFilter';
 import { WeekAppointmentTimeGrid } from '@/components/calendar/WeekAppointmentTimeGrid';
 import { CalendarAppointmentChip } from '@/components/calendar/CalendarAppointmentChip';
@@ -42,9 +45,13 @@ function formatZoomLabel(dayKeys: string[]): string {
 
 export function CalendarPage() {
   const orgId = useOrgId();
+  const { user, memberships } = useAuth();
   const { permissions } = useStaffPermissions(orgId);
   const trialExpired = useOrgWriteLocked();
   const queryClient = useQueryClient();
+  /** Matches Tailwind `md` — same breakpoint as mobile bottom nav. */
+  const isMobile = useMediaQuery('(max-width: 767px)');
+  const { myAppointmentsOnly, setMyAppointmentsOnly } = useMyAppointmentsOnly();
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 0 }));
   const [selectedAppointment, setSelectedAppointment] = useState<{
     id: string;
@@ -52,7 +59,7 @@ export function CalendarPage() {
   } | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [createDefaultDate, setCreateDefaultDate] = useState<string | undefined>(undefined);
-  /** null = default all staff selected once accounts load */
+  /** null = default all staff selected once accounts load (desktop picker). */
   const [selectedStaffIds, setSelectedStaffIds] = useState<string[] | null>(null);
   const [selectMode, setSelectMode] = useState(false);
   const [batchSelection, setBatchSelection] = useState<Record<string, BatchCheckoutItem>>({});
@@ -125,6 +132,11 @@ export function CalendarPage() {
     return staffAccounts.map((account) => account.id);
   }, [selectedStaffIds, staffAccounts]);
 
+  const myAccountId = useMemo(() => {
+    if (user?.accountId) return user.accountId;
+    return memberships.find((membership) => membership.organizationId === orgId)?.accountId ?? null;
+  }, [user?.accountId, memberships, orgId]);
+
   const activeRecurringRuleIds = useMemo(
     () =>
       new Set(
@@ -145,11 +157,33 @@ export function CalendarPage() {
     [servicesData],
   );
 
+  const accountsById = useMemo(
+    () => Object.fromEntries((accountsData?.accounts ?? []).map((account) => [account.id, account])),
+    [accountsData],
+  );
+
   const appointments = useMemo(() => {
-    const selected = new Set(resolvedStaffIds);
-    const list = (data?.appointments ?? []).filter((appt) => selected.has(appt.accountId));
-    return filterOutCancelled(list, hideCancelled);
-  }, [data?.appointments, resolvedStaffIds, hideCancelled]);
+    const list = data?.appointments ?? [];
+    let filtered = list;
+    if (isMobile) {
+      // Filter by the logged-in account id directly so own appointments still
+      // render even when that account is missing from the bookable staff list.
+      if (myAppointmentsOnly && myAccountId) {
+        filtered = list.filter((appt) => appt.accountId === myAccountId);
+      }
+    } else {
+      const selected = new Set(resolvedStaffIds);
+      filtered = list.filter((appt) => selected.has(appt.accountId));
+    }
+    return filterOutCancelled(filtered, hideCancelled);
+  }, [
+    data?.appointments,
+    hideCancelled,
+    isMobile,
+    myAccountId,
+    myAppointmentsOnly,
+    resolvedStaffIds,
+  ]);
 
   const selectedItems = useMemo(() => Object.values(batchSelection), [batchSelection]);
 
@@ -263,9 +297,11 @@ export function CalendarPage() {
               ? zoomedDayKeys.length === 1
                 ? 'Focused day view — show full week to zoom out'
                 : `Focused ${zoomedDayKeys.length}-day view — show full week to zoom out`
-              : resolvedStaffIds.length === staffAccounts.length && staffAccounts.length > 0
-                ? 'Week view of all appointments — tap day headers to zoom'
-                : 'Week view of selected schedules — tap day headers to zoom'
+              : isMobile && myAppointmentsOnly
+                ? 'Week view of your appointments — tap day headers to zoom'
+                : isMobile || (resolvedStaffIds.length === staffAccounts.length && staffAccounts.length > 0)
+                  ? 'Week view of all appointments — tap day headers to zoom'
+                  : 'Week view of selected schedules — tap day headers to zoom'
         }
         actions={
           <div className="flex items-center gap-2">
@@ -312,13 +348,20 @@ export function CalendarPage() {
         onNext={() => changeWeek(addDays(weekStart, 7))}
         leading={
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <StaffScheduleFilter
-              accounts={staffAccounts}
-              selectedIds={resolvedStaffIds}
-              onSelectedIdsChange={setSelectedStaffIds}
-            />
+            <div className="md:hidden">
+              <MyAppointmentsOnlyToggle
+                checked={myAppointmentsOnly}
+                onCheckedChange={setMyAppointmentsOnly}
+              />
+            </div>
+            <div className="hidden md:block">
+              <StaffScheduleFilter
+                accounts={staffAccounts}
+                selectedIds={resolvedStaffIds}
+                onSelectedIdsChange={setSelectedStaffIds}
+              />
+            </div>
             <HideCancelledToggle checked={hideCancelled} onCheckedChange={setHideCancelled} />
-            <FollowSystemToggle />
           </div>
         }
         trailing={
@@ -384,13 +427,29 @@ export function CalendarPage() {
               }
             : undefined
         }
-        renderAppointment={(appt, stack) => {
+        renderAppointment={(appt, stack, heightRem) => {
           const customer = customersById[appt.customerId];
           const customerName = customer
             ? `${customer.firstName} ${customer.lastName}`.trim()
             : 'Client';
           const serviceName = servicesById[appt.serviceId]?.name ?? 'Service';
+          const account = accountsById[appt.accountId];
+          const providerName = account
+            ? `${account.firstName} ${account.lastName}`.trim()
+            : '';
+          const isRecurring =
+            !!appt.recurringAppointmentRuleId &&
+            activeRecurringRuleIds.has(appt.recurringAppointmentRuleId);
           const checkoutEligible = appt.visitStatus === 'arrived' && appt.paymentStatus === 'unpaid';
+          const title = [
+            customerName,
+            providerName,
+            serviceName,
+            formatTimeRange(appt.startTime, appt.endTime),
+            isRecurring ? 'recurring' : '',
+          ]
+            .filter(Boolean)
+            .join(' — ');
 
           return (
             <CalendarAppointmentChip
@@ -398,16 +457,9 @@ export function CalendarPage() {
               serviceName={serviceName}
               visitStatus={appt.visitStatus}
               paymentStatus={appt.paymentStatus}
-              isRecurring={
-                !!appt.recurringAppointmentRuleId &&
-                activeRecurringRuleIds.has(appt.recurringAppointmentRuleId)
-              }
-              title={
-                appt.recurringAppointmentRuleId &&
-                activeRecurringRuleIds.has(appt.recurringAppointmentRuleId)
-                  ? `${customerName} — ${serviceName} — recurring`
-                  : `${customerName} — ${serviceName}`
-              }
+              isRecurring={isRecurring}
+              title={title}
+              heightRem={heightRem}
               stackInset={!!stack && stack.isFront}
               selectMode={selectMode}
               selected={!!batchSelection[appt.id]}

@@ -61,6 +61,12 @@ export function MarketingFooter() {
           <Link to="/releases" className="text-brand-300 hover:text-brand-200">
             Release notes
           </Link>
+          <Link to="/privacy" className="text-brand-300 hover:text-brand-200">
+            Privacy
+          </Link>
+          <Link to="/terms" className="text-brand-300 hover:text-brand-200">
+            Terms
+          </Link>
           <Link to="/contact" className="text-brand-300 hover:text-brand-200">
             Contact us
           </Link>

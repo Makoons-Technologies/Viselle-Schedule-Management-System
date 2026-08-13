@@ -3,6 +3,19 @@ import type { PaymentStatus, VisitStatus } from '@/types/api';
 import { getAppointmentCalendarLipClass, getAppointmentCalendarLipLabel } from '@/lib/appointment-status';
 import { cn } from '@/lib/utils';
 
+/** Matches `SLOT_HEIGHT_REM` (one 30-minute row) when the grid does not pass height. */
+export const DEFAULT_CHIP_HEIGHT_REM = 4;
+
+export type CalendarChipDensity = 'compact' | 'short' | 'medium' | 'tall';
+
+/** Progressive disclosure by slot height. 30-minute cells are 4rem. */
+export function calendarChipDensity(heightRem: number): CalendarChipDensity {
+  if (heightRem < 2.5) return 'compact';
+  if (heightRem < 5.25) return 'short';
+  if (heightRem < 7.25) return 'medium';
+  return 'tall';
+}
+
 interface CalendarAppointmentChipProps {
   customerName: string;
   serviceName: string;
@@ -18,6 +31,8 @@ interface CalendarAppointmentChipProps {
   selectable?: boolean;
   /** Right padding so the vertical stack rail does not cover title/service text. */
   stackInset?: boolean;
+  /** Visual height of the block in rem (from the week/day grid). */
+  heightRem?: number;
 }
 
 export function CalendarAppointmentChip({
@@ -32,10 +47,16 @@ export function CalendarAppointmentChip({
   selected = false,
   selectable = true,
   stackInset = false,
+  heightRem = DEFAULT_CHIP_HEIGHT_REM,
 }: CalendarAppointmentChipProps) {
   const lipClass = getAppointmentCalendarLipClass(visitStatus, paymentStatus);
   const lipLabel = getAppointmentCalendarLipLabel(visitStatus, paymentStatus);
   const disabled = selectMode && !selectable;
+  const density = calendarChipDensity(heightRem);
+  const showService = density !== 'compact';
+  const showRecurring = Boolean(isRecurring) && (density === 'medium' || density === 'tall');
+  const nameMultiline = density === 'medium' || density === 'tall';
+  const serviceMultiline = density === 'tall';
 
   return (
     <button
@@ -45,7 +66,7 @@ export function CalendarAppointmentChip({
       disabled={disabled}
       aria-pressed={selectMode ? selected : undefined}
       className={cn(
-        'relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-md border text-left shadow-sm transition',
+        'relative flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden rounded-md border text-left shadow-sm transition',
         selected
           ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-200 dark:bg-brand-950/40 dark:ring-brand-800'
           : 'border-stone-200 bg-white dark:border-stone-600 dark:bg-stone-800',
@@ -54,6 +75,11 @@ export function CalendarAppointmentChip({
           : 'hover:border-stone-300 hover:shadow dark:hover:border-stone-500',
       )}
     >
+      <span
+        className={cn('pointer-events-none absolute inset-y-0 left-0 z-[1] w-1', lipClass)}
+        aria-hidden
+      />
+      <span className="sr-only">{lipLabel}</span>
       {selectMode && !disabled && (
         <span
           className={cn(
@@ -69,24 +95,35 @@ export function CalendarAppointmentChip({
       )}
       <div
         className={cn(
-          'flex min-h-0 flex-1 flex-col justify-center gap-0.5 overflow-hidden py-1.5 sm:gap-1',
-          stackInset ? 'pl-1.5 pr-8 sm:pl-2' : 'px-1.5 sm:px-2',
+          'flex min-h-0 min-w-0 flex-1 flex-col justify-center overflow-hidden',
+          density === 'compact' ? 'gap-0 py-0.5' : 'gap-0.5 py-1',
+          stackInset ? 'pl-2.5 pr-8' : 'pl-2.5 pr-1.5 sm:pr-2',
         )}
       >
-        <span className="line-clamp-2 min-w-0 text-[11px] font-medium leading-snug text-stone-900 [overflow-wrap:anywhere] dark:text-stone-100 sm:text-xs">
+        <span
+          className={cn(
+            'min-w-0 text-[11px] font-semibold leading-tight text-stone-900 dark:text-white sm:text-xs',
+            nameMultiline ? 'line-clamp-2 [overflow-wrap:anywhere]' : 'truncate',
+          )}
+        >
           {customerName}
         </span>
-        <span className="line-clamp-2 min-w-0 text-[10px] leading-snug text-stone-600 [overflow-wrap:anywhere] dark:text-stone-300 sm:text-[11px]">
-          {serviceName}
-        </span>
-        {isRecurring ? (
-          <span className="line-clamp-1 min-w-0 text-[9px] font-medium text-brand-600 [overflow-wrap:anywhere] dark:text-brand-400 sm:text-[10px]">
+        {showService ? (
+          <span
+            className={cn(
+              'min-w-0 text-[10px] leading-tight text-stone-600 dark:text-stone-200 sm:text-[11px]',
+              serviceMultiline ? 'line-clamp-2 [overflow-wrap:anywhere]' : 'truncate',
+            )}
+          >
+            {serviceName}
+          </span>
+        ) : null}
+        {showRecurring ? (
+          <span className="min-w-0 truncate text-[9px] font-medium text-brand-600 dark:text-brand-300 sm:text-[10px]">
             Recurring
           </span>
         ) : null}
       </div>
-      <div className={cn('h-1 w-full shrink-0', lipClass)} aria-hidden />
-      <span className="sr-only">{lipLabel}</span>
     </button>
   );
 }

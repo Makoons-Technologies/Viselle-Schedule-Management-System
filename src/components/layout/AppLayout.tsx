@@ -1,6 +1,7 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 import { MobileNavProvider, useMobileNav } from '@/context/MobileNavContext';
+import { AddToHomeScreenBanner } from '@/components/layout/AddToHomeScreenBanner';
 import { ImpersonationBanner } from '@/components/layout/ImpersonationBanner';
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
 import { MobileSidebar } from '@/components/layout/MobileSidebar';
@@ -24,6 +25,7 @@ function AppLayoutContent() {
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <ImpersonationBanner />
         <OrgTrialBanner />
+        <AddToHomeScreenBanner />
         <div className="flex min-h-0 flex-1 overflow-hidden">
           <Sidebar />
           <MobileSidebar />
