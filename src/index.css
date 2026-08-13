@@ -74,7 +74,10 @@
   /* Keep autofilled fields readable in light and dark themes */
   input:-webkit-autofill,
   input:-webkit-autofill:hover,
-  input:-webkit-autofill:focus {
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  textarea:-webkit-autofill:focus {
     -webkit-text-fill-color: #1c1917;
     caret-color: #1c1917;
     box-shadow: 0 0 0 1000px #ffffff inset;
@@ -83,9 +86,58 @@
 
   html.dark input:-webkit-autofill,
   html.dark input:-webkit-autofill:hover,
-  html.dark input:-webkit-autofill:focus {
+  html.dark input:-webkit-autofill:focus,
+  html.dark textarea:-webkit-autofill,
+  html.dark textarea:-webkit-autofill:hover,
+  html.dark textarea:-webkit-autofill:focus {
     -webkit-text-fill-color: #f5f5f4;
     caret-color: #f5f5f4;
     box-shadow: 0 0 0 1000px #0c0a09 inset;
+  }
+
+  /*
+   * Public booking is always a light guest UI. Chrome + html.dark / color-scheme:dark
+   * otherwise paints autofill black; selected text then matches the fill and looks blank.
+   * These rules beat html.dark autofill even if the document class briefly remains.
+   */
+  .booking-public {
+    color-scheme: light;
+  }
+
+  html.dark .booking-public input:-webkit-autofill,
+  html.dark .booking-public input:-webkit-autofill:hover,
+  html.dark .booking-public input:-webkit-autofill:focus,
+  html.dark .booking-public textarea:-webkit-autofill,
+  html.dark .booking-public textarea:-webkit-autofill:hover,
+  html.dark .booking-public textarea:-webkit-autofill:focus,
+  .booking-public input:-webkit-autofill,
+  .booking-public input:-webkit-autofill:hover,
+  .booking-public input:-webkit-autofill:focus,
+  .booking-public textarea:-webkit-autofill,
+  .booking-public textarea:-webkit-autofill:hover,
+  .booking-public textarea:-webkit-autofill:focus {
+    -webkit-text-fill-color: #1c1917;
+    caret-color: #1c1917;
+    box-shadow: 0 0 0 1000px #ffffff inset;
+    transition: background-color 99999s ease-in-out 0s;
+  }
+
+  .booking-public input::selection,
+  .booking-public textarea::selection,
+  .booking-public input:-webkit-autofill::selection,
+  .booking-public textarea:-webkit-autofill::selection {
+    background-color: #bfdbfe;
+    color: #1c1917;
+    -webkit-text-fill-color: #1c1917;
+  }
+
+  .booking-public input::-moz-selection,
+  .booking-public textarea::-moz-selection {
+    background-color: #bfdbfe;
+    color: #1c1917;
+  }
+
+  html[data-booking-ui='light'] {
+    color-scheme: light;
   }
 }

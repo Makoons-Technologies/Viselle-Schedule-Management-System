@@ -66,6 +66,26 @@
     </script>
     <script>
       (function () {
+        var path = location.pathname || '';
+        var host = (location.hostname || '').toLowerCase();
+        var bookingPath = path === '/book' || path.indexOf('/book/') === 0;
+        var bookingHost = false;
+        if (host.length > 'viselle.net'.length + 1 && host.slice(-12) === '.viselle.net') {
+          var label = host.slice(0, -12);
+          var reserved = {
+            www: 1, api: 1, 'staging-api': 1, app: 1, admin: 1, dashboard: 1, sites: 1,
+            static: 1, assets: 1, cdn: 1, mail: 1, status: 1, support: 1, help: 1, docs: 1,
+            blog: 1, login: 1, signup: 1, auth: 1, billing: 1, owner: 1, platform: 1,
+            viselle: 1, makoons: 1, book: 1, booking: 1, manage: 1, public: 1, test: 1,
+            staging: 1, prod: 1, production: 1, dev: 1, demo: 1
+          };
+          bookingHost = !!label && label.indexOf('.') === -1 && !reserved[label];
+        }
+        if (bookingPath || bookingHost) {
+          document.documentElement.classList.remove('dark');
+          document.documentElement.style.colorScheme = 'light';
+          return;
+        }
         var key = 'viselle-color-mode';
         var stored = localStorage.getItem(key);
         var dark =

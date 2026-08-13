@@ -3,10 +3,12 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
   type ReactNode,
 } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   applyPlatformTheme,
   PLATFORM_THEMES,
@@ -17,12 +19,15 @@ import {
 import {
   applyResolvedColorMode,
   COLOR_MODE_STORAGE_KEY,
+  isPublicBookingPath,
+  lockLightColorScheme,
   readStoredColorMode,
   resolveColorMode,
   subscribeToSystemColorMode,
   type ColorMode,
   type ResolvedColorMode,
 } from '@/lib/color-mode';
+import { isSubdomainBookingHost } from '@/lib/subdomain-booking';
 
 interface ThemeContextValue {
   themeId: PlatformThemeId;
@@ -36,11 +41,18 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation();
   const [themeId, setThemeIdState] = useState<PlatformThemeId>(() => readStoredThemeId());
   const [colorMode, setColorModeState] = useState<ColorMode>(() => readStoredColorMode());
   const [resolvedColorMode, setResolvedColorMode] = useState<ResolvedColorMode>(() =>
     resolveColorMode(readStoredColorMode()),
   );
+  const forceLightBookingUi = isSubdomainBookingHost() || isPublicBookingPath(pathname);
+
+  useLayoutEffect(() => {
+    if (!forceLightBookingUi) return;
+    return lockLightColorScheme();
+  }, [forceLightBookingUi]);
 
   useEffect(() => {
     applyPlatformTheme(themeId);

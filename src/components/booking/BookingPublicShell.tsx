@@ -46,7 +46,7 @@ export function BookingPublicShell({
 
   return (
     <div
-      className="relative flex min-h-screen flex-col text-[var(--booking-text)]"
+      className="booking-public relative flex min-h-screen flex-col text-[var(--booking-text)]"
       style={{ colorScheme: 'light', ...styleVars, ...(!backgroundImage ? theme.pageStyle : undefined) }}
     >
       {backgroundImage && (
