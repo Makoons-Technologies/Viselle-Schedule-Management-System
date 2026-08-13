@@ -23,6 +23,8 @@ Beauty and wellness businesses — hair salons, spas, nail studios, estheticians
 - Pricing (on home): https://viselle.net/#pricing
 - Booking page options: https://viselle.net/#websites
 - Contact: https://viselle.net/contact
+- Privacy Policy: https://www.viselle.net/privacy
+- Terms & Conditions: https://www.viselle.net/terms
 - Public booking API docs: https://viselle.net/docs/api
 - Release notes: https://viselle.net/releases
 - Sign in: https://viselle.net/login

@@ -16,6 +16,7 @@ import { PublicBookingSeo } from '@/components/booking/PublicBookingSeo';
 import { bookingChoiceClass, bookingTheme } from '@/components/booking/booking-theme';
 import { LoadingState } from '@/components/common/LoadingState';
 import { PageSeo } from '@/components/seo/PageSeo';
+import { SmsOptInCheckbox } from '@/components/booking/SmsOptInCheckbox';
 import { publicBookingApi, getManageBookingUrl } from '@/lib/public-booking';
 import { centsToDollars, filterFutureAppointmentSlots, formatDateTime, appointmentScheduleFromIso, cn } from '@/lib/utils';
 import type { Service, BookingBranding } from '@/types/api';
@@ -38,6 +39,7 @@ export function PublicBookingPage({ slugOverride }: PublicBookingPageProps = {})
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [slot, setSlot] = useState<{ startTime: string; endTime: string; accountId: string } | null>(null);
   const [customer, setCustomer] = useState({ firstName: '', lastName: '', email: '', phone: '' });
+  const [smsOptIn, setSmsOptIn] = useState(false);
   const [notes, setNotes] = useState('');
   const [confirmed, setConfirmed] = useState(false);
   const [managementToken, setManagementToken] = useState<string | null>(null);
@@ -95,6 +97,7 @@ export function PublicBookingPage({ slugOverride }: PublicBookingPageProps = {})
         startTime: slot!.startTime,
         timezone: TIMEZONE,
         appointmentNotes: notes || undefined,
+        smsOptIn: smsOptIn || undefined,
       }),
     onSuccess: (data) => {
       setManagementToken(data.managementToken ?? null);
@@ -103,6 +106,22 @@ export function PublicBookingPage({ slugOverride }: PublicBookingPageProps = {})
     },
     onError: (err: Error) => toast.error(err.message),
   });
+
+  const phoneTrimmed = customer.phone.trim();
+  const emailTrimmed = customer.email.trim();
+  const smsRemindersEnabled = Boolean(orgQuery.data?.organization.smsRemindersEnabled);
+  const consentQuery = useQuery({
+    queryKey: ['public-sms-consent', slug, emailTrimmed, phoneTrimmed],
+    queryFn: () =>
+      publicBookingApi.getSmsConsent(slug, {
+        email: emailTrimmed || undefined,
+        phone: phoneTrimmed || undefined,
+      }),
+    enabled: step === 'details' && !!slug && smsRemindersEnabled && Boolean(emailTrimmed || phoneTrimmed),
+    staleTime: 30_000,
+  });
+  const alreadyConsented = consentQuery.data?.smsConsented === true;
+  const needsSmsOptIn = smsRemindersEnabled && phoneTrimmed.length > 0 && !alreadyConsented;
 
   const slots = useMemo(
     () => filterFutureAppointmentSlots(slotsQuery.data?.availableSlots ?? []),
@@ -419,6 +438,22 @@ export function PublicBookingPage({ slugOverride }: PublicBookingPageProps = {})
                 onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
               />
             </div>
+            {needsSmsOptIn && (
+              <div className="rounded-lg border border-stone-200 bg-white px-3 py-3">
+                <SmsOptInCheckbox
+                  brandName={org.name}
+                  checked={smsOptIn}
+                  onCheckedChange={setSmsOptIn}
+                  lightOnly
+                  textClassName="text-neutral-700"
+                />
+                {!smsOptIn && (
+                  <p className="mt-2 text-xs text-red-600">
+                    Check the box to receive appointment texts, or leave phone blank.
+                  </p>
+                )}
+              </div>
+            )}
             <div>
               <label className={cn('mb-1.5 block text-xs font-medium', theme.mutedText)}>Notes (optional)</label>
               <textarea
@@ -432,7 +467,12 @@ export function PublicBookingPage({ slugOverride }: PublicBookingPageProps = {})
           <BookingStickyAction siteTemplate={siteTemplate} branding={branding}>
             <button
               type="button"
-              disabled={!customer.firstName || !customer.lastName || bookMutation.isPending}
+              disabled={
+                !customer.firstName ||
+                !customer.lastName ||
+                bookMutation.isPending ||
+                (needsSmsOptIn && !smsOptIn)
+              }
               onClick={() => bookMutation.mutate()}
               className={cn(
                 'w-full rounded-full py-4 text-base font-semibold transition-colors disabled:opacity-40',

@@ -94,6 +94,7 @@ Returns basic public org info and booking site metadata.
   "name": "Demo Spa",
   "slug": "demo-spa",
   "publicBookingEnabled": true,
+  "smsRemindersEnabled": true,
   "bookingSite": {
     "hostingMode": "external_api",
     "siteTemplate": "classic",
@@ -102,6 +103,8 @@ Returns basic public org info and booking site metadata.
   }
 }
 ```
+
+`smsRemindersEnabled` is true when this business can send appointment SMS (plan + org setting). If you collect a phone number, you must obtain SMS opt-in before booking (see below).
 
 ### List services
 
@@ -153,6 +156,16 @@ GET /organizations/:slug/availability
 Same query params as above, but returns slots across all bookable staff who can perform the
 service, with `availableAccounts` listing who's free for each slot.
 
+### Check SMS consent (first-time opt-in)
+
+```
+GET /organizations/:slug/sms-consent?email=&phone=
+```
+
+Provide `email` and/or `phone`. Returns `{ "smsConsented": true }` when this customer has already
+opted in to appointment texts for this business. Use this to hide the SMS opt-in checkbox for
+returning customers.
+
 ### Create a booking
 
 ```
@@ -168,12 +181,17 @@ Body:
   "customer": { "firstName": "Ada", "lastName": "Lovelace", "email": "ada@example.com", "phone": "+15555550100" },
   "startTime": "2026-08-01T14:00:00.000Z",
   "timezone": "America/New_York",
-  "appointmentNotes": "First visit"
+  "appointmentNotes": "First visit",
+  "smsOptIn": true
 }
 ```
 
 `customer.email` and `customer.phone` are each optional, but at least one is recommended so the
-customer receives confirmation/reminders. Response:
+customer receives confirmation/reminders.
+
+If `smsRemindersEnabled` is true and you send a phone number for a customer who has not already
+consented, `smsOptIn` must be `true` (unchecked-by-default checkbox on your form). Leave phone
+blank to skip SMS. Viselle will not text a customer who has not opted in. Response:
 
 ```json
 {

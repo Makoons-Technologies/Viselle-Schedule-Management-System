@@ -26,6 +26,16 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://viselle.net/privacy</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://viselle.net/terms</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
     <loc>https://viselle.net/llms.txt</loc>
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>
