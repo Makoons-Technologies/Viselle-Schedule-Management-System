@@ -15,6 +15,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import type { TrialCampaign } from '@/types/api';
 
 const NONE_CAMPAIGN = '__none__';
@@ -24,6 +25,7 @@ const schema = z.object({
   slug: z.string().min(1),
   trialCampaignId: z.string().optional(),
   ownerEmail: z.string().email('Enter a valid owner email'),
+  isDev: z.boolean().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -49,7 +51,7 @@ export function CreateOrganizationPage() {
   const { setSelectedOrgId } = useOrg();
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { trialCampaignId: NONE_CAMPAIGN, ownerEmail: '' },
+    defaultValues: { trialCampaignId: NONE_CAMPAIGN, ownerEmail: '', isDev: false },
   });
 
   const name = watch('name');
@@ -73,6 +75,7 @@ export function CreateOrganizationPage() {
         name: data.name,
         slug: data.slug,
         ownerEmail: data.ownerEmail.trim(),
+        isDev: data.isDev,
         trialCampaignId:
           data.trialCampaignId && data.trialCampaignId !== NONE_CAMPAIGN
             ? data.trialCampaignId
@@ -179,6 +182,19 @@ export function CreateOrganizationPage() {
                   Use a plus tag like you+salon@gmail.com.
                 </p>
               </div>
+            </div>
+            <div className="flex items-center justify-between gap-4 rounded-lg border border-stone-200 px-4 py-3 dark:border-stone-700">
+              <div>
+                <Label htmlFor="is-dev">Dev / test account</Label>
+                <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
+                  Tagged and listed under Dev accounts, separate from live tenants.
+                </p>
+              </div>
+              <Switch
+                id="is-dev"
+                checked={watch('isDev') ?? false}
+                onCheckedChange={(v) => setValue('isDev', v)}
+              />
             </div>
             <div className="flex gap-2">
               <Button type="button" variant="outline" onClick={() => navigate(-1)}>Cancel</Button>

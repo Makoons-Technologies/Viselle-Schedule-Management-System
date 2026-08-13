@@ -138,6 +138,8 @@ export interface Organization {
   trialCampaignId?: string | null;
   referredByOrganizationId?: string | null;
   referralCode?: string | null;
+  /** Seed / QA tenant — listed under Dev accounts on the platform. */
+  isDev?: boolean;
   createdAt: string;
   updatedAt: string;
   /** Present on GET /owner/organizations */
@@ -660,6 +662,8 @@ export interface CreateOrganizationInput {
   /** Optional trial campaign; omit/null = no trial (owner chooses plan on first login). */
   trialCampaignId?: string | null;
   ownerEmail: string;
+  /** When true, org is tagged as a dev/test account. */
+  isDev?: boolean;
 }
 
 export interface InviteOrgOwnerInput {
