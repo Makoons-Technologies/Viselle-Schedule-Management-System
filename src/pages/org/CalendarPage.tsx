@@ -5,7 +5,7 @@ import { useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { orgApi } from '@/lib/api';
 import { APPOINTMENT_CALENDAR_LIP_CLASS, APPOINTMENT_CALENDAR_LIP_LABEL } from '@/lib/appointment-status';
-import { cn } from '@/lib/utils';
+import { cn, formatTimeRange } from '@/lib/utils';
 import { TRIAL_LOCKED_MESSAGE } from '@/lib/trial';
 import { useOrgId } from '@/hooks/useOrgId';
 import { filterOutCancelled, useHideCancelledAppointments } from '@/hooks/useHideCancelledAppointments';
@@ -143,6 +143,11 @@ export function CalendarPage() {
   const servicesById = useMemo(
     () => Object.fromEntries((servicesData?.services ?? []).map((service) => [service.id, service])),
     [servicesData],
+  );
+
+  const accountsById = useMemo(
+    () => Object.fromEntries((accountsData?.accounts ?? []).map((account) => [account.id, account])),
+    [accountsData],
   );
 
   const appointments = useMemo(() => {
@@ -384,13 +389,29 @@ export function CalendarPage() {
               }
             : undefined
         }
-        renderAppointment={(appt, stack) => {
+        renderAppointment={(appt, stack, heightRem) => {
           const customer = customersById[appt.customerId];
           const customerName = customer
             ? `${customer.firstName} ${customer.lastName}`.trim()
             : 'Client';
           const serviceName = servicesById[appt.serviceId]?.name ?? 'Service';
+          const account = accountsById[appt.accountId];
+          const providerName = account
+            ? `${account.firstName} ${account.lastName}`.trim()
+            : '';
+          const isRecurring =
+            !!appt.recurringAppointmentRuleId &&
+            activeRecurringRuleIds.has(appt.recurringAppointmentRuleId);
           const checkoutEligible = appt.visitStatus === 'arrived' && appt.paymentStatus === 'unpaid';
+          const title = [
+            customerName,
+            providerName,
+            serviceName,
+            formatTimeRange(appt.startTime, appt.endTime),
+            isRecurring ? 'recurring' : '',
+          ]
+            .filter(Boolean)
+            .join(' — ');
 
           return (
             <CalendarAppointmentChip
@@ -398,16 +419,9 @@ export function CalendarPage() {
               serviceName={serviceName}
               visitStatus={appt.visitStatus}
               paymentStatus={appt.paymentStatus}
-              isRecurring={
-                !!appt.recurringAppointmentRuleId &&
-                activeRecurringRuleIds.has(appt.recurringAppointmentRuleId)
-              }
-              title={
-                appt.recurringAppointmentRuleId &&
-                activeRecurringRuleIds.has(appt.recurringAppointmentRuleId)
-                  ? `${customerName} — ${serviceName} — recurring`
-                  : `${customerName} — ${serviceName}`
-              }
+              isRecurring={isRecurring}
+              title={title}
+              heightRem={heightRem}
               stackInset={!!stack && stack.isFront}
               selectMode={selectMode}
               selected={!!batchSelection[appt.id]}

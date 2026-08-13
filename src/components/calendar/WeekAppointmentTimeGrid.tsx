@@ -32,7 +32,11 @@ export type AppointmentStackMeta = {
 interface WeekAppointmentTimeGridProps {
   days: Date[];
   appointments: Appointment[];
-  renderAppointment: (appointment: Appointment, stack?: AppointmentStackMeta) => ReactNode;
+  renderAppointment: (
+    appointment: Appointment,
+    stack: AppointmentStackMeta | undefined,
+    heightRem: number,
+  ) => ReactNode;
   className?: string;
   /** Day keys (yyyy-MM-dd) highlighted for zoom selection. Ignored while zoomed. */
   selectedDayKeys?: string[];
@@ -248,7 +252,11 @@ function DayColumn({
   positioned: ReturnType<typeof layoutDayAppointments<Appointment>>;
   stackFrontByKey: Record<string, number>;
   onCycleStack: (stackKey: string, stackSize: number, delta: number) => void;
-  renderAppointment: (appointment: Appointment, stack?: AppointmentStackMeta) => ReactNode;
+  renderAppointment: (
+    appointment: Appointment,
+    stack: AppointmentStackMeta | undefined,
+    heightRem: number,
+  ) => ReactNode;
   onEmptySlotClick?: (slot: { dayKey: string; minutes: number }) => void;
 }) {
   return (
@@ -311,6 +319,7 @@ function DayColumn({
                 stackSize > 1
                   ? { size: stackSize, index: stackIndex, isFront }
                   : undefined,
+                heightRem,
               )}
               {hasStackControls ? (
                 <StackEdgeControls
