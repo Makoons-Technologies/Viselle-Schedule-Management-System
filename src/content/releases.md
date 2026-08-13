@@ -6,6 +6,18 @@ Versioning: **x.y.z** — patch (z) = unnoticeable unless a bug hits you; minor 
 
 Phases: Viselle is in **beta** (3-month trials). Path: alpha → beta → **GA** (1.0.0+).
 
+## [0.4.1] — 2026-08-13 (alpha)
+
+Recognize salon booking hosts on viselle.net even when Vercel still has the old sites.viselle.net domain.
+
+### Frontend
+
+- Treat viselle.net salon hosts as booking pages even if Vercel still has the old sites domain.
+
+### API
+
+- Ignore a stale sites.viselle.net hosting domain so salon URLs stay on viselle.net.
+
 ## [0.4.0] — 2026-08-13 (alpha)
 
 PWA home-screen install, push/SMS/email staff reminders and low-stock alerts, platform org stats, and salon booking at yourspa.viselle.net.
