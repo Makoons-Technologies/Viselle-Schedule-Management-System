@@ -23,8 +23,9 @@ export function PlatformDashboard() {
   if (orgsLoading || statsLoading) return <LoadingState />;
 
   const orgs = orgData?.organizations ?? [];
+  const liveOrgs = orgs.filter((o) => !o.isDev);
   const stats = statsData?.stats;
-  const active = orgs.filter((o) => o.status === 'active').length;
+  const active = liveOrgs.filter((o) => o.status === 'active').length;
 
   return (
     <div>
@@ -37,38 +38,77 @@ export function PlatformDashboard() {
           </Button>
         }
       />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-stone-500 dark:text-stone-400">Total Organizations</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between p-4 pb-2 sm:p-6 sm:pb-2">
+            <CardTitle className="text-sm font-medium text-stone-500 dark:text-stone-400">Live orgs</CardTitle>
             <Building2 className="h-4 w-4 text-brand-600 dark:text-brand-400" />
           </CardHeader>
-          <CardContent><p className="text-3xl font-bold">{stats?.totalOrganizations ?? orgs.length}</p></CardContent>
+          <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+            <p className="text-2xl font-bold sm:text-3xl">{stats?.totalOrganizations ?? liveOrgs.length}</p>
+          </CardContent>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardHeader className="flex flex-row items-center justify-between p-4 pb-2 sm:p-6 sm:pb-2">
             <CardTitle className="text-sm font-medium text-stone-500 dark:text-stone-400">Active</CardTitle>
             <Users className="h-4 w-4 text-brand-600 dark:text-brand-400" />
           </CardHeader>
-          <CardContent><p className="text-3xl font-bold">{stats?.activeOrganizations ?? active}</p></CardContent>
+          <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+            <p className="text-2xl font-bold sm:text-3xl">{stats?.activeOrganizations ?? active}</p>
+          </CardContent>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardHeader className="flex flex-row items-center justify-between p-4 pb-2 sm:p-6 sm:pb-2">
             <CardTitle className="text-sm font-medium text-stone-500 dark:text-stone-400">On Trial</CardTitle>
             <Calendar className="h-4 w-4 text-brand-600 dark:text-brand-400" />
           </CardHeader>
-          <CardContent><p className="text-3xl font-bold">{stats?.trialOrganizations ?? 0}</p></CardContent>
+          <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+            <p className="text-2xl font-bold sm:text-3xl">{stats?.trialOrganizations ?? 0}</p>
+          </CardContent>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardHeader className="flex flex-row items-center justify-between p-4 pb-2 sm:p-6 sm:pb-2">
+            <CardTitle className="text-sm font-medium text-stone-500 dark:text-stone-400">Inactive</CardTitle>
+            <Building2 className="h-4 w-4 text-brand-600 dark:text-brand-400" />
+          </CardHeader>
+          <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+            <p className="text-2xl font-bold sm:text-3xl">
+              {stats?.inactiveOrganizations ?? liveOrgs.filter((o) => o.status === 'inactive' || o.status === 'cancelled' || o.status === 'suspended').length}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between p-4 pb-2 sm:p-6 sm:pb-2">
+            <CardTitle className="text-sm font-medium text-stone-500 dark:text-stone-400">Billing on</CardTitle>
+            <DollarSign className="h-4 w-4 text-brand-600 dark:text-brand-400" />
+          </CardHeader>
+          <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+            <p className="text-2xl font-bold sm:text-3xl">
+              {stats?.billingActiveOrganizations ?? liveOrgs.filter((o) => o.billingStatus === 'active').length}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between p-4 pb-2 sm:p-6 sm:pb-2">
+            <CardTitle className="text-sm font-medium text-stone-500 dark:text-stone-400">Dev accounts</CardTitle>
+            <Users className="h-4 w-4 text-brand-600 dark:text-brand-400" />
+          </CardHeader>
+          <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+            <p className="text-2xl font-bold sm:text-3xl">
+              {stats?.devOrganizations ?? orgs.filter((o) => o.isDev).length}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="col-span-2 lg:col-span-2">
+          <CardHeader className="flex flex-row items-center justify-between p-4 pb-2 sm:p-6 sm:pb-2">
             <CardTitle className="text-sm font-medium text-stone-500 dark:text-stone-400">Est. MRR</CardTitle>
             <DollarSign className="h-4 w-4 text-brand-600 dark:text-brand-400" />
           </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">
+          <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+            <p className="text-2xl font-bold sm:text-3xl">
               ${centsToDollars(stats?.estimatedMrrCents ?? 0).toLocaleString()}
             </p>
-            <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">Active + trial orgs</p>
+            <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">Live active + trial orgs</p>
           </CardContent>
         </Card>
       </div>

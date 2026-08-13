@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ban, Building2, FlaskConical, LogIn, Plus, Settings } from 'lucide-react';
+import { Ban, Building2, CreditCard, FlaskConical, LogIn, Plus, Settings, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -43,6 +43,12 @@ export function OrganizationsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['owner', 'organizations'],
     queryFn: ownerApi.listOrganizations,
+    enabled: isPlatformOwner,
+  });
+
+  const { data: statsData } = useQuery({
+    queryKey: ['owner', 'stats'],
+    queryFn: ownerApi.getPlatformStats,
     enabled: isPlatformOwner,
   });
 
@@ -103,6 +109,31 @@ export function OrganizationsPage() {
 
   if (isLoading) return <LoadingState />;
 
+  const liveAll = organizations.filter((org) => !org.isDev);
+  const stats = statsData?.stats;
+  const statCards = [
+    { label: 'Live orgs', value: stats?.totalOrganizations ?? liveAll.length, icon: Building2 },
+    { label: 'Active', value: stats?.activeOrganizations ?? liveAll.filter((o) => o.status === 'active').length, icon: Users },
+    { label: 'Trial', value: stats?.trialOrganizations ?? liveAll.filter((o) => o.status === 'trial').length, icon: FlaskConical },
+    {
+      label: 'Inactive',
+      value:
+        stats?.inactiveOrganizations ??
+        liveAll.filter((o) => o.status === 'inactive' || o.status === 'cancelled' || o.status === 'suspended').length,
+      icon: Ban,
+    },
+    {
+      label: 'Billing on',
+      value: stats?.billingActiveOrganizations ?? liveAll.filter((o) => o.billingStatus === 'active').length,
+      icon: CreditCard,
+    },
+    {
+      label: 'Dev accounts',
+      value: stats?.devOrganizations ?? organizations.filter((o) => o.isDev).length,
+      icon: FlaskConical,
+    },
+  ];
+
   return (
     <div>
       <PageHeader
@@ -114,6 +145,20 @@ export function OrganizationsPage() {
           </Button>
         }
       />
+      <div className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+        {statCards.map((card) => (
+          <div
+            key={card.label}
+            className="rounded-xl border border-stone-200 bg-white px-3 py-3 dark:border-stone-800 dark:bg-stone-900"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-medium text-stone-500 dark:text-stone-400">{card.label}</p>
+              <card.icon className="h-3.5 w-3.5 shrink-0 text-brand-600 dark:text-brand-400" />
+            </div>
+            <p className="mt-1 text-2xl font-semibold tabular-nums text-stone-900 dark:text-stone-100">{card.value}</p>
+          </div>
+        ))}
+      </div>
       <ListToolbar
         search={search}
         onSearchChange={setSearch}
@@ -157,7 +202,7 @@ export function OrganizationsPage() {
           description={organizations.some((o) => !o.isDev) ? 'Try a different search or filter.' : 'Customer tenants appear here. Dev/test orgs are below.'}
         />
       ) : (
-        <OrgTable
+        <OrgList
           orgs={liveOrgs}
           impersonatingOrgId={impersonatingOrgId}
           onSelectOrg={setSelectedOrgId}
@@ -187,7 +232,7 @@ export function OrganizationsPage() {
           description="Seeded QA tenants are tagged is_dev and listed here."
         />
       ) : (
-        <OrgTable
+        <OrgList
           orgs={devOrgs}
           showDevBadge
           impersonatingOrgId={impersonatingOrgId}
@@ -224,6 +269,99 @@ export function OrganizationsPage() {
   );
 }
 
+type OrgListProps = {
+  orgs: Organization[];
+  showDevBadge?: boolean;
+  impersonatingOrgId: string | null;
+  onSelectOrg: (id: string) => void;
+  onImpersonate: (org: Organization) => void;
+  onDeactivate: (org: Organization) => void;
+};
+
+function OrgActions({
+  org,
+  impersonatingOrgId,
+  onSelectOrg,
+  onImpersonate,
+  onDeactivate,
+}: Omit<OrgListProps, 'orgs' | 'showDevBadge'> & { org: Organization }) {
+  return (
+    <TableRowActions>
+      <TableIconButton label="Organization admin settings" asChild>
+        <Link to={`/platform/orgs/${org.id}/settings`} onClick={() => onSelectOrg(org.id)}>
+          <Settings className="h-4 w-4" />
+        </Link>
+      </TableIconButton>
+      <TableIconButton
+        icon={LogIn}
+        label={
+          org.hasOwner === false
+            ? 'No owner yet — open settings to invite'
+            : 'Log in as owner'
+        }
+        onClick={() => onImpersonate(org)}
+        disabled={impersonatingOrgId === org.id}
+      />
+      {(org.status === 'active' || org.status === 'trial') && (
+        <TableIconButton
+          icon={Ban}
+          label="Deactivate organization"
+          variant="ghost"
+          destructive
+          onClick={() => onDeactivate(org)}
+        />
+      )}
+    </TableRowActions>
+  );
+}
+
+function OrgList(props: OrgListProps) {
+  return (
+    <Panel className="overflow-hidden">
+      <div className="md:hidden">
+        {props.orgs.map((org) => (
+          <div key={org.id} className="border-b border-stone-100 p-4 last:border-b-0 dark:border-stone-800">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  {props.showDevBadge ? <Badge variant="outline">DEV</Badge> : null}
+                  <Link
+                    to={`/platform/orgs/${org.id}`}
+                    onClick={() => props.onSelectOrg(org.id)}
+                    className="font-medium text-stone-900 hover:text-brand-700 hover:underline dark:text-stone-100 dark:hover:text-brand-300"
+                  >
+                    {org.name}
+                  </Link>
+                </div>
+                <p className="mt-0.5 truncate text-sm text-stone-500">{org.slug}</p>
+              </div>
+              <OrgActions
+                org={org}
+                impersonatingOrgId={props.impersonatingOrgId}
+                onSelectOrg={props.onSelectOrg}
+                onImpersonate={props.onImpersonate}
+                onDeactivate={props.onDeactivate}
+              />
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              <OrganizationStatusBadge status={org.status} />
+              <BillingStatusBadge status={org.billingStatus} />
+              <WebsiteHostingBadge
+                hostingMode={org.hostingMode}
+                customWebsiteRequested={org.customWebsiteRequested}
+              />
+            </div>
+            <p className="mt-2 text-xs text-stone-500">Created {formatDate(org.createdAt)}</p>
+          </div>
+        ))}
+      </div>
+      <div className="hidden md:block">
+        <OrgTable {...props} />
+      </div>
+    </Panel>
+  );
+}
+
 function OrgTable({
   orgs,
   showDevBadge,
@@ -231,85 +369,57 @@ function OrgTable({
   onSelectOrg,
   onImpersonate,
   onDeactivate,
-}: {
-  orgs: Organization[];
-  showDevBadge?: boolean;
-  impersonatingOrgId: string | null;
-  onSelectOrg: (id: string) => void;
-  onImpersonate: (org: Organization) => void;
-  onDeactivate: (org: Organization) => void;
-}) {
+}: OrgListProps) {
   return (
-    <Panel>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Slug</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Billing</TableHead>
-            <TableHead>Website</TableHead>
-            <TableHead>Created</TableHead>
-            <TableHead>Actions</TableHead>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Name</TableHead>
+          <TableHead>Slug</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead>Billing</TableHead>
+          <TableHead>Website</TableHead>
+          <TableHead>Created</TableHead>
+          <TableHead>Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {orgs.map((org) => (
+          <TableRow key={org.id}>
+            <TableCell className="font-medium">
+              <div className="flex items-center gap-2">
+                {showDevBadge ? <Badge variant="outline">DEV</Badge> : null}
+                <Link
+                  to={`/platform/orgs/${org.id}`}
+                  onClick={() => onSelectOrg(org.id)}
+                  className="text-stone-900 hover:text-brand-700 hover:underline dark:text-stone-100 dark:hover:text-brand-300"
+                >
+                  {org.name}
+                </Link>
+              </div>
+            </TableCell>
+            <TableCell className="text-stone-500">{org.slug}</TableCell>
+            <TableCell><OrganizationStatusBadge status={org.status} /></TableCell>
+            <TableCell><BillingStatusBadge status={org.billingStatus} /></TableCell>
+            <TableCell>
+              <WebsiteHostingBadge
+                hostingMode={org.hostingMode}
+                customWebsiteRequested={org.customWebsiteRequested}
+              />
+            </TableCell>
+            <TableCell className="text-stone-500">{formatDate(org.createdAt)}</TableCell>
+            <TableCell>
+              <OrgActions
+                org={org}
+                impersonatingOrgId={impersonatingOrgId}
+                onSelectOrg={onSelectOrg}
+                onImpersonate={onImpersonate}
+                onDeactivate={onDeactivate}
+              />
+            </TableCell>
           </TableRow>
-        </TableHeader>
-        <TableBody>
-          {orgs.map((org) => (
-            <TableRow key={org.id}>
-              <TableCell className="font-medium">
-                <div className="flex items-center gap-2">
-                  {showDevBadge ? <Badge variant="outline">DEV</Badge> : null}
-                  <Link
-                    to={`/platform/orgs/${org.id}`}
-                    onClick={() => onSelectOrg(org.id)}
-                    className="text-stone-900 hover:text-brand-700 hover:underline dark:text-stone-100 dark:hover:text-brand-300"
-                  >
-                    {org.name}
-                  </Link>
-                </div>
-              </TableCell>
-              <TableCell className="text-stone-500">{org.slug}</TableCell>
-              <TableCell><OrganizationStatusBadge status={org.status} /></TableCell>
-              <TableCell><BillingStatusBadge status={org.billingStatus} /></TableCell>
-              <TableCell>
-                <WebsiteHostingBadge
-                  hostingMode={org.hostingMode}
-                  customWebsiteRequested={org.customWebsiteRequested}
-                />
-              </TableCell>
-              <TableCell className="text-stone-500">{formatDate(org.createdAt)}</TableCell>
-              <TableCell>
-                <TableRowActions>
-                  <TableIconButton label="Organization admin settings" asChild>
-                    <Link to={`/platform/orgs/${org.id}/settings`} onClick={() => onSelectOrg(org.id)}>
-                      <Settings className="h-4 w-4" />
-                    </Link>
-                  </TableIconButton>
-                  <TableIconButton
-                    icon={LogIn}
-                    label={
-                      org.hasOwner === false
-                        ? 'No owner yet — open settings to invite'
-                        : 'Log in as owner'
-                    }
-                    onClick={() => onImpersonate(org)}
-                    disabled={impersonatingOrgId === org.id}
-                  />
-                  {(org.status === 'active' || org.status === 'trial') && (
-                    <TableIconButton
-                      icon={Ban}
-                      label="Deactivate organization"
-                      variant="ghost"
-                      destructive
-                      onClick={() => onDeactivate(org)}
-                    />
-                  )}
-                </TableRowActions>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Panel>
+        ))}
+      </TableBody>
+    </Table>
   );
 }

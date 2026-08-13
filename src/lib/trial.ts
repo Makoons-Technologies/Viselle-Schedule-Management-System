@@ -1,6 +1,6 @@
 import type { Organization } from '@/types/api';
 
-type TrialOrgFields = Pick<Organization, 'trialEndsAt' | 'status' | 'billingStatus'>;
+type TrialOrgFields = Pick<Organization, 'trialEndsAt' | 'status' | 'billingStatus' | 'isDev'>;
 
 /**
  * Mirrors the backend's isOrgTrialExpired check (see active-org.middleware.ts):
@@ -34,6 +34,7 @@ export function orgMustChoosePlan(
   hasStripeSubscription: boolean | null | undefined,
 ): boolean {
   if (!org) return false;
+  if (org.isDev) return false;
   if (hasStripeSubscription) return false;
   return !isOrgInActiveTrial(org);
 }

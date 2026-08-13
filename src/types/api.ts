@@ -265,6 +265,9 @@ export interface PlatformStats {
   totalOrganizations: number;
   activeOrganizations: number;
   trialOrganizations: number;
+  inactiveOrganizations: number;
+  billingActiveOrganizations: number;
+  devOrganizations: number;
   organizationsByTier: Record<SubscriptionTier, number>;
   estimatedMrrCents: number;
 }
