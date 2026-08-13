@@ -23,8 +23,8 @@ export function AddToHomeScreenDialog({ open, onOpenChange, platform }: AddToHom
           <DialogTitle>Add to Home Screen</DialogTitle>
           <DialogDescription>
             {isIos
-              ? 'Install Viselle so it opens fullscreen like an app.'
-              : 'Install Viselle from your browser so it opens like an app.'}
+              ? 'iPhone and iPad use Safari Share to add Viselle. There is no one-tap install button.'
+              : 'Use your browser menu to install Viselle so it opens like an app.'}
           </DialogDescription>
         </DialogHeader>
         {isIos ? (
