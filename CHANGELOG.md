@@ -6,6 +6,22 @@ Versioning: **x.y.z** — patch (z) = unnoticeable unless a bug hits you; minor 
 
 Phases: Viselle is in **beta** (3-month trials). Path: alpha → beta → **GA** (1.0.0+).
 
+## [0.5.0] — 2026-08-13 (alpha)
+
+SMS booking opt-in plus Privacy and Terms pages, and the calendar/PWA booking fixes already on staging.
+
+### Frontend
+
+- Require first-time SMS opt-in on booking and publish Privacy and Terms pages.
+- Replace the mobile schedule dropdown with a My appointments only toggle.
+- Make short calendar appointment cards readable instead of clipping four lines.
+- Offer one-tap PWA install on Android and keep Share-sheet steps on iOS.
+- Force light booking forms so Chrome autofill cannot hide selected text.
+
+### API
+
+- Require first-time SMS opt-in on booking and refuse texts without consent.
+
 ## [0.4.1] — 2026-08-13 (alpha)
 
 Recognize salon booking hosts on viselle.net even when Vercel still has the old sites.viselle.net domain.
