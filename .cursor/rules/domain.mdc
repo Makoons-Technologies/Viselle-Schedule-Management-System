@@ -12,4 +12,4 @@ alwaysApply: true
 | Production | `viselle.net` / `www.viselle.net` | `api.viselle.net` |
 | Staging | `staging.viselle.net` | `staging-api.viselle.net` |
 
-Related: paid booking subdomains use `sites.viselle.net` (e.g. `yourspa.sites.viselle.net`). Contact: `hello@viselle.net`.
+Related: paid booking subdomains use `*.viselle.net` (e.g. `yourspa.viselle.net`). Contact: `hello@viselle.net`.

@@ -4,6 +4,7 @@ import { contactPath } from '@/lib/contact';
 import { getStartedPath } from '@/lib/signup';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 const WEBSITE_OPTIONS = [
   {
@@ -21,7 +22,7 @@ const WEBSITE_OPTIONS = [
     badge: 'Optional add-on',
     title: 'Hosted subdomain',
     description:
-      'Your own address like yourspa.sites.viselle.net — the same booking page as your included link, on a branded subdomain.',
+      'Your own address like yourspa.viselle.net — the same booking page as your included link, on a branded subdomain.',
     bullets: ['Branded subdomain URL', 'Same templates & branding as your booking page', '$19/mo — add at checkout'],
     cta: { label: 'Add at signup', to: getStartedPath({ subdomain: true }) },
     variant: 'addon' as const,
@@ -52,6 +53,9 @@ const WEBSITE_OPTIONS = [
   },
 ];
 
+const glassCardClass =
+  'border-white/15 bg-white/10 text-white shadow-none backdrop-blur-sm ring-0';
+
 export function WebsiteOptionsSection() {
   return (
     <section id="websites" className="scroll-mt-20 border-y border-white/10 bg-black/15 py-16 sm:py-24">
@@ -73,46 +77,35 @@ export function WebsiteOptionsSection() {
 
         <div className="mt-12 grid gap-6 sm:grid-cols-2">
           {WEBSITE_OPTIONS.map((option) => (
-            <Card
-              key={option.title}
-              className={
-                option.variant === 'addon' || option.variant === 'build'
-                  ? 'border-brand-300 bg-white shadow-sm ring-1 ring-brand-100 dark:border-brand-700 dark:bg-stone-900 dark:ring-brand-900'
-                  : 'border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900'
-              }
-            >
+            <Card key={option.title} className={cn(glassCardClass, 'flex h-full flex-col')}>
               <CardHeader className="space-y-3">
                 <span
                   className={
                     option.variant === 'included'
-                      ? 'inline-flex w-fit rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200'
+                      ? 'inline-flex w-fit rounded-full border border-emerald-300/30 bg-emerald-400/15 px-2.5 py-0.5 text-xs font-medium text-emerald-200'
                       : option.variant === 'addon' || option.variant === 'build'
-                        ? 'inline-flex w-fit rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-900/50 dark:text-brand-200'
-                        : 'inline-flex w-fit rounded-full bg-stone-200 px-2.5 py-0.5 text-xs font-medium text-stone-700 dark:bg-stone-700 dark:text-stone-200'
+                        ? 'inline-flex w-fit rounded-full border border-brand-300/30 bg-brand-400/15 px-2.5 py-0.5 text-xs font-medium text-brand-200'
+                        : 'inline-flex w-fit rounded-full border border-white/20 bg-white/10 px-2.5 py-0.5 text-xs font-medium text-white/80'
                   }
                 >
                   {option.badge}
                 </span>
                 <div className="flex items-center gap-2">
-                  <option.icon className="h-5 w-5 text-brand-600 dark:text-brand-400" />
-                  <CardTitle className="text-lg">{option.title}</CardTitle>
+                  <option.icon className="h-5 w-5 text-[#fdeb83]" />
+                  <CardTitle className="text-lg text-white">{option.title}</CardTitle>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm leading-relaxed text-stone-600 dark:text-stone-300">{option.description}</p>
-                <ul className="space-y-2 text-sm text-stone-700 dark:text-stone-300">
+              <CardContent className="flex flex-1 flex-col gap-4">
+                <p className="text-sm leading-relaxed text-white/70">{option.description}</p>
+                <ul className="space-y-2 text-sm text-white/80">
                   {option.bullets.map((bullet) => (
                     <li key={bullet} className="flex gap-2">
-                      <span className="text-brand-600 dark:text-brand-400">·</span>
+                      <span className="text-[#fdeb83]">·</span>
                       {bullet}
                     </li>
                   ))}
                 </ul>
-                <Button
-                  asChild
-                  className="w-full"
-                  variant={option.variant === 'included' || option.variant === 'build' ? 'default' : 'outline'}
-                >
+                <Button asChild variant="default" className="mt-auto w-full">
                   <Link to={option.cta.to}>{option.cta.label}</Link>
                 </Button>
               </CardContent>

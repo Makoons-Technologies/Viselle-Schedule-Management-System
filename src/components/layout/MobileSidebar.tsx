@@ -31,10 +31,15 @@ export function MobileSidebar() {
         <SheetContent
           ref={panelRef}
           side="left"
-          style={panelStyle}
+          style={{
+            ...panelStyle,
+            // Full-bleed panel; top inset only — footer owns the bottom safe area so
+            // Powered-by can sit lower without leaving a maroon gap under the sheet.
+            paddingTop: 'env(safe-area-inset-top, 0px)',
+          }}
           overlayStyle={overlayStyle}
           className={cn(
-            'flex h-full w-[min(100vw-1rem,18rem)] max-w-xs flex-col gap-0 p-0 touch-pan-y',
+            'flex h-full w-[min(100vw-1rem,18rem)] max-w-xs flex-col gap-0 p-0 sm:p-0 touch-pan-y',
             panelClassName,
           )}
         >
@@ -52,8 +57,11 @@ export function MobileSidebar() {
               />
             </div>
           </div>
-          <div className="border-t border-stone-200 px-4 py-3 dark:border-stone-800">
-            <PoweredByMakoons />
+          <div
+            className="shrink-0 border-t border-stone-200 px-4 pt-3 text-right dark:border-stone-800"
+            style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
+          >
+            <PoweredByMakoons className="text-right" />
           </div>
         </SheetContent>
       </Sheet>

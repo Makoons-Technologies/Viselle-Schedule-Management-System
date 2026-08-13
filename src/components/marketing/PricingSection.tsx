@@ -16,8 +16,8 @@ function TierCard({ tier }: { tier: PlanTierMarketing }) {
   return (
     <Card
       className={cn(
-        'relative flex flex-col border-stone-200 bg-white/95 shadow-lg',
-        tier.highlighted && 'border-bc-magenta shadow-xl ring-1 ring-bc-magenta/30',
+        'relative flex flex-col border-white/15 bg-white/10 text-white shadow-none backdrop-blur-sm',
+        tier.highlighted && 'border-bc-magenta/60 ring-1 ring-bc-magenta/40',
       )}
     >
       {tier.highlighted && (
@@ -28,28 +28,26 @@ function TierCard({ tier }: { tier: PlanTierMarketing }) {
         </div>
       )}
       <CardHeader className="pb-4">
-        <CardTitle className="text-xl">{tier.name}</CardTitle>
-        <CardDescription>{tier.tagline}</CardDescription>
+        <CardTitle className="text-xl text-white">{tier.name}</CardTitle>
+        <CardDescription className="text-white/65">{tier.tagline}</CardDescription>
         <div className="pt-2">
-          <span className="text-3xl font-bold text-stone-900 dark:text-stone-100">
-            ${priceMonthlyDollars(tier)}
-          </span>
-          <span className="text-sm text-stone-500 dark:text-stone-400">/month</span>
+          <span className="text-3xl font-bold text-white">${priceMonthlyDollars(tier)}</span>
+          <span className="text-sm text-white/55">/month</span>
         </div>
-        <p className="text-sm font-medium text-brand-700 dark:text-brand-300">{tier.staffLimitLabel}</p>
+        <p className="text-sm font-medium text-brand-200">{tier.staffLimitLabel}</p>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-4">
-        <ul className="space-y-2 text-sm text-stone-700 dark:text-stone-300">
+        <ul className="space-y-2 text-sm text-white/85">
           {PLAN_FEATURES.map((feature) => {
             const included = tierIncludesFeature(tier.id, feature.id);
             return (
               <li
                 key={feature.id}
-                className={cn('flex gap-2', !included && 'text-stone-400 dark:text-stone-500')}
+                className={cn('flex gap-2', !included && 'text-white/35')}
                 title={feature.description}
               >
                 {included ? (
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-600 dark:text-brand-400" />
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#fdeb83]" />
                 ) : (
                   <X className="mt-0.5 h-4 w-4 shrink-0" />
                 )}
@@ -58,7 +56,7 @@ function TierCard({ tier }: { tier: PlanTierMarketing }) {
             );
           })}
         </ul>
-        <Button asChild className="mt-auto w-full" variant={tier.highlighted ? 'default' : 'outline'}>
+        <Button asChild variant="default" className="mt-auto w-full">
           <Link to={getStartedPath({ plan: tier.id })}>Get started</Link>
         </Button>
       </CardContent>

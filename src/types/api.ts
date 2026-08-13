@@ -123,6 +123,14 @@ export interface Organization {
   smsReminderHoursBefore: number;
   confirmationRequestsOptIn: boolean;
   confirmationDaysBefore: number;
+  staffEmailRemindersOptIn?: boolean;
+  staffSmsRemindersOptIn?: boolean;
+  staffPushRemindersOptIn?: boolean;
+  staffReminderHoursBefore?: number;
+  lowStockAlertsOptIn?: boolean;
+  lowStockAlertEmail?: boolean;
+  lowStockAlertSms?: boolean;
+  lowStockAlertPush?: boolean;
   city?: string | null;
   address?: string | null;
   phone?: string | null;
@@ -130,6 +138,8 @@ export interface Organization {
   trialCampaignId?: string | null;
   referredByOrganizationId?: string | null;
   referralCode?: string | null;
+  /** Seed / QA tenant — listed under Dev accounts on the platform. */
+  isDev?: boolean;
   createdAt: string;
   updatedAt: string;
   /** Present on GET /owner/organizations */
@@ -255,6 +265,9 @@ export interface PlatformStats {
   totalOrganizations: number;
   activeOrganizations: number;
   trialOrganizations: number;
+  inactiveOrganizations: number;
+  billingActiveOrganizations: number;
+  devOrganizations: number;
   organizationsByTier: Record<SubscriptionTier, number>;
   estimatedMrrCents: number;
 }
@@ -426,6 +439,9 @@ export interface Product {
   costCents?: number | null;
   stockQuantity: number;
   lowStockThreshold?: number | null;
+  stockCapacity?: number | null;
+  lowStockAlertPercent?: number | null;
+  lowStockNotifiedAt?: string | null;
   trackInventory: boolean;
   isActive: boolean;
   createdAt: string;
@@ -649,6 +665,8 @@ export interface CreateOrganizationInput {
   /** Optional trial campaign; omit/null = no trial (owner chooses plan on first login). */
   trialCampaignId?: string | null;
   ownerEmail: string;
+  /** When true, org is tagged as a dev/test account. */
+  isDev?: boolean;
 }
 
 export interface InviteOrgOwnerInput {

@@ -761,7 +761,7 @@ export function GetStartedPage() {
         : '$19/mo',
       description:
         subdomainAddonInfo?.description ??
-        'Your own address like yourspa.sites.viselle.net on Viselle.',
+        'Your own address like yourspa.viselle.net on Viselle.',
       disabled: true,
     },
     {

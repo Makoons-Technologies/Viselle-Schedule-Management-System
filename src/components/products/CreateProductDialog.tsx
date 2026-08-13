@@ -20,6 +20,8 @@ const schema = z.object({
   costDollars: z.number().min(0).optional(),
   stockQuantity: z.number().int().min(0).optional(),
   lowStockThreshold: z.number().int().min(0).optional(),
+  stockCapacity: z.number().int().min(0).optional(),
+  lowStockAlertPercent: z.number().int().min(1).max(100).optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -34,7 +36,7 @@ export function CreateProductDialog({ orgId, open, onOpenChange }: CreateProduct
   const queryClient = useQueryClient();
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { stockQuantity: 0 },
+    defaultValues: { stockQuantity: 0, lowStockAlertPercent: 25 },
   });
 
   const mutation = useMutation({
@@ -48,6 +50,8 @@ export function CreateProductDialog({ orgId, open, onOpenChange }: CreateProduct
         costCents: data.costDollars != null ? dollarsToCents(data.costDollars) : undefined,
         stockQuantity: data.stockQuantity ?? 0,
         lowStockThreshold: data.lowStockThreshold,
+        stockCapacity: data.stockCapacity,
+        lowStockAlertPercent: data.lowStockAlertPercent ?? 25,
         trackInventory: true,
       }),
     onSuccess: () => {
@@ -86,8 +90,24 @@ export function CreateProductDialog({ orgId, open, onOpenChange }: CreateProduct
               <Input type="number" min={0} {...register('stockQuantity', { valueAsNumber: true })} />
             </div>
             <div>
-              <Label>Low stock alert at</Label>
+              <Label>Low stock alert at (qty)</Label>
               <Input type="number" min={0} {...register('lowStockThreshold', { valueAsNumber: true })} />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <Label>Restock capacity (max)</Label>
+              <Input type="number" min={0} {...register('stockCapacity', { valueAsNumber: true })} />
+              <p className="mt-1 text-xs text-stone-500">e.g. 50 if you usually buy 50</p>
+            </div>
+            <div>
+              <Label>Alert at % of capacity</Label>
+              <Input
+                type="number"
+                min={1}
+                max={100}
+                {...register('lowStockAlertPercent', { valueAsNumber: true })}
+              />
             </div>
           </div>
           <DialogFooter>

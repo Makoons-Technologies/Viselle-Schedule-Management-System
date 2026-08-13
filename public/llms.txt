@@ -29,7 +29,7 @@ Beauty and wellness businesses — hair salons, spas, nail studios, estheticians
 
 ## Public booking
 
-Salon booking pages are available at `https://viselle.net/book/{slug}` and, when enabled, on hosted subdomains under `sites.viselle.net`.
+Salon booking pages are available at `https://viselle.net/book/{slug}` and, when enabled, on hosted subdomains like `https://yourspa.viselle.net`.
 
 ## Contact
 

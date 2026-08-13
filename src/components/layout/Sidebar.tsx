@@ -19,8 +19,8 @@ export function Sidebar() {
           <ReferAFriendPanel />
         </div>
       </div>
-      <div className="border-t border-stone-200 px-4 py-3 dark:border-stone-800">
-        <PoweredByMakoons />
+      <div className="shrink-0 border-t border-stone-200 px-4 py-3 text-right dark:border-stone-800">
+        <PoweredByMakoons className="text-right" />
       </div>
     </aside>
   );

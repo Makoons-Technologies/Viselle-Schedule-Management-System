@@ -20,11 +20,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 function isLowStock(product: Product): boolean {
-  return (
-    product.trackInventory &&
-    product.lowStockThreshold != null &&
-    product.stockQuantity <= product.lowStockThreshold
-  );
+  if (!product.trackInventory) return false;
+  const candidates: number[] = [];
+  if (product.lowStockThreshold != null) candidates.push(product.lowStockThreshold);
+  if (
+    product.stockCapacity != null &&
+    product.stockCapacity > 0 &&
+    product.lowStockAlertPercent != null &&
+    product.lowStockAlertPercent > 0
+  ) {
+    candidates.push(Math.floor((product.stockCapacity * product.lowStockAlertPercent) / 100));
+  }
+  if (candidates.length === 0) return false;
+  return product.stockQuantity <= Math.min(...candidates);
 }
 
 type StatusFilter = 'all' | 'active' | 'inactive' | 'low_stock';

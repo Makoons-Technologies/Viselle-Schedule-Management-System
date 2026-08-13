@@ -49,6 +49,17 @@
   }
 
   /*
+   * Installed PWA: keep the status-bar / overscroll region dark so iOS does not
+   * flash a white strip above the marketing gradient (black-translucent).
+   */
+  @media (display-mode: standalone) {
+    html,
+    body {
+      background-color: #2a0f1e;
+    }
+  }
+
+  /*
    * iOS Safari zooms focused inputs under 16px. Keep 16px on small screens even when
    * components use text-sm; desktop can stay denser.
    */

@@ -108,7 +108,7 @@ export function CalendarPage() {
   });
 
   const batchCheckoutEnabled =
-    (orgData?.organization.batchCheckoutEnabled ?? false) && permissions.canBatchCheckout;
+    (orgData?.organization.batchCheckoutEnabled ?? true) && permissions.canBatchCheckout;
 
   const staffAccounts = useMemo(() => {
     return (accountsData?.accounts ?? [])

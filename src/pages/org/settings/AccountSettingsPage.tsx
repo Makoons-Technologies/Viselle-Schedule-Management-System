@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
 import { orgApi } from '@/lib/api';
 import { OrgDangerZone } from '@/components/settings/OrgDangerZone';
+import { PushNotificationsCard } from '@/components/settings/PushNotificationsCard';
 import { LoadingState } from '@/components/common/LoadingState';
 
 /** Staff (and owners) account/membership danger zone — leave or delete. */
@@ -32,6 +33,7 @@ export function AccountSettingsPage() {
           Manage your membership in {data?.organization.name ?? 'this organization'}.
         </p>
       </div>
+      <PushNotificationsCard />
       <OrgDangerZone orgId={orgId} orgName={data?.organization.name} />
     </div>
   );

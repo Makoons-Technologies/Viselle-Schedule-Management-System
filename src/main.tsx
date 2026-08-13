@@ -11,11 +11,13 @@ import App from '@/App';
 import { applyPlatformTheme, readStoredThemeId } from '@/lib/themes';
 import { initColorMode } from '@/lib/color-mode';
 import { installClientErrorListeners } from '@/lib/client-errors';
+import { registerServiceWorker } from '@/lib/register-sw';
 import './index.css';
 
 applyPlatformTheme(readStoredThemeId());
 initColorMode();
 installClientErrorListeners();
+registerServiceWorker();
 
 const queryClient = new QueryClient({
   defaultOptions: {
