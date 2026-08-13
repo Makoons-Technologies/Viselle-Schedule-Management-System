@@ -6,6 +6,44 @@ Versioning: **x.y.z** — patch (z) = unnoticeable unless a bug hits you; minor 
 
 Phases: Viselle is in **beta** (3-month trials). Path: alpha → beta → **GA** (1.0.0+).
 
+## [0.4.0] — 2026-08-13 (alpha)
+
+PWA home-screen install, push/SMS/email staff reminders and low-stock alerts, platform org stats, and salon booking at yourspa.viselle.net.
+
+### Frontend
+
+- Treat missing batch-checkout as on in the calendar.
+- Treat salon booking hosts as yourspa.viselle.net, not sites.viselle.net.
+- Clear the last list row above the mobile nav and home indicator.
+- Show mobile-friendly org stats and list every tenant as a card.
+- Split platform orgs into live tenants and Dev accounts.
+- Claim edge swipes for the nav drawer instead of browser history.
+- Fix maroon home-indicator strip and right-align sidebar Powered-by.
+- Restore sidebar Powered-by and stop the maroon bottom gap on iOS.
+- Keep the mobile drawer below the device bevel and drop the sidebar Powered-by footer.
+- Keep mobile nav drawer content inside device safe areas.
+- Add platform Notification lab for testing Web Push.
+- Align marketing card CTAs to the bottom with one solid button style.
+- Restyle contact page to glass marketing theme.
+- Remove double outline on hosted subdomain and custom website cards.
+- Wire push opt-in UI and staff/low-stock notification settings.
+- Remove white PWA status bar and marketing card backgrounds.
+- Use homepage marketing gradient on favicon and PWA icons.
+- Ignore local .vercel link directory.
+- Add mobile-only PWA Add to Home Screen in Settings.
+- Document Phase 1 PWA Add to Home Screen design and later alert phases.
+
+### API
+
+- Turn batch checkout on for new organizations.
+- Serve hosted booking pages at yourspa.viselle.net instead of sites.viselle.net.
+- Fill every dev spa calendar and label hosting modes in the seed.
+- Keep org status and billing in sync, and count live tenants separately.
+- Tag seed tenants as dev accounts and recreate them cleanly.
+- Add push status and test endpoints for platform notification QA.
+- Add Web Push, staff appointment reminders, and low-stock percent alerts.
+- Ignore .env* and local Vercel probe scratch files.
+
 ## [0.3.0] — 2026-08-11 (beta)
 
 Business card polish, social square redesign, and smoother get-started signup.
