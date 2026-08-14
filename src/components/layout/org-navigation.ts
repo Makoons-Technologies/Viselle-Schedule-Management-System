@@ -9,17 +9,21 @@ import {
   Package,
   Repeat,
   Scissors,
+  ScrollText,
   Shield,
+  ShieldCheck,
   Settings,
   Sparkles,
   Users,
   UserCircle,
 } from 'lucide-react';
+import { VISELLE_PRIVACY_URL, VISELLE_TERMS_URL } from '@/lib/legal';
 
 export interface OrgNavLink {
   label: string;
   to: string;
   icon: typeof LayoutDashboard;
+  external?: boolean;
 }
 
 export interface OrgNavConfig {
@@ -68,6 +72,13 @@ export function getOrgSettingsHubGroups(
       items: [{ label: 'Account', to: `${orgBase}/settings/account`, icon: UserCircle }],
     });
   }
+
+  groups.push({
+    items: [
+      { label: 'Terms & Conditions', to: VISELLE_TERMS_URL, icon: ScrollText, external: true },
+      { label: 'Privacy Policy', to: VISELLE_PRIVACY_URL, icon: ShieldCheck, external: true },
+    ],
+  });
 
   return groups;
 }
