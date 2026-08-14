@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { orgApi, ownerApi } from '@/lib/api';
 import { contactPath } from '@/lib/contact';
-import { resolvePathBookingUrl } from '@/lib/public-booking';
+import { displayBookingHost, getShareableBookingLink, resolvePathBookingUrl } from '@/lib/public-booking';
 import { cn, formatDate } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
@@ -17,6 +17,7 @@ import { HostedSubdomainSection } from '@/components/settings/HostedSubdomainSec
 import { SettingsBackHeader } from '@/components/settings/SettingsBackHeader';
 import { normalizeBookingBranding } from '@/lib/booking-branding';
 import { LoadingState } from '@/components/common/LoadingState';
+import { WebsiteHostingBadge } from '@/components/common/StatusBadge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -77,15 +78,50 @@ export function BookingWebsitePage() {
   const branding = normalizeBookingBranding(website.bookingBranding);
   const hostingMode = website.hostingMode ?? 'path';
   const pathUrl = resolvePathBookingUrl(data.pathBookingUrl, data.organizationSlug);
+  const share = getShareableBookingLink(data);
+  const liveUrl = share.url;
+  const liveHost = displayBookingHost(liveUrl);
+  const pathHost = displayBookingHost(pathUrl);
+  const customSitePending = hostingMode === 'external_api' && share.kind !== 'custom';
+
+  const hero =
+    hostingMode === 'subdomain'
+      ? {
+          title: 'Your hosted subdomain',
+          description:
+            'Clients book on your Viselle subdomain. Share this link on Instagram, Google, or anywhere you promote the business.',
+          hintLabel: 'Included Viselle page',
+          hintValue: pathHost,
+        }
+      : hostingMode === 'external_api'
+        ? {
+            title: 'Your custom website',
+            description: customSitePending
+              ? 'This business books on a custom site. Add that site URL under Custom website / developer API so it shows here.'
+              : 'Clients book on your own website. Share this URL — it is the live booking site, not the included Viselle page.',
+            hintLabel: customSitePending ? 'Fallback included page' : 'Included Viselle page',
+            hintValue: pathHost,
+          }
+        : {
+            title: 'Your booking page (included)',
+            description:
+              'Every plan includes a booking page on Viselle. Share this link on Instagram, Google, or your existing website — clients pick a service and book without calling.',
+            hintLabel: 'Format',
+            hintValue: `viselle.net/book/${data.organizationSlug}`,
+          };
 
   const copyUrl = async () => {
-    await navigator.clipboard.writeText(pathUrl);
-    toast.success('Link copied');
+    try {
+      await navigator.clipboard.writeText(liveUrl);
+      toast.success('Link copied');
+    } catch {
+      toast.error('Could not copy booking link');
+    }
   };
 
   const handleTemplateChange = (template: SiteTemplate) => {
     updateMutation.mutate({
-      hostingMode: hostingMode === 'subdomain' ? 'subdomain' : 'path',
+      ...(hostingMode === 'path' || hostingMode === 'subdomain' ? { hostingMode } : {}),
       siteTemplate: template,
     });
   };
@@ -96,31 +132,29 @@ export function BookingWebsitePage() {
 
       <Card className="overflow-hidden border-brand-200 bg-gradient-to-br from-brand-50 to-white dark:border-stone-700 dark:from-stone-900 dark:to-stone-900">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base text-stone-900 dark:text-stone-50">
+          <CardTitle className="flex flex-wrap items-center gap-2 text-base text-stone-900 dark:text-stone-50">
             <Globe className="h-4 w-4 shrink-0 text-brand-700 dark:text-brand-300" />
-            Your booking page (included)
+            {hero.title}
+            <WebsiteHostingBadge hostingMode={hostingMode} />
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid min-w-0 gap-6 lg:grid-cols-2">
             <div className="min-w-0 space-y-4">
-              <p className="text-sm leading-relaxed text-stone-600 dark:text-stone-200">
-                Every plan includes a booking page on Viselle. Share this link on Instagram, Google, or your
-                existing website — clients pick a service and book without calling.
-              </p>
+              <p className="text-sm leading-relaxed text-stone-600 dark:text-stone-200">{hero.description}</p>
               <div className="min-w-0">
                 <Label className="text-stone-800 dark:text-stone-100">Your link</Label>
                 <div className="mt-1 flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-stretch">
                   <code className="block min-w-0 flex-1 break-all rounded-md border border-stone-200 bg-white px-3 py-2 text-xs text-brand-700 dark:border-stone-700 dark:bg-stone-800 dark:text-brand-300 sm:text-sm">
-                    {pathUrl.replace(/^https?:\/\//, '')}
+                    {liveHost}
                   </code>
                   <div className="flex shrink-0 gap-2">
-                    <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={copyUrl}>
+                    <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={() => void copyUrl()}>
                       <Copy className="h-4 w-4" />
                       Copy
                     </Button>
                     <Button asChild variant="outline" size="sm" className="flex-1 sm:flex-none">
-                      <a href={pathUrl} target="_blank" rel="noreferrer">
+                      <a href={liveUrl} target="_blank" rel="noreferrer">
                         <ExternalLink className="h-4 w-4" />
                         Preview
                       </a>
@@ -128,10 +162,8 @@ export function BookingWebsitePage() {
                   </div>
                 </div>
                 <p className="mt-2 break-words text-xs text-stone-500 dark:text-stone-300">
-                  Format:{' '}
-                  <span className="font-mono text-stone-600 dark:text-stone-200">
-                    yoursite.com/book/{data.organizationSlug}
-                  </span>
+                  {hero.hintLabel}:{' '}
+                  <span className="font-mono text-stone-600 dark:text-stone-200">{hero.hintValue}</span>
                 </p>
               </div>
             </div>
@@ -153,7 +185,11 @@ export function BookingWebsitePage() {
         </CardHeader>
         <CardContent>
           <p className="mb-4 text-sm text-stone-600 dark:text-stone-300">
-            Choose how your booking page looks. This applies to your included link and your hosted subdomain if you upgrade.
+            {hostingMode === 'subdomain'
+              ? 'Choose how your hosted booking page looks.'
+              : hostingMode === 'external_api'
+                ? 'This style applies to the included Viselle booking page. Your custom site uses its own design.'
+                : 'Choose how your booking page looks. This also applies to a hosted subdomain if you upgrade.'}
           </p>
           <div className="grid min-w-0 gap-4 lg:grid-cols-3">
             {data.siteTemplates.map((template) => (
