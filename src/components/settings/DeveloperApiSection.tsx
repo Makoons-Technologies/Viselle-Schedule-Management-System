@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { BookOpen, Code2, ExternalLink, KeyRound, RefreshCw } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { BookOpen, Code2, Copy, ExternalLink, KeyRound, RefreshCw } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { orgApi, ownerApi } from '@/lib/api';
@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import type { WebsiteSettingsResponse } from '@/types/api';
@@ -23,14 +24,39 @@ function isExternalDocsHref(href: string): boolean {
   return /^https?:\/\//i.test(href);
 }
 
+function DocsButton() {
+  const href = getApiDocsHref();
+  if (isExternalDocsHref(href)) {
+    return (
+      <Button asChild variant="outline" size="sm">
+        <a href={href} target="_blank" rel="noreferrer">
+          <BookOpen className="h-4 w-4" />
+          View developer docs
+          <ExternalLink className="h-3.5 w-3.5" />
+        </a>
+      </Button>
+    );
+  }
+  return (
+    <Button asChild variant="outline" size="sm">
+      <Link to={href}>
+        <BookOpen className="h-4 w-4" />
+        View developer docs
+      </Link>
+    </Button>
+  );
+}
+
 interface DeveloperApiSectionProps {
   orgId: string;
   data: WebsiteSettingsResponse;
   /** When false, section is collapsed to docs-only (mode toggle lives at page top). */
   active?: boolean;
+  /** Shareable custom-site URL controls shown above API key fields (custom mode). */
+  customUrlSlot?: ReactNode;
 }
 
-export function DeveloperApiSection({ orgId, data, active }: DeveloperApiSectionProps) {
+export function DeveloperApiSection({ orgId, data, active, customUrlSlot }: DeveloperApiSectionProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const isPlatformOwner = user?.role === 'platform_owner';
@@ -87,54 +113,31 @@ export function DeveloperApiSection({ orgId, data, active }: DeveloperApiSection
             Switch to <strong>Custom site</strong> above to generate an API key and call the Public Booking API from
             your own domain.
           </p>
-          <Button asChild variant="outline" size="sm">
-            {isExternalDocsHref(getApiDocsHref()) ? (
-              <a href={getApiDocsHref()} target="_blank" rel="noreferrer">
-                <BookOpen className="h-4 w-4" />
-                View developer docs
-                <ExternalLink className="h-3.5 w-3.5" />
-              </a>
-            ) : (
-              <Link to={getApiDocsHref()}>
-                <BookOpen className="h-4 w-4" />
-                View developer docs
-              </Link>
-            )}
-          </Button>
+          <DocsButton />
         </CardContent>
       </Card>
     );
   }
 
+  // Serenity / custom-site reference layout: Custom website title, shareable URL, then External API fields.
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
+      <CardHeader className="space-y-3">
+        <CardTitle className="flex flex-wrap items-center gap-2 text-base">
           <Code2 className="h-4 w-4" />
-          Developer API
+          Custom website
+          <Badge variant="success">External API active</Badge>
         </CardTitle>
+        <p className="text-sm text-stone-600 dark:text-stone-300">
+          Building booking into your own website or app? Use an API key and call the Public Booking API directly from
+          your own domain.
+        </p>
+        <DocsButton />
       </CardHeader>
       <CardContent className="space-y-4">
+        {customUrlSlot}
+
         <div className="space-y-4 rounded-lg border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-800/50">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="success">External API active</Badge>
-          </div>
-
-          <Button asChild variant="outline" size="sm">
-            {isExternalDocsHref(getApiDocsHref()) ? (
-              <a href={getApiDocsHref()} target="_blank" rel="noreferrer">
-                <BookOpen className="h-4 w-4" />
-                View developer docs
-                <ExternalLink className="h-3.5 w-3.5" />
-              </a>
-            ) : (
-              <Link to={getApiDocsHref()}>
-                <BookOpen className="h-4 w-4" />
-                View developer docs
-              </Link>
-            )}
-          </Button>
-
           <div>
             <Label>Base URL</Label>
             <code className="mt-1 block break-all rounded-md border border-stone-200 bg-white px-3 py-2 text-xs text-brand-700 dark:border-stone-700 dark:bg-stone-900 dark:text-brand-300">
@@ -192,5 +195,83 @@ export function DeveloperApiSection({ orgId, data, active }: DeveloperApiSection
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/** Compact shareable custom-site URL block for the Custom website card. */
+export function CustomSiteUrlFields({
+  draft,
+  onDraftChange,
+  onSave,
+  pending,
+  trialExpired,
+  liveHost,
+  liveUrl,
+  showLive,
+  fallbackHost,
+  onCopy,
+}: {
+  draft: string;
+  onDraftChange: (value: string) => void;
+  onSave: () => void;
+  pending: boolean;
+  trialExpired: boolean;
+  liveHost: string;
+  liveUrl: string;
+  showLive: boolean;
+  fallbackHost?: string;
+  onCopy: () => void;
+}) {
+  return (
+    <div className="min-w-0 space-y-3 rounded-lg border border-brand-200 bg-brand-50/50 p-4 dark:border-brand-900/50 dark:bg-brand-950/20">
+      <div>
+        <Label htmlFor="custom-site-url">Your website URL</Label>
+        <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
+          Shown on your dashboard as “Your link”. Use your public marketing or booking site (not the included Viselle
+          page).
+        </p>
+        <div className="mt-2 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch">
+          <Input
+            id="custom-site-url"
+            type="url"
+            placeholder="https://demo-site.viselle.net"
+            value={draft}
+            onChange={(e) => onDraftChange(e.target.value)}
+            disabled={trialExpired || pending}
+            autoComplete="url"
+            className="min-w-0 flex-1 font-mono text-sm"
+          />
+          <Button size="sm" className="shrink-0" onClick={onSave} disabled={trialExpired || pending}>
+            Save URL
+          </Button>
+        </div>
+        {!showLive && fallbackHost && (
+          <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
+            No custom URL saved yet — dashboard falls back to the included page until you add one. Fallback:{' '}
+            <span className="font-mono">{fallbackHost}</span>
+          </p>
+        )}
+      </div>
+
+      {showLive && (
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch">
+          <code className="block min-w-0 flex-1 break-all rounded-md border border-stone-200 bg-white px-3 py-2 text-xs text-brand-700 dark:border-stone-700 dark:bg-stone-900 dark:text-brand-300 sm:text-sm">
+            {liveHost}
+          </code>
+          <div className="flex shrink-0 gap-2">
+            <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={onCopy}>
+              <Copy className="h-4 w-4" />
+              Copy
+            </Button>
+            <Button asChild variant="outline" size="sm" className="flex-1 sm:flex-none">
+              <a href={liveUrl} target="_blank" rel="noreferrer">
+                <ExternalLink className="h-4 w-4" />
+                Open
+              </a>
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

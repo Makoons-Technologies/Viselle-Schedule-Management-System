@@ -14,7 +14,7 @@ import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import type { SiteTemplate, WebsiteHostingMode } from '@/types/api';
 import { BookingPagePreview } from '@/components/booking/BookingPagePreview';
 import { BookingBrandingSection } from '@/components/settings/BookingBrandingSection';
-import { DeveloperApiSection } from '@/components/settings/DeveloperApiSection';
+import { CustomSiteUrlFields, DeveloperApiSection } from '@/components/settings/DeveloperApiSection';
 import { HostedSubdomainSection } from '@/components/settings/HostedSubdomainSection';
 import { SettingsBackHeader } from '@/components/settings/SettingsBackHeader';
 import { normalizeBookingBranding } from '@/lib/booking-branding';
@@ -24,7 +24,6 @@ import { WebsiteHostingBadge } from '@/components/common/StatusBadge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -111,7 +110,8 @@ export function BookingWebsitePage() {
   const pathHost = displayBookingHost(pathUrl);
   const customSitePending = isCustomSite && share.kind !== 'custom';
   const hasSubdomainAddon = data.subdomainHostingEnabled;
-  const showUpgradeCtas = !hasSubdomainAddon || !isCustomSite;
+  const orgLabel = data.organizationName?.trim() || 'Booking website';
+  const pageTitle = isCustomSite ? `${orgLabel} — Custom website` : 'Booking website';
 
   const switchSiteMode = (next: SiteMode) => {
     if (trialExpired || updateMutation.isPending) return;
@@ -122,7 +122,6 @@ export function BookingWebsitePage() {
       return;
     }
 
-    // Back to Viselle-hosted: prefer purchased subdomain when available.
     const target: 'path' | 'subdomain' = hasSubdomainAddon ? 'subdomain' : 'path';
     updateMutation.mutate({
       hostingMode: target,
@@ -157,44 +156,59 @@ export function BookingWebsitePage() {
 
   return (
     <div className="mx-auto min-w-0 max-w-3xl space-y-6">
-      <SettingsBackHeader title="Booking website" backTo={`/orgs/${orgId}/settings`} />
+      <SettingsBackHeader title={pageTitle} backTo={`/orgs/${orgId}/settings`} />
 
-      {/* Top chrome: mode, upgrades, subdomain, share link / custom URL */}
-      <Card className="overflow-hidden border-brand-200 bg-gradient-to-br from-brand-50 to-white dark:border-stone-700 dark:from-stone-900 dark:to-stone-900">
-        <CardHeader className="space-y-4 pb-2">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle className="flex flex-wrap items-center gap-2 text-base text-stone-900 dark:text-stone-50">
-              <Globe className="h-4 w-4 shrink-0 text-brand-700 dark:text-brand-300" />
-              Booking website
-              <WebsiteHostingBadge hostingMode={hostingMode} />
-            </CardTitle>
+      {/* Mode chrome — always at top; replaces “Switch back to included link” */}
+      <Card className="border-brand-200 dark:border-stone-700">
+        <CardContent className="space-y-4 pt-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <WebsiteHostingBadge hostingMode={hostingMode} />
+            <span className="text-xs text-stone-500 dark:text-stone-400">
+              {isCustomSite
+                ? 'Mode: Custom site (External API)'
+                : hostingMode === 'subdomain'
+                  ? 'Mode: Viselle-hosted subdomain'
+                  : 'Mode: Viselle-hosted booking page'}
+            </span>
           </div>
 
           <div className="space-y-2">
             <Label className="text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400">Mode</Label>
             <TrialLockedControl locked={trialExpired}>
-              <Tabs
-                value={siteMode}
-                onValueChange={(value) => switchSiteMode(value as SiteMode)}
-              >
+              <Tabs value={siteMode} onValueChange={(value) => switchSiteMode(value as SiteMode)}>
                 <TabsList className="h-auto w-full flex-wrap sm:w-auto dark:bg-stone-800">
-                  <TabsTrigger value="booking" disabled={trialExpired || updateMutation.isPending} className="dark:data-[state=active]:bg-stone-950">
+                  <TabsTrigger
+                    value="booking"
+                    disabled={trialExpired || updateMutation.isPending}
+                    className="dark:data-[state=active]:bg-stone-950"
+                  >
                     Booking (Viselle-hosted)
                   </TabsTrigger>
-                  <TabsTrigger value="custom" disabled={trialExpired || updateMutation.isPending} className="dark:data-[state=active]:bg-stone-950">
+                  <TabsTrigger
+                    value="custom"
+                    disabled={trialExpired || updateMutation.isPending}
+                    className="dark:data-[state=active]:bg-stone-950"
+                  >
                     Custom site
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
             </TrialLockedControl>
-            <p className="text-xs text-stone-500 dark:text-stone-400">
-              {isCustomSite
-                ? 'Clients book on your own website via the Public Booking API.'
-                : 'Clients book on your included Viselle page or hosted subdomain.'}
-            </p>
           </div>
 
-          {showUpgradeCtas && (
+          {hasSubdomainAddon && (
+            <HostedSubdomainSection
+              orgId={orgId!}
+              data={data}
+              isPlatformOwner={isPlatformOwner}
+              trialExpired={trialExpired}
+              updatePending={updateMutation.isPending}
+              variant="inline"
+              onUpdate={(payload) => updateMutation.mutate(payload)}
+            />
+          )}
+
+          {(!hasSubdomainAddon || !isCustomSite) && (
             <div className="flex flex-wrap gap-2">
               {!hasSubdomainAddon && (
                 <Button asChild size="sm">
@@ -219,135 +233,96 @@ export function BookingWebsitePage() {
               )}
             </div>
           )}
-        </CardHeader>
-
-        <CardContent className="space-y-4">
-          {hasSubdomainAddon && (
-            <HostedSubdomainSection
-              orgId={orgId!}
-              data={data}
-              isPlatformOwner={isPlatformOwner}
-              trialExpired={trialExpired}
-              updatePending={updateMutation.isPending}
-              variant="inline"
-              onUpdate={(payload) => updateMutation.mutate(payload)}
-            />
-          )}
-
-          {isCustomSite ? (
-            <div className="min-w-0 space-y-3">
-              <div>
-                <Label htmlFor="custom-site-url">Your website URL</Label>
-                <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
-                  Shown on your dashboard as “Your link”. Use your public marketing or booking site (not the
-                  included Viselle page).
-                </p>
-                <div className="mt-2 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch">
-                  <Input
-                    id="custom-site-url"
-                    type="url"
-                    placeholder="https://www.your-salon.com"
-                    value={customUrlDraft}
-                    onChange={(e) => setCustomUrlDraft(e.target.value)}
-                    disabled={trialExpired || updateMutation.isPending}
-                    className="font-mono text-sm"
-                    autoComplete="url"
-                  />
-                  <TrialLockedControl locked={trialExpired}>
-                    <Button
-                      size="sm"
-                      className="shrink-0"
-                      onClick={saveCustomUrl}
-                      disabled={trialExpired || updateMutation.isPending}
-                    >
-                      Save URL
-                    </Button>
-                  </TrialLockedControl>
-                </div>
-                {customSitePending && (
-                  <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
-                    No custom URL saved yet — dashboard falls back to the included page until you add one.
-                    Fallback: <span className="font-mono">{pathHost}</span>
-                  </p>
-                )}
-              </div>
-
-              {!customSitePending && (
-                <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch">
-                  <code className="block min-w-0 flex-1 break-all rounded-md border border-stone-200 bg-white px-3 py-2 text-xs text-brand-700 dark:border-stone-700 dark:bg-stone-800 dark:text-brand-300 sm:text-sm">
-                    {liveHost}
-                  </code>
-                  <div className="flex shrink-0 gap-2">
-                    <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={() => void copyUrl()}>
-                      <Copy className="h-4 w-4" />
-                      Copy
-                    </Button>
-                    <Button asChild variant="outline" size="sm" className="flex-1 sm:flex-none">
-                      <a href={liveUrl} target="_blank" rel="noreferrer">
-                        <ExternalLink className="h-4 w-4" />
-                        Open
-                      </a>
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="grid min-w-0 gap-6 lg:grid-cols-2">
-              <div className="min-w-0 space-y-4">
-                <p className="text-sm leading-relaxed text-stone-600 dark:text-stone-200">
-                  {hostingMode === 'subdomain'
-                    ? 'Clients book on your Viselle subdomain. Share this link anywhere you promote the business.'
-                    : 'Every plan includes a booking page on Viselle. Share this link on Instagram, Google, or your existing website.'}
-                </p>
-                <div className="min-w-0">
-                  <Label className="text-stone-800 dark:text-stone-100">Your link</Label>
-                  <div className="mt-1 flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-stretch">
-                    <code className="block min-w-0 flex-1 break-all rounded-md border border-stone-200 bg-white px-3 py-2 text-xs text-brand-700 dark:border-stone-700 dark:bg-stone-800 dark:text-brand-300 sm:text-sm">
-                      {liveHost}
-                    </code>
-                    <div className="flex shrink-0 gap-2">
-                      <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={() => void copyUrl()}>
-                        <Copy className="h-4 w-4" />
-                        Copy
-                      </Button>
-                      <Button asChild variant="outline" size="sm" className="flex-1 sm:flex-none">
-                        <a href={liveUrl} target="_blank" rel="noreferrer">
-                          <ExternalLink className="h-4 w-4" />
-                          Preview
-                        </a>
-                      </Button>
-                    </div>
-                  </div>
-                  <p className="mt-2 break-words text-xs text-stone-500 dark:text-stone-300">
-                    {hostingMode === 'subdomain' ? (
-                      <>
-                        Included Viselle page:{' '}
-                        <span className="font-mono text-stone-600 dark:text-stone-200">{pathHost}</span>
-                      </>
-                    ) : (
-                      <>
-                        Format:{' '}
-                        <span className="font-mono text-stone-600 dark:text-stone-200">
-                          viselle.net/book/{data.organizationSlug}
-                        </span>
-                      </>
-                    )}
-                  </p>
-                </div>
-              </div>
-              <BookingPagePreview
-                template={website.siteTemplate ?? 'classic'}
-                branding={branding}
-                className="min-w-0"
-              />
-            </div>
-          )}
         </CardContent>
       </Card>
 
-      {!isCustomSite && (
+      {isCustomSite ? (
+        <DeveloperApiSection
+          orgId={orgId!}
+          data={data}
+          active
+          customUrlSlot={
+            <CustomSiteUrlFields
+              draft={customUrlDraft}
+              onDraftChange={setCustomUrlDraft}
+              onSave={saveCustomUrl}
+              pending={updateMutation.isPending}
+              trialExpired={trialExpired}
+              liveHost={liveHost}
+              liveUrl={liveUrl}
+              showLive={!customSitePending}
+              fallbackHost={pathHost}
+              onCopy={() => void copyUrl()}
+            />
+          }
+        />
+      ) : (
         <>
+          <Card className="overflow-hidden border-brand-200 bg-gradient-to-br from-brand-50 to-white dark:border-stone-700 dark:from-stone-900 dark:to-stone-900">
+            <CardHeader>
+              <CardTitle className="flex flex-wrap items-center gap-2 text-base text-stone-900 dark:text-stone-50">
+                <Globe className="h-4 w-4 shrink-0 text-brand-700 dark:text-brand-300" />
+                {hostingMode === 'subdomain' ? 'Your hosted subdomain' : 'Your booking page (included)'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid min-w-0 gap-6 lg:grid-cols-2">
+                <div className="min-w-0 space-y-4">
+                  <p className="text-sm leading-relaxed text-stone-600 dark:text-stone-200">
+                    {hostingMode === 'subdomain'
+                      ? 'Clients book on your Viselle subdomain. Share this link anywhere you promote the business.'
+                      : 'Every plan includes a booking page on Viselle. Share this link on Instagram, Google, or your existing website.'}
+                  </p>
+                  <div className="min-w-0">
+                    <Label className="text-stone-800 dark:text-stone-100">Your link</Label>
+                    <div className="mt-1 flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-stretch">
+                      <code className="block min-w-0 flex-1 break-all rounded-md border border-stone-200 bg-white px-3 py-2 text-xs text-brand-700 dark:border-stone-700 dark:bg-stone-800 dark:text-brand-300 sm:text-sm">
+                        {liveHost}
+                      </code>
+                      <div className="flex shrink-0 gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 sm:flex-none"
+                          onClick={() => void copyUrl()}
+                        >
+                          <Copy className="h-4 w-4" />
+                          Copy
+                        </Button>
+                        <Button asChild variant="outline" size="sm" className="flex-1 sm:flex-none">
+                          <a href={liveUrl} target="_blank" rel="noreferrer">
+                            <ExternalLink className="h-4 w-4" />
+                            Preview
+                          </a>
+                        </Button>
+                      </div>
+                    </div>
+                    <p className="mt-2 break-words text-xs text-stone-500 dark:text-stone-300">
+                      {hostingMode === 'subdomain' ? (
+                        <>
+                          Included Viselle page:{' '}
+                          <span className="font-mono text-stone-600 dark:text-stone-200">{pathHost}</span>
+                        </>
+                      ) : (
+                        <>
+                          Format:{' '}
+                          <span className="font-mono text-stone-600 dark:text-stone-200">
+                            viselle.net/book/{data.organizationSlug}
+                          </span>
+                        </>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <BookingPagePreview
+                  template={website.siteTemplate ?? 'classic'}
+                  branding={branding}
+                  className="min-w-0"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
@@ -395,10 +370,10 @@ export function BookingWebsitePage() {
             website={website}
             siteTemplate={website.siteTemplate ?? 'classic'}
           />
+
+          <DeveloperApiSection orgId={orgId!} data={data} active={false} />
         </>
       )}
-
-      <DeveloperApiSection orgId={orgId!} data={data} active={isCustomSite} />
 
       <div className="flex flex-wrap items-center gap-2 text-sm text-stone-500 dark:text-stone-400">
         <Label>Status</Label>
@@ -406,17 +381,19 @@ export function BookingWebsitePage() {
         {website.lastDeployedAt && <span>Updated {formatDate(website.lastDeployedAt)}</span>}
       </div>
 
-      <p className="text-xs text-stone-500 dark:text-stone-400">
-        Need booking on your own website? See{' '}
-        <a href="/#websites" className="text-brand-700 hover:underline dark:text-brand-300">
-          booking page options on our site
-        </a>{' '}
-        or{' '}
-        <Link to={contactPath({ interest: 'api' })} className="text-brand-700 hover:underline dark:text-brand-300">
-          contact us about API access
-        </Link>
-        .
-      </p>
+      {!isCustomSite && (
+        <p className="text-xs text-stone-500 dark:text-stone-400">
+          Need booking on your own website? See{' '}
+          <a href="/#websites" className="text-brand-700 hover:underline dark:text-brand-300">
+            booking page options on our site
+          </a>{' '}
+          or{' '}
+          <Link to={contactPath({ interest: 'api' })} className="text-brand-700 hover:underline dark:text-brand-300">
+            contact us about API access
+          </Link>
+          .
+        </p>
+      )}
     </div>
   );
 }
