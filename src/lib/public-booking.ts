@@ -224,6 +224,10 @@ export function getShareableBookingLink(data: {
   }
 
   if (mode === 'external_api') {
+    const deployed = data.websiteSettings.deployedSiteUrl;
+    if (deployed && /^https?:\/\//i.test(deployed) && !/localhost|127\.0\.0\.1/i.test(deployed)) {
+      return { url: deployed.replace(/\/$/, ''), kind: 'custom' };
+    }
     const origin = (data.apiAccess?.allowedOrigins ?? []).find((value) => /^https?:\/\//i.test(value.trim()));
     if (origin) return { url: origin.trim().replace(/\/$/, ''), kind: 'custom' };
   }
