@@ -94,6 +94,8 @@ export function PlanSettingsPage() {
       ? plan.subscriptionTier
       : null;
   const marketing = knownTier ? getPlanTier(knownTier) : null;
+  /** Unpaid active trial: no paid plan chosen yet — don't present a phantom "current" tier. */
+  const trialWithoutSubscription = isOnActiveTrial && !plan.hasStripeSubscription;
 
   return (
     <div className="space-y-6">
@@ -109,20 +111,39 @@ export function PlanSettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Current plan</CardTitle>
+          <CardTitle className="text-base">
+            {trialWithoutSubscription ? 'Your trial' : 'Current plan'}
+          </CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-stone-600 dark:text-stone-300">
-          <p>
-            <span className="font-medium text-stone-900 dark:text-stone-100">{plan.tierName}</span>
-            {' · '}${centsToDollars(plan.monthlyPriceCents)}/mo
-          </p>
-          {marketing && (
-            <p className="mt-1 text-stone-500 dark:text-stone-400">{marketing.tagline}</p>
-          )}
-          {!plan.hasStripeSubscription && (
-            <p className="mt-2 text-amber-800 dark:text-amber-200">
-              Billing is not linked yet — subscribe below to activate paid access.
-            </p>
+          {trialWithoutSubscription ? (
+            <>
+              <p>
+                <span className="font-medium text-stone-900 dark:text-stone-100">
+                  Full product access
+                </span>
+                {' · '}no paid plan selected yet
+              </p>
+              <p className="mt-1 text-stone-500 dark:text-stone-400">
+                Every feature is unlocked for the trial period. Choose a plan below when you are
+                ready to continue after the trial ends.
+              </p>
+            </>
+          ) : (
+            <>
+              <p>
+                <span className="font-medium text-stone-900 dark:text-stone-100">{plan.tierName}</span>
+                {' · '}${centsToDollars(plan.monthlyPriceCents)}/mo
+              </p>
+              {marketing && (
+                <p className="mt-1 text-stone-500 dark:text-stone-400">{marketing.tagline}</p>
+              )}
+              {!plan.hasStripeSubscription && (
+                <p className="mt-2 text-amber-800 dark:text-amber-200">
+                  Billing is not linked yet — subscribe below to activate paid access.
+                </p>
+              )}
+            </>
           )}
           <ul className="mt-3 list-inside list-disc space-y-1">
             <li>
