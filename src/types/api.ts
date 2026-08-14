@@ -581,6 +581,8 @@ export interface UpdateWebsiteInput {
   siteTemplate?: SiteTemplate | null;
   subdomain?: string | null;
   allowedOrigins?: string[];
+  /** Public marketing/booking URL when hostingMode is external_api. */
+  deployedSiteUrl?: string | null;
   bookingBranding?: BookingBranding;
 }
 

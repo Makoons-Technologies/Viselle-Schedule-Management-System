@@ -21,6 +21,8 @@ interface HostedSubdomainSectionProps {
   isPlatformOwner: boolean;
   trialExpired: boolean;
   updatePending: boolean;
+  /** `inline` = top chrome editor (purchased only). `card` = full section with upsell. */
+  variant?: 'card' | 'inline';
   onUpdate: (payload: {
     hostingMode: 'path' | 'subdomain';
     siteTemplate?: SiteTemplate | null;
@@ -34,6 +36,7 @@ export function HostedSubdomainSection({
   isPlatformOwner,
   trialExpired,
   updatePending,
+  variant = 'card',
   onUpdate,
 }: HostedSubdomainSectionProps) {
   const website = data.websiteSettings;
@@ -109,6 +112,91 @@ export function HostedSubdomainSection({
       subdomain: normalizedDraft,
     });
   };
+
+  if (variant === 'inline') {
+    if (!data.subdomainHostingEnabled) return null;
+
+    return (
+      <div className="space-y-3 rounded-lg border border-stone-200 bg-white/80 p-4 dark:border-stone-700 dark:bg-stone-900/60">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm font-medium text-stone-900 dark:text-stone-50">Hosted subdomain</p>
+          <Badge variant="success">Purchased</Badge>
+          {hostingMode === 'subdomain' && <Badge>Live</Badge>}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="hosted-subdomain-inline">Subdomain label</Label>
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+            <Input
+              id="hosted-subdomain-inline"
+              value={subdomainDraft}
+              onChange={(e) => setSubdomainDraft(e.target.value.toLowerCase())}
+              disabled={trialExpired || updatePending}
+              className="font-mono sm:max-w-xs"
+              autoComplete="off"
+              spellCheck={false}
+            />
+            <span className="shrink-0 text-sm text-stone-500 dark:text-stone-400">
+              .{data.subdomainBaseDomain}
+            </span>
+          </div>
+          <p
+            className={cn(
+              'text-xs',
+              status === 'available' && 'text-emerald-600 dark:text-emerald-400',
+              (status === 'taken' || status === 'reserved' || status === 'invalid') &&
+                'text-rose-600 dark:text-rose-400',
+              status === 'checking' && 'text-stone-500',
+              status === 'error' && 'text-amber-600 dark:text-amber-400',
+            )}
+          >
+            {status === 'checking' && 'Checking availability…'}
+            {status === 'available' && 'This subdomain is available'}
+            {status === 'taken' && 'That subdomain is already taken'}
+            {status === 'reserved' && 'That subdomain is reserved'}
+            {status === 'invalid' && 'Use 2–63 characters: lowercase letters, numbers, and hyphens'}
+            {status === 'error' && 'Could not check availability — try again'}
+            {status === 'idle' && `Preview: ${previewUrl.replace(/^https?:\/\//, '')}`}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {hostingMode !== 'subdomain' ? (
+            <TrialLockedControl locked={trialExpired}>
+              <Button
+                size="sm"
+                onClick={saveSubdomain}
+                disabled={
+                  updatePending ||
+                  trialExpired ||
+                  status === 'checking' ||
+                  status === 'taken' ||
+                  status === 'reserved' ||
+                  status === 'invalid'
+                }
+              >
+                Use this subdomain
+              </Button>
+            </TrialLockedControl>
+          ) : (
+            <>
+              <Button asChild variant="outline" size="sm">
+                <a href={liveUrl} target="_blank" rel="noreferrer">
+                  <ExternalLink className="h-4 w-4" />
+                  Open
+                </a>
+              </Button>
+              <TrialLockedControl locked={trialExpired}>
+                <Button size="sm" variant="secondary" onClick={saveSubdomain} disabled={!canSave}>
+                  Save subdomain
+                </Button>
+              </TrialLockedControl>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Card>
@@ -191,7 +279,14 @@ export function HostedSubdomainSection({
                 <TrialLockedControl locked={trialExpired}>
                   <Button
                     onClick={saveSubdomain}
-                    disabled={updatePending || trialExpired || status === 'checking' || status === 'taken' || status === 'reserved' || status === 'invalid'}
+                    disabled={
+                      updatePending ||
+                      trialExpired ||
+                      status === 'checking' ||
+                      status === 'taken' ||
+                      status === 'reserved' ||
+                      status === 'invalid'
+                    }
                   >
                     Switch to hosted subdomain
                   </Button>
