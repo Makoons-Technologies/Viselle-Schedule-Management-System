@@ -122,6 +122,50 @@ Returns active, bookable services only.
 }
 ```
 
+### List products
+
+```
+GET /organizations/:slug/products
+```
+
+Returns active retail products suitable for public display (e.g. a shop section on a custom
+booking site). Response fields are limited to catalog-safe data — no cost, stock levels, SKU,
+or barcode.
+
+```json
+{
+  "products": [
+    {
+      "id": "…",
+      "name": "Hydrating Shampoo",
+      "description": "Sulfate-free formula for color-treated hair.",
+      "priceCents": 2800,
+      "isActive": true
+    }
+  ]
+}
+```
+
+### Get one product
+
+```
+GET /organizations/:slug/products/:productId
+```
+
+Returns a single active product for the org, or `404` if missing/inactive.
+
+```json
+{
+  "product": {
+    "id": "…",
+    "name": "Hydrating Shampoo",
+    "description": "Sulfate-free formula for color-treated hair.",
+    "priceCents": 2800,
+    "isActive": true
+  }
+}
+```
+
 ### List staff/accounts
 
 ```
@@ -285,7 +329,7 @@ curl -X POST "https://api.viselle.net/api/v1/public/organizations/your-salon-slu
 ## Notes & limitations
 
 - There is currently no rate limiting on these endpoints beyond normal infrastructure limits —
-  be a good citizen and cache service/staff lists client-side rather than polling.
+  be a good citizen and cache service/staff/product lists client-side rather than polling.
 - Fields not documented above (e.g. internal IDs) may appear in responses and should be treated
   as unstable; only rely on the fields shown in the examples.
 - If you need functionality this API doesn't cover (webhooks, payments, custom fields), open a

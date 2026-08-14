@@ -30,6 +30,14 @@ export interface PublicAccount {
   lastName: string;
 }
 
+export interface PublicProduct {
+  id: string;
+  name: string;
+  description: string | null;
+  priceCents: number;
+  isActive: boolean;
+}
+
 export interface PublicSlot {
   startTime: string;
   endTime: string;
@@ -110,6 +118,12 @@ export const publicBookingApi = {
       .then((r) => r.data),
   getServices: (slug: string) =>
     apiClient.get<{ services: Service[] }>(`/public/organizations/${slug}/services`).then((r) => r.data),
+  getProducts: (slug: string) =>
+    apiClient.get<{ products: PublicProduct[] }>(`/public/organizations/${slug}/products`).then((r) => r.data),
+  getProduct: (slug: string, productId: string) =>
+    apiClient
+      .get<{ product: PublicProduct }>(`/public/organizations/${slug}/products/${productId}`)
+      .then((r) => r.data),
   getAccounts: (slug: string) =>
     apiClient.get<{ accounts: PublicAccount[] }>(`/public/organizations/${slug}/accounts`).then((r) => r.data),
   getAvailability: (
