@@ -1,5 +1,9 @@
 import { apiClient } from '@/lib/api';
-import { getSubdomainBookingSlug, isSubdomainBookingHost } from '@/lib/subdomain-booking';
+import {
+  getSubdomainBookingSlug,
+  getSubdomainBookingUrl,
+  isSubdomainBookingHost,
+} from '@/lib/subdomain-booking';
 import type { Service, SiteTemplate, BookingBranding } from '@/types/api';
 
 export interface PublicOrganization {
@@ -192,4 +196,48 @@ export function resolvePathBookingUrl(apiUrl: string | undefined | null, slug: s
   return getBookingPageUrl(slug);
 }
 
-export { getSubdomainBookingUrl } from '@/lib/subdomain-booking';
+export type ShareableBookingLinkKind = 'subdomain' | 'custom' | 'path';
+
+export function displayBookingHost(url: string): string {
+  return url.replace(/^https?:\/\//i, '').replace(/\/$/, '');
+}
+
+/** The URL an org should share: hosted subdomain, custom site, or included /book/ path. */
+export function getShareableBookingLink(data: {
+  websiteSettings: { hostingMode: string; deployedSiteUrl?: string | null };
+  subdomainUrl: string;
+  pathBookingUrl: string;
+  organizationSlug: string;
+  effectiveSubdomain?: string;
+  subdomainBaseDomain?: string;
+  apiAccess?: { allowedOrigins: string[] };
+}): { url: string; kind: ShareableBookingLinkKind } {
+  const mode = data.websiteSettings.hostingMode;
+
+  if (mode === 'subdomain') {
+    const url =
+      data.subdomainUrl ||
+      (data.effectiveSubdomain && data.subdomainBaseDomain
+        ? getSubdomainBookingUrl(data.effectiveSubdomain, data.subdomainBaseDomain)
+        : '');
+    if (url) return { url: url.replace(/\/$/, ''), kind: 'subdomain' };
+  }
+
+  if (mode === 'external_api') {
+    const origin = (data.apiAccess?.allowedOrigins ?? []).find((value) => /^https?:\/\//i.test(value.trim()));
+    if (origin) return { url: origin.trim().replace(/\/$/, ''), kind: 'custom' };
+  }
+
+  const deployed = data.websiteSettings.deployedSiteUrl;
+  if (deployed && /^https?:\/\//i.test(deployed) && !/localhost|127\.0\.0\.1/i.test(deployed)) {
+    const kind: ShareableBookingLinkKind = mode === 'subdomain' ? 'subdomain' : 'path';
+    return { url: deployed.replace(/\/$/, ''), kind };
+  }
+
+  return {
+    url: resolvePathBookingUrl(data.pathBookingUrl, data.organizationSlug),
+    kind: 'path',
+  };
+}
+
+export { getSubdomainBookingUrl };
