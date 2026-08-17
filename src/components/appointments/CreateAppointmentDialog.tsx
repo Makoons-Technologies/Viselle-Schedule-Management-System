@@ -190,14 +190,28 @@ export function CreateAppointmentDialog({
     }
   }, [date, today, setValue]);
 
+  const skipSlotClearRef = useRef(true);
+  const dialogOpenedRef = useRef(false);
+
   useEffect(() => {
+    if (skipSlotClearRef.current) {
+      skipSlotClearRef.current = false;
+      return;
+    }
     setValue('startTime', '');
   }, [accountId, serviceId, date, setValue]);
 
   const recurringAnchorRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      dialogOpenedRef.current = false;
+      skipSlotClearRef.current = true;
+      return;
+    }
+    if (dialogOpenedRef.current) return;
+    dialogOpenedRef.current = true;
+
     recurringAnchorRef.current = null;
     setMakeRecurring(false);
     setFrequency('weekly');
@@ -208,7 +222,8 @@ export function CreateAppointmentDialog({
     setSmsOptIn(false);
     resetSchedule([], {});
     reset({ date: initialDate });
-  }, [open, resetSchedule, reset, initialDate]);
+    skipSlotClearRef.current = true;
+  }, [open, initialDate, reset, resetSchedule]);
 
   useEffect(() => {
     if (open && trialExpired) {
