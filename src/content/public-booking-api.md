@@ -76,7 +76,7 @@ All errors share this shape:
 ```
 
 Common codes: `VALIDATION_ERROR` (400), `FORBIDDEN` (403), `NOT_FOUND` (404),
-`TIME_SLOT_UNAVAILABLE` (400), `ORG_INACTIVE` / `BILLING_INACTIVE` (403).
+`RATE_LIMITED` (429), `TIME_SLOT_UNAVAILABLE` (400), `ORG_INACTIVE` / `BILLING_INACTIVE` (403).
 
 ## Endpoints
 
@@ -326,10 +326,33 @@ curl -X POST "https://api.viselle.net/api/v1/public/organizations/your-salon-slu
   }'
 ```
 
+## Rate limits
+
+The Public Booking API is **included** with an active subscription or full-access trial.
+There is no per-booking or per-request charge. Limits are request-rate caps only, so one
+site cannot overwhelm the platform.
+
+| Traffic | How it is keyed | Default budget |
+|---|---|---|
+| Viselle-hosted booking (`path` / `subdomain`, no API key) | Client IP + organization slug | **60 requests / 10 seconds** |
+| External API (`x-api-key` or `Authorization: Bearer`, valid or attempted) | Hashed API key + slug (the raw key is never logged) | **20 requests / 10 seconds** |
+| Customer management (`/appointments/:managementToken/...`) | Client IP | **60 requests / 10 seconds** (hosted budget) |
+
+`POST /organizations/:slug/appointments` shares the same window and budget as reads for
+that key. A normal page load plus booking one appointment will not be blocked.
+
+When a limit is exceeded the API returns HTTP `429` with `error.code` `RATE_LIMITED` and a
+`Retry-After` header (seconds to wait). Enforcement is in-memory per server instance —
+best-effort on multi-instance hosts such as Vercel, not a global quota.
+
+Operators can override defaults with `PUBLIC_API_RATE_LIMIT_WINDOW_MS`,
+`PUBLIC_API_RATE_LIMIT_HOSTED_MAX`, and `PUBLIC_API_RATE_LIMIT_EXTERNAL_MAX`.
+
+Cache service, staff, and product lists client-side rather than polling.
+
 ## Notes & limitations
 
-- There is currently no rate limiting on these endpoints beyond normal infrastructure limits —
-  be a good citizen and cache service/staff/product lists client-side rather than polling.
+- Rate limits above apply to `/api/v1/public` only (not owner/staff APIs).
 - Fields not documented above (e.g. internal IDs) may appear in responses and should be treated
   as unstable; only rely on the fields shown in the examples.
 - If you need functionality this API doesn't cover (webhooks, payments, custom fields), open a
