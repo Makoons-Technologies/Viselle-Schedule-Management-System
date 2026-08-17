@@ -616,7 +616,7 @@ function CampaignsTab() {
   const [createOpen, setCreateOpen] = useState(false);
   const [detailCampaignId, setDetailCampaignId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'live' | 'off' | 'expired'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'live' | 'off' | 'expired'>('live');
 
   const { data, isLoading } = useQuery({
     queryKey: ['owner', 'trials', 'campaigns'],
