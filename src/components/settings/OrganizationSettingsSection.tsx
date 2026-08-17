@@ -10,7 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { helperTextClass } from '@/components/common/Panel';
+import { SmsUnderReviewNotice } from '@/components/common/SmsUnderReviewNotice';
 import { cn, slugify } from '@/lib/utils';
+import { isSmsSendingEnabled } from '@/lib/sms';
 import { Switch } from '@/components/ui/switch';
 import { TRIAL_LOCKED_MESSAGE } from '@/lib/trial';
 
@@ -77,6 +79,7 @@ export function OrganizationSettingsSection({ orgId }: OrganizationSettingsSecti
 
   const emailPlanEnabled = plan?.emailRemindersEnabled ?? true;
   const smsPlanEnabled = plan?.smsRemindersEnabled ?? true;
+  const smsSendingOn = isSmsSendingEnabled(plan);
 
   return (
     <Card>
@@ -207,6 +210,7 @@ export function OrganizationSettingsSection({ orgId }: OrganizationSettingsSecti
               cancelled (with calendar links on book/update), plus a later reminder at the hours you
               set below.
             </p>
+            {!smsSendingOn && <SmsUnderReviewNotice className="mt-3" />}
           </div>
 
           <div className="space-y-3">
@@ -256,6 +260,10 @@ export function OrganizationSettingsSection({ orgId }: OrganizationSettingsSecti
                 <Label>Text (SMS) reminders</Label>
                 {!smsPlanEnabled ? (
                   <p className={helperTextClass}>Not included in your plan</p>
+                ) : !smsSendingOn ? (
+                  <p className={helperTextClass}>
+                    Settings are saved, but texts will not send until the number is approved
+                  </p>
                 ) : (
                   <p className={helperTextClass}>Send a text reminder before the appointment</p>
                 )}
@@ -299,7 +307,8 @@ export function OrganizationSettingsSection({ orgId }: OrganizationSettingsSecti
             </p>
             <p className={helperTextClass}>
               Customers receive a link to confirm they will attend, by default 3 days before the
-              appointment. Uses the same email/SMS channels as reminders.
+              appointment. Uses the same email{smsSendingOn ? '/SMS' : ''} channels as reminders
+              {smsSendingOn ? '.' : '. Text confirmations are paused until the number is approved.'}
             </p>
           </div>
 
@@ -347,7 +356,10 @@ export function OrganizationSettingsSection({ orgId }: OrganizationSettingsSecti
               Staff &amp; owner reminders
             </p>
             <p className={helperTextClass}>
-              Notify the assigned staff member before their appointment (email, SMS, and/or push).
+              Notify the assigned staff member before their appointment (email
+              {smsSendingOn ? ', SMS, ' : ' '}
+              and/or push)
+              {smsSendingOn ? '.' : '. Staff texts are paused until the number is approved.'}
             </p>
           </div>
           <div className="flex items-center justify-between gap-4">
@@ -363,6 +375,9 @@ export function OrganizationSettingsSection({ orgId }: OrganizationSettingsSecti
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0 flex-1">
               <Label>Staff text (SMS)</Label>
+              {!smsSendingOn && (
+                <p className={helperTextClass}>Paused during carrier review</p>
+              )}
             </div>
             <Switch
               checked={org.staffSmsRemindersOptIn ?? false}
@@ -431,7 +446,12 @@ export function OrganizationSettingsSection({ orgId }: OrganizationSettingsSecti
             />
           </div>
           <div className="flex items-center justify-between gap-4">
-            <Label>Text (SMS)</Label>
+            <div className="min-w-0 flex-1">
+              <Label>Text (SMS)</Label>
+              {!smsSendingOn && (
+                <p className={helperTextClass}>Paused during carrier review</p>
+              )}
+            </div>
             <Switch
               checked={org.lowStockAlertSms ?? false}
               disabled={

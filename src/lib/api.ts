@@ -194,7 +194,9 @@ export const ownerApi = {
       )
       .then((r) => r.data),
   getSettings: (id: string) =>
-    apiClient.get<{ settings: OrganizationSettings }>(`/owner/organizations/${id}/settings`).then((r) => r.data),
+    apiClient
+      .get<{ settings: OrganizationSettings; smsSendingEnabled?: boolean }>(`/owner/organizations/${id}/settings`)
+      .then((r) => r.data),
   updateSettings: (id: string, data: Partial<OrganizationSettings>) =>
     apiClient.patch<{ settings: OrganizationSettings }>(`/owner/organizations/${id}/settings`, data).then((r) => r.data),
   applyTier: (id: string, tier: Exclude<SubscriptionTier, 'custom'>) =>

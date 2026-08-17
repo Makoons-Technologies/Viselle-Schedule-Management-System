@@ -12,6 +12,8 @@ export interface PublicOrganization {
   slug: string;
   publicBookingEnabled: boolean;
   smsRemindersEnabled?: boolean;
+  /** False while the platform sending number is under A2P / carrier review. */
+  smsSendingEnabled?: boolean;
   city?: string | null;
   address?: string | null;
   phone?: string | null;

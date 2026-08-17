@@ -9,10 +9,12 @@ import { useOrgPlan } from '@/hooks/useOrgPlan';
 import { orgApi } from '@/lib/api';
 import { isOrgInActiveTrial } from '@/lib/trial';
 import { LoadingState } from '@/components/common/LoadingState';
+import { SmsUnderReviewNotice } from '@/components/common/SmsUnderReviewNotice';
 import { PlanComparisonSection } from '@/components/settings/PlanComparisonSection';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { centsToDollars } from '@/lib/utils';
 import { getPlanTier, type PlanTierId } from '@/lib/plan-features';
+import { isSmsSendingEnabled } from '@/lib/sms';
 
 export function PlanSettingsPage() {
   const orgId = useOrgId();
@@ -145,6 +147,7 @@ export function PlanSettingsPage() {
               )}
             </>
           )}
+          {!isSmsSendingEnabled(plan) && <SmsUnderReviewNotice className="mt-3" />}
           <ul className="mt-3 list-inside list-disc space-y-1">
             <li>
               Staff limit:{' '}
@@ -155,7 +158,14 @@ export function PlanSettingsPage() {
                   : `Up to ${plan.maxStaffAccounts}`}
             </li>
             <li>Email reminders: {plan.emailRemindersEnabled ? 'Included' : 'Not included'}</li>
-            <li>Text (SMS) reminders: {plan.smsRemindersEnabled ? 'Included' : 'Not included'}</li>
+            <li>
+              Text (SMS) reminders:{' '}
+              {plan.smsRemindersEnabled
+                ? isSmsSendingEnabled(plan)
+                  ? 'Included'
+                  : 'Included — sending paused during carrier review'
+                : 'Not included'}
+            </li>
             <li>
               Recurring appointments:{' '}
               {plan.recurringAppointmentsEnabled ? 'Included' : 'Not included'}

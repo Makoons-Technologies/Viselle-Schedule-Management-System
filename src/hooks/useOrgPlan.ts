@@ -29,6 +29,7 @@ export function useOrgPlan(orgId: string | undefined) {
                 ? 'Business'
                 : 'Custom',
         smsRemindersEnabled: data.settings.smsRemindersEnabled,
+        smsSendingEnabled: data.smsSendingEnabled === true,
         emailRemindersEnabled: data.settings.emailRemindersEnabled,
         recurringAppointmentsEnabled: data.settings.recurringAppointmentsEnabled,
         maxStaffAccounts: data.settings.maxStaffAccounts,

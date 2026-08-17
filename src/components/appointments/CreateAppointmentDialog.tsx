@@ -30,6 +30,7 @@ import { helperTextClass } from '@/components/common/Panel';
 import { useRecurringDaySchedule } from '@/hooks/useRecurringDaySchedule';
 import { useOrgPlan } from '@/hooks/useOrgPlan';
 import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
+import { isSmsSendingEnabled, SMS_UNDER_REVIEW_OPT_IN_NOTE } from '@/lib/sms';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -95,6 +96,7 @@ export function CreateAppointmentDialog({
   const queryClient = useQueryClient();
   const { plan } = useOrgPlan(orgId);
   const trialExpired = useOrgWriteLocked();
+  const smsSendingOn = isSmsSendingEnabled(plan);
   const today = todayDateOnlyLocal();
   const initialDate =
     defaultDate && defaultDate >= today ? defaultDate : today;
@@ -478,7 +480,9 @@ export function CreateAppointmentDialog({
                     textClassName="text-stone-600 dark:text-stone-300"
                   />
                   <p className={cn(helperTextClass, 'mt-2')}>
-                    Optional for staff booking. If they do not opt in, they will not receive appointment texts.
+                    {smsSendingOn
+                      ? 'Optional for staff booking. If they do not opt in, they will not receive appointment texts.'
+                      : SMS_UNDER_REVIEW_OPT_IN_NOTE}
                   </p>
                 </div>
               )}

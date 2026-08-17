@@ -18,6 +18,7 @@ import { LoadingState } from '@/components/common/LoadingState';
 import { PageSeo } from '@/components/seo/PageSeo';
 import { SmsOptInCheckbox } from '@/components/booking/SmsOptInCheckbox';
 import { publicBookingApi, getManageBookingUrl } from '@/lib/public-booking';
+import { SMS_UNDER_REVIEW_OPT_IN_NOTE } from '@/lib/sms';
 import { centsToDollars, filterFutureAppointmentSlots, formatDateTime, appointmentScheduleFromIso, cn } from '@/lib/utils';
 import type { Service, BookingBranding } from '@/types/api';
 
@@ -110,6 +111,7 @@ export function PublicBookingPage({ slugOverride }: PublicBookingPageProps = {})
   const phoneTrimmed = customer.phone.trim();
   const emailTrimmed = customer.email.trim();
   const smsRemindersEnabled = Boolean(orgQuery.data?.organization.smsRemindersEnabled);
+  const smsSendingOn = orgQuery.data?.organization.smsSendingEnabled === true;
   const consentQuery = useQuery({
     queryKey: ['public-sms-consent', slug, emailTrimmed, phoneTrimmed],
     queryFn: () =>
@@ -447,9 +449,14 @@ export function PublicBookingPage({ slugOverride }: PublicBookingPageProps = {})
                   lightOnly
                   textClassName="text-neutral-700"
                 />
+                {!smsSendingOn && (
+                  <p className="mt-2 text-xs text-neutral-600">{SMS_UNDER_REVIEW_OPT_IN_NOTE}</p>
+                )}
                 {!smsOptIn && (
                   <p className="mt-2 text-xs text-red-600">
-                    Check the box to receive appointment texts, or leave phone blank.
+                    {smsSendingOn
+                      ? 'Check the box to receive appointment texts, or leave phone blank.'
+                      : 'Check the box to opt in for texts (they start after carrier approval), or leave phone blank.'}
                   </p>
                 )}
               </div>

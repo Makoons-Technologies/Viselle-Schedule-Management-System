@@ -11,13 +11,16 @@ import { EditAppointmentDialog } from '@/components/appointments/EditAppointment
 import { NoteHistoryList } from '@/components/appointments/CustomerServiceNoteHistory';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { LoadingState } from '@/components/common/LoadingState';
+import { SmsUnderReviewNotice } from '@/components/common/SmsUnderReviewNotice';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
 import { useStaffPermissions } from '@/hooks/useStaffPermissions';
+import { useOrgPlan } from '@/hooks/useOrgPlan';
 import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { TRIAL_LOCKED_MESSAGE } from '@/lib/trial';
+import { isSmsSendingEnabled, SMS_UNDER_REVIEW_NOTICE } from '@/lib/sms';
 
 interface AppointmentDetailSheetProps {
   appointmentId: string | null;
@@ -66,7 +69,9 @@ export function AppointmentDetailSheet({
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { permissions, isManager } = useStaffPermissions(orgId);
+  const { plan } = useOrgPlan(orgId);
   const trialExpired = useOrgWriteLocked();
+  const smsSendingOn = isSmsSendingEnabled(plan);
 
   const [recurringOpen, setRecurringOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -321,11 +326,18 @@ export function AppointmentDetailSheet({
                 <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-stone-500 dark:text-stone-400">
                   Reminders
                 </p>
+                {!smsSendingOn && remindersData.reminders.some((r) => r.type === 'sms') && (
+                  <SmsUnderReviewNotice className="mb-2" />
+                )}
                 <ul className="divide-y divide-stone-200 dark:divide-stone-700/80">
                   {remindersData.reminders.map((r) => (
                     <li key={r.id} className="flex items-center justify-between py-2.5 text-sm">
                       <span className="capitalize text-stone-900 dark:text-stone-100">{r.type}</span>
-                      <Badge variant={r.status === 'sent' ? 'success' : 'secondary'}>{r.status}</Badge>
+                      <Badge variant={r.status === 'sent' ? 'success' : 'secondary'}>
+                        {r.type === 'sms' && r.status === 'pending' && !smsSendingOn
+                          ? 'paused'
+                          : r.status}
+                      </Badge>
                     </li>
                   ))}
                 </ul>
@@ -422,11 +434,17 @@ export function AppointmentDetailSheet({
                         variant="outline"
                         className={pillOutline}
                         onClick={() => sendSmsMutation.mutate()}
-                        disabled={sendSmsMutation.isPending || !data.customer?.phone?.trim()}
+                        disabled={
+                          sendSmsMutation.isPending ||
+                          !smsSendingOn ||
+                          !data.customer?.phone?.trim()
+                        }
                         title={
-                          data.customer?.phone?.trim()
-                            ? undefined
-                            : 'Add a phone number for this customer to send SMS'
+                          !smsSendingOn
+                            ? SMS_UNDER_REVIEW_NOTICE
+                            : data.customer?.phone?.trim()
+                              ? undefined
+                              : 'Add a phone number for this customer to send SMS'
                         }
                       >
                         Send SMS
