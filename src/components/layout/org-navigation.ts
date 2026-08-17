@@ -48,28 +48,37 @@ export function getOrgSettingsHubGroups(
     },
   ];
 
-  if (options.showStaffPermissions) {
-    groups.push({
-      items: [{ label: 'Staff permissions', to: `${orgBase}/settings/staff-permissions`, icon: Shield }],
-    });
-  }
-
   if (options.showAdminSettings) {
+    const teamItems: OrgNavLink[] = [
+      { label: 'Organization', to: `${orgBase}/settings/org`, icon: Building2 },
+      { label: 'Staff', to: `${orgBase}/staff`, icon: Users },
+    ];
+    if (options.showStaffPermissions) {
+      teamItems.push({ label: 'Staff permissions', to: `${orgBase}/settings/staff-permissions`, icon: Shield });
+    }
+    groups.push({ items: teamItems });
+
     groups.push({
       items: [
-        { label: 'Organization', to: `${orgBase}/settings/org`, icon: Building2 },
-        { label: 'Staff', to: `${orgBase}/staff`, icon: Users },
         { label: 'Services', to: `${orgBase}/settings/services`, icon: Scissors },
         { label: 'Products', to: `${orgBase}/settings/products`, icon: Package },
         { label: 'Availability', to: `${orgBase}/availability`, icon: Clock },
-        { label: 'Booking website', to: `${orgBase}/website`, icon: Globe },
       ],
     });
+
     groups.push({
-      items: [{ label: 'Payments', to: `${orgBase}/settings/payments`, icon: CreditCard }],
+      items: [
+        { label: 'Booking website', to: `${orgBase}/website`, icon: Globe },
+        { label: 'Payments', to: `${orgBase}/settings/payments`, icon: CreditCard },
+      ],
     });
+
     groups.push({
       items: [{ label: 'Account', to: `${orgBase}/settings/account`, icon: UserCircle }],
+    });
+  } else if (options.showStaffPermissions) {
+    groups.push({
+      items: [{ label: 'Staff permissions', to: `${orgBase}/settings/staff-permissions`, icon: Shield }],
     });
   }
 
