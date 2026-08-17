@@ -23,7 +23,7 @@ const WEBSITE_OPTIONS = [
     title: 'Hosted subdomain',
     description:
       'Your own address like yourspa.viselle.net — the same booking page as your included link, on a branded subdomain.',
-    bullets: ['Branded subdomain URL', 'Same templates & branding as your booking page', '$19/mo — add at checkout'],
+    bullets: ['Branded subdomain URL', 'Same templates & branding as your booking page', 'Pricing TBD — contact us to add'],
     cta: { label: 'Add at signup', to: getStartedPath({ subdomain: true }) },
     variant: 'addon' as const,
   },

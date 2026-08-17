@@ -756,9 +756,7 @@ export function GetStartedPage() {
     {
       id: 'subdomain',
       title: subdomainAddonInfo?.name ?? 'Hosted subdomain',
-      price: subdomainAddonInfo?.priceCents
-        ? `${formatCents(subdomainAddonInfo.priceCents)}/mo`
-        : '$19/mo',
+      price: subdomainAddonInfo?.priceLabel ?? 'TBD',
       description:
         subdomainAddonInfo?.description ??
         'Your own address like yourspa.viselle.net on Viselle.',
