@@ -110,8 +110,8 @@ export function DeveloperApiSection({ orgId, data, active, customUrlSlot }: Deve
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-stone-600 dark:text-stone-300">
-            Switch to <strong>Custom site</strong> above to generate an API key and call the Public Booking API from
-            your own domain.
+            Add your own website URL above to generate an API key and call the Public Booking API from your
+            domain.
           </p>
           <DocsButton />
         </CardContent>
@@ -125,7 +125,7 @@ export function DeveloperApiSection({ orgId, data, active, customUrlSlot }: Deve
       <CardHeader className="space-y-3">
         <CardTitle className="flex flex-wrap items-center gap-2 text-base">
           <Code2 className="h-4 w-4" />
-          Custom website
+          Your website
           <Badge variant="success">External API active</Badge>
         </CardTitle>
         <p className="text-sm text-stone-600 dark:text-stone-300">
@@ -227,14 +227,14 @@ export function CustomSiteUrlFields({
       <div>
         <Label htmlFor="custom-site-url">Your website URL</Label>
         <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
-          Shown on your dashboard as “Your link”. Use your public marketing or booking site (not the included Viselle
-          page).
+          Shown on your dashboard as “Your link”. Use your public marketing or booking site. Hosted subdomains and
+          Viselle custom websites are set up by us.
         </p>
         <div className="mt-2 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch">
           <Input
             id="custom-site-url"
             type="url"
-            placeholder="https://demo-site.viselle.net"
+            placeholder="https://www.your-salon.com"
             value={draft}
             onChange={(e) => onDraftChange(e.target.value)}
             disabled={trialExpired || pending}

@@ -11,7 +11,7 @@ import { cn, formatDate } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
-import type { SiteTemplate, WebsiteHostingMode } from '@/types/api';
+import type { SiteTemplate } from '@/types/api';
 import { BookingPagePreview } from '@/components/booking/BookingPagePreview';
 import { BookingBrandingSection } from '@/components/settings/BookingBrandingSection';
 import { CustomSiteUrlFields, DeveloperApiSection } from '@/components/settings/DeveloperApiSection';
@@ -19,19 +19,11 @@ import { HostedSubdomainSection } from '@/components/settings/HostedSubdomainSec
 import { SettingsBackHeader } from '@/components/settings/SettingsBackHeader';
 import { normalizeBookingBranding } from '@/lib/booking-branding';
 import { LoadingState } from '@/components/common/LoadingState';
-import { TrialLockedControl } from '@/components/common/TrialLockedControl';
 import { WebsiteHostingBadge } from '@/components/common/StatusBadge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
-type SiteMode = 'booking' | 'custom';
-
-function hostingModeToSiteMode(mode: WebsiteHostingMode | string | undefined): SiteMode {
-  return mode === 'external_api' ? 'custom' : 'booking';
-}
 
 export function BookingWebsitePage() {
   const orgId = useOrgId();
@@ -73,7 +65,9 @@ export function BookingWebsitePage() {
         (stored && !/localhost|127\.0\.0\.1/i.test(stored) ? stored : share.kind === 'custom' ? share.url : '') ||
           '',
       );
+      return;
     }
+    setCustomUrlDraft('');
   }, [data]);
 
   if (orgLoading) return <LoadingState />;
@@ -101,8 +95,8 @@ export function BookingWebsitePage() {
   const website = data.websiteSettings;
   const branding = normalizeBookingBranding(website.bookingBranding);
   const hostingMode = website.hostingMode ?? 'path';
-  const siteMode = hostingModeToSiteMode(hostingMode);
-  const isCustomSite = siteMode === 'custom';
+  const customWebsiteEnabled = Boolean(data.customWebsiteEnabled);
+  const isCustomSite = hostingMode === 'external_api';
   const pathUrl = resolvePathBookingUrl(data.pathBookingUrl, data.organizationSlug);
   const share = getShareableBookingLink(data);
   const liveUrl = share.url;
@@ -111,30 +105,31 @@ export function BookingWebsitePage() {
   const customSitePending = isCustomSite && share.kind !== 'custom';
   const hasSubdomainAddon = data.subdomainHostingEnabled;
   const orgLabel = data.organizationName?.trim() || 'Booking website';
-  const pageTitle = isCustomSite ? `${orgLabel} — Custom website` : 'Booking website';
-
-  const switchSiteMode = (next: SiteMode) => {
-    if (trialExpired || updateMutation.isPending) return;
-    if (next === siteMode) return;
-
-    if (next === 'custom') {
-      updateMutation.mutate({ hostingMode: 'external_api' });
-      return;
-    }
-
-    const target: 'path' | 'subdomain' = hasSubdomainAddon ? 'subdomain' : 'path';
-    updateMutation.mutate({
-      hostingMode: target,
-      siteTemplate: website.siteTemplate ?? data.siteTemplates[0]?.id ?? 'classic',
-      ...(target === 'subdomain' && website.subdomain ? { subdomain: website.subdomain } : {}),
-    });
-  };
+  const pageTitle = customWebsiteEnabled
+    ? `${orgLabel} — Custom website`
+    : isCustomSite
+      ? `${orgLabel} — Your website`
+      : 'Booking website';
+  const canEditThirdPartyUrl = !customWebsiteEnabled && hostingMode !== 'subdomain';
 
   const saveCustomUrl = () => {
     const trimmed = customUrlDraft.trim();
+    if (!trimmed) {
+      if (hostingMode === 'external_api' && canEditThirdPartyUrl) {
+        useIncludedBookingPage();
+      }
+      return;
+    }
     updateMutation.mutate({
       hostingMode: 'external_api',
-      deployedSiteUrl: trimmed || null,
+      deployedSiteUrl: trimmed,
+    });
+  };
+
+  const useIncludedBookingPage = () => {
+    updateMutation.mutate({
+      hostingMode: 'path',
+      siteTemplate: website.siteTemplate ?? data.siteTemplates[0]?.id ?? 'classic',
     });
   };
 
@@ -158,43 +153,34 @@ export function BookingWebsitePage() {
     <div className="mx-auto min-w-0 max-w-3xl space-y-6">
       <SettingsBackHeader title={pageTitle} backTo={`/orgs/${orgId}/settings`} />
 
-      {/* Mode chrome — always at top; replaces “Switch back to included link” */}
+      {/* Hosting status — subdomain/custom website are platform-managed */}
       <Card className="border-brand-200 dark:border-stone-700">
         <CardContent className="space-y-4 pt-6">
           <div className="flex flex-wrap items-center gap-2">
-            <WebsiteHostingBadge hostingMode={hostingMode} />
+            <WebsiteHostingBadge hostingMode={hostingMode} customWebsiteRequested={customWebsiteEnabled} />
             <span className="text-xs text-stone-500 dark:text-stone-400">
-              {isCustomSite
-                ? 'Mode: Custom site (External API)'
-                : hostingMode === 'subdomain'
-                  ? 'Mode: Viselle-hosted subdomain'
-                  : 'Mode: Viselle-hosted booking page'}
+              {customWebsiteEnabled
+                ? 'Mode: Viselle custom website'
+                : isCustomSite
+                  ? 'Mode: Your own website'
+                  : hostingMode === 'subdomain'
+                    ? 'Mode: Viselle-hosted subdomain'
+                    : 'Mode: Viselle-hosted booking page'}
             </span>
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400">Mode</Label>
-            <TrialLockedControl locked={trialExpired}>
-              <Tabs value={siteMode} onValueChange={(value) => switchSiteMode(value as SiteMode)}>
-                <TabsList className="h-auto w-full flex-wrap sm:w-auto dark:bg-stone-800">
-                  <TabsTrigger
-                    value="booking"
-                    disabled={trialExpired || updateMutation.isPending}
-                    className="dark:data-[state=active]:bg-stone-950"
-                  >
-                    Booking (Viselle-hosted)
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="custom"
-                    disabled={trialExpired || updateMutation.isPending}
-                    className="dark:data-[state=active]:bg-stone-950"
-                  >
-                    Custom site
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </TrialLockedControl>
-          </div>
+          {isPlatformOwner && (
+            <p className="text-xs text-stone-500 dark:text-stone-400">
+              Change hosted subdomain or Viselle custom website in{' '}
+              <Link
+                to={`/platform/organizations/${orgId}/settings`}
+                className="text-brand-700 hover:underline dark:text-brand-300"
+              >
+                platform admin settings
+              </Link>
+              .
+            </p>
+          )}
 
           {hasSubdomainAddon && (
             <HostedSubdomainSection
@@ -204,11 +190,26 @@ export function BookingWebsitePage() {
               trialExpired={trialExpired}
               updatePending={updateMutation.isPending}
               variant="inline"
+              readOnly
               onUpdate={(payload) => updateMutation.mutate(payload)}
             />
           )}
 
-          {(!hasSubdomainAddon || !isCustomSite) && (
+          {canEditThirdPartyUrl && hostingMode === 'path' && (
+            <CustomSiteUrlFields
+              draft={customUrlDraft}
+              onDraftChange={setCustomUrlDraft}
+              onSave={saveCustomUrl}
+              pending={updateMutation.isPending}
+              trialExpired={trialExpired}
+              liveHost={liveHost}
+              liveUrl={liveUrl}
+              showLive={false}
+              onCopy={() => void copyUrl()}
+            />
+          )}
+
+          {(!hasSubdomainAddon || !isCustomSite) && !customWebsiteEnabled && hostingMode !== 'subdomain' && (
             <div className="flex flex-wrap gap-2">
               {!hasSubdomainAddon && (
                 <Button asChild size="sm">
@@ -242,18 +243,62 @@ export function BookingWebsitePage() {
           data={data}
           active
           customUrlSlot={
-            <CustomSiteUrlFields
-              draft={customUrlDraft}
-              onDraftChange={setCustomUrlDraft}
-              onSave={saveCustomUrl}
-              pending={updateMutation.isPending}
-              trialExpired={trialExpired}
-              liveHost={liveHost}
-              liveUrl={liveUrl}
-              showLive={!customSitePending}
-              fallbackHost={pathHost}
-              onCopy={() => void copyUrl()}
-            />
+            customWebsiteEnabled ? (
+              <div className="min-w-0 space-y-2 rounded-lg border border-brand-200 bg-brand-50/50 p-4 dark:border-brand-900/50 dark:bg-brand-950/20">
+                <Label>Your website</Label>
+                <p className="text-xs text-stone-500 dark:text-stone-400">
+                  Viselle manages this custom website. Contact us if you need the URL changed.
+                </p>
+                {share.kind === 'custom' ? (
+                  <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch">
+                    <code className="block min-w-0 flex-1 break-all rounded-md border border-stone-200 bg-white px-3 py-2 text-xs text-brand-700 dark:border-stone-700 dark:bg-stone-900 dark:text-brand-300 sm:text-sm">
+                      {liveHost}
+                    </code>
+                    <div className="flex shrink-0 gap-2">
+                      <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={() => void copyUrl()}>
+                        <Copy className="h-4 w-4" />
+                        Copy
+                      </Button>
+                      <Button asChild variant="outline" size="sm" className="flex-1 sm:flex-none">
+                        <a href={liveUrl} target="_blank" rel="noreferrer">
+                          <ExternalLink className="h-4 w-4" />
+                          Open
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-amber-700 dark:text-amber-400">
+                    Live URL not set yet — dashboard falls back to the included page:{' '}
+                    <span className="font-mono">{pathHost}</span>
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <CustomSiteUrlFields
+                  draft={customUrlDraft}
+                  onDraftChange={setCustomUrlDraft}
+                  onSave={saveCustomUrl}
+                  pending={updateMutation.isPending}
+                  trialExpired={trialExpired}
+                  liveHost={liveHost}
+                  liveUrl={liveUrl}
+                  showLive={!customSitePending}
+                  fallbackHost={pathHost}
+                  onCopy={() => void copyUrl()}
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-stone-500 dark:text-stone-400"
+                  onClick={useIncludedBookingPage}
+                  disabled={trialExpired || updateMutation.isPending}
+                >
+                  Use included booking page instead
+                </Button>
+              </div>
+            )
           }
         />
       ) : (

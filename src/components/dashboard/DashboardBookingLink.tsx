@@ -19,7 +19,7 @@ export function DashboardBookingLink({ orgId }: { orgId: string }) {
   if (!data) return null;
 
   const { url, kind } = getShareableBookingLink(data);
-  const label = kind === 'custom' ? 'Custom site' : kind === 'subdomain' ? 'Booking page' : 'Booking link';
+  const label = kind === 'custom' ? 'Your website' : kind === 'subdomain' ? 'Booking page' : 'Booking link';
 
   const copyLink = async () => {
     try {

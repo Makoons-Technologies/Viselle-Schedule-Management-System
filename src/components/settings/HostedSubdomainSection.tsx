@@ -23,6 +23,8 @@ interface HostedSubdomainSectionProps {
   updatePending: boolean;
   /** `inline` = top chrome editor (purchased only). `card` = full section with upsell. */
   variant?: 'card' | 'inline';
+  /** Org users cannot change Viselle-hosted subdomains. */
+  readOnly?: boolean;
   onUpdate: (payload: {
     hostingMode: 'path' | 'subdomain';
     siteTemplate?: SiteTemplate | null;
@@ -37,6 +39,7 @@ export function HostedSubdomainSection({
   trialExpired,
   updatePending,
   variant = 'card',
+  readOnly = false,
   onUpdate,
 }: HostedSubdomainSectionProps) {
   const website = data.websiteSettings;
@@ -52,7 +55,7 @@ export function HostedSubdomainSection({
   }, [website.subdomain, data.effectiveSubdomain, defaultSubdomain]);
 
   useEffect(() => {
-    if (!data.subdomainHostingEnabled) return;
+    if (!data.subdomainHostingEnabled || readOnly) return;
 
     const normalized = slugify(subdomainDraft);
     if (normalized.length < 2) {
@@ -87,7 +90,7 @@ export function HostedSubdomainSection({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [subdomainDraft, data.subdomainHostingEnabled, isPlatformOwner, orgId]);
+  }, [subdomainDraft, data.subdomainHostingEnabled, isPlatformOwner, orgId, readOnly]);
 
   const previewUrl = getSubdomainBookingUrl(
     slugify(subdomainDraft) || defaultSubdomain,
@@ -115,6 +118,32 @@ export function HostedSubdomainSection({
 
   if (variant === 'inline') {
     if (!data.subdomainHostingEnabled) return null;
+
+    if (readOnly) {
+      return (
+        <div className="space-y-3 rounded-lg border border-stone-200 bg-white/80 p-4 dark:border-stone-700 dark:bg-stone-900/60">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-medium text-stone-900 dark:text-stone-50">Hosted subdomain</p>
+            <Badge variant="success">Purchased</Badge>
+            {hostingMode === 'subdomain' && <Badge>Live</Badge>}
+          </div>
+          <p className="font-mono text-sm text-brand-700 dark:text-brand-300">
+            {liveUrl.replace(/^https?:\/\//, '')}
+          </p>
+          <p className="text-xs text-stone-500 dark:text-stone-400">
+            Viselle manages this subdomain. Contact us if you need it changed.
+          </p>
+          {hostingMode === 'subdomain' && (
+            <Button asChild variant="outline" size="sm">
+              <a href={liveUrl} target="_blank" rel="noreferrer">
+                <ExternalLink className="h-4 w-4" />
+                Open
+              </a>
+            </Button>
+          )}
+        </div>
+      );
+    }
 
     return (
       <div className="space-y-3 rounded-lg border border-stone-200 bg-white/80 p-4 dark:border-stone-700 dark:bg-stone-900/60">

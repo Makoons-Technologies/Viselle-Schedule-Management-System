@@ -569,6 +569,8 @@ export interface WebsiteSettingsResponse {
   defaultSubdomain: string;
   effectiveSubdomain: string;
   subdomainHostingEnabled: boolean;
+  /** Platform-provisioned Viselle custom website; org cannot change hosting or URL. */
+  customWebsiteEnabled?: boolean;
   publicApiBaseUrl: string;
   organizationSlug: string;
   organizationName: string;
