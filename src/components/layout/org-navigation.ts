@@ -70,11 +70,8 @@ export function getOrgSettingsHubGroups(
       items: [
         { label: 'Booking website', to: `${orgBase}/website`, icon: Globe },
         { label: 'Payments', to: `${orgBase}/settings/payments`, icon: CreditCard },
+        { label: 'Account', to: `${orgBase}/settings/account`, icon: UserCircle },
       ],
-    });
-
-    groups.push({
-      items: [{ label: 'Account', to: `${orgBase}/settings/account`, icon: UserCircle }],
     });
   } else if (options.showStaffPermissions) {
     groups.push({
