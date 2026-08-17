@@ -21,6 +21,7 @@ import { useOrgPlan } from '@/hooks/useOrgPlan';
 import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { TRIAL_LOCKED_MESSAGE } from '@/lib/trial';
 import { isSmsSendingEnabled, SMS_UNDER_REVIEW_NOTICE } from '@/lib/sms';
+import { reminderRowLabel, reminderStatusLabel } from '@/lib/reminders';
 
 interface AppointmentDetailSheetProps {
   appointmentId: string | null;
@@ -330,17 +331,32 @@ export function AppointmentDetailSheet({
                   <SmsUnderReviewNotice className="mb-2" />
                 )}
                 <ul className="divide-y divide-stone-200 dark:divide-stone-700/80">
-                  {remindersData.reminders.map((r) => (
-                    <li key={r.id} className="flex items-center justify-between py-2.5 text-sm">
-                      <span className="capitalize text-stone-900 dark:text-stone-100">{r.type}</span>
-                      <Badge variant={r.status === 'sent' ? 'success' : 'secondary'}>
-                        {r.type === 'sms' && r.status === 'pending' && !smsSendingOn
-                          ? 'paused'
-                          : r.status}
-                      </Badge>
-                    </li>
-                  ))}
+                  {remindersData.reminders.map((r) => {
+                    const statusLabel = reminderStatusLabel(r, smsSendingOn);
+                    return (
+                      <li key={r.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                        <span className="text-stone-900 dark:text-stone-100">{reminderRowLabel(r)}</span>
+                        <Badge
+                          variant={
+                            statusLabel === 'sent'
+                              ? 'success'
+                              : statusLabel === 'failed'
+                                ? 'destructive'
+                                : 'secondary'
+                          }
+                        >
+                          {statusLabel}
+                        </Badge>
+                      </li>
+                    );
+                  })}
                 </ul>
+                {remindersData.reminders.some((r) => r.type === 'push') && (
+                  <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">
+                    Push status means the notification was accepted by the browser push service, not
+                    that it reached the device.
+                  </p>
+                )}
               </div>
             )}
 

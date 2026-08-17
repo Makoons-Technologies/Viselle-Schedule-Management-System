@@ -36,8 +36,15 @@ export type AppointmentStatus = VisitStatus | PaymentStatus | 'confirmed' | 'com
 export type RecurringFrequency = 'weekly' | 'biweekly' | 'monthly' | 'custom';
 export type RecurringRuleStatus = 'active' | 'paused' | 'cancelled';
 
-export type ReminderType = 'sms' | 'email';
+export type ReminderType = 'sms' | 'email' | 'push';
 export type ReminderStatus = 'pending' | 'sent' | 'failed' | 'cancelled';
+export type ReminderPurpose =
+  | 'reminder'
+  | 'confirmation_request'
+  | 'confirmation'
+  | 'update'
+  | 'cancellation';
+export type ReminderAudience = 'customer' | 'staff';
 
 export type DeploymentStatus = 'not_started' | 'pending' | 'deployed' | 'failed' | 'disabled';
 
@@ -517,7 +524,9 @@ export interface Reminder {
   organizationId: string;
   appointmentId: string;
   type: ReminderType;
-  purpose?: 'reminder' | 'confirmation_request';
+  purpose?: ReminderPurpose;
+  audience?: ReminderAudience;
+  targetUserId?: string | null;
   status: ReminderStatus;
   scheduledFor: string;
   sentAt?: string | null;
