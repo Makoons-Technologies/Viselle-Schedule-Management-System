@@ -23,6 +23,8 @@ export interface PublicOrganization {
     deploymentStatus: string;
     subdomain?: string | null;
     branding: BookingBranding;
+    /** Included viselle.net/book/:slug page. Undefined on older APIs means on. */
+    pathBookingEnabled?: boolean;
   } | null;
 }
 

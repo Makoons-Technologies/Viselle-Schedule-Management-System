@@ -548,6 +548,8 @@ export interface WebsiteSettings {
   apiKeyPrefix?: string | null;
   allowedOrigins: string[];
   deployedSiteUrl?: string | null;
+  /** Included viselle.net/book/:slug page. Independent of custom website / API. Default true. */
+  pathBookingEnabled?: boolean;
   deploymentStatus: DeploymentStatus;
   lastDeployedAt?: string | null;
   bookingBranding?: BookingBranding;
@@ -598,6 +600,7 @@ export interface UpdateWebsiteInput {
   allowedOrigins?: string[];
   /** Public marketing/booking URL when hostingMode is external_api. */
   deployedSiteUrl?: string | null;
+  pathBookingEnabled?: boolean;
   bookingBranding?: BookingBranding;
 }
 

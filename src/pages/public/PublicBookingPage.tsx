@@ -58,7 +58,10 @@ export function PublicBookingPage({ slugOverride }: PublicBookingPageProps = {})
   const servicesQuery = useQuery({
     queryKey: ['public-services', slug],
     queryFn: () => publicBookingApi.getServices(slug),
-    enabled: !!slug && orgQuery.data?.organization.publicBookingEnabled,
+    enabled:
+      !!slug &&
+      !!orgQuery.data?.organization.publicBookingEnabled &&
+      (Boolean(slugOverride) || orgQuery.data.organization.bookingSite?.pathBookingEnabled !== false),
   });
 
   const accountsQuery = useQuery({
@@ -151,7 +154,9 @@ export function PublicBookingPage({ slugOverride }: PublicBookingPageProps = {})
   }
 
   const org = orgQuery.data?.organization;
-  if (!org || !org.publicBookingEnabled) {
+  const pathBookingOff =
+    !slugOverride && org?.bookingSite?.pathBookingEnabled === false;
+  if (!org || !org.publicBookingEnabled || pathBookingOff) {
     return (
       <BookingPublicShell showPoweredBy>
         {org ? (
