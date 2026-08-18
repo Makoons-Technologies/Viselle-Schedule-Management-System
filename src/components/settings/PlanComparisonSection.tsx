@@ -27,7 +27,7 @@ interface PlanComparisonSectionProps {
   orgId: string;
   currentTier: SubscriptionTier | null | undefined;
   hasStripeSubscription: boolean;
-  /** Active (non-expired) trial — lower tiers cannot be selected. */
+  /** Active (non-expired) trial — unpaid trials have no locked conversion tier. */
   isOnActiveTrial?: boolean;
 }
 
@@ -36,12 +36,19 @@ type PlanCtaLabel =
   | PlanChangeCtaLabel
   | 'Unavailable';
 
+/**
+ * Trial without a Stripe subscription has no paid selection yet — every tier is
+ * Subscribe. Downgrade locks only apply once a real subscription exists.
+ */
 function ctaLabel(
   current: PlanTierId | null,
   target: PlanTierId,
   hasStripeSubscription: boolean,
   isOnActiveTrial: boolean,
 ): PlanCtaLabel {
+  if (isOnActiveTrial && !hasStripeSubscription) {
+    return 'Subscribe';
+  }
   if (current === target) {
     return hasStripeSubscription ? 'Current plan' : 'Subscribe';
   }
@@ -61,10 +68,13 @@ export function PlanComparisonSection({
   const queryClient = useQueryClient();
   const [pendingTier, setPendingTier] = useState<PlanTierId | null>(null);
 
-  const normalizedCurrent: PlanTierId | null =
+  const storedCurrent: PlanTierId | null =
     currentTier === 'starter' || currentTier === 'professional' || currentTier === 'business'
       ? currentTier
       : null;
+  /** Unpaid trial: ignore stored conversion tier so nothing looks pre-selected. */
+  const normalizedCurrent: PlanTierId | null =
+    isOnActiveTrial && !hasStripeSubscription ? null : storedCurrent;
 
   const changeMutation = useMutation({
     mutationFn: (tier: PlanTierId) => orgApi.changePlan(orgId, tier),
@@ -133,11 +143,13 @@ export function PlanComparisonSection({
         <CardHeader>
           <CardTitle className="text-base">Compare plans</CardTitle>
           <CardDescription>
-            {isOnActiveTrial
-              ? 'Checkmarks show what each tier includes. During your trial you can subscribe to your current plan or upgrade — downgrades are unavailable until the trial ends.'
-              : hasStripeSubscription
-                ? 'Checkmarks show what each tier includes. Upgrade or downgrade anytime — feature access updates immediately. You’ll be asked to trim staff if the new plan has a lower seat limit.'
-                : 'Checkmarks show what each tier includes. Choose a plan to pay with Stripe Checkout and activate your account.'}
+            {isOnActiveTrial && !hasStripeSubscription
+              ? 'Your trial includes every feature below. Columns show what you keep after you subscribe — pick any plan; nothing is locked in yet.'
+              : isOnActiveTrial
+                ? 'Checkmarks show what each tier includes. During your trial you can subscribe to your current plan or upgrade — downgrades are unavailable until the trial ends.'
+                : hasStripeSubscription
+                  ? 'Checkmarks show what each tier includes. Upgrade or downgrade anytime — feature access updates immediately. You’ll be asked to trim staff if the new plan has a lower seat limit.'
+                  : 'Checkmarks show what each tier includes. Choose a plan to pay with Stripe Checkout and activate your account.'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -148,7 +160,15 @@ export function PlanComparisonSection({
             </p>
           )}
 
-          {!hasStripeSubscription && (
+          {isOnActiveTrial && !hasStripeSubscription && (
+            <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100">
+              Included on your trial — SMS reminders, recurring appointments, multi-staff, and
+              unlimited seats are available now. Subscribe below when you are ready to continue after
+              the trial.
+            </p>
+          )}
+
+          {!hasStripeSubscription && !isOnActiveTrial && (
             <p className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-950 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-100">
               No card is linked yet. Selecting a plan opens Stripe Checkout so you can subscribe and
               unlock the app.
@@ -183,14 +203,29 @@ export function PlanComparisonSection({
                       </div>
                     </td>
                     {PLAN_TIERS.map((tier) => {
-                      const included = tierIncludesFeature(tier.id, feature.id);
+                      const includedOnPlan = tierIncludesFeature(tier.id, feature.id);
+                      const includedOnTrial =
+                        isOnActiveTrial && !includedOnPlan;
                       return (
                         <td key={tier.id} className="px-2 py-3 text-center align-middle">
-                          {included ? (
+                          {includedOnPlan ? (
                             <Check
                               className="mx-auto h-5 w-5 text-brand-600 dark:text-brand-400"
-                              aria-label="Included"
+                              aria-label="Included on this plan"
                             />
+                          ) : includedOnTrial ? (
+                            <span
+                              className="mx-auto flex flex-col items-center gap-0.5"
+                              title="Included on your trial"
+                            >
+                              <Check
+                                className="h-5 w-5 text-emerald-600 dark:text-emerald-400"
+                                aria-label="Included on your trial"
+                              />
+                              <span className="text-[0.65rem] font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                                Trial
+                              </span>
+                            </span>
                           ) : (
                             <X
                               className="mx-auto h-5 w-5 text-stone-300 dark:text-stone-600"

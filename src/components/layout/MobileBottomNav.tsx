@@ -17,6 +17,8 @@ import { useOrgMustChoosePlan } from '@/hooks/useOrgMustChoosePlan';
 import { isOrgSettingsPath } from '@/components/layout/org-navigation';
 import { getPlatformOrgBase, isPlatformOrgAdminPath } from '@/components/layout/platform-navigation';
 import { cn } from '@/lib/utils';
+import { useOrgOwnerTour } from '@/context/OrgOwnerTourContext';
+import { orgTourTargetFromTo } from '@/lib/org-owner-tour';
 
 interface BottomNavItem {
   key: string;
@@ -31,12 +33,18 @@ const bottomNavClassName =
   'fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-white px-2 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-1 dark:border-stone-800 dark:bg-stone-900 md:hidden';
 
 function BottomNavLink({ item, active }: { item: BottomNavItem; active: boolean }) {
+  const { isActive: tourActive, currentTarget } = useOrgOwnerTour();
+  const target = orgTourTargetFromTo(item.to);
+  const highlighted = tourActive && !!target && currentTarget === target;
+
   return (
     <NavLink
       to={item.to}
+      data-tour={target}
       className={cn(
         'flex min-h-[3.25rem] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 text-[10px] font-medium transition-colors sm:text-xs',
         active ? 'text-brand-700 dark:text-brand-300' : 'text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200',
+        highlighted && 'ring-2 ring-brand-500 ring-offset-2 ring-offset-white dark:ring-offset-stone-900',
       )}
       aria-label={item.label}
     >

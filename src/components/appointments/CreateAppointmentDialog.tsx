@@ -30,6 +30,7 @@ import { helperTextClass } from '@/components/common/Panel';
 import { useRecurringDaySchedule } from '@/hooks/useRecurringDaySchedule';
 import { useOrgPlan } from '@/hooks/useOrgPlan';
 import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
+import { isSmsSendingEnabled, SMS_UNDER_REVIEW_OPT_IN_NOTE } from '@/lib/sms';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -95,6 +96,7 @@ export function CreateAppointmentDialog({
   const queryClient = useQueryClient();
   const { plan } = useOrgPlan(orgId);
   const trialExpired = useOrgWriteLocked();
+  const smsSendingOn = isSmsSendingEnabled(plan);
   const today = todayDateOnlyLocal();
   const initialDate =
     defaultDate && defaultDate >= today ? defaultDate : today;
@@ -190,14 +192,28 @@ export function CreateAppointmentDialog({
     }
   }, [date, today, setValue]);
 
+  const skipSlotClearRef = useRef(true);
+  const dialogOpenedRef = useRef(false);
+
   useEffect(() => {
+    if (skipSlotClearRef.current) {
+      skipSlotClearRef.current = false;
+      return;
+    }
     setValue('startTime', '');
   }, [accountId, serviceId, date, setValue]);
 
   const recurringAnchorRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      dialogOpenedRef.current = false;
+      skipSlotClearRef.current = true;
+      return;
+    }
+    if (dialogOpenedRef.current) return;
+    dialogOpenedRef.current = true;
+
     recurringAnchorRef.current = null;
     setMakeRecurring(false);
     setFrequency('weekly');
@@ -208,7 +224,8 @@ export function CreateAppointmentDialog({
     setSmsOptIn(false);
     resetSchedule([], {});
     reset({ date: initialDate });
-  }, [open, resetSchedule, reset, initialDate]);
+    skipSlotClearRef.current = true;
+  }, [open, initialDate, reset, resetSchedule]);
 
   useEffect(() => {
     if (open && trialExpired) {
@@ -463,7 +480,9 @@ export function CreateAppointmentDialog({
                     textClassName="text-stone-600 dark:text-stone-300"
                   />
                   <p className={cn(helperTextClass, 'mt-2')}>
-                    Optional for staff booking. If they do not opt in, they will not receive appointment texts.
+                    {smsSendingOn
+                      ? 'Optional for staff booking. If they do not opt in, they will not receive appointment texts.'
+                      : SMS_UNDER_REVIEW_OPT_IN_NOTE}
                   </p>
                 </div>
               )}

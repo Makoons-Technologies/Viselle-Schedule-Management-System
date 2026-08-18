@@ -6,6 +6,52 @@ Versioning: **x.y.z** — patch (z) = unnoticeable unless a bug hits you; minor 
 
 Phases: Viselle is in **beta** (3-month trials). Path: alpha → beta → **GA** (1.0.0+).
 
+## [0.6.0] — 2026-08-18 (alpha)
+
+Lock Viselle-hosted subdomain and custom websites to platform admin, keep 3rd-party booking URLs on the org dashboard, and ship booking-website, CRM, and reminder polish from staging.
+
+### Frontend
+
+- Collapse Developer API behind a closed dropdown so booking-page owners are not dropped into key setup.
+- Give org owners a skippable product tour and a customer page they can actually edit.
+- Clarify that the custom URL replaces the included booking page, and put API setup first.
+- Move subdomain and custom website controls to platform admin so orgs can only add their own site URL.
+- Document public booking rate limits so embedders know the API is capped, not billed.
+- Show hosted subdomain pricing as TBD in marketing and signup flows.
+- Group Account with booking website and payments in the settings hub.
+- Split settings hub into spaced card groups so related items read as sections without labels.
+- Default the Trials & Campaigns list to Live so expired and off campaigns stay out of the way.
+- Show booking confirmation vs last reminder and real send status on appointment details.
+- Show that SMS is paused during carrier/A2P review.
+- Keep new-appointment fields when picking a future time slot.
+- Add Terms and Privacy links in Settings.
+- Expose public product catalog endpoints for external booking sites.
+- Align custom site mode with Serenity External API settings layout.
+- Treat active trials as unlocked for plan features in Settings.
+- Simplify booking website settings with mode toggle, custom URL, and upgrade CTAs.
+- Prefer deployed custom site URL on the dashboard booking link.
+- Show the live free, subdomain, or custom booking URL on the website settings page.
+- Show the live booking URL on the org dashboard with a copy button.
+
+### API
+
+- Let org owners load every customer note with its service so CRM can show full history.
+- Lock hosted subdomain and Viselle custom websites to platform admin so orgs cannot self-provision them.
+- Protect public booking from abuse with rate limits, without charging for the API.
+- Record the beta Sales playbook; Linear remains the operating copy.
+- Mark hosted subdomain pricing as TBD instead of charging /mo at signup.
+- Note that the Log conversation form already exists.
+- Keep the marketing spec aligned with the Linear form and agent skill.
+- Record the beta marketing playbook as the Linear operating source of truth.
+- Record first outbound notices on reminder rows so sent email/SMS status matches what actually went out.
+- Pause outbound SMS until A2P/carrier review passes.
+- Expose public product catalog endpoints for external booking sites.
+- Allow unpaid trial orgs to checkout any plan tier.
+- Allow saving deployedSiteUrl for external_api custom booking sites.
+- Point Serenity seed at external API and demo-site.viselle.net.
+- Add implementation plan for the Serenity demo custom site.
+- Document the Serenity demo custom website design for demo-site.viselle.net.
+
 ## [0.5.0] — 2026-08-13 (alpha)
 
 SMS booking opt-in plus Privacy and Terms pages, and the calendar/PWA booking fixes already on staging.

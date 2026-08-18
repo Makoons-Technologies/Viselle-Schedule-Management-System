@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { UserCircle } from 'lucide-react';
 import { orgApi } from '@/lib/api';
@@ -13,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 export function CustomersPage() {
   const orgId = useOrgId();
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
 
   const { data, isLoading } = useQuery({
@@ -34,7 +36,10 @@ export function CustomersPage() {
 
   return (
     <div>
-      <PageHeader title="Customers" description="View all customers who have booked appointments" />
+      <PageHeader
+        title="Customers"
+        description="Open a customer to edit contact details and read notes by service"
+      />
       {customers.length === 0 ? (
         <EmptyState icon={UserCircle} title="No customers yet" description="Customers are created when appointments are booked." />
       ) : (
@@ -63,8 +68,20 @@ export function CustomersPage() {
                 </TableHeader>
                 <TableBody>
                   {filtered.map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell className="font-medium">{c.firstName} {c.lastName}</TableCell>
+                    <TableRow
+                      key={c.id}
+                      className="cursor-pointer"
+                      onClick={() => navigate(`/orgs/${orgId}/customers/${c.id}`)}
+                    >
+                      <TableCell className="font-medium">
+                        <Link
+                          to={`/orgs/${orgId}/customers/${c.id}`}
+                          className="text-brand-700 hover:underline dark:text-brand-300"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {c.firstName} {c.lastName}
+                        </Link>
+                      </TableCell>
                       <TableCell className="text-stone-500">{c.email ?? '—'}</TableCell>
                       <TableCell className="text-stone-500">{c.phone ?? '—'}</TableCell>
                       <TableCell className="text-stone-500">{formatDate(c.createdAt)}</TableCell>

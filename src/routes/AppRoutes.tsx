@@ -34,6 +34,7 @@ import { ServicesPage } from '@/pages/org/ServicesPage';
 import { ProductsPage } from '@/pages/org/ProductsPage';
 import { AvailabilityPage } from '@/pages/org/AvailabilityPage';
 import { CustomersPage } from '@/pages/org/CustomersPage';
+import { CustomerDetailPage } from '@/pages/org/CustomerDetailPage';
 import { BookingWebsitePage } from '@/pages/org/BookingWebsitePage';
 import { SettingsHubPage } from '@/pages/org/settings/SettingsHubPage';
 import { SettingsDetailLayout } from '@/pages/org/settings/SettingsDetailLayout';
@@ -153,6 +154,7 @@ export const appRoutes = [
                       { path: 'calendar', element: <CalendarPage /> },
                       { path: 'appointments', element: <AppointmentsPage /> },
                       { path: 'customers', element: <CustomersPage /> },
+                      { path: 'customers/:customerId', element: <CustomerDetailPage /> },
                       {
                         element: <ProtectedRoute roles={['platform_owner', 'org_owner']} />,
                         children: [

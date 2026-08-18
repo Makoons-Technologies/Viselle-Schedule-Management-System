@@ -9,17 +9,21 @@ import {
   Package,
   Repeat,
   Scissors,
+  ScrollText,
   Shield,
+  ShieldCheck,
   Settings,
   Sparkles,
   Users,
   UserCircle,
 } from 'lucide-react';
+import { VISELLE_PRIVACY_URL, VISELLE_TERMS_URL } from '@/lib/legal';
 
 export interface OrgNavLink {
   label: string;
   to: string;
   icon: typeof LayoutDashboard;
+  external?: boolean;
 }
 
 export interface OrgNavConfig {
@@ -44,30 +48,43 @@ export function getOrgSettingsHubGroups(
     },
   ];
 
-  if (options.showStaffPermissions) {
+  if (options.showAdminSettings) {
+    const teamItems: OrgNavLink[] = [
+      { label: 'Organization', to: `${orgBase}/settings/org`, icon: Building2 },
+      { label: 'Staff', to: `${orgBase}/staff`, icon: Users },
+    ];
+    if (options.showStaffPermissions) {
+      teamItems.push({ label: 'Staff permissions', to: `${orgBase}/settings/staff-permissions`, icon: Shield });
+    }
+    groups.push({ items: teamItems });
+
+    groups.push({
+      items: [
+        { label: 'Services', to: `${orgBase}/settings/services`, icon: Scissors },
+        { label: 'Products', to: `${orgBase}/settings/products`, icon: Package },
+        { label: 'Availability', to: `${orgBase}/availability`, icon: Clock },
+      ],
+    });
+
+    groups.push({
+      items: [
+        { label: 'Booking website', to: `${orgBase}/website`, icon: Globe },
+        { label: 'Payments', to: `${orgBase}/settings/payments`, icon: CreditCard },
+        { label: 'Account', to: `${orgBase}/settings/account`, icon: UserCircle },
+      ],
+    });
+  } else if (options.showStaffPermissions) {
     groups.push({
       items: [{ label: 'Staff permissions', to: `${orgBase}/settings/staff-permissions`, icon: Shield }],
     });
   }
 
-  if (options.showAdminSettings) {
-    groups.push({
-      items: [
-        { label: 'Organization', to: `${orgBase}/settings/org`, icon: Building2 },
-        { label: 'Staff', to: `${orgBase}/staff`, icon: Users },
-        { label: 'Services', to: `${orgBase}/settings/services`, icon: Scissors },
-        { label: 'Products', to: `${orgBase}/settings/products`, icon: Package },
-        { label: 'Availability', to: `${orgBase}/availability`, icon: Clock },
-        { label: 'Booking website', to: `${orgBase}/website`, icon: Globe },
-      ],
-    });
-    groups.push({
-      items: [{ label: 'Payments', to: `${orgBase}/settings/payments`, icon: CreditCard }],
-    });
-    groups.push({
-      items: [{ label: 'Account', to: `${orgBase}/settings/account`, icon: UserCircle }],
-    });
-  }
+  groups.push({
+    items: [
+      { label: 'Terms & Conditions', to: VISELLE_TERMS_URL, icon: ScrollText, external: true },
+      { label: 'Privacy Policy', to: VISELLE_PRIVACY_URL, icon: ShieldCheck, external: true },
+    ],
+  });
 
   return groups;
 }

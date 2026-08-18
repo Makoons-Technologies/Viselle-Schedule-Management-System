@@ -1,5 +1,5 @@
 import { useQueries } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   getDayTimeConflict,
   nextDateForDayOfWeek,
@@ -29,6 +29,8 @@ export function useRecurringDaySchedule({
   const [dayTimes, setDayTimes] = useState<Record<number, string>>({});
   const [lastSetTime, setLastSetTime] = useState<string | null>(null);
   const [userEditedDays, setUserEditedDays] = useState<Set<number>>(() => new Set());
+  const fallbackTimeRef = useRef(fallbackTime);
+  fallbackTimeRef.current = fallbackTime;
 
   const canValidate = enabled && !!accountId && !!serviceId;
 
@@ -36,10 +38,10 @@ export function useRecurringDaySchedule({
     (days: number[], times: Record<number, string>, lastTime?: string | null) => {
       setSelectedDays([...days].sort((a, b) => a - b));
       setDayTimes(times);
-      setLastSetTime(lastTime ?? Object.values(times).at(-1) ?? fallbackTime);
+      setLastSetTime(lastTime ?? Object.values(times).at(-1) ?? fallbackTimeRef.current);
       setUserEditedDays(new Set());
     },
-    [fallbackTime],
+    [],
   );
 
   const slotQueries = useQueries({

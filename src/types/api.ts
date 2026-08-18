@@ -36,8 +36,15 @@ export type AppointmentStatus = VisitStatus | PaymentStatus | 'confirmed' | 'com
 export type RecurringFrequency = 'weekly' | 'biweekly' | 'monthly' | 'custom';
 export type RecurringRuleStatus = 'active' | 'paused' | 'cancelled';
 
-export type ReminderType = 'sms' | 'email';
+export type ReminderType = 'sms' | 'email' | 'push';
 export type ReminderStatus = 'pending' | 'sent' | 'failed' | 'cancelled';
+export type ReminderPurpose =
+  | 'reminder'
+  | 'confirmation_request'
+  | 'confirmation'
+  | 'update'
+  | 'cancellation';
+export type ReminderAudience = 'customer' | 'staff';
 
 export type DeploymentStatus = 'not_started' | 'pending' | 'deployed' | 'failed' | 'disabled';
 
@@ -252,6 +259,8 @@ export interface OrgPlanFeatures {
   subscriptionTier: SubscriptionTier | null;
   tierName: string;
   smsRemindersEnabled: boolean;
+  /** False while the platform sending number is under A2P / carrier review. */
+  smsSendingEnabled?: boolean;
   emailRemindersEnabled: boolean;
   recurringAppointmentsEnabled: boolean;
   maxStaffAccounts: number;
@@ -422,6 +431,8 @@ export interface CustomerServiceNote {
   organizationId: string;
   customerId: string;
   serviceId: string;
+  /** Present when listing all notes for a customer (CRM). */
+  serviceName?: string | null;
   body: string;
   sourceAppointmentId?: string | null;
   createdByAccountId?: string | null;
@@ -515,7 +526,9 @@ export interface Reminder {
   organizationId: string;
   appointmentId: string;
   type: ReminderType;
-  purpose?: 'reminder' | 'confirmation_request';
+  purpose?: ReminderPurpose;
+  audience?: ReminderAudience;
+  targetUserId?: string | null;
   status: ReminderStatus;
   scheduledFor: string;
   sentAt?: string | null;
@@ -558,6 +571,8 @@ export interface WebsiteSettingsResponse {
   defaultSubdomain: string;
   effectiveSubdomain: string;
   subdomainHostingEnabled: boolean;
+  /** Platform-provisioned Viselle custom website; org cannot change hosting or URL. */
+  customWebsiteEnabled?: boolean;
   publicApiBaseUrl: string;
   organizationSlug: string;
   organizationName: string;
@@ -581,6 +596,8 @@ export interface UpdateWebsiteInput {
   siteTemplate?: SiteTemplate | null;
   subdomain?: string | null;
   allowedOrigins?: string[];
+  /** Public marketing/booking URL when hostingMode is external_api. */
+  deployedSiteUrl?: string | null;
   bookingBranding?: BookingBranding;
 }
 
