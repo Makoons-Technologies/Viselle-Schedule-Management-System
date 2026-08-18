@@ -196,20 +196,25 @@ export function BookingWebsitePage() {
           )}
 
           {canEditThirdPartyUrl && hostingMode === 'path' && (
-            <>
-              <DeveloperApiSection orgId={orgId!} data={data} active={false} embedded />
-              <CustomSiteUrlFields
-                draft={customUrlDraft}
-                onDraftChange={setCustomUrlDraft}
-                onSave={saveCustomUrl}
-                pending={updateMutation.isPending}
-                trialExpired={trialExpired}
-                liveHost={liveHost}
-                liveUrl={liveUrl}
-                showLive={false}
-                onCopy={() => void copyUrl()}
-              />
-            </>
+            <DeveloperApiSection
+              orgId={orgId!}
+              data={data}
+              active={false}
+              embedded
+              customUrlSlot={
+                <CustomSiteUrlFields
+                  draft={customUrlDraft}
+                  onDraftChange={setCustomUrlDraft}
+                  onSave={saveCustomUrl}
+                  pending={updateMutation.isPending}
+                  trialExpired={trialExpired}
+                  liveHost={liveHost}
+                  liveUrl={liveUrl}
+                  showLive={false}
+                  onCopy={() => void copyUrl()}
+                />
+              }
+            />
           )}
 
           {(!hasSubdomainAddon || !isCustomSite) && !customWebsiteEnabled && hostingMode !== 'subdomain' && (

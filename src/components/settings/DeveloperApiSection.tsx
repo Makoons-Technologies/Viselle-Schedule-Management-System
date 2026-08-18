@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { BookOpen, Code2, Copy, ExternalLink, KeyRound, RefreshCw } from 'lucide-react';
+import { BookOpen, ChevronDown, Code2, Copy, ExternalLink, KeyRound, RefreshCw } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -56,6 +56,8 @@ interface DeveloperApiSectionProps {
   embedded?: boolean;
   /** Shareable custom-site URL controls. Shown below API fields. */
   customUrlSlot?: ReactNode;
+  /** Start expanded. Default is closed so salon owners are not dropped into API setup. */
+  defaultOpen?: boolean;
 }
 
 export function DeveloperApiSection({
@@ -64,6 +66,7 @@ export function DeveloperApiSection({
   active,
   embedded = false,
   customUrlSlot,
+  defaultOpen,
 }: DeveloperApiSectionProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -110,16 +113,22 @@ export function DeveloperApiSection({
     });
   };
 
+  const startOpen = defaultOpen ?? false;
+
   const body = (
-    <div className="space-y-4">
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="flex items-center gap-2 text-sm font-medium text-stone-900 dark:text-stone-50">
-            <Code2 className="h-4 w-4" />
+    <details className="group space-y-4" open={startOpen ? true : undefined}>
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg py-1 hover:bg-stone-50 marker:content-none dark:hover:bg-stone-800/60 [&::-webkit-details-marker]:hidden">
+        <span className="flex min-w-0 flex-wrap items-center gap-2">
+          <span className="flex items-center gap-2 text-sm font-medium text-stone-900 dark:text-stone-50">
+            <Code2 className="h-4 w-4 shrink-0" />
             Developer API
-          </p>
+          </span>
           {isExternalApi && <Badge variant="success">External API active</Badge>}
-        </div>
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-stone-400 transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="space-y-4 pt-2">
+      <div className="space-y-3">
         <p className="text-sm text-stone-600 dark:text-stone-300">
           {isExternalApi
             ? 'Use an API key and call the Public Booking API from your own domain.'
@@ -192,7 +201,8 @@ export function DeveloperApiSection({
       </div>
 
       {customUrlSlot}
-    </div>
+      </div>
+    </details>
   );
 
   if (embedded) return body;
