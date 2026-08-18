@@ -313,6 +313,15 @@ export const ownerApi = {
     apiClient
       .get<{ requests: CustomWebsiteRequest[] }>('/owner/custom-website-requests', { params })
       .then((r) => r.data),
+  createCustomWebsiteRequest: (data: {
+    businessName: string;
+    contactName: string;
+    contactEmail: string;
+    organizationId?: string | null;
+  }) =>
+    apiClient
+      .post<{ request: CustomWebsiteRequest }>('/owner/custom-website-requests', data)
+      .then((r) => r.data),
   getCustomWebsiteRequest: (requestId: string) =>
     apiClient
       .get<{ request: CustomWebsiteRequest; notes: CustomWebsiteRequestNote[] }>(
