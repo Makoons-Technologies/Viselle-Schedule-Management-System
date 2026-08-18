@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Code2, Copy, ExternalLink, Globe, LayoutTemplate, Sparkles } from 'lucide-react';
+import { Copy, ExternalLink, Globe, LayoutTemplate, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { orgApi, ownerApi } from '@/lib/api';
@@ -196,17 +196,20 @@ export function BookingWebsitePage() {
           )}
 
           {canEditThirdPartyUrl && hostingMode === 'path' && (
-            <CustomSiteUrlFields
-              draft={customUrlDraft}
-              onDraftChange={setCustomUrlDraft}
-              onSave={saveCustomUrl}
-              pending={updateMutation.isPending}
-              trialExpired={trialExpired}
-              liveHost={liveHost}
-              liveUrl={liveUrl}
-              showLive={false}
-              onCopy={() => void copyUrl()}
-            />
+            <>
+              <DeveloperApiSection orgId={orgId!} data={data} active={false} embedded />
+              <CustomSiteUrlFields
+                draft={customUrlDraft}
+                onDraftChange={setCustomUrlDraft}
+                onSave={saveCustomUrl}
+                pending={updateMutation.isPending}
+                trialExpired={trialExpired}
+                liveHost={liveHost}
+                liveUrl={liveUrl}
+                showLive={false}
+                onCopy={() => void copyUrl()}
+              />
+            </>
           )}
 
           {(!hasSubdomainAddon || !isCustomSite) && !customWebsiteEnabled && hostingMode !== 'subdomain' && (
@@ -220,17 +223,9 @@ export function BookingWebsitePage() {
                 </Button>
               )}
               {!isCustomSite && (
-                <>
-                  <Button asChild size="sm" variant={hasSubdomainAddon ? 'default' : 'secondary'}>
-                    <Link to={contactPath({ interest: 'api', slug: data.organizationSlug })}>
-                      <Code2 className="h-4 w-4" />
-                      Get API / custom site
-                    </Link>
-                  </Button>
-                  <Button asChild size="sm" variant="outline">
-                    <Link to={getStartedPath({ customWebsite: true })}>Custom website options</Link>
-                  </Button>
-                </>
+                <Button asChild size="sm" variant="outline">
+                  <Link to={getStartedPath({ customWebsite: true })}>Get Custom website</Link>
+                </Button>
               )}
             </div>
           )}
@@ -415,8 +410,6 @@ export function BookingWebsitePage() {
             website={website}
             siteTemplate={website.siteTemplate ?? 'classic'}
           />
-
-          <DeveloperApiSection orgId={orgId!} data={data} active={false} />
         </>
       )}
 
@@ -425,20 +418,6 @@ export function BookingWebsitePage() {
         <Badge>{website.deploymentStatus}</Badge>
         {website.lastDeployedAt && <span>Updated {formatDate(website.lastDeployedAt)}</span>}
       </div>
-
-      {!isCustomSite && (
-        <p className="text-xs text-stone-500 dark:text-stone-400">
-          Need booking on your own website? See{' '}
-          <a href="/#websites" className="text-brand-700 hover:underline dark:text-brand-300">
-            booking page options on our site
-          </a>{' '}
-          or{' '}
-          <Link to={contactPath({ interest: 'api' })} className="text-brand-700 hover:underline dark:text-brand-300">
-            contact us about API access
-          </Link>
-          .
-        </p>
-      )}
     </div>
   );
 }

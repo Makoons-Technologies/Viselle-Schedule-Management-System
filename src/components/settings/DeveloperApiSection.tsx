@@ -7,7 +7,7 @@ import { orgApi, ownerApi } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -52,11 +52,19 @@ interface DeveloperApiSectionProps {
   data: WebsiteSettingsResponse;
   /** When false, section is collapsed to docs-only (mode toggle lives at page top). */
   active?: boolean;
-  /** Shareable custom-site URL controls shown above API key fields (custom mode). */
+  /** Render without a card wrapper so this can sit at the top of another section. */
+  embedded?: boolean;
+  /** Shareable custom-site URL controls. Shown below API fields. */
   customUrlSlot?: ReactNode;
 }
 
-export function DeveloperApiSection({ orgId, data, active, customUrlSlot }: DeveloperApiSectionProps) {
+export function DeveloperApiSection({
+  orgId,
+  data,
+  active,
+  embedded = false,
+  customUrlSlot,
+}: DeveloperApiSectionProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const isPlatformOwner = user?.role === 'platform_owner';
@@ -96,85 +104,67 @@ export function DeveloperApiSection({ orgId, data, active, customUrlSlot }: Deve
       .split('\n')
       .map((line) => line.trim())
       .filter(Boolean);
-    updateMutation.mutate({ hostingMode: 'external_api', allowedOrigins: origins });
+    updateMutation.mutate({
+      ...(isExternalApi ? { hostingMode: 'external_api' as const } : {}),
+      allowedOrigins: origins,
+    });
   };
 
-  if (!isExternalApi) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
+  const body = (
+    <div className="space-y-4">
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="flex items-center gap-2 text-sm font-medium text-stone-900 dark:text-stone-50">
             <Code2 className="h-4 w-4" />
             Developer API
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-stone-600 dark:text-stone-300">
-            Add your own website URL above to generate an API key and call the Public Booking API from your
-            domain.
           </p>
-          <DocsButton />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Serenity / custom-site reference layout: Custom website title, shareable URL, then External API fields.
-  return (
-    <Card>
-      <CardHeader className="space-y-3">
-        <CardTitle className="flex flex-wrap items-center gap-2 text-base">
-          <Code2 className="h-4 w-4" />
-          Your website
-          <Badge variant="success">External API active</Badge>
-        </CardTitle>
+          {isExternalApi && <Badge variant="success">External API active</Badge>}
+        </div>
         <p className="text-sm text-stone-600 dark:text-stone-300">
-          Building booking into your own website or app? Use an API key and call the Public Booking API directly from
-          your own domain.
+          {isExternalApi
+            ? 'Use an API key and call the Public Booking API from your own domain.'
+            : 'If you book from your own site through the API, generate a key here, then set that site URL below. That URL replaces the included Viselle booking page.'}
         </p>
         <DocsButton />
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {customUrlSlot}
+      </div>
 
-        <div className="space-y-4 rounded-lg border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-800/50">
-          <div>
-            <Label>Base URL</Label>
-            <code className="mt-1 block break-all rounded-md border border-stone-200 bg-white px-3 py-2 text-xs text-brand-700 dark:border-stone-700 dark:bg-stone-900 dark:text-brand-300">
-              {data.publicApiBaseUrl}
-            </code>
-          </div>
+      <div className="space-y-4 rounded-lg border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-800/50">
+        <div>
+          <Label>Base URL</Label>
+          <code className="mt-1 block break-all rounded-md border border-stone-200 bg-white px-3 py-2 text-xs text-brand-700 dark:border-stone-700 dark:bg-stone-900 dark:text-brand-300">
+            {data.publicApiBaseUrl}
+          </code>
+        </div>
 
-          <div>
-            <Label>API key</Label>
-            {revealedKey ? (
-              <div className="mt-1 space-y-1">
-                <code className="block break-all rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
-                  {revealedKey}
-                </code>
-                <p className="text-xs text-amber-700 dark:text-amber-400">
-                  Copy this now — it won't be shown again.
-                </p>
-              </div>
-            ) : (
-              <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">
-                {data.apiAccess.apiKeyConfigured
-                  ? `${data.apiAccess.apiKeyPrefix}••••••••••••••••••••`
-                  : 'No key generated yet.'}
-              </p>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-2"
-              onClick={() => regenerateMutation.mutate()}
-              disabled={regenerateMutation.isPending}
-            >
-              <KeyRound className="h-4 w-4" />
-              {data.apiAccess.apiKeyConfigured ? 'Regenerate key' : 'Generate key'}
-            </Button>
-          </div>
+        <div>
+          <Label>API key</Label>
+          {revealedKey ? (
+            <div className="mt-1 space-y-1">
+              <code className="block break-all rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
+                {revealedKey}
+              </code>
+              <p className="text-xs text-amber-700 dark:text-amber-400">Copy this now — it won't be shown again.</p>
+            </div>
+          ) : (
+            <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">
+              {data.apiAccess.apiKeyConfigured
+                ? `${data.apiAccess.apiKeyPrefix}••••••••••••••••••••`
+                : 'No key generated yet.'}
+            </p>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            onClick={() => regenerateMutation.mutate()}
+            disabled={regenerateMutation.isPending}
+          >
+            <KeyRound className="h-4 w-4" />
+            {data.apiAccess.apiKeyConfigured ? 'Regenerate key' : 'Generate key'}
+          </Button>
+        </div>
 
+        {isExternalApi && (
           <div>
             <Label>Allowed origins (one per line)</Label>
             <Textarea
@@ -187,13 +177,29 @@ export function DeveloperApiSection({ orgId, data, active, customUrlSlot }: Deve
               Leave empty to allow requests from any origin (not recommended for production). Localhost and demo
               origins are fine alongside your live site.
             </p>
-            <Button variant="outline" size="sm" className="mt-2" onClick={saveOrigins} disabled={updateMutation.isPending}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              onClick={saveOrigins}
+              disabled={updateMutation.isPending}
+            >
               <RefreshCw className="h-4 w-4" />
               Save allowed origins
             </Button>
           </div>
-        </div>
-      </CardContent>
+        )}
+      </div>
+
+      {customUrlSlot}
+    </div>
+  );
+
+  if (embedded) return body;
+
+  return (
+    <Card>
+      <CardContent className="space-y-4 pt-6">{body}</CardContent>
     </Card>
   );
 }
@@ -210,6 +216,7 @@ export function CustomSiteUrlFields({
   showLive,
   fallbackHost,
   onCopy,
+  description = 'If you have a custom site you use for booking through the API, set it here. This replaces the included Viselle booking page on your dashboard.',
 }: {
   draft: string;
   onDraftChange: (value: string) => void;
@@ -221,15 +228,13 @@ export function CustomSiteUrlFields({
   showLive: boolean;
   fallbackHost?: string;
   onCopy: () => void;
+  description?: string;
 }) {
   return (
     <div className="min-w-0 space-y-3 rounded-lg border border-brand-200 bg-brand-50/50 p-4 dark:border-brand-900/50 dark:bg-brand-950/20">
       <div>
         <Label htmlFor="custom-site-url">Your website URL</Label>
-        <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
-          Shown on your dashboard as “Your link”. Use your public marketing or booking site. Hosted subdomains and
-          Viselle custom websites are set up by us.
-        </p>
+        <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">{description}</p>
         <div className="mt-2 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch">
           <Input
             id="custom-site-url"

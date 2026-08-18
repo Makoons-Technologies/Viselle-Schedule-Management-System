@@ -221,6 +221,7 @@ export function PlatformAdminSection({ orgId }: PlatformAdminSectionProps) {
               liveHost={liveHost}
               liveUrl={liveUrl}
               showLive={share?.kind === 'custom'}
+              description="Live URL for the Viselle-built custom website. Shown on the org dashboard as their booking link."
               onCopy={() => {
                 void navigator.clipboard.writeText(liveUrl).then(
                   () => toast.success('Link copied'),
