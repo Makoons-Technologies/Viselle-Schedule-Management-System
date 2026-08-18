@@ -50,8 +50,6 @@ function DocsButton() {
 interface DeveloperApiSectionProps {
   orgId: string;
   data: WebsiteSettingsResponse;
-  /** When false, section is collapsed to docs-only (mode toggle lives at page top). */
-  active?: boolean;
   /** Render without a card wrapper so this can sit at the top of another section. */
   embedded?: boolean;
   /** Shareable custom-site URL controls. Shown below API fields. */
@@ -63,7 +61,6 @@ interface DeveloperApiSectionProps {
 export function DeveloperApiSection({
   orgId,
   data,
-  active,
   embedded = false,
   customUrlSlot,
   defaultOpen,
@@ -73,8 +70,6 @@ export function DeveloperApiSection({
   const isPlatformOwner = user?.role === 'platform_owner';
   const [revealedKey, setRevealedKey] = useState<string | null>(null);
   const [originsInput, setOriginsInput] = useState(() => data.apiAccess.allowedOrigins.join('\n'));
-
-  const isExternalApi = active ?? data.websiteSettings.hostingMode === 'external_api';
 
   useEffect(() => {
     setOriginsInput(data.apiAccess.allowedOrigins.join('\n'));
@@ -107,10 +102,7 @@ export function DeveloperApiSection({
       .split('\n')
       .map((line) => line.trim())
       .filter(Boolean);
-    updateMutation.mutate({
-      ...(isExternalApi ? { hostingMode: 'external_api' as const } : {}),
-      allowedOrigins: origins,
-    });
+    updateMutation.mutate({ allowedOrigins: origins });
   };
 
   const startOpen = defaultOpen ?? false;
@@ -123,16 +115,15 @@ export function DeveloperApiSection({
             <Code2 className="h-4 w-4 shrink-0" />
             Developer API
           </span>
-          {isExternalApi && <Badge variant="success">External API active</Badge>}
+          {data.apiAccess.apiKeyConfigured && <Badge variant="success">Key issued</Badge>}
         </span>
         <ChevronDown className="h-4 w-4 shrink-0 text-stone-400 transition-transform group-open:rotate-180" />
       </summary>
       <div className="space-y-4 pt-2">
       <div className="space-y-3">
         <p className="text-sm text-stone-600 dark:text-stone-300">
-          {isExternalApi
-            ? 'Use an API key and call the Public Booking API from your own domain.'
-            : 'If you book from your own site through the API, generate a key here, then set that site URL below. That URL replaces the included Viselle booking page.'}
+          The Public Booking API is included with every org. Generate a key to book from your own site — this does
+          not change the Viselle booking page or a custom website we built.
         </p>
         <DocsButton />
       </div>
@@ -173,31 +164,29 @@ export function DeveloperApiSection({
           </Button>
         </div>
 
-        {isExternalApi && (
-          <div>
-            <Label>Allowed origins (one per line)</Label>
-            <Textarea
-              rows={3}
-              placeholder="https://www.your-salon.com"
-              value={originsInput}
-              onChange={(e) => setOriginsInput(e.target.value)}
-            />
-            <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
-              Leave empty to allow requests from any origin (not recommended for production). Localhost and demo
-              origins are fine alongside your live site.
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-2"
-              onClick={saveOrigins}
-              disabled={updateMutation.isPending}
-            >
-              <RefreshCw className="h-4 w-4" />
-              Save allowed origins
-            </Button>
-          </div>
-        )}
+        <div>
+          <Label>Allowed origins (one per line)</Label>
+          <Textarea
+            rows={3}
+            placeholder="https://www.your-salon.com"
+            value={originsInput}
+            onChange={(e) => setOriginsInput(e.target.value)}
+          />
+          <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
+            Leave empty to allow requests from any origin (not recommended for production). Localhost and demo
+            origins are fine alongside your live site.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            onClick={saveOrigins}
+            disabled={updateMutation.isPending}
+          >
+            <RefreshCw className="h-4 w-4" />
+            Save allowed origins
+          </Button>
+        </div>
       </div>
 
       {customUrlSlot}

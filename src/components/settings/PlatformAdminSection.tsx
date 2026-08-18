@@ -155,7 +155,7 @@ export function PlatformAdminSection({ orgId }: PlatformAdminSectionProps) {
           <CardTitle className="text-base">Website hosting</CardTitle>
           <p className="text-sm text-stone-500">
             Hosted subdomain and Viselle custom websites are set here. Org users cannot change them. They can still
-            add their own 3rd-party site URL from Booking website.
+            add their own 3rd-party site URL from Booking website. The Public Booking API is included either way.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -205,7 +205,7 @@ export function PlatformAdminSection({ orgId }: PlatformAdminSectionProps) {
                 : settings.externalApiEnabled
                   ? 'Viselle custom website'
                   : hostingMode === 'external_api'
-                    ? 'Org 3rd-party site / API'
+                    ? "Org's own website"
                     : 'Included booking page'}
             </span>
           </div>
@@ -229,7 +229,9 @@ export function PlatformAdminSection({ orgId }: PlatformAdminSectionProps) {
           <div className="flex items-center justify-between gap-4">
             <div>
               <Label>Custom website (Viselle-built)</Label>
-              <p className="text-xs text-stone-500">Locks hosting to the site we build. Set the live URL below.</p>
+              <p className="text-xs text-stone-500">
+                Uses the site we build as their booking link. Does not turn the API on or off — that stays included.
+              </p>
             </div>
             <Switch
               checked={settings.externalApiEnabled}

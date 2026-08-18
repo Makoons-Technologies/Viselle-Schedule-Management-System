@@ -220,7 +220,7 @@ export function PlatformCustomWebsiteDetailPage() {
                     : websiteData.websiteSettings.hostingMode === 'subdomain'
                       ? 'Currently on hosted subdomain'
                       : websiteData.websiteSettings.hostingMode === 'external_api'
-                        ? 'Currently on org 3rd-party / API URL'
+                        ? "Currently on the org's own website"
                         : 'Currently on included booking page'}
                 </span>
               </div>

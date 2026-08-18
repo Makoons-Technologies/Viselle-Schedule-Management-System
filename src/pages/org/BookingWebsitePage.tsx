@@ -195,26 +195,64 @@ export function BookingWebsitePage() {
             />
           )}
 
-          {canEditThirdPartyUrl && hostingMode === 'path' && (
-            <DeveloperApiSection
-              orgId={orgId!}
-              data={data}
-              active={false}
-              embedded
-              customUrlSlot={
-                <CustomSiteUrlFields
-                  draft={customUrlDraft}
-                  onDraftChange={setCustomUrlDraft}
-                  onSave={saveCustomUrl}
-                  pending={updateMutation.isPending}
-                  trialExpired={trialExpired}
-                  liveHost={liveHost}
-                  liveUrl={liveUrl}
-                  showLive={false}
-                  onCopy={() => void copyUrl()}
-                />
-              }
+          {canEditThirdPartyUrl && (
+            <CustomSiteUrlFields
+              draft={customUrlDraft}
+              onDraftChange={setCustomUrlDraft}
+              onSave={saveCustomUrl}
+              pending={updateMutation.isPending}
+              trialExpired={trialExpired}
+              liveHost={liveHost}
+              liveUrl={liveUrl}
+              showLive={isCustomSite && !customSitePending}
+              fallbackHost={isCustomSite ? pathHost : undefined}
+              onCopy={() => void copyUrl()}
             />
+          )}
+
+          {customWebsiteEnabled && (
+            <div className="min-w-0 space-y-2 rounded-lg border border-brand-200 bg-brand-50/50 p-4 dark:border-brand-900/50 dark:bg-brand-950/20">
+              <Label>Your website</Label>
+              <p className="text-xs text-stone-500 dark:text-stone-400">
+                Viselle manages this custom website. Contact us if you need the URL changed.
+              </p>
+              {share.kind === 'custom' ? (
+                <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch">
+                  <code className="block min-w-0 flex-1 break-all rounded-md border border-stone-200 bg-white px-3 py-2 text-xs text-brand-700 dark:border-stone-700 dark:bg-stone-900 dark:text-brand-300 sm:text-sm">
+                    {liveHost}
+                  </code>
+                  <div className="flex shrink-0 gap-2">
+                    <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={() => void copyUrl()}>
+                      <Copy className="h-4 w-4" />
+                      Copy
+                    </Button>
+                    <Button asChild variant="outline" size="sm" className="flex-1 sm:flex-none">
+                      <a href={liveUrl} target="_blank" rel="noreferrer">
+                        <ExternalLink className="h-4 w-4" />
+                        Open
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-amber-700 dark:text-amber-400">
+                  Live URL not set yet — dashboard falls back to the included page:{' '}
+                  <span className="font-mono">{pathHost}</span>
+                </p>
+              )}
+            </div>
+          )}
+
+          {canEditThirdPartyUrl && hostingMode === 'external_api' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-stone-500 dark:text-stone-400"
+              onClick={useIncludedBookingPage}
+              disabled={trialExpired || updateMutation.isPending}
+            >
+              Use included booking page instead
+            </Button>
           )}
 
           {(!hasSubdomainAddon || !isCustomSite) && !customWebsiteEnabled && hostingMode !== 'subdomain' && (
@@ -237,71 +275,7 @@ export function BookingWebsitePage() {
         </CardContent>
       </Card>
 
-      {isCustomSite ? (
-        <DeveloperApiSection
-          orgId={orgId!}
-          data={data}
-          active
-          customUrlSlot={
-            customWebsiteEnabled ? (
-              <div className="min-w-0 space-y-2 rounded-lg border border-brand-200 bg-brand-50/50 p-4 dark:border-brand-900/50 dark:bg-brand-950/20">
-                <Label>Your website</Label>
-                <p className="text-xs text-stone-500 dark:text-stone-400">
-                  Viselle manages this custom website. Contact us if you need the URL changed.
-                </p>
-                {share.kind === 'custom' ? (
-                  <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch">
-                    <code className="block min-w-0 flex-1 break-all rounded-md border border-stone-200 bg-white px-3 py-2 text-xs text-brand-700 dark:border-stone-700 dark:bg-stone-900 dark:text-brand-300 sm:text-sm">
-                      {liveHost}
-                    </code>
-                    <div className="flex shrink-0 gap-2">
-                      <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={() => void copyUrl()}>
-                        <Copy className="h-4 w-4" />
-                        Copy
-                      </Button>
-                      <Button asChild variant="outline" size="sm" className="flex-1 sm:flex-none">
-                        <a href={liveUrl} target="_blank" rel="noreferrer">
-                          <ExternalLink className="h-4 w-4" />
-                          Open
-                        </a>
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-xs text-amber-700 dark:text-amber-400">
-                    Live URL not set yet — dashboard falls back to the included page:{' '}
-                    <span className="font-mono">{pathHost}</span>
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <CustomSiteUrlFields
-                  draft={customUrlDraft}
-                  onDraftChange={setCustomUrlDraft}
-                  onSave={saveCustomUrl}
-                  pending={updateMutation.isPending}
-                  trialExpired={trialExpired}
-                  liveHost={liveHost}
-                  liveUrl={liveUrl}
-                  showLive={!customSitePending}
-                  fallbackHost={pathHost}
-                  onCopy={() => void copyUrl()}
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-stone-500 dark:text-stone-400"
-                  onClick={useIncludedBookingPage}
-                  disabled={trialExpired || updateMutation.isPending}
-                >
-                  Use included booking page instead
-                </Button>
-              </div>
-            )
-          }
-        />
-      ) : (
+      {!isCustomSite && (
         <>
           <Card className="overflow-hidden border-brand-200 bg-gradient-to-br from-brand-50 to-white dark:border-stone-700 dark:from-stone-900 dark:to-stone-900">
             <CardHeader>
@@ -417,6 +391,8 @@ export function BookingWebsitePage() {
           />
         </>
       )}
+
+      <DeveloperApiSection orgId={orgId!} data={data} />
 
       <div className="flex flex-wrap items-center gap-2 text-sm text-stone-500 dark:text-stone-400">
         <Label>Status</Label>

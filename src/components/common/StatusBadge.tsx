@@ -93,7 +93,7 @@ export function WebsiteHostingBadge({
     case 'subdomain':
       return <Badge variant={hostingVariants.subdomain}>Hosted subdomain</Badge>;
     case 'external_api':
-      return <Badge variant={hostingVariants.external_api}>3rd party + API</Badge>;
+      return <Badge variant={hostingVariants.external_api}>Own website</Badge>;
     case 'path':
     case 'none':
     default:
