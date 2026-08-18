@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ownerApi } from '@/lib/api';
 import { PRICING_TIERS } from '@/lib/pricing';
 import { displayBookingHost, getShareableBookingLink } from '@/lib/public-booking';
 import { LoadingState } from '@/components/common/LoadingState';
 import { WebsiteHostingBadge } from '@/components/common/StatusBadge';
+import { CustomWebsiteStatusBadge } from '@/components/customWebsites/CustomWebsiteStatusBadge';
 import { CustomSiteUrlFields } from '@/components/settings/DeveloperApiSection';
 import { HostedSubdomainSection } from '@/components/settings/HostedSubdomainSection';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -34,6 +37,12 @@ export function PlatformAdminSection({ orgId }: PlatformAdminSectionProps) {
     enabled: !!orgId,
   });
 
+  const { data: requestData } = useQuery({
+    queryKey: ['custom-website-requests', 'org', orgId],
+    queryFn: () => ownerApi.listCustomWebsiteRequests({ organizationId: orgId }),
+    enabled: !!orgId,
+  });
+
   useEffect(() => {
     if (!websiteData) return;
     const stored = websiteData.websiteSettings.deployedSiteUrl;
@@ -44,6 +53,7 @@ export function PlatformAdminSection({ orgId }: PlatformAdminSectionProps) {
     queryClient.invalidateQueries({ queryKey: ['owner-settings', orgId] });
     queryClient.invalidateQueries({ queryKey: ['org-plan', orgId] });
     queryClient.invalidateQueries({ queryKey: ['website', orgId] });
+    queryClient.invalidateQueries({ queryKey: ['custom-website-requests', 'org', orgId] });
   };
 
   const updateMutation = useMutation({
@@ -84,6 +94,10 @@ export function PlatformAdminSection({ orgId }: PlatformAdminSectionProps) {
   const share = websiteData ? getShareableBookingLink(websiteData) : null;
   const liveUrl = share?.url ?? '';
   const liveHost = liveUrl ? displayBookingHost(liveUrl) : '';
+  const websiteRequests = requestData?.requests ?? [];
+  const activeRequest =
+    websiteRequests.find((request) => request.status === 'open' || request.status === 'in_progress') ??
+    websiteRequests[0];
 
   return (
     <>
@@ -145,6 +159,41 @@ export function PlatformAdminSection({ orgId }: PlatformAdminSectionProps) {
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="flex flex-col gap-3 rounded-lg border border-stone-200 bg-stone-50 p-3 dark:border-stone-700 dark:bg-stone-900/40 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0 space-y-1">
+              <p className="text-sm font-medium text-stone-900 dark:text-stone-100">Build request</p>
+              {activeRequest ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <CustomWebsiteStatusBadge status={activeRequest.status} />
+                  <span className="text-xs text-stone-500">
+                    {activeRequest.source.replace('_', ' ')} ·{' '}
+                    {new Date(activeRequest.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+              ) : (
+                <p className="text-xs text-stone-500">
+                  No Get Started custom-website request for this org. You can still toggle hosting below.
+                </p>
+              )}
+              {activeRequest && !settings.externalApiEnabled && activeRequest.status !== 'done' && (
+                <p className="text-xs text-stone-500">
+                  When the site is ready, open the request and use Go live.
+                </p>
+              )}
+            </div>
+            <Button asChild variant="outline" size="sm" className="shrink-0">
+              <Link
+                to={
+                  activeRequest
+                    ? `/platform/custom-websites/${activeRequest.id}`
+                    : '/platform/custom-websites'
+                }
+              >
+                {activeRequest ? 'Open request' : 'Inbox'}
+              </Link>
+            </Button>
+          </div>
+
           <div className="flex flex-wrap items-center gap-2">
             <WebsiteHostingBadge
               hostingMode={hostingMode}

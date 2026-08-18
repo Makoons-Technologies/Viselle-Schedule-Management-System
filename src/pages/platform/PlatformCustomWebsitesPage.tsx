@@ -48,7 +48,7 @@ export function PlatformCustomWebsitesPage() {
     <div className="mx-auto max-w-4xl space-y-6">
       <PageHeader
         title="Custom websites"
-        description="Build requests from Get Started when someone selects the custom website option."
+        description="Build requests from Get Started. Open a request to set the live URL and go live — that locks the Viselle-built site on the org."
       />
 
       <ListToolbar
@@ -90,6 +90,7 @@ export function PlatformCustomWebsitesPage() {
               <TableRow>
                 <TableHead>Business</TableHead>
                 <TableHead>Contact</TableHead>
+                <TableHead>Org</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Submitted</TableHead>
               </TableRow>
@@ -105,6 +106,18 @@ export function PlatformCustomWebsitesPage() {
                   <TableCell className="text-stone-500">
                     <div>{request.contactName}</div>
                     <div className="text-xs text-stone-400">{request.contactEmail}</div>
+                  </TableCell>
+                  <TableCell>
+                    {request.organizationId ? (
+                      <Link
+                        to={`/platform/organizations/${request.organizationId}/settings`}
+                        className="text-xs text-brand-700 hover:underline dark:text-brand-300"
+                      >
+                        Org settings
+                      </Link>
+                    ) : (
+                      <span className="text-xs text-stone-400">Pending signup</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <CustomWebsiteStatusBadge status={request.status} />
