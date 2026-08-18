@@ -10,8 +10,8 @@ import {
 import { Link, NavLink, useLocation } from 'react-router-dom';
 
 import { useAuth } from '@/context/AuthContext';
-
 import { useOrg } from '@/context/OrgContext';
+import { useOrgOwnerTour } from '@/context/OrgOwnerTourContext';
 
 import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgAdminAccess } from '@/hooks/useOrgAdminAccess';
@@ -27,6 +27,7 @@ import {
 import { SidebarTrialStatus } from '@/components/layout/SidebarTrialStatus';
 import { ViselleLogo } from '@/components/common/ViselleLogo';
 
+import { orgTourTargetFromTo } from '@/lib/org-owner-tour';
 import { cn } from '@/lib/utils';
 
 
@@ -70,8 +71,39 @@ function navLinkClass(mobile?: boolean) {
 
 
 
-function NavSection({
+function TourNavLink({
+  item,
+  onNavigate,
+  mobile,
+}: {
+  item: NavItem;
+  onNavigate?: () => void;
+  mobile?: boolean;
+}) {
+  const { isActive: tourActive, currentTarget } = useOrgOwnerTour();
+  const target = orgTourTargetFromTo(item.to);
+  const highlighted = tourActive && !!target && currentTarget === target;
 
+  return (
+    <NavLink
+      to={item.to}
+      end={item.end}
+      onClick={onNavigate}
+      data-tour={target}
+      className={(args) =>
+        cn(
+          navLinkClass(mobile)(args),
+          highlighted && 'ring-2 ring-brand-500 ring-offset-2 ring-offset-white dark:ring-offset-stone-950',
+        )
+      }
+    >
+      <item.icon className="h-5 w-5 shrink-0" />
+      {item.label}
+    </NavLink>
+  );
+}
+
+function NavSection({
   title,
 
   items,
@@ -104,16 +136,7 @@ function NavSection({
 
       <nav className="space-y-0.5">
         {items.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.end}
-            onClick={onNavigate}
-            className={navLinkClass(mobile)}
-          >
-            <item.icon className="h-5 w-5 shrink-0" />
-            {item.label}
-          </NavLink>
+          <TourNavLink key={item.to} item={item} onNavigate={onNavigate} mobile={mobile} />
         ))}
       </nav>
 
@@ -166,16 +189,7 @@ function NavSectionWithGroups({
         <div className="space-y-0.5">
 
           {mainItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              onClick={onNavigate}
-              className={navLinkClass(mobile)}
-            >
-              <item.icon className="h-5 w-5 shrink-0" />
-              {item.label}
-            </NavLink>
+            <TourNavLink key={item.to} item={item} onNavigate={onNavigate} mobile={mobile} />
           ))}
 
         </div>
@@ -184,16 +198,7 @@ function NavSectionWithGroups({
           <div className="mt-4 border-t border-stone-200 pt-4 dark:border-stone-800">
             <div className="space-y-0.5">
               {settingsItems.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  end={item.end}
-                  onClick={onNavigate}
-                  className={navLinkClass(mobile)}
-                >
-                  <item.icon className="h-5 w-5 shrink-0" />
-                  {item.label}
-                </NavLink>
+                <TourNavLink key={item.to} item={item} onNavigate={onNavigate} mobile={mobile} />
               ))}
             </div>
           </div>

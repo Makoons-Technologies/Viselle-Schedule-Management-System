@@ -1,6 +1,7 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 import { MobileNavProvider, useMobileNav } from '@/context/MobileNavContext';
+import { OrgOwnerTourProvider } from '@/context/OrgOwnerTourContext';
 import { AddToHomeScreenBanner } from '@/components/layout/AddToHomeScreenBanner';
 import { ImpersonationBanner } from '@/components/layout/ImpersonationBanner';
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
@@ -8,6 +9,7 @@ import { MobileSidebar } from '@/components/layout/MobileSidebar';
 import { OrgTrialBanner } from '@/components/layout/OrgTrialBanner';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
+import { OrgOwnerTourPanel } from '@/components/onboarding/OrgOwnerTourPanel';
 
 function AppLayoutContent() {
   const location = useLocation();
@@ -38,6 +40,7 @@ function AppLayoutContent() {
           <MobileBottomNav />
         </div>
       </div>
+      <OrgOwnerTourPanel />
     </div>
   );
 }
@@ -45,7 +48,9 @@ function AppLayoutContent() {
 export function AppLayout() {
   return (
     <MobileNavProvider>
-      <AppLayoutContent />
+      <OrgOwnerTourProvider>
+        <AppLayoutContent />
+      </OrgOwnerTourProvider>
     </MobileNavProvider>
   );
 }

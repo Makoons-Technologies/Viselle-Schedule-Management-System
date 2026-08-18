@@ -8,9 +8,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DashboardBookingLink } from '@/components/dashboard/DashboardBookingLink';
 import { DashboardTrialStatus } from '@/components/dashboard/DashboardTrialStatus';
 import { RevenueChart } from '@/components/dashboard/RevenueChart';
+import { OrgSetupChecklist } from '@/components/onboarding/OrgSetupChecklist';
+import { useAuth } from '@/context/AuthContext';
 
 export function OrgDashboard() {
   const orgId = useOrgId();
+  const { user } = useAuth();
 
   const { data: appointments, isLoading: loadingAppts } = useQuery({
     queryKey: ['appointments', orgId],
@@ -57,6 +60,7 @@ export function OrgDashboard() {
         actions={orgId ? <DashboardBookingLink orgId={orgId} /> : null}
       />
       <DashboardTrialStatus />
+      {user?.role === 'org_owner' && orgId ? <OrgSetupChecklist orgId={orgId} /> : null}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (
           <Card key={s.label}>

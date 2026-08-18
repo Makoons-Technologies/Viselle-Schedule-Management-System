@@ -431,6 +431,8 @@ export interface CustomerServiceNote {
   organizationId: string;
   customerId: string;
   serviceId: string;
+  /** Present when listing all notes for a customer (CRM). */
+  serviceName?: string | null;
   body: string;
   sourceAppointmentId?: string | null;
   createdByAccountId?: string | null;

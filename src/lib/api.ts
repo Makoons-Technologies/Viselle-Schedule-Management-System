@@ -467,6 +467,8 @@ export const orgApi = {
 
   listCustomers: (orgId: string) =>
     apiClient.get<{ customers: Customer[] }>(`/organizations/${orgId}/customers`).then((r) => r.data),
+  getCustomer: (orgId: string, customerId: string) =>
+    apiClient.get<{ customer: Customer }>(`/organizations/${orgId}/customers/${customerId}`).then((r) => r.data),
 
   getRevenueReport: (orgId: string, params?: { granularity?: RevenueGranularity; from?: string; to?: string }) =>
     apiClient.get<RevenueReport>(`/organizations/${orgId}/reports/revenue`, { params }).then((r) => r.data),
@@ -478,10 +480,10 @@ export const orgApi = {
     apiClient
       .patch<{ customer: Customer }>(`/organizations/${orgId}/customers/${customerId}`, data)
       .then((r) => r.data),
-  listCustomerServiceNotes: (orgId: string, customerId: string, serviceId: string) =>
+  listCustomerServiceNotes: (orgId: string, customerId: string, serviceId?: string) =>
     apiClient
       .get<{ notes: CustomerServiceNote[] }>(`/organizations/${orgId}/customers/${customerId}/service-notes`, {
-        params: { serviceId },
+        params: serviceId ? { serviceId } : undefined,
       })
       .then((r) => r.data),
 
