@@ -104,16 +104,35 @@
         var KEYBOARD_CLOSE_DELAYS = [80, 200, 400, 600];
         var keyboardWasOpen = false;
 
+        function isStandaloneWebApp() {
+          return !!(
+            navigator.standalone ||
+            window.matchMedia('(display-mode: standalone)').matches
+          );
+        }
+
+        function isIosStandaloneWebApp() {
+          if (!isStandaloneWebApp()) return false;
+          var ua = navigator.userAgent || '';
+          var iPadOs = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+          return /iPhone|iPad|iPod/i.test(ua) || iPadOs;
+        }
+
         function isKeyboardOpen() {
           var vv = window.visualViewport;
           return !!(vv && window.innerHeight - vv.height > KEYBOARD_THRESHOLD);
         }
 
-        function measureAppHeight() {
+        function measureBrowserAppHeight() {
           var vv = window.visualViewport;
           var h = window.innerHeight;
           if (vv) h = Math.max(h, Math.round(vv.height + vv.offsetTop));
           return h;
+        }
+
+        function getAppHeightCSSValue() {
+          if (isIosStandaloneWebApp() && !isKeyboardOpen()) return '100vh';
+          return measureBrowserAppHeight() + 'px';
         }
 
         function resetWindowScroll() {
@@ -138,7 +157,7 @@
             scheduleSettle(KEYBOARD_CLOSE_DELAYS);
           }
           resetWindowScroll();
-          document.documentElement.style.setProperty('--app-height', measureAppHeight() + 'px');
+          document.documentElement.style.setProperty('--app-height', getAppHeightCSSValue());
         }
 
         function onFocusOut(event) {
@@ -146,6 +165,10 @@
           if (!target || !target.matches) return;
           if (!target.matches('input, textarea, select, [contenteditable="true"]')) return;
           scheduleSettle(KEYBOARD_CLOSE_DELAYS);
+        }
+
+        if (isIosStandaloneWebApp()) {
+          document.documentElement.style.setProperty('--app-height', '100vh');
         }
 
         onViewportSettle();

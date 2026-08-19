@@ -1,20 +1,14 @@
 import { useEffect } from 'react';
-
-const KEYBOARD_OPEN_THRESHOLD = 80;
-const SETTLE_DELAYS_MS = [50, 150, 350, 700] as const;
-const KEYBOARD_CLOSE_DELAYS_MS = [80, 200, 400, 600] as const;
-
-function isKeyboardOpen(): boolean {
-  const vv = window.visualViewport;
-  return Boolean(vv && window.innerHeight - vv.height > KEYBOARD_OPEN_THRESHOLD);
-}
-
-function measureAppHeight(): number {
-  const vv = window.visualViewport;
-  const inner = window.innerHeight;
-  if (!vv) return inner;
-  return Math.max(inner, Math.round(vv.height + vv.offsetTop));
-}
+import {
+  FIRST_SHELL_SETTLE_DELAYS_MS,
+  KEYBOARD_CLOSE_DELAYS_MS,
+  SETTLE_DELAYS_MS,
+  isKeyboardOpen,
+  nudgeStandaloneViewportRecalc,
+  resetWindowScroll,
+  setAppHeightCSSProperty,
+  shouldRunFirstShellViewportBurst,
+} from '@/lib/app-shell-viewport';
 
 function isEditableFocusTarget(target: EventTarget | null): target is HTMLElement {
   return target instanceof HTMLElement && target.matches('input, textarea, select, [contenteditable="true"]');
@@ -36,18 +30,6 @@ export function useAppShellViewport() {
 
     let keyboardWasOpen = false;
 
-    const resetWindowScroll = () => {
-      if (window.scrollX !== 0 || window.scrollY !== 0) {
-        window.scrollTo(0, 0);
-      }
-      if (document.documentElement.scrollTop) document.documentElement.scrollTop = 0;
-      if (document.body.scrollTop) document.body.scrollTop = 0;
-    };
-
-    const setAppHeight = () => {
-      document.documentElement.style.setProperty('--app-height', `${measureAppHeight()}px`);
-    };
-
     const scheduleSettle = (delays: readonly number[]) => {
       for (const delay of delays) {
         window.setTimeout(onViewportSettle, delay);
@@ -68,7 +50,7 @@ export function useAppShellViewport() {
 
       // Reset scroll before measuring so a post-keyboard offsetTop does not inflate --app-height.
       resetWindowScroll();
-      setAppHeight();
+      setAppHeightCSSProperty();
     };
 
     const onFocusOut = (event: FocusEvent) => {
@@ -79,7 +61,20 @@ export function useAppShellViewport() {
     const vv = window.visualViewport;
     onViewportSettle();
     requestAnimationFrame(onViewportSettle);
-    scheduleSettle(SETTLE_DELAYS_MS);
+
+    if (shouldRunFirstShellViewportBurst()) {
+      nudgeStandaloneViewportRecalc();
+      scheduleSettle(FIRST_SHELL_SETTLE_DELAYS_MS);
+      let frames = 0;
+      const rafBurst = () => {
+        onViewportSettle();
+        if (++frames < 8) requestAnimationFrame(rafBurst);
+      };
+      requestAnimationFrame(rafBurst);
+    } else {
+      scheduleSettle(SETTLE_DELAYS_MS);
+    }
+
     vv?.addEventListener('resize', onViewportSettle);
     vv?.addEventListener('scroll', onViewportSettle);
     window.addEventListener('resize', onViewportSettle);
