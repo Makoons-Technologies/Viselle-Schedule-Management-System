@@ -22,8 +22,6 @@ function AppLayoutContent() {
   }, [location.pathname, close]);
 
   return (
-    // Fill the physical screen (including home-indicator). Tab bar background
-    // paints into that inset; icons sit above it like a native tab bar.
     <div className="flex h-full min-h-0 flex-col overflow-hidden overscroll-none bg-stone-50 dark:bg-stone-900">
       {/* Dark band under translucent iOS status bar so icons stay readable */}
       <div className="shrink-0 bg-[#0f172a] pt-[env(safe-area-inset-top)]" aria-hidden />
@@ -36,13 +34,13 @@ function AppLayoutContent() {
           <MobileSidebar />
           <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
             <Topbar />
-            <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain p-4 sm:px-6 sm:pt-6 md:pb-6">
+            <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain p-4 pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))] sm:px-6 sm:pt-6 sm:pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))] md:pb-6">
               <Outlet />
             </main>
           </div>
         </div>
-        <MobileBottomNav />
       </div>
+      <MobileBottomNav />
       <OrgOwnerTourPanel />
     </div>
   );

@@ -50,23 +50,20 @@
 
   /*
    * Authenticated PWA/app shell: only <main> scrolls.
-   * Fill the *large* viewport (home-indicator included). 100svh left a maroon
-   * lip under the tab bar on iOS standalone.
+   * Height comes from --app-height (visual viewport). 100lvh overshoots on iOS
+   * standalone and clips the tab bar; 100svh left a maroon lip under it.
    */
   html.app-shell,
   html.app-shell body,
   html.app-shell #root {
-    height: 100%;
-    height: 100dvh;
-    height: 100lvh;
-    height: -webkit-fill-available;
-    max-height: none;
+    height: var(--app-height, 100dvh);
+    max-height: var(--app-height, 100dvh);
     overflow: hidden;
     overscroll-behavior: none;
   }
 
   html.app-shell body {
-    background-color: #fafaf9;
+    background-color: #ffffff;
   }
 
   html.dark.app-shell body {

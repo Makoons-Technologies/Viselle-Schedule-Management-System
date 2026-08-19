@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 
 /**
- * Keep the authenticated app on a single inner scroller.
- * iOS PWAs otherwise shift the document after the keyboard, which snags
- * scroll and leaves the bottom nav sitting above the home indicator.
+ * Size the app shell to the visible viewport and keep document scroll at 0.
+ * iOS PWAs otherwise overshoot (clipped tab bar) or undershoot (maroon lip),
+ * and the keyboard can leave leftover window scroll.
  */
 export function useAppShellViewport() {
   useEffect(() => {
@@ -17,7 +17,16 @@ export function useAppShellViewport() {
       if (document.body.scrollTop) document.body.scrollTop = 0;
     };
 
+    const setAppHeight = () => {
+      const vv = window.visualViewport;
+      const keyboardOpen = Boolean(vv && window.innerHeight - vv.height > 80);
+      if (keyboardOpen) return;
+      const height = Math.round(vv?.height ?? window.innerHeight);
+      document.documentElement.style.setProperty('--app-height', `${height}px`);
+    };
+
     const onViewportSettle = () => {
+      setAppHeight();
       const vv = window.visualViewport;
       const keyboardOpen = Boolean(vv && window.innerHeight - vv.height > 80);
       if (!keyboardOpen) resetWindowScroll();
@@ -28,14 +37,16 @@ export function useAppShellViewport() {
     };
 
     const vv = window.visualViewport;
+    setAppHeight();
+    resetWindowScroll();
     vv?.addEventListener('resize', onViewportSettle);
     vv?.addEventListener('scroll', onViewportSettle);
     window.addEventListener('orientationchange', onViewportSettle);
     window.addEventListener('focusout', onFocusOut);
-    resetWindowScroll();
 
     return () => {
       document.documentElement.classList.remove('app-shell');
+      document.documentElement.style.removeProperty('--app-height');
       vv?.removeEventListener('resize', onViewportSettle);
       vv?.removeEventListener('scroll', onViewportSettle);
       window.removeEventListener('orientationchange', onViewportSettle);
