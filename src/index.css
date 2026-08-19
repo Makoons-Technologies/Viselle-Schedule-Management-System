@@ -49,9 +49,10 @@
   }
 
   /*
-   * Authenticated PWA/app shell: only <main> scrolls.
-   * Height comes from --app-height (layout viewport). Do not use 100lvh (clips
-   * tabs) or visualViewport.height (double-counts the home-indicator inset).
+   * Authenticated app shell: only <main> scrolls.
+   * In-browser Safari uses --app-height (innerHeight). Installed PWA must not:
+   * JS-cap height (leaves a theme-color gutter) or overflow:hidden on html while
+   * shorter than the webview (that makes position:fixed sit above the gutter).
    */
   html.app-shell,
   html.app-shell body,
@@ -66,9 +67,24 @@
     --app-bottom-inset: env(safe-area-inset-bottom, 0px);
   }
 
-  /* Home-screen PWA: no Safari toolbar. Don't reserve a blank bottom band. */
+  /* Home-screen PWA: fill the webview. Tab bar uses bottom:0 of that box. */
   html.pwa-standalone {
     --app-bottom-inset: 0px;
+  }
+
+  html.pwa-standalone.app-shell,
+  html.pwa-standalone.app-shell body {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: auto;
+    max-height: none;
+    overflow: hidden;
+  }
+
+  html.pwa-standalone.app-shell #root {
+    height: 100%;
+    max-height: 100%;
   }
 
   html.app-shell body {

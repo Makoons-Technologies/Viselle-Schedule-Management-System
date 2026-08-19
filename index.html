@@ -95,6 +95,12 @@
           document.documentElement.classList.add('dark');
           document.documentElement.style.colorScheme = 'dark';
         }
+        if (
+          window.matchMedia('(display-mode: standalone)').matches ||
+          Boolean(window.navigator.standalone)
+        ) {
+          document.documentElement.classList.add('pwa-standalone');
+        }
       })();
     </script>
   </head>

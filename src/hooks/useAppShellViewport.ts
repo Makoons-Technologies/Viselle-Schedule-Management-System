@@ -37,9 +37,19 @@ export function useAppShellViewport() {
       const vv = window.visualViewport;
       const keyboardOpen = Boolean(vv && window.innerHeight - vv.height > 80);
       if (keyboardOpen) return;
-      // Layout viewport (innerHeight), not visualViewport.height — that value is
-      // already inset on iOS PWAs and stacked with safe-area padding to float the tabs.
+
+      const standalone = document.documentElement.classList.contains('pwa-standalone');
+      const mobile = window.matchMedia('(max-width: 767px)').matches;
+      if (standalone && mobile) {
+        // Let CSS `position:fixed; inset:0` fill the webview. A JS pixel height
+        // shorter than the actual screen paints a dead band under the tab bar.
+        document.documentElement.style.removeProperty('--app-height');
+        document.documentElement.style.setProperty('--pwa-bottom-shift', '0px');
+        return;
+      }
+
       document.documentElement.style.setProperty('--app-height', `${Math.round(window.innerHeight)}px`);
+      document.documentElement.style.setProperty('--pwa-bottom-shift', '0px');
     };
 
     const onViewportSettle = () => {
@@ -66,6 +76,7 @@ export function useAppShellViewport() {
     return () => {
       document.documentElement.classList.remove('app-shell', 'pwa-standalone');
       document.documentElement.style.removeProperty('--app-height');
+      document.documentElement.style.removeProperty('--pwa-bottom-shift');
       if (themeMeta && previousTheme) themeMeta.setAttribute('content', previousTheme);
       standaloneMq.removeEventListener('change', syncStandalone);
       vv?.removeEventListener('resize', onViewportSettle);

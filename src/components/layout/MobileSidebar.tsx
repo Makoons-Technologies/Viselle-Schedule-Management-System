@@ -39,7 +39,7 @@ export function MobileSidebar() {
           }}
           overlayStyle={overlayStyle}
           className={cn(
-            'flex h-full w-[min(100vw-1rem,18rem)] max-w-xs flex-col gap-0 p-0 sm:p-0 touch-pan-y',
+            'flex h-auto w-[min(100vw-1rem,18rem)] max-w-xs flex-col gap-0 p-0 sm:p-0 touch-pan-y',
             panelClassName,
           )}
         >
