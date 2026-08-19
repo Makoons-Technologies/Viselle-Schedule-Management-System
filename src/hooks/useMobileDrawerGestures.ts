@@ -44,6 +44,17 @@ function isDrawerScrollTarget(target: Node | null): boolean {
   return target.closest('[data-mobile-drawer-scroll]') !== null;
 }
 
+function isScrollableDrawerNav(element: Element): boolean {
+  return element.scrollHeight > element.clientHeight + 1;
+}
+
+function drawerNavWantsVerticalScroll(element: Element, dy: number): boolean {
+  if (Math.abs(dy) < LOCK_AXIS_PX) return false;
+  if (!isScrollableDrawerNav(element)) return false;
+  if (dy < 0) return element.scrollTop > 0;
+  return element.scrollTop + element.clientHeight < element.scrollHeight - 1;
+}
+
 /**
  * Native-feeling mobile drawer gestures:
  * - swipe right from a left edge strip to open
@@ -160,6 +171,15 @@ export function useMobileDrawerGestures(
 
       if (session.axis === 'none') {
         if (Math.abs(dx) < LOCK_AXIS_PX && Math.abs(dy) < LOCK_AXIS_PX) return;
+
+        const scrollEl = panelRef.current?.querySelector('[data-mobile-drawer-scroll]');
+        if (scrollEl instanceof HTMLElement && drawerNavWantsVerticalScroll(scrollEl, dy)) {
+          sessionRef.current = null;
+          setIsDragging(false);
+          setDragOffset(0);
+          return;
+        }
+
         // Prefer vertical when ambiguous so nav list scroll still works.
         session.axis = Math.abs(dx) > Math.abs(dy) * 1.15 ? 'horizontal' : 'vertical';
         if (session.axis === 'vertical') {
