@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
@@ -35,6 +35,7 @@ export function OrgOwnerTourProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const [isActive, setIsActive] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
+  const autoStartSessionRef = useRef<string | null>(null);
 
   const canUseTour =
     user?.role === 'org_owner' && !!orgId && !mustChoosePlan && location.pathname.startsWith('/orgs/');
@@ -44,11 +45,11 @@ export function OrgOwnerTourProvider({ children }: { children: ReactNode }) {
 
   const close = useCallback(
     (status: 'done' | 'skipped') => {
-      if (orgId) writeOrgOwnerTourStorage(orgId, status);
+      if (user?.id && orgId) writeOrgOwnerTourStorage(user.id, orgId, status);
       setIsActive(false);
       setStepIndex(0);
     },
-    [orgId],
+    [orgId, user?.id],
   );
 
   const start = useCallback(() => {
@@ -73,15 +74,27 @@ export function OrgOwnerTourProvider({ children }: { children: ReactNode }) {
   }, [close, stepIndex]);
 
   useEffect(() => {
-    if (!canUseTour || !orgId || isActive || user?.impersonatedBy) return;
-    if (readOrgOwnerTourStorage(orgId)) return;
+    if (!canUseTour || !orgId || !user?.id || isActive || user.impersonatedBy) return;
+
+    const sessionKey = `${user.id}:${orgId}`;
+    if (autoStartSessionRef.current === sessionKey) return;
+
+    if (readOrgOwnerTourStorage(user.id, orgId)) {
+      autoStartSessionRef.current = sessionKey;
+      return;
+    }
+
     const timer = window.setTimeout(() => {
-      if (readOrgOwnerTourStorage(orgId)) return;
+      if (readOrgOwnerTourStorage(user.id, orgId)) {
+        autoStartSessionRef.current = sessionKey;
+        return;
+      }
+      autoStartSessionRef.current = sessionKey;
       setStepIndex(0);
       setIsActive(true);
     }, 700);
     return () => window.clearTimeout(timer);
-  }, [canUseTour, orgId, isActive, user?.impersonatedBy]);
+  }, [canUseTour, orgId, user?.id, user?.impersonatedBy, isActive]);
 
   useEffect(() => {
     if (!isActive || !orgId || !step) return;
