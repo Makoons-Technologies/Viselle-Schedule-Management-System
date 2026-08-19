@@ -46,7 +46,7 @@ export const SheetContent = forwardRef<HTMLDivElement, SheetContentProps>(
       />
       <DialogPrimitive.Content
         ref={ref}
-        className={cn(sheetVariants({ side }), 'flex flex-col p-4 sm:p-6', className)}
+        className={cn(sheetVariants({ side }), 'relative z-[51] flex flex-col p-4 sm:p-6', className)}
         {...props}
       >
         {children}
