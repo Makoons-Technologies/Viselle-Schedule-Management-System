@@ -28,9 +28,9 @@ interface BottomNavItem {
   match: (pathname: string, orgBase: string) => boolean;
 }
 
-/** Fixed to the physical bottom so iOS cannot clip the tabs. Opaque fill covers the home indicator. */
+/** Flush to the screen edge. Safe-area padding here stacked with the PWA viewport and floated the tabs. */
 const bottomNavClassName =
-  'fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-white px-2 pb-[env(safe-area-inset-bottom,0px)] pt-1 dark:border-stone-800 dark:bg-stone-900 md:hidden';
+  'fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-white px-2 pb-1 pt-1 shadow-[0_80px_0_0_#fff] dark:border-stone-800 dark:bg-stone-900 dark:shadow-[0_80px_0_0_#1c1917] md:hidden';
 
 function BottomNavLink({ item, active }: { item: BottomNavItem; active: boolean }) {
   const { isActive: tourActive, currentTarget } = useOrgOwnerTour();
@@ -42,7 +42,7 @@ function BottomNavLink({ item, active }: { item: BottomNavItem; active: boolean 
       to={item.to}
       data-tour={target}
       className={cn(
-        'flex min-h-[3.25rem] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 text-[10px] font-medium transition-colors sm:text-xs',
+        'flex min-h-12 min-w-0 flex-1 flex-col items-center justify-end gap-0.5 rounded-lg px-1 py-1 text-[10px] font-medium transition-colors sm:text-xs',
         active ? 'text-brand-700 dark:text-brand-300' : 'text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200',
         highlighted && 'ring-2 ring-brand-500 ring-offset-2 ring-offset-white dark:ring-offset-stone-900',
       )}

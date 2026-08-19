@@ -50,8 +50,8 @@
 
   /*
    * Authenticated PWA/app shell: only <main> scrolls.
-   * Height comes from --app-height (visual viewport). 100lvh overshoots on iOS
-   * standalone and clips the tab bar; 100svh left a maroon lip under it.
+   * Height comes from --app-height (layout viewport). Do not use 100lvh (clips
+   * tabs) or visualViewport.height (double-counts the home-indicator inset).
    */
   html.app-shell,
   html.app-shell body,

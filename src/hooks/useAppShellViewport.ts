@@ -21,8 +21,9 @@ export function useAppShellViewport() {
       const vv = window.visualViewport;
       const keyboardOpen = Boolean(vv && window.innerHeight - vv.height > 80);
       if (keyboardOpen) return;
-      const height = Math.round(vv?.height ?? window.innerHeight);
-      document.documentElement.style.setProperty('--app-height', `${height}px`);
+      // Layout viewport (innerHeight), not visualViewport.height — that value is
+      // already inset on iOS PWAs and stacked with safe-area padding to float the tabs.
+      document.documentElement.style.setProperty('--app-height', `${Math.round(window.innerHeight)}px`);
     };
 
     const onViewportSettle = () => {
