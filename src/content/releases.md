@@ -35,6 +35,7 @@ Lock Viselle-hosted subdomain and custom websites to platform admin, keep 3rd-pa
 
 ### API
 
+- Upgrade production database to more performant hardware for faster queries and lower latency.
 - Let org owners load every customer note with its service so CRM can show full history.
 - Lock hosted subdomain and Viselle custom websites to platform admin so orgs cannot self-provision them.
 - Protect public booking from abuse with rate limits, without charging for the API.
