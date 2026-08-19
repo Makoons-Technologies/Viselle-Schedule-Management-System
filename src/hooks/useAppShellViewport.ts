@@ -1,10 +1,23 @@
 import { useEffect } from 'react';
 
+const KEYBOARD_OPEN_THRESHOLD = 80;
+const SETTLE_DELAYS_MS = [50, 150, 350, 700] as const;
+const KEYBOARD_CLOSE_DELAYS_MS = [80, 200, 400, 600] as const;
+
+function isKeyboardOpen(): boolean {
+  const vv = window.visualViewport;
+  return Boolean(vv && window.innerHeight - vv.height > KEYBOARD_OPEN_THRESHOLD);
+}
+
 function measureAppHeight(): number {
   const vv = window.visualViewport;
   const inner = window.innerHeight;
   if (!vv) return inner;
   return Math.max(inner, Math.round(vv.height + vv.offsetTop));
+}
+
+function isEditableFocusTarget(target: EventTarget | null): target is HTMLElement {
+  return target instanceof HTMLElement && target.matches('input, textarea, select, [contenteditable="true"]');
 }
 
 /** Size the app shell to the visible viewport and keep document scroll at 0. */
@@ -21,6 +34,8 @@ export function useAppShellViewport() {
     };
     syncThemeColor();
 
+    let keyboardWasOpen = false;
+
     const resetWindowScroll = () => {
       if (window.scrollX !== 0 || window.scrollY !== 0) {
         window.scrollTo(0, 0);
@@ -30,29 +45,41 @@ export function useAppShellViewport() {
     };
 
     const setAppHeight = () => {
-      const vv = window.visualViewport;
-      const keyboardOpen = Boolean(vv && window.innerHeight - vv.height > 80);
-      if (keyboardOpen) return;
       document.documentElement.style.setProperty('--app-height', `${measureAppHeight()}px`);
     };
 
-    const onViewportSettle = () => {
-      setAppHeight();
-      const vv = window.visualViewport;
-      const keyboardOpen = Boolean(vv && window.innerHeight - vv.height > 80);
-      if (!keyboardOpen) resetWindowScroll();
+    const scheduleSettle = (delays: readonly number[]) => {
+      for (const delay of delays) {
+        window.setTimeout(onViewportSettle, delay);
+      }
     };
 
-    const onFocusOut = () => {
-      window.setTimeout(onViewportSettle, 80);
+    const onViewportSettle = () => {
+      const keyboardOpen = isKeyboardOpen();
+      if (keyboardOpen) {
+        keyboardWasOpen = true;
+        return;
+      }
+
+      if (keyboardWasOpen) {
+        keyboardWasOpen = false;
+        scheduleSettle(KEYBOARD_CLOSE_DELAYS_MS);
+      }
+
+      // Reset scroll before measuring so a post-keyboard offsetTop does not inflate --app-height.
+      resetWindowScroll();
+      setAppHeight();
+    };
+
+    const onFocusOut = (event: FocusEvent) => {
+      if (!isEditableFocusTarget(event.target)) return;
+      scheduleSettle(KEYBOARD_CLOSE_DELAYS_MS);
     };
 
     const vv = window.visualViewport;
     onViewportSettle();
     requestAnimationFrame(onViewportSettle);
-    for (const delay of [50, 150, 350, 700]) {
-      window.setTimeout(onViewportSettle, delay);
-    }
+    scheduleSettle(SETTLE_DELAYS_MS);
     vv?.addEventListener('resize', onViewportSettle);
     vv?.addEventListener('scroll', onViewportSettle);
     window.addEventListener('resize', onViewportSettle);
