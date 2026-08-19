@@ -10,18 +10,20 @@ import { OrgTrialBanner } from '@/components/layout/OrgTrialBanner';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
 import { OrgOwnerTourPanel } from '@/components/onboarding/OrgOwnerTourPanel';
+import { useAppShellViewport } from '@/hooks/useAppShellViewport';
 
 function AppLayoutContent() {
   const location = useLocation();
   const { close } = useMobileNav();
+  useAppShellViewport();
 
   useEffect(() => {
     close();
   }, [location.pathname, close]);
 
   return (
-    // Outer fill matches app chrome so home-indicator gaps are never the PWA maroon body color.
-    <div className="flex h-[100dvh] flex-col overflow-hidden overscroll-x-none bg-stone-50 dark:bg-stone-950">
+    // svh stays stable when the keyboard opens; dvh on iOS PWAs often does not restore.
+    <div className="flex h-[100svh] max-h-[100svh] flex-col overflow-hidden overscroll-none bg-stone-50 dark:bg-stone-950">
       {/* Dark band under translucent iOS status bar so icons stay readable */}
       <div className="shrink-0 bg-[#0f172a] pt-[env(safe-area-inset-top)]" aria-hidden />
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -33,12 +35,12 @@ function AppLayoutContent() {
           <MobileSidebar />
           <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
             <Topbar />
-            <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))] sm:px-6 sm:pt-6 sm:pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))] md:pb-6">
+            <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain p-4 sm:px-6 sm:pt-6 md:pb-6">
               <Outlet />
             </main>
           </div>
-          <MobileBottomNav />
         </div>
+        <MobileBottomNav />
       </div>
       <OrgOwnerTourPanel />
     </div>

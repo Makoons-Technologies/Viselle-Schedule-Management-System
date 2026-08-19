@@ -49,6 +49,19 @@
   }
 
   /*
+   * Authenticated PWA/app shell: only <main> scrolls. Stops iOS from shifting
+   * the document after the keyboard (caught scroll + raised bottom nav).
+   */
+  html.app-shell,
+  html.app-shell body,
+  html.app-shell #root {
+    height: 100%;
+    max-height: 100svh;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  /*
    * Installed PWA: keep the status-bar / overscroll region dark so iOS does not
    * flash a white strip above the marketing gradient (black-translucent).
    */

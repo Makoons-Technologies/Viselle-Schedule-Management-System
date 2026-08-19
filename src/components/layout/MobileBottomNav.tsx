@@ -28,9 +28,9 @@ interface BottomNavItem {
   match: (pathname: string, orgBase: string) => boolean;
 }
 
-/** Opaque fill — translucent white lets the PWA maroon body show through under the home indicator. */
+/** In-flow (not fixed) so iOS keyboard dismiss cannot leave the bar floating mid-screen. */
 const bottomNavClassName =
-  'fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-white px-2 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-1 dark:border-stone-800 dark:bg-stone-900 md:hidden';
+  'z-40 shrink-0 border-t border-stone-200 bg-white px-2 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-1 dark:border-stone-800 dark:bg-stone-900 md:hidden';
 
 function BottomNavLink({ item, active }: { item: BottomNavItem; active: boolean }) {
   const { isActive: tourActive, currentTarget } = useOrgOwnerTour();
