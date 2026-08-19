@@ -50,8 +50,6 @@
 
   /*
    * Authenticated app shell: only <main> scrolls.
-   * --app-height is innerHeight. PWA tab bar background extends into the iOS
-   * dead band via --pwa-bottom-fill without moving buttons off-screen.
    */
   html.app-shell,
   html.app-shell body,
@@ -60,15 +58,6 @@
     max-height: var(--app-height, 100dvh);
     overflow: hidden;
     overscroll-behavior: none;
-  }
-
-  html.app-shell {
-    --app-bottom-inset: env(safe-area-inset-bottom, 0px);
-  }
-
-  html.pwa-standalone {
-    --app-bottom-inset: 0px;
-    --pwa-bottom-fill: 0px;
   }
 
   html.app-shell body {

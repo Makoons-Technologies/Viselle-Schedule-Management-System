@@ -39,7 +39,7 @@ export function MobileSidebar() {
           }}
           overlayStyle={overlayStyle}
           className={cn(
-            'flex h-auto w-[min(100vw-1rem,18rem)] max-w-xs flex-col gap-0 p-0 sm:p-0 touch-pan-y',
+            'flex h-full w-[min(100vw-1rem,18rem)] max-w-xs flex-col gap-0 p-0 sm:p-0 touch-pan-y',
             panelClassName,
           )}
         >
@@ -59,7 +59,7 @@ export function MobileSidebar() {
           </div>
           <div
             className="shrink-0 border-t border-stone-200 px-4 pt-3 text-right dark:border-stone-800"
-            style={{ paddingBottom: 'max(0.75rem, var(--app-bottom-inset, 0px))' }}
+            style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
           >
             <PoweredByMakoons className="text-right" />
           </div>

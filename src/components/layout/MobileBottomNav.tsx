@@ -10,7 +10,6 @@ import {
   UserCircle,
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { createPortal } from 'react-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useOrg } from '@/context/OrgContext';
 import { useOrgId } from '@/hooks/useOrgId';
@@ -18,7 +17,6 @@ import { useOrgMustChoosePlan } from '@/hooks/useOrgMustChoosePlan';
 import { isOrgSettingsPath } from '@/components/layout/org-navigation';
 import { getPlatformOrgBase, isPlatformOrgAdminPath } from '@/components/layout/platform-navigation';
 import { cn } from '@/lib/utils';
-import type { ReactNode } from 'react';
 import { useOrgOwnerTour } from '@/context/OrgOwnerTourContext';
 import { orgTourTargetFromTo } from '@/lib/org-owner-tour';
 
@@ -30,23 +28,8 @@ interface BottomNavItem {
   match: (pathname: string, orgBase: string) => boolean;
 }
 
-/** Tab bar sits on the visible viewport; filler extends background into the iOS dead band. */
 const bottomNavClassName =
-  'fixed inset-x-0 z-40 flex flex-col border-t border-stone-200 bg-white px-2 pb-1 pt-1 dark:border-stone-800 dark:bg-stone-900 md:hidden [bottom:calc(-1*var(--pwa-bottom-fill,0px))]';
-
-function BottomNavShell({ children }: { children: ReactNode }) {
-  return createPortal(
-    <nav className={bottomNavClassName} aria-label="Primary navigation">
-      {children}
-      <div
-        aria-hidden
-        className="shrink-0 bg-inherit"
-        style={{ height: 'var(--pwa-bottom-fill, 0px)' }}
-      />
-    </nav>,
-    document.body,
-  );
-}
+  'fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-white px-2 pb-[max(0.25rem,env(safe-area-inset-bottom,0px))] pt-1 dark:border-stone-800 dark:bg-stone-900 md:hidden';
 
 function BottomNavLink({ item, active }: { item: BottomNavItem; active: boolean }) {
   const { isActive: tourActive, currentTarget } = useOrgOwnerTour();
@@ -116,13 +99,13 @@ export function MobileBottomNav() {
     ];
 
     return (
-      <BottomNavShell>
+      <nav className={bottomNavClassName} aria-label="Primary navigation">
         <div className="mx-auto flex max-w-lg items-stretch justify-between gap-1">
           {items.map((item) => (
             <BottomNavLink key={item.key} item={item} active={item.match(location.pathname, '')} />
           ))}
         </div>
-      </BottomNavShell>
+      </nav>
     );
   }
 
@@ -149,13 +132,13 @@ export function MobileBottomNav() {
     ];
 
     return (
-      <BottomNavShell>
+      <nav className={bottomNavClassName} aria-label="Primary navigation">
         <div className="mx-auto flex max-w-lg items-stretch justify-center gap-1">
           {items.map((item) => (
             <BottomNavLink key={item.key} item={item} active={item.match(location.pathname, platformOrgBase)} />
           ))}
         </div>
-      </BottomNavShell>
+      </nav>
     );
   }
 
@@ -185,13 +168,13 @@ export function MobileBottomNav() {
     ];
 
     return (
-      <BottomNavShell>
+      <nav className={bottomNavClassName} aria-label="Primary navigation">
         <div className="mx-auto flex max-w-lg items-stretch justify-center gap-1">
           {items.map((item) => (
             <BottomNavLink key={item.key} item={item} active={item.match(location.pathname, '')} />
           ))}
         </div>
-      </BottomNavShell>
+      </nav>
     );
   }
 
@@ -250,7 +233,7 @@ export function MobileBottomNav() {
         ];
 
   return (
-    <BottomNavShell>
+    <nav className={bottomNavClassName} aria-label="Primary navigation">
       <div className="mx-auto flex max-w-lg items-stretch justify-between gap-1">
         {items.map((item) => (
           <BottomNavLink
@@ -265,6 +248,6 @@ export function MobileBottomNav() {
           />
         ))}
       </div>
-    </BottomNavShell>
+    </nav>
   );
 }
