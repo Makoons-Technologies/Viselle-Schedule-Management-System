@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-
-/** Matches Tailwind `md` — desktop sidebar shows at 768px+. */
-const MOBILE_MAX = '(max-width: 767px)';
+import { MOBILE_SHELL_MEDIA } from '@/lib/viewport';
 
 /**
  * Edge strip where we claim horizontal swipes for the drawer and block the
@@ -41,6 +39,11 @@ function isNearHorizontalEdge(clientX: number): boolean {
   return clientX <= EDGE_WIDTH_PX || clientX >= window.innerWidth - EDGE_WIDTH_PX;
 }
 
+function isDrawerScrollTarget(target: Node | null): boolean {
+  if (!target || !(target instanceof Element)) return false;
+  return target.closest('[data-mobile-drawer-scroll]') !== null;
+}
+
 /**
  * Native-feeling mobile drawer gestures:
  * - swipe right from a left edge strip to open
@@ -53,7 +56,7 @@ export function useMobileDrawerGestures(
   setOpen: (open: boolean) => void,
   enabled = true,
 ): MobileDrawerGestures {
-  const isMobile = useMediaQuery(MOBILE_MAX);
+  const isMobile = useMediaQuery(MOBILE_SHELL_MEDIA);
   const active = enabled && isMobile;
   const panelRef = useRef<HTMLDivElement | null>(null);
   const sessionRef = useRef<TouchSession | null>(null);
@@ -110,6 +113,8 @@ export function useMobileDrawerGestures(
       if (openRef.current) {
         const panel = panelRef.current;
         if (!panel || !target || !panel.contains(target)) return;
+        // Let the nav list scroll without competing with drag-to-close.
+        if (isDrawerScrollTarget(target)) return;
         sessionRef.current = {
           startX: touch.clientX,
           startY: touch.clientY,

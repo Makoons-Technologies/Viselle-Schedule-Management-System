@@ -39,13 +39,18 @@ export function MobileSidebar() {
           }}
           overlayStyle={overlayStyle}
           className={cn(
-            'flex h-full w-[min(100vw-1rem,18rem)] max-w-xs flex-col gap-0 p-0 sm:p-0 touch-pan-y',
+            'flex h-[var(--app-height,100dvh)] max-h-[var(--app-height,100dvh)] w-[min(100vw-1rem,18rem)] max-w-xs flex-col gap-0 overflow-hidden p-0 sm:p-0 touch-pan-y',
             panelClassName,
           )}
         >
           <SheetTitle className="sr-only">Navigation menu</SheetTitle>
-          <SidebarBrand subtitle={subtitle} />
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain p-3 [&_a]:min-h-11 [&_a]:py-2.5 [&_a]:text-[0.9375rem] [&_button]:min-h-11">
+          <div className="shrink-0">
+            <SidebarBrand subtitle={subtitle} />
+          </div>
+          <div
+            data-mobile-drawer-scroll
+            className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain p-3 [&_a]:min-h-11 [&_a]:py-2.5 [&_a]:text-[0.9375rem] [&_button]:min-h-11"
+          >
             <SidebarNav onNavigate={close} mobile />
             <div className="mt-auto border-t border-stone-200 pt-4 dark:border-stone-800">
               <ReferAFriendTrigger
