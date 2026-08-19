@@ -97,6 +97,28 @@
         }
       })();
     </script>
+    <script>
+      (function () {
+        function syncAppHeight() {
+          var vv = window.visualViewport;
+          var h = window.innerHeight;
+          if (vv) h = Math.max(h, Math.round(vv.height + vv.offsetTop));
+          document.documentElement.style.setProperty('--app-height', h + 'px');
+        }
+        syncAppHeight();
+        requestAnimationFrame(syncAppHeight);
+        [50, 150, 350, 700].forEach(function (delay) {
+          window.setTimeout(syncAppHeight, delay);
+        });
+        window.addEventListener('resize', syncAppHeight);
+        window.addEventListener('orientationchange', syncAppHeight);
+        window.addEventListener('pageshow', syncAppHeight);
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener('resize', syncAppHeight);
+          window.visualViewport.addEventListener('scroll', syncAppHeight);
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

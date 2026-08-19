@@ -1,5 +1,12 @@
 import { useEffect } from 'react';
 
+function measureAppHeight(): number {
+  const vv = window.visualViewport;
+  const inner = window.innerHeight;
+  if (!vv) return inner;
+  return Math.max(inner, Math.round(vv.height + vv.offsetTop));
+}
+
 /** Size the app shell to the visible viewport and keep document scroll at 0. */
 export function useAppShellViewport() {
   useEffect(() => {
@@ -26,7 +33,7 @@ export function useAppShellViewport() {
       const vv = window.visualViewport;
       const keyboardOpen = Boolean(vv && window.innerHeight - vv.height > 80);
       if (keyboardOpen) return;
-      document.documentElement.style.setProperty('--app-height', `${Math.round(window.innerHeight)}px`);
+      document.documentElement.style.setProperty('--app-height', `${measureAppHeight()}px`);
     };
 
     const onViewportSettle = () => {
@@ -41,11 +48,17 @@ export function useAppShellViewport() {
     };
 
     const vv = window.visualViewport;
-    setAppHeight();
-    resetWindowScroll();
+    onViewportSettle();
+    requestAnimationFrame(onViewportSettle);
+    for (const delay of [50, 150, 350, 700]) {
+      window.setTimeout(onViewportSettle, delay);
+    }
     vv?.addEventListener('resize', onViewportSettle);
     vv?.addEventListener('scroll', onViewportSettle);
+    window.addEventListener('resize', onViewportSettle);
     window.addEventListener('orientationchange', onViewportSettle);
+    window.addEventListener('load', onViewportSettle);
+    window.addEventListener('pageshow', onViewportSettle);
     window.addEventListener('focusout', onFocusOut);
 
     return () => {
@@ -54,7 +67,10 @@ export function useAppShellViewport() {
       if (themeMeta && previousTheme) themeMeta.setAttribute('content', previousTheme);
       vv?.removeEventListener('resize', onViewportSettle);
       vv?.removeEventListener('scroll', onViewportSettle);
+      window.removeEventListener('resize', onViewportSettle);
       window.removeEventListener('orientationchange', onViewportSettle);
+      window.removeEventListener('load', onViewportSettle);
+      window.removeEventListener('pageshow', onViewportSettle);
       window.removeEventListener('focusout', onFocusOut);
     };
   }, []);
