@@ -22,8 +22,9 @@ function AppLayoutContent() {
   }, [location.pathname, close]);
 
   return (
-    // svh stays stable when the keyboard opens; dvh on iOS PWAs often does not restore.
-    <div className="flex h-[100svh] max-h-[100svh] flex-col overflow-hidden overscroll-none bg-stone-50 dark:bg-stone-950">
+    // Fill the physical screen (including home-indicator). Tab bar background
+    // paints into that inset; icons sit above it like a native tab bar.
+    <div className="flex h-full min-h-0 flex-col overflow-hidden overscroll-none bg-stone-50 dark:bg-stone-900">
       {/* Dark band under translucent iOS status bar so icons stay readable */}
       <div className="shrink-0 bg-[#0f172a] pt-[env(safe-area-inset-top)]" aria-hidden />
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">

@@ -49,25 +49,37 @@
   }
 
   /*
-   * Authenticated PWA/app shell: only <main> scrolls. Stops iOS from shifting
-   * the document after the keyboard (caught scroll + raised bottom nav).
+   * Authenticated PWA/app shell: only <main> scrolls.
+   * Fill the *large* viewport (home-indicator included). 100svh left a maroon
+   * lip under the tab bar on iOS standalone.
    */
   html.app-shell,
   html.app-shell body,
   html.app-shell #root {
     height: 100%;
-    max-height: 100svh;
+    height: 100dvh;
+    height: 100lvh;
+    height: -webkit-fill-available;
+    max-height: none;
     overflow: hidden;
     overscroll-behavior: none;
   }
 
+  html.app-shell body {
+    background-color: #fafaf9;
+  }
+
+  html.dark.app-shell body {
+    background-color: #1c1917;
+  }
+
   /*
-   * Installed PWA: keep the status-bar / overscroll region dark so iOS does not
-   * flash a white strip above the marketing gradient (black-translucent).
+   * Installed PWA marketing pages: keep the status-bar / overscroll region dark.
+   * The app shell overrides this so the tab bar is not sitting on maroon.
    */
   @media (display-mode: standalone) {
-    html,
-    body {
+    html:not(.app-shell),
+    html:not(.app-shell) body {
       background-color: #2a0f1e;
     }
   }
