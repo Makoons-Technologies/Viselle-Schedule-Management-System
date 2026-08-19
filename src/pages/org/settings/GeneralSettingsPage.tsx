@@ -3,7 +3,6 @@ import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgPlan } from '@/hooks/useOrgPlan';
 import { useAuth } from '@/context/AuthContext';
 import { ThemeSettingsSection } from '@/components/settings/ThemeSettingsSection';
-import { PushNotificationsCard } from '@/components/settings/PushNotificationsCard';
 import { LoadingState } from '@/components/common/LoadingState';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,7 +42,6 @@ export function GeneralSettingsPage() {
         </>
       )}
       <ThemeSettingsSection />
-      <PushNotificationsCard />
     </div>
   );
 }

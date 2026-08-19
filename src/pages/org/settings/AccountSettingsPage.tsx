@@ -5,7 +5,6 @@ import { useOrgId } from '@/hooks/useOrgId';
 import { orgApi } from '@/lib/api';
 import { AddToHomeScreenCard } from '@/components/settings/AddToHomeScreenCard';
 import { OrgDangerZone } from '@/components/settings/OrgDangerZone';
-import { PushNotificationsCard } from '@/components/settings/PushNotificationsCard';
 import { LoadingState } from '@/components/common/LoadingState';
 
 /** Staff (and owners) account/membership danger zone — leave or delete. */
@@ -35,7 +34,6 @@ export function AccountSettingsPage() {
         </p>
       </div>
       <AddToHomeScreenCard />
-      <PushNotificationsCard />
       <OrgDangerZone orgId={orgId} orgName={data?.organization.name} />
     </div>
   );

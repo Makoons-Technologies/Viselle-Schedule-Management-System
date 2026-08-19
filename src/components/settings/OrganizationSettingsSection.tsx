@@ -33,12 +33,10 @@ type OrgUpdatePayload = {
   confirmationDaysBefore?: number;
   staffEmailRemindersOptIn?: boolean;
   staffSmsRemindersOptIn?: boolean;
-  staffPushRemindersOptIn?: boolean;
   staffReminderHoursBefore?: number;
   lowStockAlertsOptIn?: boolean;
   lowStockAlertEmail?: boolean;
   lowStockAlertSms?: boolean;
-  lowStockAlertPush?: boolean;
   city?: string | null;
   address?: string | null;
   phone?: string | null;
@@ -357,8 +355,7 @@ export function OrganizationSettingsSection({ orgId }: OrganizationSettingsSecti
             </p>
             <p className={helperTextClass}>
               Notify the assigned staff member before their appointment (email
-              {smsSendingOn ? ', SMS, ' : ' '}
-              and/or push)
+              {smsSendingOn ? ' and/or SMS' : ''})
               {smsSendingOn ? '.' : '. Staff texts are paused until the number is approved.'}
             </p>
           </div>
@@ -383,17 +380,6 @@ export function OrganizationSettingsSection({ orgId }: OrganizationSettingsSecti
               checked={org.staffSmsRemindersOptIn ?? false}
               disabled={!smsPlanEnabled || updateMutation.isPending}
               onCheckedChange={(v) => updateMutation.mutate({ staffSmsRemindersOptIn: v })}
-            />
-          </div>
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0 flex-1">
-              <Label>Staff push notifications</Label>
-              <p className={helperTextClass}>Requires enabling notifications on each device</p>
-            </div>
-            <Switch
-              checked={org.staffPushRemindersOptIn ?? true}
-              disabled={updateMutation.isPending}
-              onCheckedChange={(v) => updateMutation.mutate({ staffPushRemindersOptIn: v })}
             />
           </div>
           <div>
@@ -458,14 +444,6 @@ export function OrganizationSettingsSection({ orgId }: OrganizationSettingsSecti
                 !(org.lowStockAlertsOptIn ?? true) || !smsPlanEnabled || updateMutation.isPending
               }
               onCheckedChange={(v) => updateMutation.mutate({ lowStockAlertSms: v })}
-            />
-          </div>
-          <div className="flex items-center justify-between gap-4">
-            <Label>Push</Label>
-            <Switch
-              checked={org.lowStockAlertPush ?? true}
-              disabled={!(org.lowStockAlertsOptIn ?? true) || updateMutation.isPending}
-              onCheckedChange={(v) => updateMutation.mutate({ lowStockAlertPush: v })}
             />
           </div>
         </div>
