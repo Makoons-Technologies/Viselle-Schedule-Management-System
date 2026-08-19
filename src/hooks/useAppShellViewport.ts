@@ -2,12 +2,28 @@ import { useEffect } from 'react';
 
 /**
  * Size the app shell to the visible viewport and keep document scroll at 0.
- * iOS PWAs otherwise overshoot (clipped tab bar) or undershoot (maroon lip),
- * and the keyboard can leave leftover window scroll.
+ * Installed PWAs have no browser toolbar — zero the bottom inset so we don't
+ * paint an empty strip under the tab bar.
  */
 export function useAppShellViewport() {
   useEffect(() => {
     document.documentElement.classList.add('app-shell');
+
+    const standaloneMq = window.matchMedia('(display-mode: standalone)');
+    const iosStandalone = 'standalone' in navigator && Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
+    const syncStandalone = () => {
+      document.documentElement.classList.toggle('pwa-standalone', standaloneMq.matches || iosStandalone);
+    };
+    syncStandalone();
+
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
+    const previousTheme = themeMeta?.getAttribute('content');
+    const syncThemeColor = () => {
+      if (!themeMeta) return;
+      const dark = document.documentElement.classList.contains('dark');
+      themeMeta.setAttribute('content', dark ? '#1c1917' : '#ffffff');
+    };
+    syncThemeColor();
 
     const resetWindowScroll = () => {
       if (window.scrollX !== 0 || window.scrollY !== 0) {
@@ -45,9 +61,13 @@ export function useAppShellViewport() {
     window.addEventListener('orientationchange', onViewportSettle);
     window.addEventListener('focusout', onFocusOut);
 
+    standaloneMq.addEventListener('change', syncStandalone);
+
     return () => {
-      document.documentElement.classList.remove('app-shell');
+      document.documentElement.classList.remove('app-shell', 'pwa-standalone');
       document.documentElement.style.removeProperty('--app-height');
+      if (themeMeta && previousTheme) themeMeta.setAttribute('content', previousTheme);
+      standaloneMq.removeEventListener('change', syncStandalone);
       vv?.removeEventListener('resize', onViewportSettle);
       vv?.removeEventListener('scroll', onViewportSettle);
       window.removeEventListener('orientationchange', onViewportSettle);

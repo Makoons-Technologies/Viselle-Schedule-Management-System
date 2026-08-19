@@ -59,7 +59,7 @@ export function MobileSidebar() {
           </div>
           <div
             className="shrink-0 border-t border-stone-200 px-4 pt-3 text-right dark:border-stone-800"
-            style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
+            style={{ paddingBottom: 'max(0.75rem, var(--app-bottom-inset, 0px))' }}
           >
             <PoweredByMakoons className="text-right" />
           </div>

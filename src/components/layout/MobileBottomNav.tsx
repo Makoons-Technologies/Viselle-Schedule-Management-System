@@ -28,9 +28,9 @@ interface BottomNavItem {
   match: (pathname: string, orgBase: string) => boolean;
 }
 
-/** Flush to the screen edge. Safe-area padding here stacked with the PWA viewport and floated the tabs. */
+/** Flush to the screen edge. Installed PWA has no Safari toolbar — don't reserve a fake bottom strip. */
 const bottomNavClassName =
-  'fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-white px-2 pb-1 pt-1 shadow-[0_80px_0_0_#fff] dark:border-stone-800 dark:bg-stone-900 dark:shadow-[0_80px_0_0_#1c1917] md:hidden';
+  'fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-white px-2 pb-[max(0.25rem,var(--app-bottom-inset,0px))] pt-1 dark:border-stone-800 dark:bg-stone-900 md:hidden';
 
 function BottomNavLink({ item, active }: { item: BottomNavItem; active: boolean }) {
   const { isActive: tourActive, currentTarget } = useOrgOwnerTour();

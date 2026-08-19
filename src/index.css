@@ -62,6 +62,15 @@
     overscroll-behavior: none;
   }
 
+  html.app-shell {
+    --app-bottom-inset: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Home-screen PWA: no Safari toolbar. Don't reserve a blank bottom band. */
+  html.pwa-standalone {
+    --app-bottom-inset: 0px;
+  }
+
   html.app-shell body {
     background-color: #ffffff;
   }
