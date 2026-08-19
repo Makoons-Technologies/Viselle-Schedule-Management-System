@@ -318,7 +318,7 @@ function OrgActions({
 function OrgList(props: OrgListProps) {
   return (
     <Panel className="overflow-hidden">
-      <div className="md:hidden">
+      <div className="desktop-shell:hidden">
         {props.orgs.map((org) => (
           <div key={org.id} className="border-b border-stone-100 p-4 last:border-b-0 dark:border-stone-800">
             <div className="flex items-start justify-between gap-3">
@@ -355,7 +355,7 @@ function OrgList(props: OrgListProps) {
           </div>
         ))}
       </div>
-      <div className="hidden md:block">
+      <div className="hidden desktop-shell:block">
         <OrgTable {...props} />
       </div>
     </Panel>

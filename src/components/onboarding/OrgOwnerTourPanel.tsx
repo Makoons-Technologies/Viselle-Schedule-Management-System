@@ -9,9 +9,9 @@ export function OrgOwnerTourPanel() {
   const last = stepIndex >= stepCount - 1;
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] z-[60] flex justify-end px-3 md:bottom-6 md:px-6">
+    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] z-[60] flex justify-end px-3 desktop-shell:bottom-6 desktop-shell:px-6">
       <aside
-        className="pointer-events-auto mb-2 w-full max-w-md rounded-xl border border-brand-200 bg-white p-4 shadow-lg dark:border-brand-900 dark:bg-stone-900 md:mb-4"
+        className="pointer-events-auto mb-2 w-full max-w-md rounded-xl border border-brand-200 bg-white p-4 shadow-lg dark:border-brand-900 dark:bg-stone-900 desktop-shell:mb-4"
         role="dialog"
         aria-labelledby="org-owner-tour-title"
         aria-live="polite"

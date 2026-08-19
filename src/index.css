@@ -2,6 +2,10 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Portrait phones + landscape phones (short height) keep the mobile shell. */
+@custom-variant mobile-shell (@media (max-width: 767px), ((orientation: landscape) and (max-height: 767px)));
+@custom-variant desktop-shell (@media (min-width: 768px) and (min-height: 768px));
+
 @theme {
   --color-brand-50: #fdf4f8;
   --color-brand-100: #fbe8f2;
@@ -83,7 +87,7 @@
    * iOS Safari zooms focused inputs under 16px. Keep 16px on small screens even when
    * components use text-sm; desktop can stay denser.
    */
-  @media (max-width: 767px) {
+  @media (max-width: 767px), ((orientation: landscape) and (max-height: 767px)) {
     input,
     select,
     textarea {
