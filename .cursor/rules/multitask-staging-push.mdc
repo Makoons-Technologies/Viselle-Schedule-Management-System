@@ -1,25 +1,26 @@
 ---
-description: Defer staging push until all Multitask Mode workstreams in the current batch finish
+description: Defer remote push until all Multitask Mode workstreams in the current batch finish
 alwaysApply: true
 ---
 
-# Multitask staging push gate
+# Multitask push gate
 
-When **Multitask Mode** (or multiple parallel background agents) is working on the user's open tasks, **do not push to `staging` after each task finishes**. Push only when the **entire current multitask batch** is complete.
+When **Multitask Mode** (or multiple parallel background agents) is working on the user's open tasks, **do not `git push` after each task finishes**. Push only when the **entire current multitask batch** is complete.
 
 ## Single task (no batch)
 
-If only one task is running, keep the normal flow: verify → commit → push to `staging` (see `auto-commit-staging` + `verify-before-staging-push`).
+Normal flow: verify → commit → push the **current branch** (`auto-commit-staging` + `verify-before-staging-push`).
 
 ## Multitask batch
 
-1. **Workers** may verify and **commit locally** on `staging`, but **must not `git push`** while sibling multitasks are still running.
-2. **Coordinator** (parent agent, or the last finishing agent that knows the batch is done) runs verify as needed, then **pushes** each affected repo to `origin/staging`.
-3. If any task in the batch **fails**, do not push the batch until it is fixed or the user is told of the blocker.
-4. Goal: avoid half-landed interleaved commits on remote `staging` while other workstreams are still in flight.
+1. **Workers** may verify and **commit locally** on the current branch, but **must not `git push`** while sibling multitasks are still running.
+2. **Coordinator** (parent, or the last finisher that knows the batch is done) verifies as needed, then **pushes that same branch** (`origin/staging` or `origin/HEAD` for a feature branch).
+3. If any task **fails**, do not push the batch until it is fixed or the user is told of the blocker.
+4. Goal: avoid half-landed interleaved commits on the remote while other workstreams are in flight.
+5. Do **not** merge a feature-branch batch onto `staging` just to “finish” — that deploys. Stay on the feature branch unless the user asked for staging.
 
 ## Still required
 
-- Verify before any push (`verify-before-staging-push`).
-- Eventually land on `staging` (`auto-commit-staging`) — deferred push is not skipped push.
-- Safety unchanged: no secrets, no force-push to `main`.
+- Verify before any push.
+- Eventually push the current branch (deferred push is not skipped push).
+- Never commit or push `main`. No secrets, no force-push to `main`.
