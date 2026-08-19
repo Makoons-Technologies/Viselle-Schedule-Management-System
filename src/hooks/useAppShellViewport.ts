@@ -1,18 +1,9 @@
 import { useEffect } from 'react';
 
-function readHeight(value: string): number {
-  const el = document.createElement('div');
-  el.style.cssText = `position:fixed;left:0;top:0;width:0;height:${value};visibility:hidden;pointer-events:none`;
-  document.documentElement.appendChild(el);
-  const height = el.getBoundingClientRect().height;
-  el.remove();
-  return height;
-}
-
 /**
  * Size the app shell to the visible viewport and keep document scroll at 0.
- * iOS PWAs paint a dead band below the CSS viewport; --pwa-bottom-shift pulls
- * the tab bar into that band so labels sit on the screen edge.
+ * iOS PWAs paint a dead band below innerHeight; --pwa-bottom-fill extends the
+ * tab bar background into that band while keeping buttons in the visible area.
  */
 export function useAppShellViewport() {
   useEffect(() => {
@@ -54,27 +45,17 @@ export function useAppShellViewport() {
       const standalone = document.documentElement.classList.contains('pwa-standalone');
       const mobile = window.matchMedia('(max-width: 767px)').matches;
       if (!(standalone && mobile)) {
-        document.documentElement.style.setProperty('--pwa-bottom-shift', '0px');
+        document.documentElement.style.removeProperty('--pwa-bottom-fill');
         return;
       }
 
-      const probe = document.createElement('div');
-      probe.style.cssText = 'position:fixed;left:0;bottom:0;width:0;height:0;visibility:hidden;pointer-events:none';
-      document.body.appendChild(probe);
-      const fixedBottom = probe.getBoundingClientRect().bottom;
-      probe.remove();
-
       const vvBottom = vv ? vv.offsetTop + vv.height : inner;
-      const visualGap = Math.max(0, inner - vvBottom);
-      const lvhGap = Math.max(0, readHeight('100lvh') - inner, readHeight('-webkit-fill-available') - inner);
-      const screenGapRaw = window.screen.height - Math.max(fixedBottom, inner);
-      const screenGap = screenGapRaw > 0 && screenGapRaw <= 96 ? screenGapRaw : 0;
-      const gap = Math.min(96, Math.round(Math.max(visualGap, lvhGap, screenGap)));
+      const gap = Math.min(40, Math.max(0, Math.round(inner - vvBottom)));
 
       if (gap > 0) {
-        document.documentElement.style.setProperty('--pwa-bottom-shift', `${gap}px`);
+        document.documentElement.style.setProperty('--pwa-bottom-fill', `${gap}px`);
       } else {
-        document.documentElement.style.removeProperty('--pwa-bottom-shift');
+        document.documentElement.style.removeProperty('--pwa-bottom-fill');
       }
     };
 
@@ -102,7 +83,7 @@ export function useAppShellViewport() {
     return () => {
       document.documentElement.classList.remove('app-shell', 'pwa-standalone');
       document.documentElement.style.removeProperty('--app-height');
-      document.documentElement.style.removeProperty('--pwa-bottom-shift');
+      document.documentElement.style.removeProperty('--pwa-bottom-fill');
       if (themeMeta && previousTheme) themeMeta.setAttribute('content', previousTheme);
       standaloneMq.removeEventListener('change', syncStandalone);
       vv?.removeEventListener('resize', onViewportSettle);

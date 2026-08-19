@@ -21,7 +21,7 @@ const sheetVariants = cva(
         right:
           'inset-y-0 right-0 h-full w-full max-w-md border-l border-stone-200 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right dark:border-stone-800',
         left:
-          'top-0 left-0 h-auto min-h-0 w-full max-w-xs border-r border-stone-200 data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left dark:border-stone-800 [bottom:calc(-1*var(--pwa-bottom-shift,0px))]',
+          'inset-y-0 left-0 h-full w-full max-w-xs border-r border-stone-200 data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left dark:border-stone-800',
       },
     },
     defaultVariants: { side: 'right' },

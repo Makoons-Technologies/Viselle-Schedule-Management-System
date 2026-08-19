@@ -30,14 +30,19 @@ interface BottomNavItem {
   match: (pathname: string, orgBase: string) => boolean;
 }
 
-/** Flush to the screen edge. Shifted down on iOS PWA into the dead band below the CSS viewport. */
+/** Tab bar sits on the visible viewport; filler extends background into the iOS dead band. */
 const bottomNavClassName =
-  'fixed inset-x-0 z-40 border-t border-stone-200 bg-white px-2 pb-1 pt-1 dark:border-stone-800 dark:bg-stone-900 md:hidden [bottom:calc(-1*var(--pwa-bottom-shift,0px))]';
+  'fixed inset-x-0 z-40 flex flex-col border-t border-stone-200 bg-white px-2 pb-1 pt-1 dark:border-stone-800 dark:bg-stone-900 md:hidden [bottom:calc(-1*var(--pwa-bottom-fill,0px))]';
 
 function BottomNavShell({ children }: { children: ReactNode }) {
   return createPortal(
     <nav className={bottomNavClassName} aria-label="Primary navigation">
       {children}
+      <div
+        aria-hidden
+        className="shrink-0 bg-inherit"
+        style={{ height: 'var(--pwa-bottom-fill, 0px)' }}
+      />
     </nav>,
     document.body,
   );
