@@ -50,9 +50,8 @@
 
   /*
    * Authenticated app shell: only <main> scrolls.
-   * In-browser Safari uses --app-height (innerHeight). Installed PWA must not:
-   * JS-cap height (leaves a theme-color gutter) or overflow:hidden on html while
-   * shorter than the webview (that makes position:fixed sit above the gutter).
+   * --app-height is innerHeight. iOS still paints a dead band below that; the
+   * tab bar is pulled into it with --pwa-bottom-shift (html/body must not clip).
    */
   html.app-shell,
   html.app-shell body,
@@ -67,24 +66,18 @@
     --app-bottom-inset: env(safe-area-inset-bottom, 0px);
   }
 
-  /* Home-screen PWA: fill the webview. Tab bar uses bottom:0 of that box. */
   html.pwa-standalone {
     --app-bottom-inset: 0px;
+    --pwa-bottom-shift: max(0px, calc(100lvh - 100dvh), env(safe-area-inset-bottom, 0px));
   }
 
   html.pwa-standalone.app-shell,
   html.pwa-standalone.app-shell body {
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    height: auto;
-    max-height: none;
-    overflow: hidden;
+    overflow: visible;
   }
 
   html.pwa-standalone.app-shell #root {
-    height: 100%;
-    max-height: 100%;
+    overflow: hidden;
   }
 
   html.app-shell body {

@@ -30,9 +30,9 @@ interface BottomNavItem {
   match: (pathname: string, orgBase: string) => boolean;
 }
 
-/** Flush to the screen edge. Portaled to body so #root overflow cannot clip it. */
+/** Flush to the screen edge. Shifted down on iOS PWA into the dead band below the CSS viewport. */
 const bottomNavClassName =
-  'fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-white px-2 pb-1 pt-1 dark:border-stone-800 dark:bg-stone-900 md:hidden';
+  'fixed inset-x-0 z-40 border-t border-stone-200 bg-white px-2 pb-1 pt-1 dark:border-stone-800 dark:bg-stone-900 md:hidden [bottom:calc(-1*var(--pwa-bottom-shift,0px))]';
 
 function BottomNavShell({ children }: { children: ReactNode }) {
   return createPortal(
