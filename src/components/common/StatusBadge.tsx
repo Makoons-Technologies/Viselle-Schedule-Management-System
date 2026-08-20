@@ -65,7 +65,8 @@ export function OrganizationStatusBadge({ status }: { status: OrganizationStatus
 }
 
 export function BillingStatusBadge({ status }: { status: BillingStatus }) {
-  return <Badge variant={billingVariants[status]}>{status.replace('_', ' ')}</Badge>;
+  const label = status === 'cancelled' ? 'Canceled' : status.replace('_', ' ');
+  return <Badge variant={billingVariants[status]}>{label}</Badge>;
 }
 
 const hostingVariants: Record<

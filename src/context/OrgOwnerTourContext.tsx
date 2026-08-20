@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
-import { useOrgMustChoosePlan } from '@/hooks/useOrgMustChoosePlan';
+import { useOrgNeedsBilling } from '@/hooks/useOrgNeedsBilling';
 import {
   ORG_OWNER_TOUR_STEPS,
   readOrgOwnerTourStorage,
@@ -30,7 +30,7 @@ const OrgOwnerTourContext = createContext<OrgOwnerTourContextValue | null>(null)
 export function OrgOwnerTourProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const orgId = useOrgId();
-  const mustChoosePlan = useOrgMustChoosePlan();
+  const needsBilling = useOrgNeedsBilling();
   const location = useLocation();
   const navigate = useNavigate();
   const [isActive, setIsActive] = useState(false);
@@ -38,7 +38,7 @@ export function OrgOwnerTourProvider({ children }: { children: ReactNode }) {
   const autoStartSessionRef = useRef<string | null>(null);
 
   const canUseTour =
-    user?.role === 'org_owner' && !!orgId && !mustChoosePlan && location.pathname.startsWith('/orgs/');
+    user?.role === 'org_owner' && !!orgId && !needsBilling && location.pathname.startsWith('/orgs/');
 
   const step = isActive ? ORG_OWNER_TOUR_STEPS[stepIndex] ?? null : null;
   const currentTarget = step?.target ?? null;

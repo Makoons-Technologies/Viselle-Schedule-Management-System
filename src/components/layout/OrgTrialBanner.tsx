@@ -5,8 +5,9 @@ import { useOrg } from '@/context/OrgContext';
 import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgPlan } from '@/hooks/useOrgPlan';
 import { orgApi } from '@/lib/api';
-import { isOrgTrialExpired, orgMustChoosePlan } from '@/lib/trial';
+import { isOrgCanceled, isOrgTrialExpired, orgMustChoosePlan } from '@/lib/trial';
 import { getPlatformContextFromPath, PLATFORM_CONTEXT } from '@/components/layout/platform-navigation';
+import { CanceledOrgBanner } from '@/components/common/CanceledOrgBanner';
 import { TrialExpiredBanner } from '@/components/common/TrialExpiredBanner';
 import { PlanRequiredBanner } from '@/components/common/PlanRequiredBanner';
 
@@ -41,6 +42,16 @@ export function OrgTrialBanner() {
   const organization = isPlatformOwner ? selectedOrgFromContext : orgData?.organization ?? null;
 
   if (!organization) return null;
+
+  if (isOrgCanceled(organization)) {
+    return (
+      <CanceledOrgBanner
+        organization={organization}
+        isStaff={user?.role === 'staff'}
+        isPlatformOwner={isPlatformOwner}
+      />
+    );
+  }
 
   if (isOrgTrialExpired(organization)) {
     return <TrialExpiredBanner organization={organization} isPlatformOwner={isPlatformOwner} />;

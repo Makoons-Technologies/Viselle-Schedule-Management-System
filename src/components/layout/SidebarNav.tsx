@@ -15,7 +15,8 @@ import { useOrgOwnerTour } from '@/context/OrgOwnerTourContext';
 
 import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgAdminAccess } from '@/hooks/useOrgAdminAccess';
-import { useOrgMustChoosePlan } from '@/hooks/useOrgMustChoosePlan';
+import { useOrgCanceled } from '@/hooks/useOrgCanceled';
+import { useOrgNeedsBilling } from '@/hooks/useOrgNeedsBilling';
 import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 
 import { getOrgNavigation } from '@/components/layout/org-navigation';
@@ -255,7 +256,8 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
   const showRecurring = true;
   const canManageStaff = useOrgAdminAccess(effectiveOrgId ?? undefined);
   const writeLocked = useOrgWriteLocked();
-  const mustChoosePlan = useOrgMustChoosePlan();
+  const needsBilling = useOrgNeedsBilling();
+  const canceled = useOrgCanceled();
 
   if (!user) return null;
 
@@ -268,6 +270,17 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
       showAdminSettings: false,
       showRecurring: false,
     });
+
+    if (canceled) {
+      return (
+        <NavSectionWithGroups
+          onNavigate={onNavigate}
+          mobile={mobile}
+          mainItems={[{ label: 'Account', to: `${orgBase}/settings/account`, icon: UserCircle }]}
+          settingsItems={[]}
+        />
+      );
+    }
 
     const staffItems = [
       ...orgNav.main,
@@ -368,7 +381,7 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
     showRecurring,
   });
 
-  if (mustChoosePlan) {
+  if (needsBilling) {
     return (
       <NavSectionWithGroups
         onNavigate={onNavigate}

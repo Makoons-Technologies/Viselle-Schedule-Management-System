@@ -13,7 +13,8 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useOrg } from '@/context/OrgContext';
 import { useOrgId } from '@/hooks/useOrgId';
-import { useOrgMustChoosePlan } from '@/hooks/useOrgMustChoosePlan';
+import { useOrgCanceled } from '@/hooks/useOrgCanceled';
+import { useOrgNeedsBilling } from '@/hooks/useOrgNeedsBilling';
 import { isOrgSettingsPath } from '@/components/layout/org-navigation';
 import { getPlatformOrgBase, isPlatformOrgAdminPath } from '@/components/layout/platform-navigation';
 import { cn } from '@/lib/utils';
@@ -58,7 +59,8 @@ export function MobileBottomNav() {
   const location = useLocation();
   const routeOrgId = useOrgId();
   const { selectedOrgId } = useOrg();
-  const mustChoosePlan = useOrgMustChoosePlan();
+  const needsBilling = useOrgNeedsBilling();
+  const canceled = useOrgCanceled();
 
   if (!user) return null;
 
@@ -67,6 +69,29 @@ export function MobileBottomNav() {
     if (!orgId) return null;
 
     const orgBase = `/orgs/${orgId}`;
+
+    if (canceled) {
+      const items: BottomNavItem[] = [
+        {
+          key: 'account',
+          label: 'Account',
+          to: `${orgBase}/settings/account`,
+          icon: UserCircle,
+          match: (p, base) => p.startsWith(`${base}/settings/account`),
+        },
+      ];
+
+      return (
+        <nav className={bottomNavClassName} aria-label="Primary navigation">
+          <div className="mx-auto flex max-w-lg items-stretch justify-center gap-1">
+            {items.map((item) => (
+              <BottomNavLink key={item.key} item={item} active={item.match(location.pathname, orgBase)} />
+            ))}
+          </div>
+        </nav>
+      );
+    }
+
     const items: BottomNavItem[] = [
       {
         key: 'dashboard',
@@ -184,7 +209,7 @@ export function MobileBottomNav() {
   const orgBase = `/orgs/${orgId}`;
 
   const items: BottomNavItem[] =
-    mustChoosePlan && user.role === 'org_owner'
+    needsBilling && user.role === 'org_owner'
       ? [
           {
             key: 'plan',
@@ -240,7 +265,7 @@ export function MobileBottomNav() {
             key={item.key}
             item={item}
             active={
-              mustChoosePlan && user.role === 'org_owner'
+              needsBilling && user.role === 'org_owner'
                 ? item.match(location.pathname, orgBase)
                 : item.match(location.pathname, orgBase) &&
                   !isOrgSettingsPath(location.pathname, orgBase)

@@ -9,7 +9,7 @@ import { useSidebarCollapse } from '@/context/SidebarCollapseContext';
 import { useOrg } from '@/context/OrgContext';
 import { orgApi } from '@/lib/api';
 import { useOrgId } from '@/hooks/useOrgId';
-import { useOrgMustChoosePlan } from '@/hooks/useOrgMustChoosePlan';
+import { useOrgNeedsBilling } from '@/hooks/useOrgNeedsBilling';
 import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import {
   getPlatformContextFromPath,
@@ -38,7 +38,7 @@ export function Topbar() {
   const location = useLocation();
   const routeOrgId = useOrgId();
   const writeLocked = useOrgWriteLocked();
-  const mustChoosePlan = useOrgMustChoosePlan();
+  const needsBilling = useOrgNeedsBilling();
 
   const orgIdForQuery =
     user?.role === 'platform_owner' ? routeOrgId : user?.organizationId ?? routeOrgId;
@@ -95,7 +95,7 @@ export function Topbar() {
       : routeOrgId
         ? user?.role === 'staff'
           ? `/orgs/${routeOrgId}/settings/account`
-          : mustChoosePlan
+          : needsBilling
             ? `/orgs/${routeOrgId}/settings/plan`
             : `/orgs/${routeOrgId}/settings`
         : null;
@@ -104,9 +104,11 @@ export function Topbar() {
     !!orgSettingsPath &&
     (user?.role === 'platform_owner'
       ? true
-      : mustChoosePlan && user?.role === 'org_owner'
+      : needsBilling && user?.role === 'org_owner'
         ? true
-        : !writeLocked && (user?.role === 'org_owner' || user?.role === 'staff'));
+        : needsBilling && user?.role === 'staff'
+          ? true
+          : !writeLocked && (user?.role === 'org_owner' || user?.role === 'staff'));
 
   const onSettingsPage = !orgSettingsPath
     ? false
@@ -114,7 +116,7 @@ export function Topbar() {
       ? location.pathname.startsWith(orgSettingsPath)
       : user?.role === 'staff'
         ? location.pathname.includes('/settings/account')
-        : mustChoosePlan
+        : needsBilling
           ? location.pathname.includes('/settings/plan')
           : !!routeOrgId && isOrgSettingsPath(location.pathname, `/orgs/${routeOrgId}`);
 
