@@ -237,6 +237,7 @@ export function StaffPage() {
       <CreateStaffDialog
         orgId={orgId}
         account={editingAccount}
+        existingAccountIds={accounts.map((a) => a.id)}
         open={dialogOpen}
         onOpenChange={(open) => {
           setDialogOpen(open);
