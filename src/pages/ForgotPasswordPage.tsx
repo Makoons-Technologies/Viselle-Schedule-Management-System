@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { authApi } from '@/lib/api';
+import { withoutReactFormReset } from '@/lib/form-submit';
 import { ViselleLogo } from '@/components/common/ViselleLogo';
 import { PageSeo } from '@/components/seo/PageSeo';
 import { Button } from '@/components/ui/button';
@@ -66,7 +67,7 @@ export function ForgotPasswordPage() {
               </Button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={withoutReactFormReset(handleSubmit(onSubmit))} className="space-y-4">
               <div>
                 <Label htmlFor="email">Email</Label>
                 <Input id="email" type="email" autoComplete="email" {...register('email')} />

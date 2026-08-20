@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  ApiError,
   authApi,
   getImpersonationOriginToken,
   getStoredToken,
@@ -46,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [token, setToken] = useState<string | null>(() => getStoredToken());
 
-  const { data: user, isLoading } = useQuery({
+  const { data: user, isLoading, isError, error, isFetched } = useQuery({
     queryKey: ['auth', 'me'],
     queryFn: authApi.me,
     enabled: !!token,
@@ -58,6 +59,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       queryClient.removeQueries({ queryKey: ['auth', 'me'] });
     }
   }, [token, queryClient]);
+
+  useEffect(() => {
+    if (!token || !isFetched || !isError) return;
+    const status = error instanceof ApiError ? error.status : 0;
+    if (status !== 401 && status !== 403) return;
+    setStoredToken(null);
+    setImpersonationOriginToken(null);
+    setToken(null);
+    queryClient.removeQueries({ queryKey: ['auth', 'me'] });
+  }, [token, isFetched, isError, error, queryClient]);
 
   const login = useCallback(async (email: string, password: string) => {
     const result = await authApi.login(email, password);

@@ -5,6 +5,9 @@ import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { useAuth } from '@/context/AuthContext';
+import { getApiErrorMessage } from '@/lib/api';
+import { signedInHomePath } from '@/lib/auth-redirect';
+import { withoutReactFormReset } from '@/lib/form-submit';
 import { LoadingState } from '@/components/common/LoadingState';
 import { ViselleLogo } from '@/components/common/ViselleLogo';
 import { PageSeo } from '@/components/seo/PageSeo';
@@ -55,23 +58,19 @@ export function SetPasswordPage() {
   }
 
   if (!isLoading && isAuthenticated && user) {
-    if (user.role === 'platform_owner') return <Navigate to="/platform/dashboard" replace />;
-    if (user.role === 'org_owner') return <Navigate to={`/orgs/${user.organizationId}/dashboard`} replace />;
-    return <Navigate to={`/orgs/${user.organizationId}/calendar`} replace />;
+    return <Navigate to={signedInHomePath(user)} replace />;
   }
 
-  if (isLoading) return <LoadingState />;
+  if (isLoading && !submitting) return <LoadingState />;
 
   const onSubmit = async (data: FormData) => {
     setSubmitting(true);
     try {
       const nextUser = await completePasswordSetup(token, data.password);
       toast.success('Password set. Welcome!');
-      if (nextUser.role === 'platform_owner') navigate('/platform/dashboard');
-      else if (nextUser.role === 'org_owner') navigate(`/orgs/${nextUser.organizationId}/dashboard`);
-      else navigate(`/orgs/${nextUser.organizationId}/calendar`);
+      navigate(signedInHomePath(nextUser));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not set password');
+      toast.error(getApiErrorMessage(err, 'Could not set password'));
     } finally {
       setSubmitting(false);
     }
@@ -89,7 +88,7 @@ export function SetPasswordPage() {
           <CardDescription>Choose a password for your Viselle account.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={withoutReactFormReset(handleSubmit(onSubmit))} className="space-y-4">
             <div>
               <Label htmlFor="password">Password</Label>
               <PasswordInput id="password" autoComplete="new-password" {...register('password')} />

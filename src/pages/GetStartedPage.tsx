@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Building2,
@@ -59,13 +59,6 @@ const emailSchema = z.string().trim().email();
 
 function isValidEmail(value: string): boolean {
   return emailSchema.safeParse(value).success;
-}
-
-/** Sync controlled inputs with browser autofill (onChange alone can miss it). */
-function syncInputValue(setter: (value: string) => void) {
-  return (event: FormEvent<HTMLInputElement>) => {
-    setter(event.currentTarget.value);
-  };
 }
 
 type AccountFieldErrors = {
@@ -212,7 +205,7 @@ function TrialCodeField({
         <Input
           id={id}
           value={trialCode}
-          onChange={(e) => onChange(e.target.value.toUpperCase())}
+          onChange={(e) => onChange(e.target.value)}
           onBlur={() => {
             if (!disabled) onCommit();
           }}
@@ -223,8 +216,9 @@ function TrialCodeField({
             }
           }}
           placeholder="Optional"
-          className="pl-9"
+          className="pl-9 uppercase"
           autoComplete="off"
+          autoCorrect="off"
           spellCheck={false}
           disabled={disabled}
           title={disabled ? 'A homepage trial is already applied' : undefined}
@@ -957,7 +951,6 @@ export function GetStartedPage() {
                       name="organization"
                       value={businessName}
                       onChange={(e) => setBusinessName(e.target.value)}
-                      onInput={syncInputValue(setBusinessName)}
                       placeholder="Luna Hair Studio"
                       autoComplete="organization"
                     />
@@ -1015,7 +1008,6 @@ export function GetStartedPage() {
                       name="name"
                       value={ownerName}
                       onChange={(e) => setOwnerName(e.target.value)}
-                      onInput={syncInputValue(setOwnerName)}
                       onBlur={() => markAccountTouched('ownerName')}
                       autoComplete="name"
                       aria-invalid={Boolean(visibleAccountErrors.ownerName)}
@@ -1036,7 +1028,6 @@ export function GetStartedPage() {
                       spellCheck={false}
                       value={ownerEmail}
                       onChange={(e) => setOwnerEmail(e.target.value)}
-                      onInput={syncInputValue(setOwnerEmail)}
                       onBlur={() => {
                         setOwnerEmail((current) => current.trim());
                         markAccountTouched('ownerEmail');
@@ -1055,7 +1046,6 @@ export function GetStartedPage() {
                       name="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      onInput={syncInputValue(setPassword)}
                       onBlur={() => markAccountTouched('password')}
                       autoComplete="new-password"
                       aria-invalid={Boolean(visibleAccountErrors.password)}
@@ -1073,7 +1063,6 @@ export function GetStartedPage() {
                       name="confirmPassword"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      onInput={syncInputValue(setConfirmPassword)}
                       onBlur={() => markAccountTouched('confirmPassword')}
                       autoComplete="new-password"
                       aria-invalid={Boolean(visibleAccountErrors.confirmPassword)}
