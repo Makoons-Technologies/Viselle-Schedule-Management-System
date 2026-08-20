@@ -208,8 +208,9 @@ export function MobileBottomNav() {
 
   const orgBase = `/orgs/${orgId}`;
 
+  const billingOnlyNav = canceled || (needsBilling && user.role === 'org_owner');
   const items: BottomNavItem[] =
-    needsBilling && user.role === 'org_owner'
+    billingOnlyNav
       ? [
           {
             key: 'plan',
@@ -265,7 +266,7 @@ export function MobileBottomNav() {
             key={item.key}
             item={item}
             active={
-              needsBilling && user.role === 'org_owner'
+              billingOnlyNav
                 ? item.match(location.pathname, orgBase)
                 : item.match(location.pathname, orgBase) &&
                   !isOrgSettingsPath(location.pathname, orgBase)

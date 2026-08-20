@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
+import { useOrg } from '@/context/OrgContext';
 import { useOrgCanceled } from '@/hooks/useOrgCanceled';
 import { useOrgId } from '@/hooks/useOrgId';
 import { orgApi } from '@/lib/api';
@@ -15,6 +16,7 @@ import { LoadingState } from '@/components/common/LoadingState';
 export function AccountSettingsPage() {
   const orgId = useOrgId();
   const { user } = useAuth();
+  const { selectedOrg } = useOrg();
   const canceled = useOrgCanceled();
 
   const { data, isLoading } = useQuery({
@@ -24,7 +26,8 @@ export function AccountSettingsPage() {
   });
 
   if (!orgId) return <Navigate to="/" replace />;
-  if (user?.role === 'platform_owner') {
+  // Canceled salon shell keeps Account open for everyone, including platform Open salon.
+  if (user?.role === 'platform_owner' && !canceled) {
     return <Navigate to={`/orgs/${orgId}/dashboard`} replace />;
   }
 
@@ -50,7 +53,7 @@ export function AccountSettingsPage() {
         </div>
       )}
       <p className={backTo ? '-mt-2 text-sm text-stone-600 dark:text-stone-400' : 'text-sm text-stone-600 dark:text-stone-400'}>
-        Manage your membership in {data?.organization.name ?? 'this organization'}.
+        Manage your membership in {data?.organization.name ?? selectedOrg?.name ?? 'this organization'}.
       </p>
       <AddToHomeScreenCard />
       {user?.role === 'staff' ? <PushNotificationsCard /> : null}

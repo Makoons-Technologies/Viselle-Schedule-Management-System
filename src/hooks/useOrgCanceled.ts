@@ -13,8 +13,8 @@ import { getPlatformContextFromPath, PLATFORM_CONTEXT } from '@/components/layou
  * trial/plan banners.
  *
  * Platform owners on dedicated `/platform/...` admin routes are never gated.
- * Salon ops (`/orgs/...`) still report canceled billing for banners and write
- * locks; hard redirects skip platform_owner.
+ * Salon ops (`/orgs/...`) report canceled billing for banners, write locks,
+ * and the same Plan/Account hard-redirect as org owners.
  */
 export function useOrgCanceled(): boolean {
   const { user } = useAuth();

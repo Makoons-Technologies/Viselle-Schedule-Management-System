@@ -13,8 +13,11 @@ import {
 
 /**
  * Closes salon ops when billing status is cancelled. Plan / account /
- * billing stay reachable so the owner can reactivate. Platform owners are
- * not hard-redirected (write-lock still applies on salon pages).
+ * billing stay reachable so the owner can reactivate.
+ *
+ * Anyone in the salon product shell (`/orgs/:orgId/...`) is redirected,
+ * including platform_owner via Open salon. Dedicated `/platform/orgs/:orgId`
+ * inspect pages are outside this guard.
  */
 export function CanceledOrgGuard() {
   const { user } = useAuth();
@@ -24,8 +27,7 @@ export function CanceledOrgGuard() {
   const warned = useRef(false);
 
   const allowed = !!orgId && isOrgBillingReactivatePath(location.pathname, orgId);
-  const shouldRedirect =
-    canceled && user?.role !== 'platform_owner' && !!orgId && !allowed;
+  const shouldRedirect = canceled && !!orgId && !allowed;
 
   useEffect(() => {
     if (shouldRedirect && !warned.current) {

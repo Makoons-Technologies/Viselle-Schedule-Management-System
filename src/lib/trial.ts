@@ -73,6 +73,19 @@ export function orgCanceledRedirectPath(orgId: string, role: string | undefined)
   return `/orgs/${orgId}/settings/plan`;
 }
 
+/**
+ * Salon-shell entry for platform "Open salon" (and similar). Canceled billing
+ * lands on Plan; everyone else still opens the dashboard. Gate is
+ * billingStatus === 'cancelled' only — not org status or name.
+ */
+export function orgSalonEntryPath(
+  orgId: string,
+  billingStatus: Organization['billingStatus'] | null | undefined,
+): string {
+  if (billingStatus === 'cancelled') return orgCanceledRedirectPath(orgId, 'org_owner');
+  return `/orgs/${orgId}/dashboard`;
+}
+
 export interface TrialRemainingParts {
   days: number;
   hours: number;
