@@ -55,6 +55,7 @@ import { PlatformSupportInboxPage } from '@/pages/platform/PlatformSupportInboxP
 import { PlatformTicketDetailPage } from '@/pages/platform/PlatformTicketDetailPage';
 import { PlatformCustomWebsitesPage } from '@/pages/platform/PlatformCustomWebsitesPage';
 import { PlatformCustomWebsiteDetailPage } from '@/pages/platform/PlatformCustomWebsiteDetailPage';
+import { PlatformNotificationsPage } from '@/pages/platform/PlatformNotificationsPage';
 import type { UserRole } from '@/types/api';
 
 function StaffOrgRedirect({ to }: { to: 'calendar' | 'appointments' }) {
@@ -115,7 +116,7 @@ export const appRoutes = [
               { path: '/platform/support/:ticketId', element: <PlatformTicketDetailPage /> },
               { path: '/platform/custom-websites', element: <PlatformCustomWebsitesPage /> },
               { path: '/platform/custom-websites/:requestId', element: <PlatformCustomWebsiteDetailPage /> },
-              { path: '/platform/notifications', element: <Navigate to="/platform/dashboard" replace /> },
+              { path: '/platform/notifications', element: <PlatformNotificationsPage /> },
               {
                 path: '/platform/orgs/:orgId',
                 element: <PlatformOrgLayout />,

@@ -2,6 +2,7 @@ import { ChevronRight, Smartphone } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { AddToHomeScreenDialog } from '@/components/settings/AddToHomeScreenDialog';
+import { PushNotificationsCard } from '@/components/settings/PushNotificationsCard';
 import { SettingsBackHeader } from '@/components/settings/SettingsBackHeader';
 import { panelClassName } from '@/components/common/Panel';
 import { getOrgSettingsHubGroups, type OrgNavLink, type SettingsHubGroup } from '@/components/layout/org-navigation';
@@ -84,6 +85,7 @@ export function SettingsHubPage() {
             <SettingsHubGroupList group={group} />
           </SettingsHubSection>
         ))}
+        <PushNotificationsCard />
         {showRow ? (
           <SettingsHubSection>
             <ul>

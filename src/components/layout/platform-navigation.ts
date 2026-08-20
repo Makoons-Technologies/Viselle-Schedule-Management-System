@@ -1,4 +1,4 @@
-import { Building2, Globe, LayoutDashboard, LifeBuoy, Settings, TicketPercent } from 'lucide-react';
+import { Building2, Bell, Globe, LayoutDashboard, LifeBuoy, Settings, TicketPercent } from 'lucide-react';
 
 export const PLATFORM_CONTEXT = 'platform';
 
@@ -21,6 +21,7 @@ export function getPlatformNavigation(): PlatformNavLink[] {
     { label: 'Trials & Campaigns', to: '/platform/trials', icon: TicketPercent },
     { label: 'Inbox', to: '/platform/support', icon: LifeBuoy },
     { label: 'Custom websites', to: '/platform/custom-websites', icon: Globe },
+    { label: 'Notifications', to: '/platform/notifications', icon: Bell },
   ];
 }
 

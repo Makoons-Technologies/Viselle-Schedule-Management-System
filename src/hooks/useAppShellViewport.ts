@@ -5,6 +5,7 @@ import {
   SETTLE_DELAYS_MS,
   isKeyboardOpen,
   nudgeStandaloneViewportRecalc,
+  resetRememberedAppHeight,
   resetWindowScroll,
   setAppHeightCSSProperty,
   shouldRunFirstShellViewportBurst,
@@ -29,10 +30,11 @@ export function useAppShellViewport() {
     syncThemeColor();
 
     let keyboardWasOpen = false;
+    const settleTimers: number[] = [];
 
     const scheduleSettle = (delays: readonly number[]) => {
       for (const delay of delays) {
-        window.setTimeout(onViewportSettle, delay);
+        settleTimers.push(window.setTimeout(onViewportSettle, delay));
       }
     };
 
@@ -40,15 +42,19 @@ export function useAppShellViewport() {
       const keyboardOpen = isKeyboardOpen();
       if (keyboardOpen) {
         keyboardWasOpen = true;
+        // Shrink to the visual viewport while the keyboard is up so the tab bar is not stranded.
+        setAppHeightCSSProperty();
         return;
       }
 
       if (keyboardWasOpen) {
         keyboardWasOpen = false;
+        nudgeStandaloneViewportRecalc();
         scheduleSettle(KEYBOARD_CLOSE_DELAYS_MS);
       }
 
-      // Reset scroll before measuring so a post-keyboard offsetTop does not inflate --app-height.
+      // Reset window scroll only when the layout viewport changed — not on visualViewport
+      // pan/scroll, which fights <main> scrolling and feels like a snag.
       resetWindowScroll();
       setAppHeightCSSProperty();
     };
@@ -56,6 +62,12 @@ export function useAppShellViewport() {
     const onFocusOut = (event: FocusEvent) => {
       if (!isEditableFocusTarget(event.target)) return;
       scheduleSettle(KEYBOARD_CLOSE_DELAYS_MS);
+    };
+
+    const onOrientationChange = () => {
+      resetRememberedAppHeight();
+      onViewportSettle();
+      scheduleSettle(SETTLE_DELAYS_MS);
     };
 
     const vv = window.visualViewport;
@@ -75,10 +87,11 @@ export function useAppShellViewport() {
       scheduleSettle(SETTLE_DELAYS_MS);
     }
 
+    // Do not listen to visualViewport "scroll": iOS fires it during overscroll and
+    // resetting window scroll / --app-height mid-gesture snags the main page.
     vv?.addEventListener('resize', onViewportSettle);
-    vv?.addEventListener('scroll', onViewportSettle);
     window.addEventListener('resize', onViewportSettle);
-    window.addEventListener('orientationchange', onViewportSettle);
+    window.addEventListener('orientationchange', onOrientationChange);
     window.addEventListener('load', onViewportSettle);
     window.addEventListener('pageshow', onViewportSettle);
     window.addEventListener('focusout', onFocusOut);
@@ -87,10 +100,10 @@ export function useAppShellViewport() {
       document.documentElement.classList.remove('app-shell');
       document.documentElement.style.removeProperty('--app-height');
       if (themeMeta && previousTheme) themeMeta.setAttribute('content', previousTheme);
+      for (const id of settleTimers) window.clearTimeout(id);
       vv?.removeEventListener('resize', onViewportSettle);
-      vv?.removeEventListener('scroll', onViewportSettle);
       window.removeEventListener('resize', onViewportSettle);
-      window.removeEventListener('orientationchange', onViewportSettle);
+      window.removeEventListener('orientationchange', onOrientationChange);
       window.removeEventListener('load', onViewportSettle);
       window.removeEventListener('pageshow', onViewportSettle);
       window.removeEventListener('focusout', onFocusOut);

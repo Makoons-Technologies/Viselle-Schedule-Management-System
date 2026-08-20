@@ -64,7 +64,8 @@
     overscroll-behavior: none;
   }
 
-  /* iOS standalone cold start: 100dvh/innerHeight lie; 100vh matches full screen (WebKit #254868). */
+  /* iOS standalone: 100dvh/innerHeight lie on cold start (WebKit #254868). After the
+   * keyboard, 100vh can shrink and leave a lip; JS sets --app-height to max(100vh, remembered). */
   @media (display-mode: standalone) {
     html.app-shell,
     html.app-shell body,
