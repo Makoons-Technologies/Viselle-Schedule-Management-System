@@ -8,7 +8,7 @@ import { isOrgCanceled } from '@/lib/trial';
 import { getPlatformContextFromPath, PLATFORM_CONTEXT } from '@/components/layout/platform-navigation';
 
 /**
- * True when the current org's billing status is cancelled (Canceled label).
+ * True when the current org is hard-canceled (Canceled label), not expire-job.
  * Org status may still be active. Uses the same organization query cache as
  * trial/plan banners.
  *

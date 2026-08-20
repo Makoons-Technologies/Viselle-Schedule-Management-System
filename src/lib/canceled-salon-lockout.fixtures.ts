@@ -1,9 +1,15 @@
+import { typedDashboardPath, typedHoursPath } from '@/lib/auth-redirect';
 import type { Organization } from '@/types/api';
 import {
   isOrgBillingReactivatePath,
   isOrgCanceled,
+  isOrgProductClosed,
+  isOrgTrialExpired,
   orgCanceledRedirectPath,
   orgSalonEntryPath,
+  publicBookingLockReason,
+  PUBLIC_BOOKING_TRIAL_EXPIRED_MESSAGE,
+  PUBLIC_BOOKING_UNAVAILABLE_MESSAGE,
 } from '@/lib/trial';
 
 type FixtureOrg = Pick<Organization, 'status' | 'billingStatus' | 'isDev' | 'trialEndsAt'>;
@@ -29,6 +35,8 @@ export const canceledSalonLockoutFixtures = [
     name: 'canceled grokbot (active status) closes salon; Open salon → Plan',
     organization: org({ billingStatus: 'cancelled', status: 'active' }),
     canceled: true,
+    expired: false,
+    productClosed: true,
     openSalonPath: `/orgs/${ORG_ID}/settings/plan`,
     ownerRedirect: `/orgs/${ORG_ID}/settings/plan`,
     platformRedirect: `/orgs/${ORG_ID}/settings/plan`,
@@ -38,6 +46,8 @@ export const canceledSalonLockoutFixtures = [
     name: 'active billing stays fully usable',
     organization: org({ billingStatus: 'active' }),
     canceled: false,
+    expired: false,
+    productClosed: false,
     openSalonPath: `/orgs/${ORG_ID}/dashboard`,
     ownerRedirect: `/orgs/${ORG_ID}/settings/plan`,
     platformRedirect: `/orgs/${ORG_ID}/settings/plan`,
@@ -47,7 +57,24 @@ export const canceledSalonLockoutFixtures = [
     name: 'trial billing stays fully usable',
     organization: org({ billingStatus: 'trial', status: 'trial' }),
     canceled: false,
+    expired: false,
+    productClosed: false,
     openSalonPath: `/orgs/${ORG_ID}/dashboard`,
+    ownerRedirect: `/orgs/${ORG_ID}/settings/plan`,
+    platformRedirect: `/orgs/${ORG_ID}/settings/plan`,
+    staffRedirect: `/orgs/${ORG_ID}/settings/account`,
+  },
+  {
+    name: 'expire-job is expired, not canceled; Open salon still → Plan',
+    organization: org({
+      status: 'inactive',
+      billingStatus: 'cancelled',
+      trialEndsAt: '2020-01-01T00:00:00.000Z',
+    }),
+    canceled: false,
+    expired: true,
+    productClosed: true,
+    openSalonPath: `/orgs/${ORG_ID}/settings/plan`,
     ownerRedirect: `/orgs/${ORG_ID}/settings/plan`,
     platformRedirect: `/orgs/${ORG_ID}/settings/plan`,
     staffRedirect: `/orgs/${ORG_ID}/settings/account`,
@@ -77,6 +104,12 @@ export function assertCanceledSalonLockoutFixtures(): void {
     if (isOrgCanceled(fixture.organization) !== fixture.canceled) {
       throw new Error(`${fixture.name}: isOrgCanceled mismatch`);
     }
+    if (isOrgTrialExpired(fixture.organization) !== fixture.expired) {
+      throw new Error(`${fixture.name}: isOrgTrialExpired mismatch`);
+    }
+    if (isOrgProductClosed(fixture.organization) !== fixture.productClosed) {
+      throw new Error(`${fixture.name}: isOrgProductClosed mismatch`);
+    }
     if (orgSalonEntryPath(ORG_ID, fixture.organization.billingStatus) !== fixture.openSalonPath) {
       throw new Error(`${fixture.name}: orgSalonEntryPath mismatch`);
     }
@@ -103,6 +136,43 @@ export function assertCanceledSalonLockoutFixtures(): void {
   }
   if (isOrgBillingReactivatePath(platformInspectPath, ORG_ID)) {
     throw new Error('platform inspect is not a salon billing path');
+  }
+
+  const expiredOrg = org({
+    status: 'inactive',
+    billingStatus: 'cancelled',
+    trialEndsAt: '2020-01-01T00:00:00.000Z',
+  });
+  if (publicBookingLockReason({ errorCode: 'TRIAL_EXPIRED' }) !== 'expired') {
+    throw new Error('TRIAL_EXPIRED API code must lock as expired');
+  }
+  if (publicBookingLockReason({ organization: expiredOrg }) !== 'expired') {
+    throw new Error('expire-job org shape must lock public book as expired');
+  }
+  if (publicBookingLockReason({ errorCode: 'ORG_CANCELLED' }) !== 'unavailable') {
+    throw new Error('ORG_CANCELLED must keep the generic/canceled public lock');
+  }
+  if (String(PUBLIC_BOOKING_UNAVAILABLE_MESSAGE) === String(PUBLIC_BOOKING_TRIAL_EXPIRED_MESSAGE)) {
+    throw new Error('expired and canceled public lock copy must differ');
+  }
+  if (!/expired/i.test(PUBLIC_BOOKING_TRIAL_EXPIRED_MESSAGE)) {
+    throw new Error('expired public lock must say expired');
+  }
+  if (/canceled|cancelled/i.test(PUBLIC_BOOKING_TRIAL_EXPIRED_MESSAGE)) {
+    throw new Error('expired public lock must not say canceled');
+  }
+
+  if (typedDashboardPath({ role: 'org_owner', organizationId: ORG_ID }) !== `/orgs/${ORG_ID}/dashboard`) {
+    throw new Error('typed /dashboard must land on the org dashboard');
+  }
+  if (typedHoursPath({ role: 'org_owner', organizationId: ORG_ID }) !== `/orgs/${ORG_ID}/availability`) {
+    throw new Error('typed /settings/hours must land on availability');
+  }
+  if (typedHoursPath({ role: 'staff', organizationId: ORG_ID }) !== '/staff/availability') {
+    throw new Error('typed /settings/hours for staff must land on staff availability');
+  }
+  if (typedDashboardPath({ role: 'platform_owner', organizationId: null }) !== '/platform/dashboard') {
+    throw new Error('typed /dashboard for platform must land on platform dashboard');
   }
 }
 

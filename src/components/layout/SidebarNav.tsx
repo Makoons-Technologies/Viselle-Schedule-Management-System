@@ -14,7 +14,7 @@ import { useOrgOwnerTour } from '@/context/OrgOwnerTourContext';
 
 import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgAdminAccess } from '@/hooks/useOrgAdminAccess';
-import { useOrgCanceled } from '@/hooks/useOrgCanceled';
+import { useOrgProductClosed } from '@/hooks/useOrgProductClosed';
 import { useOrgNeedsBilling } from '@/hooks/useOrgNeedsBilling';
 import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 
@@ -256,7 +256,7 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
   const canManageStaff = useOrgAdminAccess(effectiveOrgId ?? undefined);
   const writeLocked = useOrgWriteLocked();
   const needsBilling = useOrgNeedsBilling();
-  const canceled = useOrgCanceled();
+  const productClosed = useOrgProductClosed();
 
   if (!user) return null;
 
@@ -270,7 +270,7 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
       showRecurring: false,
     });
 
-    if (canceled) {
+    if (productClosed) {
       return (
         <NavSectionWithGroups
           onNavigate={onNavigate}
@@ -321,7 +321,7 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
 
     if (inSalonContext && selectedOrgId) {
       const orgBase = `/orgs/${selectedOrgId}`;
-      if (canceled) {
+      if (productClosed) {
         return (
           <NavSectionWithGroups
             onNavigate={onNavigate}

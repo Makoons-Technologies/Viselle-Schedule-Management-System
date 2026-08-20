@@ -13,8 +13,8 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useOrg } from '@/context/OrgContext';
 import { useOrgId } from '@/hooks/useOrgId';
-import { useOrgCanceled } from '@/hooks/useOrgCanceled';
 import { useOrgNeedsBilling } from '@/hooks/useOrgNeedsBilling';
+import { useOrgProductClosed } from '@/hooks/useOrgProductClosed';
 import { isOrgSettingsPath } from '@/components/layout/org-navigation';
 import { getPlatformOrgBase, isPlatformOrgAdminPath } from '@/components/layout/platform-navigation';
 import { cn } from '@/lib/utils';
@@ -60,7 +60,7 @@ export function MobileBottomNav() {
   const routeOrgId = useOrgId();
   const { selectedOrgId } = useOrg();
   const needsBilling = useOrgNeedsBilling();
-  const canceled = useOrgCanceled();
+  const productClosed = useOrgProductClosed();
 
   if (!user) return null;
 
@@ -70,7 +70,7 @@ export function MobileBottomNav() {
 
     const orgBase = `/orgs/${orgId}`;
 
-    if (canceled) {
+    if (productClosed) {
       const items: BottomNavItem[] = [
         {
           key: 'account',
@@ -208,7 +208,7 @@ export function MobileBottomNav() {
 
   const orgBase = `/orgs/${orgId}`;
 
-  const billingOnlyNav = canceled || (needsBilling && user.role === 'org_owner');
+  const billingOnlyNav = productClosed || (needsBilling && user.role === 'org_owner');
   const items: BottomNavItem[] =
     billingOnlyNav
       ? [
