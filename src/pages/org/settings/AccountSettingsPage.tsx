@@ -6,6 +6,7 @@ import { orgApi } from '@/lib/api';
 import { AddToHomeScreenCard } from '@/components/settings/AddToHomeScreenCard';
 import { OrgDangerZone } from '@/components/settings/OrgDangerZone';
 import { PushNotificationsCard } from '@/components/settings/PushNotificationsCard';
+import { SettingsBackHeader } from '@/components/settings/SettingsBackHeader';
 import { LoadingState } from '@/components/common/LoadingState';
 
 /** Staff (and owners) account/membership danger zone — leave or delete. */
@@ -26,16 +27,17 @@ export function AccountSettingsPage() {
 
   if (isLoading) return <LoadingState />;
 
+  const backTo =
+    user?.role === 'staff' ? `/orgs/${orgId}/calendar` : `/orgs/${orgId}/settings`;
+
   return (
-    <div className="mx-auto max-w-xl space-y-6 p-4 sm:p-6">
-      <div>
-        <h1 className="text-lg font-semibold text-stone-900 dark:text-stone-100">Account</h1>
-        <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
-          Manage your membership in {data?.organization.name ?? 'this organization'}.
-        </p>
-      </div>
+    <div className="mx-auto max-w-xl space-y-6">
+      <SettingsBackHeader title="Account" backTo={backTo} />
+      <p className="-mt-2 text-sm text-stone-600 dark:text-stone-400">
+        Manage your membership in {data?.organization.name ?? 'this organization'}.
+      </p>
       <AddToHomeScreenCard />
-      <PushNotificationsCard />
+      {user?.role === 'staff' ? <PushNotificationsCard /> : null}
       <OrgDangerZone orgId={orgId} orgName={data?.organization.name} />
     </div>
   );
