@@ -42,7 +42,11 @@ import {
   type SignupWebsiteOption,
 } from '@/lib/signup';
 import { ApiError } from '@/lib/api';
+import { signedInHomePath } from '@/lib/auth-redirect';
+import { useAuth } from '@/context/AuthContext';
 import type { ResolvedTrialOffer, TrialCampaign } from '@/types/api';
+
+const TRIAL_CODE_DEBOUNCE_MS = 300;
 
 const STEPS = [
   { id: 'business', label: 'Your business', icon: Building2 },
@@ -370,6 +374,7 @@ function useIsLgUp() {
 
 export function GetStartedPage() {
   const navigate = useNavigate();
+  const { login, logout } = useAuth();
   const isLgUp = useIsLgUp();
   const [searchParams] = useSearchParams();
   const initialPlan = (searchParams.get('plan') as SignupTierId | null) ?? 'professional';
@@ -415,10 +420,15 @@ export function GetStartedPage() {
   const [trialOffer, setTrialOffer] = useState<ResolvedTrialOffer | null>(null);
   const [committedTrialCode, setCommittedTrialCode] = useState('');
   const [homepageTrial, setHomepageTrial] = useState<TrialCampaign | null>(null);
-  const [provisionedResult, setProvisionedResult] = useState<{ organizationId: string; slug: string } | null>(null);
+  const [provisionedResult, setProvisionedResult] = useState<{
+    organizationId: string;
+    slug: string;
+    signedIn: boolean;
+  } | null>(null);
   const committedTrialCodeRef = useRef(committedTrialCode);
   const trialOfferRef = useRef(trialOffer);
   const trialValidateSeq = useRef(0);
+  const trialCodeDebounceRef = useRef<number>();
   const formSectionRef = useRef<HTMLDivElement>(null);
   committedTrialCodeRef.current = committedTrialCode;
   trialOfferRef.current = trialOffer;
@@ -453,7 +463,7 @@ export function GetStartedPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const commitTrialCode = useCallback(async (rawCode: string) => {
+  const commitTrialCode = useCallback(async (rawCode: string): Promise<ResolvedTrialOffer | null> => {
     const trimmed = rawCode.trim().toUpperCase();
     if (!trimmed) {
       trialValidateSeq.current += 1;
@@ -461,33 +471,51 @@ export function GetStartedPage() {
       setCommittedTrialCode('');
       setTrialCodeStatus('idle');
       setTrialOffer(null);
-      return;
+      return null;
     }
 
     if (trimmed === committedTrialCodeRef.current) {
       // Cancel any in-flight validation for a different draft.
       trialValidateSeq.current += 1;
-      setTrialCodeStatus(
-        trialOfferRef.current ? 'valid' : committedTrialCodeRef.current ? 'invalid' : 'idle',
-      );
-      return;
+      const existing = trialOfferRef.current;
+      setTrialCodeStatus(existing ? 'valid' : committedTrialCodeRef.current ? 'invalid' : 'idle');
+      return existing;
     }
 
     const seq = ++trialValidateSeq.current;
     setTrialCodeStatus('checking');
     try {
       const offer = await validateTrialCode(trimmed);
-      if (seq !== trialValidateSeq.current) return;
-      setTrialCode(trimmed);
-      setCommittedTrialCode(trimmed);
-      setTrialOffer(offer);
-      setTrialCodeStatus('valid');
+      if (seq === trialValidateSeq.current) {
+        setTrialCode(trimmed);
+        setCommittedTrialCode(trimmed);
+        setTrialOffer(offer);
+        setTrialCodeStatus('valid');
+      }
+      return offer;
     } catch {
-      if (seq !== trialValidateSeq.current) return;
-      setCommittedTrialCode(trimmed);
-      setTrialOffer(null);
-      setTrialCodeStatus('invalid');
+      if (seq === trialValidateSeq.current) {
+        setCommittedTrialCode(trimmed);
+        setTrialOffer(null);
+        setTrialCodeStatus('invalid');
+      }
+      return null;
     }
+  }, []);
+
+  const handleTrialCodeChange = useCallback(
+    (value: string) => {
+      setTrialCode(value);
+      window.clearTimeout(trialCodeDebounceRef.current);
+      trialCodeDebounceRef.current = window.setTimeout(() => {
+        void commitTrialCode(value);
+      }, TRIAL_CODE_DEBOUNCE_MS);
+    },
+    [commitTrialCode],
+  );
+
+  useEffect(() => {
+    return () => window.clearTimeout(trialCodeDebounceRef.current);
   }, []);
 
   // Validate ?code= from the URL once on mount (skipped when homepage trial is selected).
@@ -673,7 +701,19 @@ export function GetStartedPage() {
   async function handleCheckout() {
     setError(null);
     setSubmitting(true);
+    window.clearTimeout(trialCodeDebounceRef.current);
     try {
+      let code: string | undefined;
+      if (!useHomepageCampaign && trialCode.trim()) {
+        const offer = await commitTrialCode(trialCode);
+        if (!offer) {
+          setError('That code is invalid or expired. Clear it to continue with a paid plan.');
+          setSubmitting(false);
+          return;
+        }
+        code = trialCode.trim().toUpperCase();
+      }
+
       const result = await createSignupCheckout({
         businessName: businessName.trim(),
         slug: slug.trim().toLowerCase(),
@@ -683,14 +723,32 @@ export function GetStartedPage() {
         tier,
         subdomainAddon,
         customWebsiteAddon,
-        code: trialCodeStatus === 'valid' ? committedTrialCode : undefined,
+        code,
         useHomepageCampaign,
       });
 
       if (result.provisioned && result.organizationId && result.slug) {
-        setProvisionedResult({ organizationId: result.organizationId, slug: result.slug });
-        setSubmitting(false);
-        window.setTimeout(() => navigate('/login', { replace: true }), 1800);
+        // Leftover browser session must not win — /login auto-sends signed-in users
+        // back to their previous org (QA: Isolation Studio calendar).
+        logout();
+        setProvisionedResult({
+          organizationId: result.organizationId,
+          slug: result.slug,
+          signedIn: false,
+        });
+        try {
+          const signedIn = await login(ownerEmail.trim(), password);
+          setProvisionedResult({
+            organizationId: result.organizationId,
+            slug: result.slug,
+            signedIn: true,
+          });
+          setSubmitting(false);
+          window.setTimeout(() => navigate(signedInHomePath(signedIn), { replace: true }), 900);
+        } catch {
+          setSubmitting(false);
+          window.setTimeout(() => navigate('/login', { replace: true }), 1800);
+        }
         return;
       }
 
@@ -785,7 +843,9 @@ export function GetStartedPage() {
               <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-600 dark:text-emerald-400" />
               <CardTitle className="mt-4">Your free trial is ready!</CardTitle>
               <CardDescription>
-                {businessName} is all set — taking you to sign in as {ownerEmail}…
+                {provisionedResult.signedIn
+                  ? `${businessName} is all set — opening your dashboard as ${ownerEmail}…`
+                  : `${businessName} is all set — taking you to sign in as ${ownerEmail}…`}
               </CardDescription>
             </CardHeader>
           </Card>
@@ -1218,7 +1278,7 @@ export function GetStartedPage() {
                 useHomepageCampaign={useHomepageCampaign}
                 homepageTrial={homepageTrial}
                 trialCodeDisabled={homepageTrialSelected}
-                onTrialCodeChange={setTrialCode}
+                onTrialCodeChange={handleTrialCodeChange}
                 onTrialCodeCommit={() => void commitTrialCode(trialCode)}
                 inputId="trialCode"
               />
@@ -1243,7 +1303,7 @@ export function GetStartedPage() {
               useHomepageCampaign={useHomepageCampaign}
               homepageTrial={homepageTrial}
               trialCodeDisabled={homepageTrialSelected}
-              onTrialCodeChange={setTrialCode}
+              onTrialCodeChange={handleTrialCodeChange}
               onTrialCodeCommit={() => void commitTrialCode(trialCode)}
               inputId="trialCode-mobile"
             />

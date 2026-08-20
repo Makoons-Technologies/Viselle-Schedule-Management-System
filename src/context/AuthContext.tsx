@@ -61,6 +61,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (email: string, password: string) => {
     const result = await authApi.login(email, password);
+    // Drop any leftover user/org cache so a previous session cannot keep winning.
+    queryClient.clear();
+    setImpersonationOriginToken(null);
     setToken(result.token);
     return applyAuthSession(queryClient, result);
   }, [queryClient]);
