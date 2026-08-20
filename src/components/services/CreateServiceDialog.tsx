@@ -14,11 +14,19 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 
+function hasAtMostTwoDecimals(value: number): boolean {
+  return Number.isFinite(value) && Math.abs(value * 100 - Math.round(value * 100)) < 1e-6;
+}
+
 const schema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
   durationMinutes: z.number().int().positive(),
-  priceDollars: z.number().min(0).optional(),
+  priceDollars: z
+    .number()
+    .min(0)
+    .optional()
+    .refine((value) => value == null || hasAtMostTwoDecimals(value), 'Use at most two decimal places'),
   isActive: z.boolean().optional(),
 });
 
@@ -117,6 +125,9 @@ export function CreateServiceDialog({ orgId, open, onOpenChange, service }: Crea
                 autoComplete="off"
                 {...register('priceDollars', { valueAsNumber: true })}
               />
+              {errors.priceDollars && (
+                <p className="text-xs text-red-600">{errors.priceDollars.message ?? 'Invalid price'}</p>
+              )}
             </div>
           </div>
           {isEditing && (
