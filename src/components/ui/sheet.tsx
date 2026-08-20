@@ -46,7 +46,10 @@ export const SheetContent = forwardRef<HTMLDivElement, SheetContentProps>(
       />
       <DialogPrimitive.Content
         ref={ref}
-        className={cn(sheetVariants({ side }), 'relative z-[51] flex flex-col p-4 sm:p-6', className)}
+        // Keep `fixed` from sheetVariants. `relative` here is merged away by
+        // tailwind-merge and drops `fixed`, so the portaled panel sits after
+        // #root and is clipped by html.app-shell overflow — a blank overlay.
+        className={cn(sheetVariants({ side }), 'z-[51] flex flex-col p-4 sm:p-6', className)}
         {...props}
       >
         {children}
