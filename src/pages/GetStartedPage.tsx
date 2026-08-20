@@ -46,8 +46,6 @@ import { signedInHomePath } from '@/lib/auth-redirect';
 import { useAuth } from '@/context/AuthContext';
 import type { ResolvedTrialOffer, TrialCampaign } from '@/types/api';
 
-const TRIAL_CODE_DEBOUNCE_MS = 300;
-
 const STEPS = [
   { id: 'business', label: 'Your business', icon: Building2 },
   { id: 'account', label: 'Your account', icon: User },
@@ -428,7 +426,6 @@ export function GetStartedPage() {
   const committedTrialCodeRef = useRef(committedTrialCode);
   const trialOfferRef = useRef(trialOffer);
   const trialValidateSeq = useRef(0);
-  const trialCodeDebounceRef = useRef<number | undefined>(undefined);
   const formSectionRef = useRef<HTMLDivElement>(null);
   committedTrialCodeRef.current = committedTrialCode;
   trialOfferRef.current = trialOffer;
@@ -463,7 +460,7 @@ export function GetStartedPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const commitTrialCode = useCallback(async (rawCode: string): Promise<ResolvedTrialOffer | null> => {
+  const commitTrialCode = useCallback(async (rawCode: string) => {
     const trimmed = rawCode.trim().toUpperCase();
     if (!trimmed) {
       trialValidateSeq.current += 1;
@@ -471,51 +468,33 @@ export function GetStartedPage() {
       setCommittedTrialCode('');
       setTrialCodeStatus('idle');
       setTrialOffer(null);
-      return null;
+      return;
     }
 
     if (trimmed === committedTrialCodeRef.current) {
       // Cancel any in-flight validation for a different draft.
       trialValidateSeq.current += 1;
-      const existing = trialOfferRef.current;
-      setTrialCodeStatus(existing ? 'valid' : committedTrialCodeRef.current ? 'invalid' : 'idle');
-      return existing;
+      setTrialCodeStatus(
+        trialOfferRef.current ? 'valid' : committedTrialCodeRef.current ? 'invalid' : 'idle',
+      );
+      return;
     }
 
     const seq = ++trialValidateSeq.current;
     setTrialCodeStatus('checking');
     try {
       const offer = await validateTrialCode(trimmed);
-      if (seq === trialValidateSeq.current) {
-        setTrialCode(trimmed);
-        setCommittedTrialCode(trimmed);
-        setTrialOffer(offer);
-        setTrialCodeStatus('valid');
-      }
-      return offer;
+      if (seq !== trialValidateSeq.current) return;
+      setTrialCode(trimmed);
+      setCommittedTrialCode(trimmed);
+      setTrialOffer(offer);
+      setTrialCodeStatus('valid');
     } catch {
-      if (seq === trialValidateSeq.current) {
-        setCommittedTrialCode(trimmed);
-        setTrialOffer(null);
-        setTrialCodeStatus('invalid');
-      }
-      return null;
+      if (seq !== trialValidateSeq.current) return;
+      setCommittedTrialCode(trimmed);
+      setTrialOffer(null);
+      setTrialCodeStatus('invalid');
     }
-  }, []);
-
-  const handleTrialCodeChange = useCallback(
-    (value: string) => {
-      setTrialCode(value);
-      window.clearTimeout(trialCodeDebounceRef.current);
-      trialCodeDebounceRef.current = window.setTimeout(() => {
-        void commitTrialCode(value);
-      }, TRIAL_CODE_DEBOUNCE_MS);
-    },
-    [commitTrialCode],
-  );
-
-  useEffect(() => {
-    return () => window.clearTimeout(trialCodeDebounceRef.current);
   }, []);
 
   // Validate ?code= from the URL once on mount (skipped when homepage trial is selected).
@@ -701,19 +680,7 @@ export function GetStartedPage() {
   async function handleCheckout() {
     setError(null);
     setSubmitting(true);
-    window.clearTimeout(trialCodeDebounceRef.current);
     try {
-      let code: string | undefined;
-      if (!useHomepageCampaign && trialCode.trim()) {
-        const offer = await commitTrialCode(trialCode);
-        if (!offer) {
-          setError('That code is invalid or expired. Clear it to continue with a paid plan.');
-          setSubmitting(false);
-          return;
-        }
-        code = trialCode.trim().toUpperCase();
-      }
-
       const result = await createSignupCheckout({
         businessName: businessName.trim(),
         slug: slug.trim().toLowerCase(),
@@ -723,7 +690,7 @@ export function GetStartedPage() {
         tier,
         subdomainAddon,
         customWebsiteAddon,
-        code,
+        code: trialCodeStatus === 'valid' ? committedTrialCode : undefined,
         useHomepageCampaign,
       });
 
@@ -1278,7 +1245,7 @@ export function GetStartedPage() {
                 useHomepageCampaign={useHomepageCampaign}
                 homepageTrial={homepageTrial}
                 trialCodeDisabled={homepageTrialSelected}
-                onTrialCodeChange={handleTrialCodeChange}
+                onTrialCodeChange={setTrialCode}
                 onTrialCodeCommit={() => void commitTrialCode(trialCode)}
                 inputId="trialCode"
               />
@@ -1303,7 +1270,7 @@ export function GetStartedPage() {
               useHomepageCampaign={useHomepageCampaign}
               homepageTrial={homepageTrial}
               trialCodeDisabled={homepageTrialSelected}
-              onTrialCodeChange={handleTrialCodeChange}
+              onTrialCodeChange={setTrialCode}
               onTrialCodeCommit={() => void commitTrialCode(trialCode)}
               inputId="trialCode-mobile"
             />
