@@ -428,7 +428,7 @@ export function GetStartedPage() {
   const committedTrialCodeRef = useRef(committedTrialCode);
   const trialOfferRef = useRef(trialOffer);
   const trialValidateSeq = useRef(0);
-  const trialCodeDebounceRef = useRef<number>();
+  const trialCodeDebounceRef = useRef<number | undefined>(undefined);
   const formSectionRef = useRef<HTMLDivElement>(null);
   committedTrialCodeRef.current = committedTrialCode;
   trialOfferRef.current = trialOffer;
