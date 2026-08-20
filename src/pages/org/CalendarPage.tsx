@@ -479,7 +479,7 @@ export function CalendarPage() {
         }}
       />
       {selectMode && (
-        <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-50 border-t border-stone-200 bg-white/95 px-4 py-3 backdrop-blur-md dark:border-stone-800 dark:bg-stone-900/95 sm:px-6 desktop-shell:bottom-0">
+        <div className="fixed inset-x-0 bottom-[calc(4rem+var(--safe-area-bottom))] z-50 border-t border-stone-200 bg-white/95 px-4 py-3 backdrop-blur-md dark:border-stone-800 dark:bg-stone-900/95 sm:px-6 desktop-shell:bottom-0">
           <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
             <p className="text-sm font-medium text-stone-900 dark:text-stone-100">
               {selectedItems.length} appointment{selectedItems.length === 1 ? '' : 's'} selected
