@@ -18,6 +18,8 @@ import type {
   LeaveOrDeleteOrgResponse,
   LoginResponse,
   Organization,
+  FirstVisitPaymentMode,
+  OwnerFirstVisitPayment,
   OrganizationOwnerSummary,
   OrgPlanFeatures,
   OrganizationSettings,
@@ -176,9 +178,11 @@ export const ownerApi = {
       .then((r) => r.data),
   getOrganization: (id: string) =>
     apiClient
-      .get<{ organization: Organization; owner: OrganizationOwnerSummary | null }>(
-        `/owner/organizations/${id}`,
-      )
+      .get<{
+        organization: Organization;
+        owner?: OrganizationOwnerSummary | null;
+        firstVisitPayment?: OwnerFirstVisitPayment;
+      }>(`/owner/organizations/${id}`)
       .then((r) => r.data),
   updateOrganization: (id: string, data: Partial<Organization>) =>
     apiClient.patch<{ organization: Organization }>(`/owner/organizations/${id}`, data).then((r) => r.data),
@@ -361,7 +365,13 @@ export const supportApi = {
 
 export const orgApi = {
   getOrganization: (orgId: string) =>
-    apiClient.get<{ organization: Organization }>(`/organizations/${orgId}`).then((r) => r.data),
+    apiClient
+      .get<{
+        organization: Organization;
+        owner?: OrganizationOwnerSummary | null;
+        firstVisitPayment?: OwnerFirstVisitPayment;
+      }>(`/organizations/${orgId}`)
+      .then((r) => r.data),
   getPlan: (orgId: string) =>
     apiClient.get<{ plan: OrgPlanFeatures }>(`/organizations/${orgId}/plan`).then((r) => r.data),
   changePlan: (orgId: string, tier: Exclude<SubscriptionTier, 'custom'>) =>
@@ -393,8 +403,42 @@ export const orgApi = {
     apiClient
       .patch<{ staffPermissions: StaffPermissions }>(`/organizations/${orgId}/staff-permissions`, data)
       .then((r) => r.data),
-  updateOrganization: (orgId: string, data: Pick<Partial<Organization>, 'name' | 'slug' | 'publicBookingEnabled' | 'batchCheckoutEnabled' | 'emailRemindersOptIn' | 'smsRemindersOptIn' | 'emailReminderHoursBefore' | 'smsReminderHoursBefore' | 'confirmationRequestsOptIn' | 'confirmationDaysBefore' | 'staffEmailRemindersOptIn' | 'staffSmsRemindersOptIn' | 'staffPushRemindersOptIn' | 'staffReminderHoursBefore' | 'lowStockAlertsOptIn' | 'lowStockAlertEmail' | 'lowStockAlertSms' | 'lowStockAlertPush' | 'city' | 'address' | 'phone'>) =>
-    apiClient.patch<{ organization: Organization }>(`/organizations/${orgId}`, data).then((r) => r.data),
+  updateOrganization: (
+    orgId: string,
+    data: Pick<
+      Partial<Organization>,
+      | 'name'
+      | 'slug'
+      | 'publicBookingEnabled'
+      | 'batchCheckoutEnabled'
+      | 'emailRemindersOptIn'
+      | 'smsRemindersOptIn'
+      | 'emailReminderHoursBefore'
+      | 'smsReminderHoursBefore'
+      | 'confirmationRequestsOptIn'
+      | 'confirmationDaysBefore'
+      | 'staffEmailRemindersOptIn'
+      | 'staffSmsRemindersOptIn'
+      | 'staffPushRemindersOptIn'
+      | 'staffReminderHoursBefore'
+      | 'lowStockAlertsOptIn'
+      | 'lowStockAlertEmail'
+      | 'lowStockAlertSms'
+      | 'lowStockAlertPush'
+      | 'city'
+      | 'address'
+      | 'phone'
+    > & {
+      firstVisitPaymentMode?: FirstVisitPaymentMode;
+      firstVisitDepositCents?: number | null;
+    },
+  ) =>
+    apiClient
+      .patch<{ organization: Organization; firstVisitPayment?: OwnerFirstVisitPayment }>(
+        `/organizations/${orgId}`,
+        data,
+      )
+      .then((r) => r.data),
   deleteOrganization: (orgId: string) =>
     apiClient.delete<LeaveOrDeleteOrgResponse>(`/organizations/${orgId}`).then((r) => r.data),
   getWebsite: (orgId: string) =>

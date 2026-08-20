@@ -4,7 +4,43 @@ import {
   getSubdomainBookingUrl,
   isSubdomainBookingHost,
 } from '@/lib/subdomain-booking';
-import type { Service, SiteTemplate, BookingBranding } from '@/types/api';
+import type {
+  BookingPaymentMode,
+  FirstVisitPaymentMode,
+  Service,
+  SiteTemplate,
+  BookingBranding,
+} from '@/types/api';
+
+export interface PublicFirstVisitPayment {
+  mode: FirstVisitPaymentMode;
+  depositCents?: number | null;
+  /** Org policy is on and Stripe Connect can charge. Not per-guest. */
+  required: boolean;
+  stripeReady: boolean;
+  publishableKey?: string | null;
+  stripeAccountId?: string | null;
+}
+
+export type FirstVisitRequirementReason = 'first_visit' | 'returning' | 'disabled' | 'stripe_not_ready';
+
+export interface FirstVisitRequirement {
+  required: boolean;
+  mode: FirstVisitPaymentMode;
+  depositCents: number | null;
+  reason: FirstVisitRequirementReason;
+  publishableKey: string | null;
+  stripeAccountId: string | null;
+}
+
+export interface PublicBookingPayment {
+  bookingPaymentId: string;
+  mode: BookingPaymentMode;
+  amountCents: number | null;
+  clientSecret: string;
+  stripeAccountId: string;
+  publishableKey: string;
+}
 
 export interface PublicOrganization {
   id: string;
@@ -17,6 +53,7 @@ export interface PublicOrganization {
   city?: string | null;
   address?: string | null;
   phone?: string | null;
+  firstVisitPayment?: PublicFirstVisitPayment | null;
   bookingSite: {
     hostingMode: string;
     siteTemplate: SiteTemplate | null;
@@ -111,14 +148,39 @@ export interface BookAppointmentResponse {
   };
   managementToken?: string | null;
   confirmationMessage: string;
+  bookingPayment?: {
+    id: string;
+    mode: BookingPaymentMode;
+    amountCents: number | null;
+    status: string;
+  } | null;
 }
 
 export const publicBookingApi = {
-  getOrganization: (slug: string) =>
-    apiClient.get<{ organization: PublicOrganization }>(`/public/organizations/${slug}`).then((r) => r.data),
+  getOrganization: async (slug: string) => {
+    const { data } = await apiClient.get<{
+      organization?: PublicOrganization;
+      firstVisitPayment?: PublicFirstVisitPayment;
+    }>(`/public/organizations/${slug}`);
+    const organization = data.organization ?? (data as PublicOrganization);
+    return {
+      organization: {
+        ...organization,
+        firstVisitPayment: organization.firstVisitPayment ?? data.firstVisitPayment ?? null,
+      },
+    };
+  },
   getSmsConsent: (slug: string, params: { email?: string; phone?: string }) =>
     apiClient
       .get<{ smsConsented: boolean }>(`/public/organizations/${slug}/sms-consent`, { params })
+      .then((r) => r.data),
+  getFirstVisitRequirement: (slug: string, params: { email?: string; phone?: string }) =>
+    apiClient
+      .get<FirstVisitRequirement>(`/public/organizations/${slug}/first-visit-requirement`, { params })
+      .then((r) => r.data),
+  createBookingPayment: (slug: string, data: { email?: string; phone?: string }) =>
+    apiClient
+      .post<PublicBookingPayment>(`/public/organizations/${slug}/booking-payments`, data)
       .then((r) => r.data),
   getServices: (slug: string) =>
     apiClient.get<{ services: Service[] }>(`/public/organizations/${slug}/services`).then((r) => r.data),
@@ -152,6 +214,7 @@ export const publicBookingApi = {
       timezone: string;
       appointmentNotes?: string;
       smsOptIn?: boolean;
+      bookingPaymentId?: string;
     },
   ) =>
     apiClient

@@ -108,6 +108,19 @@ export interface ImpersonateOwnerResponse {
   organization: { id: string; name: string };
 }
 
+/** Public-booking first-visit no-show protection. Not POS, gift cards, or memberships. */
+export type FirstVisitPaymentMode = 'off' | 'deposit' | 'card_on_file';
+export type BookingPaymentMode = 'deposit' | 'card_on_file';
+
+/** Sibling on GET/PATCH `/organizations/:id` and GET `…/stripe-connect/status`. */
+export interface OwnerFirstVisitPayment {
+  mode: FirstVisitPaymentMode;
+  depositCents: number | null;
+  stripeReady: boolean;
+  stripeAccountId: string | null;
+  publishableKey: string | null;
+}
+
 export interface Organization {
   id: string;
   name: string;
@@ -465,6 +478,7 @@ export interface StripeConnectStatus {
   publishableKey: string | null;
   chargesEnabled: boolean;
   onboardingComplete: boolean;
+  firstVisitPayment?: OwnerFirstVisitPayment;
 }
 
 export interface CheckoutLineInput {

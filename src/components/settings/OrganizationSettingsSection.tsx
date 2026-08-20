@@ -182,6 +182,7 @@ export function OrganizationSettingsSection({ orgId }: OrganizationSettingsSecti
             <Label>Public booking enabled</Label>
             <p className={helperTextClass}>
               Allow customers to book online. Enables your free booking page under Booking website.
+              First-visit deposits and card-on-file are in Settings → Payments.
             </p>
           </div>
           <Switch
