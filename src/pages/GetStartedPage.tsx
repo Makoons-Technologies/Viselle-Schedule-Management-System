@@ -491,12 +491,10 @@ export function GetStartedPage() {
       return;
     }
 
-    if (trimmed === committedTrialCodeRef.current) {
+    if (trimmed === committedTrialCodeRef.current && trialOfferRef.current) {
       // Cancel any in-flight validation for a different draft.
       trialValidateSeq.current += 1;
-      setTrialCodeStatus(
-        trialOfferRef.current ? 'valid' : committedTrialCodeRef.current ? 'invalid' : 'idle',
-      );
+      setTrialCodeStatus('valid');
       return;
     }
 
@@ -523,6 +521,19 @@ export function GetStartedPage() {
     void commitTrialCode(initialCode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleTrialCodeChange = useCallback((next: string) => {
+    trialValidateSeq.current += 1;
+    setTrialCode(next);
+    setTrialCodeStatus('idle');
+    setTrialOffer(null);
+  }, []);
+
+  const trialCodeDraftMatchesCommit = trialCode.trim().toUpperCase() === committedTrialCode;
+  const trialCodeReadyForCheckout =
+    trialCodeDraftMatchesCommit &&
+    trialCodeStatus !== 'checking' &&
+    (trialCodeStatus === 'valid' || (trialCodeStatus === 'idle' && committedTrialCode.length === 0));
 
   const homepageTrialSelected = trialParam && Boolean(homepageTrial);
 
@@ -707,8 +718,7 @@ export function GetStartedPage() {
       case 'checkout':
         return (
           Boolean(displayCart) &&
-          trialCodeStatus !== 'checking' &&
-          trialCodeStatus !== 'invalid' &&
+          trialCodeReadyForCheckout &&
           (isFreeTrialCheckout || !loadingCart)
         );
       default:
@@ -724,10 +734,11 @@ export function GetStartedPage() {
     slug,
     slugStatus,
     tier,
-    trialCodeStatus,
+    trialCodeReadyForCheckout,
   ]);
 
   async function handleCheckout() {
+    if (!trialCodeReadyForCheckout) return;
     setError(null);
     setSubmitting(true);
     try {
@@ -1311,7 +1322,7 @@ export function GetStartedPage() {
                 useHomepageCampaign={useHomepageCampaign}
                 homepageTrial={homepageTrial}
                 trialCodeDisabled={homepageTrialSelected}
-                onTrialCodeChange={setTrialCode}
+                onTrialCodeChange={handleTrialCodeChange}
                 onTrialCodeCommit={() => void commitTrialCode(trialCode)}
                 inputId="trialCode"
               />
@@ -1336,7 +1347,7 @@ export function GetStartedPage() {
               useHomepageCampaign={useHomepageCampaign}
               homepageTrial={homepageTrial}
               trialCodeDisabled={homepageTrialSelected}
-              onTrialCodeChange={setTrialCode}
+              onTrialCodeChange={handleTrialCodeChange}
               onTrialCodeCommit={() => void commitTrialCode(trialCode)}
               inputId="trialCode-mobile"
             />
