@@ -20,8 +20,8 @@ import {
  * (expired trial, canceled, or unpaid / no Stripe plan for org_owner/staff).
  *
  * Plan settings (`settings/plan`) and Account are routed outside this guard so
- * upgrade / subscribe / reactivate stays reachable. Platform owners are not
- * plan-gated by useOrgWriteLocked; canceled still write-locks them.
+ * upgrade / subscribe / reactivate stays reachable. Canceled billing redirects
+ * everyone in the salon shell (including platform_owner) to Plan / Account.
  */
 export function TrialSettingsGuard() {
   const { user } = useAuth();
@@ -44,7 +44,7 @@ export function TrialSettingsGuard() {
 
   if (writeLocked) {
     if (!orgId) return null;
-    if (canceled && user?.role !== 'platform_owner') {
+    if (canceled) {
       return <Navigate to={orgCanceledRedirectPath(orgId, user?.role)} replace />;
     }
     return <Navigate to={`/orgs/${orgId}/dashboard`} replace />;
