@@ -869,7 +869,7 @@ export function GetStartedPage() {
   }
 
   return (
-    <div className={cn(MARKETING_SHELL_CLASS, !isLgUp && 'pb-44')}>
+    <div className={cn(MARKETING_SHELL_CLASS, !isLgUp && 'pb-[calc(11rem+var(--safe-area-bottom))]')}>
       <PageSeo {...marketingSeo.getStarted} />
       <MarketingHeader />
 
@@ -1296,7 +1296,7 @@ export function GetStartedPage() {
       </div>
 
       {!isLgUp && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-white/95 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] backdrop-blur dark:border-stone-700 dark:bg-stone-950/95 dark:shadow-[0_-8px_30px_rgba(0,0,0,0.35)]">
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-white/95 px-safe pb-safe-or-3 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] backdrop-blur dark:border-stone-700 dark:bg-stone-950/95 dark:shadow-[0_-8px_30px_rgba(0,0,0,0.35)]">
           <div className="mx-auto max-w-6xl px-4 py-3 sm:px-6">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
               Your cart

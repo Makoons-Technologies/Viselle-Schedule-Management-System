@@ -40,7 +40,7 @@ export function MobileSidebar() {
             maxHeight: 'var(--app-height, 100dvh)',
             // Full-bleed panel; top inset only — footer owns the bottom safe area so
             // Powered-by can sit lower without leaving a maroon gap under the sheet.
-            paddingTop: 'env(safe-area-inset-top, 0px)',
+            paddingTop: 'var(--safe-area-top)',
           }}
           overlayStyle={overlayStyle}
           className={cn(
@@ -71,7 +71,7 @@ export function MobileSidebar() {
           </div>
           <div
             className="shrink-0 border-t border-stone-200 px-4 pt-3 text-right dark:border-stone-800"
-            style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
+            style={{ paddingBottom: 'max(0.75rem, var(--safe-area-bottom))' }}
           >
             <PoweredByMakoons className="text-right" />
           </div>

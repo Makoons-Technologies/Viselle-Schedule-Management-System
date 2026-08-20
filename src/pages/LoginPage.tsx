@@ -63,7 +63,7 @@ export function LoginPage() {
   };
 
   return (
-    <div className={cn(MARKETING_SHELL_CLASS, 'flex flex-col items-center justify-center gap-4 p-4')}>
+    <div className={cn(MARKETING_SHELL_CLASS, 'flex flex-col items-center justify-center gap-4 p-safe-or-4')}>
       <PageSeo {...marketingSeo.login} />
       <Card className="w-full max-w-md border-white/15 bg-white/95 shadow-2xl">
         <CardHeader className="text-center">

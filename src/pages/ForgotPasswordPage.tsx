@@ -43,7 +43,7 @@ export function ForgotPasswordPage() {
   };
 
   return (
-    <div className={cn(MARKETING_SHELL_CLASS, 'flex items-center justify-center p-4')}>
+    <div className={cn(MARKETING_SHELL_CLASS, 'flex items-center justify-center p-safe-or-4')}>
       <PageSeo {...marketingSeo.forgotPassword} />
       <Card className="w-full max-w-md border-white/15 bg-white/95 shadow-2xl">
         <CardHeader className="text-center">
