@@ -46,6 +46,9 @@ export interface PublicOrganization {
   id: string;
   name: string;
   slug: string;
+  status?: 'active' | 'inactive' | 'suspended' | 'trial' | 'cancelled';
+  billingStatus?: 'active' | 'past_due' | 'failed' | 'cancelled' | 'trial';
+  trialEndsAt?: string | null;
   publicBookingEnabled: boolean;
   smsRemindersEnabled?: boolean;
   /** False while the platform sending number is under A2P / carrier review. */

@@ -50,6 +50,7 @@ import { StaffAvailabilityPage } from '@/pages/staff/StaffAvailabilityPage';
 import { TrialSettingsGuard } from '@/routes/TrialSettingsGuard';
 import { PlanRequiredGuard } from '@/routes/PlanRequiredGuard';
 import { CanceledOrgGuard } from '@/routes/CanceledOrgGuard';
+import { LogoutRedirect, TypedDashboardRedirect, TypedHoursRedirect } from '@/routes/SignedInShortcuts';
 import { MyTicketsPage } from '@/pages/support/MyTicketsPage';
 import { TicketDetailPage } from '@/pages/support/TicketDetailPage';
 import { PlatformSupportInboxPage } from '@/pages/platform/PlatformSupportInboxPage';
@@ -100,6 +101,9 @@ export const appRoutes = [
   { path: '/login', element: <LoginPage /> },
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
   { path: '/set-password', element: <SetPasswordPage /> },
+  { path: '/dashboard', element: <TypedDashboardRedirect /> },
+  { path: '/settings/hours', element: <TypedHoursRedirect /> },
+  { path: '/logout', element: <LogoutRedirect /> },
   {
     element: <ProtectedRoute />,
     children: [

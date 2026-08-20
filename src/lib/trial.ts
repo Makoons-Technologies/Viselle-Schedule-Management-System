@@ -11,7 +11,7 @@ function isCanceledLabel(value: string | null | undefined): boolean {
  * only true for the exact soft-lock state the expire-trials job writes
  * (status: 'inactive', billingStatus: 'cancelled', trialEndsAt in the past).
  */
-export function isOrgTrialExpired(org: TrialOrgFields | null | undefined): boolean {
+export function isOrgTrialExpired(org: Partial<TrialOrgFields> | null | undefined): boolean {
   if (!org?.trialEndsAt) return false;
   if (org.status !== 'inactive' || !isCanceledLabel(org.billingStatus)) return false;
   return new Date(org.trialEndsAt).getTime() <= Date.now();
@@ -48,13 +48,28 @@ export function orgMustChoosePlan(
 }
 
 /**
+ * Hard-canceled billing, not the expire-job shape.
+ *
  * Canceled label on staging is `organizations.billing_status = 'cancelled'`
  * (two L's). Org `status` can still be `active`. Product closed; Plan/Account
  * stay open to reactivate. Applies to isDev grokbot shops too.
+ *
+ * Expire-job orgs also have cancelled billing (`inactive` + past trialEndsAt).
+ * Those are `isOrgTrialExpired`, not canceled — Joseph wants trial / expired /
+ * canceled as separate states (BEA-44).
  */
 export function isOrgCanceled(org: TrialOrgFields | null | undefined): boolean {
   if (!org) return false;
+  if (isOrgTrialExpired(org)) return false;
   return org.billingStatus === 'cancelled';
+}
+
+/**
+ * Product shell should collapse to Plan / Account: hard-canceled or expire-job.
+ * Distinct copy still comes from isOrgCanceled vs isOrgTrialExpired.
+ */
+export function isOrgProductClosed(org: TrialOrgFields | null | undefined): boolean {
+  return isOrgCanceled(org) || isOrgTrialExpired(org);
 }
 
 /** Plan / account / billing paths that stay open when the product shell is closed. */
@@ -124,6 +139,41 @@ export const ORG_CANCELED_MESSAGE = 'This organization is canceled. Subscribe to
 
 export const ORG_CANCELED_STAFF_MESSAGE =
   'This organization is canceled. Ask the owner to reactivate billing.';
+
+/** In-app / Plan copy when the expire-job lock is on (not canceled). */
+export const TRIAL_EXPIRED_MESSAGE = 'Your trial has expired. Upgrade to continue using Viselle.';
+
+export const TRIAL_EXPIRED_STAFF_MESSAGE =
+  'This organization trial has expired. Ask the owner to upgrade.';
+
+/** Public /book lock for canceled, disabled, or missing shops. */
+export const PUBLIC_BOOKING_UNAVAILABLE_MESSAGE =
+  'Online booking is not available for this business.';
+
+/** Public /book lock for expire-job shops — same lock chrome, expired copy. */
+export const PUBLIC_BOOKING_TRIAL_EXPIRED_MESSAGE =
+  'This business’s trial has expired. Online booking is not available.';
+
+export type PublicBookingLockReason = 'expired' | 'unavailable';
+
+/**
+ * Canceled / disabled / missing shops stay on the generic lock.
+ * Expire-job uses TRIAL_EXPIRED (API) or the expire-job org shape.
+ */
+export function publicBookingLockReason(input: {
+  errorCode?: string | null;
+  organization?: Partial<TrialOrgFields> | null;
+}): PublicBookingLockReason {
+  if (input.errorCode === 'TRIAL_EXPIRED') return 'expired';
+  if (isOrgTrialExpired(input.organization)) return 'expired';
+  return 'unavailable';
+}
+
+export function publicBookingLockMessage(reason: PublicBookingLockReason): string {
+  return reason === 'expired'
+    ? PUBLIC_BOOKING_TRIAL_EXPIRED_MESSAGE
+    : PUBLIC_BOOKING_UNAVAILABLE_MESSAGE;
+}
 
 /**
  * Spread onto a `<Button>` (or other control) to lock it down when the

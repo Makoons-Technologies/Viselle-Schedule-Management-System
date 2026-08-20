@@ -43,6 +43,10 @@ export function OrgTrialBanner() {
 
   if (!organization) return null;
 
+  if (isOrgTrialExpired(organization)) {
+    return <TrialExpiredBanner organization={organization} isPlatformOwner={isPlatformOwner} />;
+  }
+
   if (isOrgCanceled(organization)) {
     return (
       <CanceledOrgBanner
@@ -51,10 +55,6 @@ export function OrgTrialBanner() {
         isPlatformOwner={isPlatformOwner}
       />
     );
-  }
-
-  if (isOrgTrialExpired(organization)) {
-    return <TrialExpiredBanner organization={organization} isPlatformOwner={isPlatformOwner} />;
   }
 
   if (orgMustChoosePlan(organization, plan?.hasStripeSubscription)) {

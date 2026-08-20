@@ -56,18 +56,18 @@ export function SidebarTrialStatus() {
 
   if (!organization) return null;
 
-  if (canceled) {
-    return (
-      <p className="mt-1 text-xs font-medium text-red-600 dark:text-red-400" aria-live="polite">
-        Canceled
-      </p>
-    );
-  }
-
   if (expired) {
     return (
       <p className="mt-1 text-xs font-medium text-red-600 dark:text-red-400" aria-live="polite">
         Trial expired
+      </p>
+    );
+  }
+
+  if (canceled) {
+    return (
+      <p className="mt-1 text-xs font-medium text-red-600 dark:text-red-400" aria-live="polite">
+        Canceled
       </p>
     );
   }

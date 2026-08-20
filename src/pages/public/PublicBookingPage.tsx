@@ -3,6 +3,7 @@ import { CheckCircle2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { BookingUnavailableLock } from '@/components/booking/BookingUnavailableLock';
 import { BookingDateChips, buildDateRange } from '@/components/booking/BookingDateChips';
 import { FirstVisitProtectionCard } from '@/components/booking/FirstVisitProtectionCard';
 import {
@@ -16,7 +17,6 @@ import { BookingTimeGrid } from '@/components/booking/BookingTimeGrid';
 import { PublicBookingSeo } from '@/components/booking/PublicBookingSeo';
 import { bookingChoiceClass, bookingTheme } from '@/components/booking/booking-theme';
 import { LoadingState } from '@/components/common/LoadingState';
-import { PageSeo } from '@/components/seo/PageSeo';
 import { SmsOptInCheckbox } from '@/components/booking/SmsOptInCheckbox';
 import {
   firstVisitBookLabel,
@@ -24,7 +24,9 @@ import {
   firstVisitPaymentHeadline,
   intentTypeForMode,
 } from '@/lib/first-visit-protection';
+import { ApiError } from '@/lib/api';
 import { publicBookingApi, getManageBookingUrl } from '@/lib/public-booking';
+import { publicBookingLockReason } from '@/lib/trial';
 import type { FirstVisitCardSession } from '@/lib/stripe-first-visit';
 import { createFirstVisitCardSession } from '@/lib/stripe-first-visit';
 import type { BookingPaymentMode } from '@/types/api';
@@ -264,29 +266,23 @@ export function PublicBookingPage({ slugOverride }: PublicBookingPageProps = {})
   const org = orgQuery.data?.organization;
   const pathBookingOff =
     !slugOverride && org?.bookingSite?.pathBookingEnabled === false;
-  if (!org || !org.publicBookingEnabled || pathBookingOff) {
+  const publicLockReason = publicBookingLockReason({
+    errorCode: orgQuery.error instanceof ApiError ? orgQuery.error.code : null,
+    organization: org,
+  });
+  if (
+    orgQuery.isError ||
+    !org ||
+    !org.publicBookingEnabled ||
+    pathBookingOff ||
+    publicLockReason === 'expired'
+  ) {
     return (
-      <BookingPublicShell showPoweredBy>
-        {org ? (
-          <PublicBookingSeo
-            name={org.name}
-            slug={org.slug}
-            city={org.city}
-            address={org.address}
-            phone={org.phone}
-            branding={org.bookingSite?.branding ?? null}
-            indexable={false}
-          />
-        ) : (
-          <PageSeo
-            title="Booking unavailable"
-            description="Online booking is not available for this business."
-            path={slug ? `/book/${slug}` : '/'}
-            robots="noindex,follow"
-          />
-        )}
-        <p className="text-center text-neutral-600">Online booking is not available for this business.</p>
-      </BookingPublicShell>
+      <BookingUnavailableLock
+        slug={slug}
+        reason={publicLockReason}
+        organization={org ?? null}
+      />
     );
   }
 
