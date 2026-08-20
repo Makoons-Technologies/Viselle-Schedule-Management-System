@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils';
 import { contactPath } from '@/lib/contact';
 import { redirectToStripeUrl } from '@/lib/safe-redirect';
 import {
+  calculateSignupCart,
   checkSlugAvailable,
   createSignupCheckout,
   fetchLiveHomepageTrial,
@@ -98,12 +99,26 @@ function getAccountFieldErrors(input: {
   return errors;
 }
 
-function CartSummary({ cart, compact }: { cart: SignupCart | null; compact?: boolean }) {
+function CartSummary({
+  cart,
+  compact,
+  loading,
+}: {
+  cart: SignupCart | null;
+  compact?: boolean;
+  loading?: boolean;
+}) {
   if (!cart) {
     return (
       <div className="text-sm text-stone-500 dark:text-stone-400">
-        <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
-        Calculating…
+        {loading ? (
+          <>
+            <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
+            Calculating…
+          </>
+        ) : (
+          'Cart unavailable'
+        )}
       </div>
     );
   }
@@ -338,7 +353,7 @@ function SignupCartPanel({
           {loadingCart && !cart ? (
             <Loader2 className="h-5 w-5 animate-spin text-stone-400" />
           ) : (
-            <CartSummary cart={cart} compact />
+            <CartSummary cart={cart} compact loading={loadingCart} />
           )}
           {loadingCart && cart && (
             <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">
@@ -383,7 +398,13 @@ export function GetStartedPage() {
     addons: SignupCatalogAddon[];
     included: { name: string; description: string };
   } | null>(null);
-  const [cart, setCart] = useState<SignupCart | null>(null);
+  const [cart, setCart] = useState<SignupCart | null>(() =>
+    calculateSignupCart({
+      tier: ['starter', 'professional', 'business'].includes(initialPlan) ? initialPlan : 'professional',
+      subdomainAddon: false,
+      customWebsiteAddon: false,
+    }),
+  );
   const [loadingCart, setLoadingCart] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -419,6 +440,7 @@ export function GetStartedPage() {
   const committedTrialCodeRef = useRef(committedTrialCode);
   const trialOfferRef = useRef(trialOffer);
   const trialValidateSeq = useRef(0);
+  const cartPreviewSeq = useRef(0);
   const formSectionRef = useRef<HTMLDivElement>(null);
   committedTrialCodeRef.current = committedTrialCode;
   trialOfferRef.current = trialOffer;
@@ -577,7 +599,16 @@ export function GetStartedPage() {
   }, [slug]);
 
   const refreshCart = useCallback(async () => {
-    setLoadingCart(true);
+    const seq = ++cartPreviewSeq.current;
+    const local = calculateSignupCart({
+      tier,
+      subdomainAddon,
+      customWebsiteAddon,
+      trialPaymentMode: activeTrialPaymentMode,
+    });
+    setCart(local);
+    // Keep Start free trial enabled: a hung/failed preview must not wipe a valid $0 trial cart.
+    setLoadingCart(false);
     try {
       const next = await previewSignupCart({
         tier,
@@ -585,17 +616,32 @@ export function GetStartedPage() {
         customWebsiteAddon,
         trialPaymentMode: activeTrialPaymentMode,
       });
+      if (seq !== cartPreviewSeq.current || !next) return;
       setCart(next);
     } catch {
-      setCart(null);
-    } finally {
-      setLoadingCart(false);
+      // Local cart already matches the API calculator for free_no_card / stripe_trial.
     }
   }, [tier, subdomainAddon, customWebsiteAddon, activeTrialPaymentMode]);
 
   useEffect(() => {
     void refreshCart();
   }, [refreshCart]);
+
+  const localCart = useMemo(
+    () =>
+      calculateSignupCart({
+        tier,
+        subdomainAddon,
+        customWebsiteAddon,
+        trialPaymentMode: activeTrialPaymentMode,
+      }),
+    [activeTrialPaymentMode, customWebsiteAddon, subdomainAddon, tier],
+  );
+  // Prefer the API cart only when it already reflects the current trial (Due today $0).
+  // Otherwise show the local $0/paid cart in the same render as BETA validating —
+  // a stale $49 cart or a failed preview must not leave Calculating / a disabled CTA.
+  const displayCart =
+    cart && cart.dueTodayCents === localCart.dueTodayCents ? cart : localCart;
 
   const bookingBase = (import.meta.env.VITE_BOOKING_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? 'https://viselle.net';
 
@@ -653,16 +699,22 @@ export function GetStartedPage() {
       case 'website':
         return true;
       case 'checkout':
-        return Boolean(cart) && !loadingCart && trialCodeStatus !== 'checking' && trialCodeStatus !== 'invalid';
+        return (
+          Boolean(displayCart) &&
+          trialCodeStatus !== 'checking' &&
+          trialCodeStatus !== 'invalid' &&
+          (isFreeTrialCheckout || !loadingCart)
+        );
       default:
         return false;
     }
   }, [
     accountErrors,
     businessName,
-    cart,
     catalog,
     currentStep,
+    displayCart,
+    isFreeTrialCheckout,
     loadingCart,
     slug,
     slugStatus,
@@ -1210,7 +1262,7 @@ export function GetStartedPage() {
             <aside>
               <SignupCartPanel
                 variant="sidebar"
-                cart={cart}
+                cart={displayCart}
                 loadingCart={loadingCart}
                 trialCode={trialCode}
                 trialCodeStatus={trialCodeStatus}
@@ -1235,7 +1287,7 @@ export function GetStartedPage() {
             </p>
             <SignupCartPanel
               variant="mobileBar"
-              cart={cart}
+              cart={displayCart}
               loadingCart={loadingCart}
               trialCode={trialCode}
               trialCodeStatus={trialCodeStatus}
