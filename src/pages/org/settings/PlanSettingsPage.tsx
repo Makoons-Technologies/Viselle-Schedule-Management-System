@@ -4,10 +4,11 @@ import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
+import { useOrgCanceled } from '@/hooks/useOrgCanceled';
 import { useOrgMustChoosePlan } from '@/hooks/useOrgMustChoosePlan';
 import { useOrgPlan } from '@/hooks/useOrgPlan';
 import { orgApi } from '@/lib/api';
-import { isOrgInActiveTrial } from '@/lib/trial';
+import { isOrgInActiveTrial, ORG_CANCELED_MESSAGE } from '@/lib/trial';
 import { LoadingState } from '@/components/common/LoadingState';
 import { SmsUnderReviewNotice } from '@/components/common/SmsUnderReviewNotice';
 import { PlanComparisonSection } from '@/components/settings/PlanComparisonSection';
@@ -21,6 +22,7 @@ export function PlanSettingsPage() {
   const { user } = useAuth();
   const { plan, isLoading } = useOrgPlan(orgId);
   const mustChoosePlan = useOrgMustChoosePlan();
+  const canceled = useOrgCanceled();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const checkoutHandled = useRef(false);
@@ -101,7 +103,17 @@ export function PlanSettingsPage() {
 
   return (
     <div className="space-y-6">
-      {mustChoosePlan && !plan.hasStripeSubscription && (
+      {canceled && (
+        <div className="rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-950 dark:border-red-800 dark:bg-red-950/40 dark:text-red-100">
+          <p className="font-semibold">Organization canceled</p>
+          <p className="mt-1">
+            {ORG_CANCELED_MESSAGE} Choose a plan below to pay with Stripe Checkout. Calendar,
+            bookings, staff, and checkout stay closed until billing is active again.
+          </p>
+        </div>
+      )}
+
+      {mustChoosePlan && !canceled && !plan.hasStripeSubscription && (
         <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
           <p className="font-semibold">Subscribe to unlock your salon</p>
           <p className="mt-1">
@@ -179,6 +191,7 @@ export function PlanSettingsPage() {
         currentTier={plan.subscriptionTier}
         hasStripeSubscription={plan.hasStripeSubscription}
         isOnActiveTrial={isOnActiveTrial}
+        isCanceled={canceled}
       />
     </div>
   );

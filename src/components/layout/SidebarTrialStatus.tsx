@@ -8,6 +8,7 @@ import { orgApi } from '@/lib/api';
 import {
   formatTrialCountdown,
   getTrialRemainingParts,
+  isOrgCanceled,
   isOrgInActiveTrial,
   isOrgTrialExpired,
 } from '@/lib/trial';
@@ -43,6 +44,7 @@ export function SidebarTrialStatus() {
   const endsAt = organization?.trialEndsAt ?? null;
   const active = !!organization && isOrgInActiveTrial(organization) && !!endsAt;
   const expired = !!organization && isOrgTrialExpired(organization);
+  const canceled = !!organization && isOrgCanceled(organization);
 
   const [nowMs, setNowMs] = useState(() => Date.now());
 
@@ -53,6 +55,14 @@ export function SidebarTrialStatus() {
   }, [active, endsAt]);
 
   if (!organization) return null;
+
+  if (canceled) {
+    return (
+      <p className="mt-1 text-xs font-medium text-red-600 dark:text-red-400" aria-live="polite">
+        Canceled
+      </p>
+    );
+  }
 
   if (expired) {
     return (

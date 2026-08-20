@@ -4,17 +4,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgMustChoosePlan } from '@/hooks/useOrgMustChoosePlan';
-import { PLAN_REQUIRED_MESSAGE } from '@/lib/trial';
-
-function isPlanGateAllowedPath(pathname: string, orgId: string): boolean {
-  const orgBase = `/orgs/${orgId}`;
-  if (pathname === `${orgBase}/settings/plan`) return true;
-  if (pathname.startsWith(`${orgBase}/settings/plan?`)) return true;
-  if (pathname === `${orgBase}/settings/account`) return true;
-  if (pathname.startsWith(`${orgBase}/settings/account/`)) return true;
-  if (pathname === `${orgBase}/billing`) return true;
-  return false;
-}
+import { isOrgBillingReactivatePath, PLAN_REQUIRED_MESSAGE } from '@/lib/trial';
 
 /**
  * Forces org_owners whose org is not on trial and has no Stripe subscription
@@ -32,7 +22,7 @@ export function PlanRequiredGuard() {
     mustChoosePlan &&
     user?.role === 'org_owner' &&
     !!orgId &&
-    !isPlanGateAllowedPath(location.pathname, orgId);
+    !isOrgBillingReactivatePath(location.pathname, orgId);
 
   useEffect(() => {
     if (shouldRedirect && !warned.current) {
