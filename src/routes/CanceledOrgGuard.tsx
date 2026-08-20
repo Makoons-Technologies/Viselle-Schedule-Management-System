@@ -12,7 +12,7 @@ import {
 } from '@/lib/trial';
 
 /**
- * Closes salon ops when the current org is Canceled. Plan / account /
+ * Closes salon ops when billing status is cancelled. Plan / account /
  * billing stay reachable so the owner can reactivate. Platform owners are
  * not hard-redirected (write-lock still applies on salon pages).
  */

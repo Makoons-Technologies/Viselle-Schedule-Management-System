@@ -61,8 +61,7 @@ export function AppointmentStatusBadge({
 }
 
 export function OrganizationStatusBadge({ status }: { status: OrganizationStatus }) {
-  const label = status === 'cancelled' ? 'Canceled' : status;
-  return <Badge variant={orgVariants[status]}>{label}</Badge>;
+  return <Badge variant={orgVariants[status]}>{status}</Badge>;
 }
 
 export function BillingStatusBadge({ status }: { status: BillingStatus }) {

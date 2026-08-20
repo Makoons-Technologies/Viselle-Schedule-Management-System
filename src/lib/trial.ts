@@ -48,13 +48,13 @@ export function orgMustChoosePlan(
 }
 
 /**
- * Canceled org (status or billing). Matches the Canceled / cancelled label
- * the app already shows. Applies to isDev grokbot orgs too — product closed,
- * billing/reactivate still allowed.
+ * Canceled label on staging is `organizations.billing_status = 'cancelled'`
+ * (two L's). Org `status` can still be `active`. Product closed; Plan/Account
+ * stay open to reactivate. Applies to isDev grokbot shops too.
  */
 export function isOrgCanceled(org: TrialOrgFields | null | undefined): boolean {
   if (!org) return false;
-  return isCanceledLabel(org.status) || isCanceledLabel(org.billingStatus);
+  return org.billingStatus === 'cancelled';
 }
 
 /** Plan / account / billing paths that stay open when the product shell is closed. */

@@ -8,12 +8,13 @@ import { isOrgCanceled } from '@/lib/trial';
 import { getPlatformContextFromPath, PLATFORM_CONTEXT } from '@/components/layout/platform-navigation';
 
 /**
- * True when the current org is Canceled (org status or billing status).
- * Uses the same organization query cache as trial/plan banners.
+ * True when the current org's billing status is cancelled (Canceled label).
+ * Org status may still be active. Uses the same organization query cache as
+ * trial/plan banners.
  *
  * Platform owners on dedicated `/platform/...` admin routes are never gated.
- * Salon ops (`/orgs/...`) still report the org's canceled state for banners
- * and write locks; hard redirects skip platform_owner.
+ * Salon ops (`/orgs/...`) still report canceled billing for banners and write
+ * locks; hard redirects skip platform_owner.
  */
 export function useOrgCanceled(): boolean {
   const { user } = useAuth();

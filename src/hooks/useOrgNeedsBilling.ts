@@ -3,7 +3,7 @@ import { useOrgMustChoosePlan } from '@/hooks/useOrgMustChoosePlan';
 
 /**
  * True when the product shell should collapse to billing/reactivate (or
- * choose-a-plan): unpaid/no-Stripe, or the org is Canceled.
+ * choose-a-plan): unpaid/no-Stripe, or billing status is cancelled.
  */
 export function useOrgNeedsBilling(): boolean {
   const mustChoosePlan = useOrgMustChoosePlan();
