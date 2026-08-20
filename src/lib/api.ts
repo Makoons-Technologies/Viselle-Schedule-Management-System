@@ -463,7 +463,9 @@ export const orgApi = {
   listAccounts: (orgId: string) =>
     apiClient.get<{ accounts: Account[] }>(`/organizations/${orgId}/accounts`).then((r) => r.data),
   createAccount: (orgId: string, data: CreateAccountInput) =>
-    apiClient.post<{ account: Account }>(`/organizations/${orgId}/accounts`, data).then((r) => r.data),
+    apiClient
+      .post<{ account: Account; emailSent?: boolean }>(`/organizations/${orgId}/accounts`, data)
+      .then((r) => r.data),
   updateAccount: (
     orgId: string,
     accountId: string,

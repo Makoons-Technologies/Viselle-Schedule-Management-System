@@ -4,5 +4,13 @@ import { useTheme } from '@/context/ThemeContext';
 export function AppToaster() {
   const { resolvedColorMode } = useTheme();
 
-  return <Toaster position="top-right" richColors theme={resolvedColorMode} />;
+  return (
+    <Toaster
+      position="top-right"
+      richColors
+      theme={resolvedColorMode}
+      toastOptions={{ className: 'z-[80]' }}
+      style={{ zIndex: 80 }}
+    />
+  );
 }
