@@ -5,39 +5,41 @@ import {
   isSubdomainBookingHost,
 } from '@/lib/subdomain-booking';
 import type {
-  FirstVisitProtectionMode,
+  BookingPaymentMode,
+  FirstVisitPaymentMode,
   Service,
   SiteTemplate,
   BookingBranding,
 } from '@/types/api';
 
-export interface PublicFirstVisitProtection {
-  enabled: boolean;
-  mode: FirstVisitProtectionMode;
+export interface PublicFirstVisitPayment {
+  mode: FirstVisitPaymentMode;
   depositCents?: number | null;
-  collectionReady?: boolean;
-}
-
-export type FirstVisitProtectionReason =
-  | 'first_visit'
-  | 'returning_client'
-  | 'protection_off'
-  | 'stripe_not_ready'
-  | 'endpoint_unavailable';
-
-export interface PublicFirstVisitStripeSession {
-  publishableKey: string;
-  stripeAccountId: string;
-  clientSecret: string;
-  intentType: 'payment' | 'setup';
-}
-
-export interface PublicFirstVisitProtectionResult {
+  /** Org policy is on and Stripe Connect can charge. Not per-guest. */
   required: boolean;
-  mode: FirstVisitProtectionMode | null;
+  stripeReady: boolean;
+  publishableKey?: string | null;
+  stripeAccountId?: string | null;
+}
+
+export type FirstVisitRequirementReason = 'first_visit' | 'returning' | 'disabled' | 'stripe_not_ready';
+
+export interface FirstVisitRequirement {
+  required: boolean;
+  mode: FirstVisitPaymentMode;
   depositCents: number | null;
-  reason: FirstVisitProtectionReason;
-  stripe: PublicFirstVisitStripeSession | null;
+  reason: FirstVisitRequirementReason;
+  publishableKey: string | null;
+  stripeAccountId: string | null;
+}
+
+export interface PublicBookingPayment {
+  bookingPaymentId: string;
+  mode: BookingPaymentMode;
+  amountCents: number | null;
+  clientSecret: string;
+  stripeAccountId: string;
+  publishableKey: string;
 }
 
 export interface PublicOrganization {
@@ -51,11 +53,7 @@ export interface PublicOrganization {
   city?: string | null;
   address?: string | null;
   phone?: string | null;
-  /**
-   * BEA-24 policy for the booking page. Absent on older APIs — treat as off.
-   * `collectionReady` is true when Stripe Connect can take the card/deposit now.
-   */
-  firstVisitProtection?: PublicFirstVisitProtection | null;
+  firstVisitPayment?: PublicFirstVisitPayment | null;
   bookingSite: {
     hostingMode: string;
     siteTemplate: SiteTemplate | null;
@@ -150,14 +148,39 @@ export interface BookAppointmentResponse {
   };
   managementToken?: string | null;
   confirmationMessage: string;
+  bookingPayment?: {
+    id: string;
+    mode: BookingPaymentMode;
+    amountCents: number | null;
+    status: string;
+  } | null;
 }
 
 export const publicBookingApi = {
-  getOrganization: (slug: string) =>
-    apiClient.get<{ organization: PublicOrganization }>(`/public/organizations/${slug}`).then((r) => r.data),
+  getOrganization: async (slug: string) => {
+    const { data } = await apiClient.get<{
+      organization?: PublicOrganization;
+      firstVisitPayment?: PublicFirstVisitPayment;
+    }>(`/public/organizations/${slug}`);
+    const organization = data.organization ?? (data as PublicOrganization);
+    return {
+      organization: {
+        ...organization,
+        firstVisitPayment: organization.firstVisitPayment ?? data.firstVisitPayment ?? null,
+      },
+    };
+  },
   getSmsConsent: (slug: string, params: { email?: string; phone?: string }) =>
     apiClient
       .get<{ smsConsented: boolean }>(`/public/organizations/${slug}/sms-consent`, { params })
+      .then((r) => r.data),
+  getFirstVisitRequirement: (slug: string, params: { email?: string; phone?: string }) =>
+    apiClient
+      .get<FirstVisitRequirement>(`/public/organizations/${slug}/first-visit-requirement`, { params })
+      .then((r) => r.data),
+  createBookingPayment: (slug: string, data: { email?: string; phone?: string }) =>
+    apiClient
+      .post<PublicBookingPayment>(`/public/organizations/${slug}/booking-payments`, data)
       .then((r) => r.data),
   getServices: (slug: string) =>
     apiClient.get<{ services: Service[] }>(`/public/organizations/${slug}/services`).then((r) => r.data),
@@ -181,21 +204,6 @@ export const publicBookingApi = {
       .get<{ availableSlots: PublicSlot[] }>(path, { params: query })
       .then((r) => r.data);
   },
-  /**
-   * Creates a PaymentIntent (deposit) or SetupIntent (card-on-file) when this
-   * customer is a first visit and the org has protection enabled.
-   * Staging API: POST /public/organizations/:slug/first-visit-protection
-   */
-  createFirstVisitProtection: (
-    slug: string,
-    data: {
-      serviceId: string;
-      customer: { firstName: string; lastName: string; email?: string; phone?: string };
-    },
-  ) =>
-    apiClient
-      .post<PublicFirstVisitProtectionResult>(`/public/organizations/${slug}/first-visit-protection`, data)
-      .then((r) => r.data),
   book: (
     slug: string,
     data: {
@@ -206,8 +214,7 @@ export const publicBookingApi = {
       timezone: string;
       appointmentNotes?: string;
       smsOptIn?: boolean;
-      paymentIntentId?: string;
-      setupIntentId?: string;
+      bookingPaymentId?: string;
     },
   ) =>
     apiClient

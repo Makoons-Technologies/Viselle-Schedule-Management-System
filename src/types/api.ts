@@ -108,14 +108,17 @@ export interface ImpersonateOwnerResponse {
   organization: { id: string; name: string };
 }
 
-/** How a new client holds their first public booking. Not POS, gift cards, or memberships. */
-export type FirstVisitProtectionMode = 'deposit' | 'card_on_file';
+/** Public-booking first-visit no-show protection. Not POS, gift cards, or memberships. */
+export type FirstVisitPaymentMode = 'off' | 'deposit' | 'card_on_file';
+export type BookingPaymentMode = 'deposit' | 'card_on_file';
 
-export interface FirstVisitProtection {
-  enabled: boolean;
-  mode: FirstVisitProtectionMode;
-  /** Fixed deposit in cents when `mode` is `deposit`. Null for card-on-file. */
+/** Sibling on GET/PATCH `/organizations/:id` and GET `…/stripe-connect/status`. */
+export interface OwnerFirstVisitPayment {
+  mode: FirstVisitPaymentMode;
   depositCents: number | null;
+  stripeReady: boolean;
+  stripeAccountId: string | null;
+  publishableKey: string | null;
 }
 
 export interface Organization {
@@ -151,12 +154,6 @@ export interface Organization {
   city?: string | null;
   address?: string | null;
   phone?: string | null;
-  /**
-   * BEA-24 first-visit no-show protection on the public booking page.
-   * Nested object on GET/PATCH `/organizations/:id` (and owner GET).
-   * Absent on older APIs — treat as off.
-   */
-  firstVisitProtection?: FirstVisitProtection | null;
   trialEndsAt?: string | null;
   trialCampaignId?: string | null;
   referredByOrganizationId?: string | null;
@@ -481,6 +478,7 @@ export interface StripeConnectStatus {
   publishableKey: string | null;
   chargesEnabled: boolean;
   onboardingComplete: boolean;
+  firstVisitPayment?: OwnerFirstVisitPayment;
 }
 
 export interface CheckoutLineInput {

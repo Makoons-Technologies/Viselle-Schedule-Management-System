@@ -1,14 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { ApiError, orgApi } from '@/lib/api';
+import { orgApi } from '@/lib/api';
 import {
   DEFAULT_FIRST_VISIT_DEPOSIT_CENTS,
   depositDollarsInput,
-  FIRST_VISIT_PROTECTION_API_HINT,
-  normalizeFirstVisitProtection,
   parseDepositDollars,
-  protectionEquals,
+  readOwnerFirstVisitPayment,
 } from '@/lib/first-visit-protection';
 import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { TRIAL_LOCKED_MESSAGE } from '@/lib/trial';
@@ -18,11 +16,12 @@ import { TrialLockedControl } from '@/components/common/TrialLockedControl';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import type { FirstVisitProtection, FirstVisitProtectionMode } from '@/types/api';
+import type { BookingPaymentMode, FirstVisitPaymentMode, OwnerFirstVisitPayment } from '@/types/api';
 
 interface FirstVisitProtectionSectionProps {
   orgId: string;
   stripeReady: boolean;
+  firstVisitPayment?: OwnerFirstVisitPayment | null;
 }
 
 function modeButtonClass(selected: boolean) {
@@ -34,76 +33,73 @@ function modeButtonClass(selected: boolean) {
   );
 }
 
-export function FirstVisitProtectionSection({ orgId, stripeReady }: FirstVisitProtectionSectionProps) {
+export function FirstVisitProtectionSection({
+  orgId,
+  stripeReady,
+  firstVisitPayment,
+}: FirstVisitProtectionSectionProps) {
   const trialExpired = useOrgWriteLocked();
   const queryClient = useQueryClient();
   const [depositInput, setDepositInput] = useState(depositDollarsInput(DEFAULT_FIRST_VISIT_DEPOSIT_CENTS));
 
-  const { data } = useQuery({
+  const { data: orgData } = useQuery({
     queryKey: ['organization', orgId],
     queryFn: () => orgApi.getOrganization(orgId),
-    enabled: !!orgId,
+    enabled: !!orgId && !firstVisitPayment,
   });
 
-  const protection = normalizeFirstVisitProtection(data?.organization.firstVisitProtection);
+  const payment = readOwnerFirstVisitPayment(firstVisitPayment ?? orgData?.firstVisitPayment);
+  const enabled = payment.mode !== 'off';
+  const activeMode: BookingPaymentMode = payment.mode === 'card_on_file' ? 'card_on_file' : 'deposit';
 
   useEffect(() => {
-    setDepositInput(depositDollarsInput(protection.depositCents));
-  }, [protection.depositCents, data?.organization.updatedAt]);
+    setDepositInput(depositDollarsInput(payment.depositCents));
+  }, [payment.depositCents]);
 
   const updateMutation = useMutation({
-    mutationFn: (next: FirstVisitProtection) => orgApi.updateOrganization(orgId, { firstVisitProtection: next }),
+    mutationFn: (next: { mode: FirstVisitPaymentMode; depositCents: number | null }) =>
+      orgApi.updateOrganization(orgId, {
+        firstVisitPaymentMode: next.mode,
+        firstVisitDepositCents: next.mode === 'deposit' ? next.depositCents : null,
+      }),
     onSuccess: (result, next) => {
       queryClient.setQueryData(['organization', orgId], result);
       queryClient.invalidateQueries({ queryKey: ['organization', orgId] });
-      if (!protectionEquals(next, result.organization.firstVisitProtection)) {
-        toast.error(FIRST_VISIT_PROTECTION_API_HINT);
+      queryClient.invalidateQueries({ queryKey: ['stripe-connect', orgId] });
+      if (!result.firstVisitPayment || result.firstVisitPayment.mode !== next.mode) {
+        toast.error('Could not confirm first-visit payment was saved. Refresh and try again.');
         return;
       }
       toast.success('First-visit protection saved');
     },
-    onError: (err: Error) => {
-      if (err instanceof ApiError && (err.status === 400 || err.status === 422)) {
-        toast.error(FIRST_VISIT_PROTECTION_API_HINT);
-        return;
-      }
-      toast.error(err.message);
-    },
+    onError: (err: Error) => toast.error(err.message),
   });
 
-  const save = (patch: Partial<FirstVisitProtection>) => {
-    const next = normalizeFirstVisitProtection({ ...protection, ...patch });
-    if (next.enabled && !stripeReady) {
+  const save = (mode: FirstVisitPaymentMode, depositCents = payment.depositCents) => {
+    if (mode !== 'off' && !stripeReady) {
       toast.error('Connect Stripe before requiring a deposit or card on file.');
       return;
     }
-    if (next.enabled && next.mode === 'deposit') {
-      const cents = next.depositCents ?? DEFAULT_FIRST_VISIT_DEPOSIT_CENTS;
-      if (cents < 500) {
-        toast.error('Deposit must be at least $5.00');
-        return;
-      }
+    const cents = depositCents ?? DEFAULT_FIRST_VISIT_DEPOSIT_CENTS;
+    if (mode === 'deposit' && (cents < 100 || cents > 100_000)) {
+      toast.error('Deposit must be between $1.00 and $1,000.00');
+      return;
     }
-    updateMutation.mutate(next);
-  };
-
-  const setMode = (mode: FirstVisitProtectionMode) => {
-    if (mode === protection.mode) return;
-    save({ mode });
+    updateMutation.mutate({ mode, depositCents: mode === 'deposit' ? cents : null });
   };
 
   const commitDeposit = () => {
     const cents = parseDepositDollars(depositInput);
     if (cents == null) {
-      toast.error('Enter a deposit between $5.00 and $500.00');
-      setDepositInput(depositDollarsInput(protection.depositCents));
+      toast.error('Enter a deposit between $1.00 and $1,000.00');
+      setDepositInput(depositDollarsInput(payment.depositCents));
       return;
     }
-    if (cents === (protection.depositCents ?? DEFAULT_FIRST_VISIT_DEPOSIT_CENTS)) {
-      setDepositInput(depositDollarsInput(cents));
+    setDepositInput(depositDollarsInput(cents));
+    if (!enabled || cents === (payment.depositCents ?? DEFAULT_FIRST_VISIT_DEPOSIT_CENTS)) {
       return;
     }
-    save({ depositCents: cents });
+    save('deposit', cents);
   };
 
   return (
@@ -123,9 +119,11 @@ export function FirstVisitProtectionSection({ orgId, stripeReady }: FirstVisitPr
           </div>
           <TrialLockedControl locked={trialExpired}>
             <Switch
-              checked={protection.enabled}
-              disabled={trialExpired || updateMutation.isPending || (!stripeReady && !protection.enabled)}
-              onCheckedChange={(enabled) => save({ enabled })}
+              checked={enabled}
+              disabled={trialExpired || updateMutation.isPending || (!stripeReady && !enabled)}
+              onCheckedChange={(nextEnabled) =>
+                save(nextEnabled ? activeMode : 'off', payment.depositCents)
+              }
             />
           </TrialLockedControl>
         </div>
@@ -138,21 +136,31 @@ export function FirstVisitProtectionSection({ orgId, stripeReady }: FirstVisitPr
         )}
 
         <div className="flex gap-2">
-          <button type="button" className={modeButtonClass(protection.mode === 'deposit')} onClick={() => setMode('deposit')}>
+          <button
+            type="button"
+            className={modeButtonClass(activeMode === 'deposit')}
+            onClick={() => {
+              if (enabled && activeMode === 'deposit') return;
+              save('deposit');
+            }}
+          >
             <p className="font-medium">Deposit</p>
             <p className={cn('mt-0.5 text-xs', sectionMutedClass)}>Charge a fixed amount at book. Applied to the visit if they show.</p>
           </button>
           <button
             type="button"
-            className={modeButtonClass(protection.mode === 'card_on_file')}
-            onClick={() => setMode('card_on_file')}
+            className={modeButtonClass(activeMode === 'card_on_file')}
+            onClick={() => {
+              if (enabled && activeMode === 'card_on_file') return;
+              save('card_on_file');
+            }}
           >
             <p className="font-medium">Card on file</p>
             <p className={cn('mt-0.5 text-xs', sectionMutedClass)}>Save a card to hold the appointment. Charge only if they no-show.</p>
           </button>
         </div>
 
-        {protection.mode === 'deposit' && (
+        {activeMode === 'deposit' && (
           <div className="max-w-xs">
             <Label htmlFor="first-visit-deposit">Deposit amount</Label>
             <div className="relative mt-1">
@@ -167,7 +175,7 @@ export function FirstVisitProtectionSection({ orgId, stripeReady }: FirstVisitPr
                 disabled={trialExpired}
               />
             </div>
-            <p className={cn('mt-1', helperTextClass)}>$5.00–$500.00. Charged when a first-time client books.</p>
+            <p className={cn('mt-1', helperTextClass)}>$1.00–$1,000.00. Charged when a first-time client books.</p>
           </div>
         )}
       </fieldset>

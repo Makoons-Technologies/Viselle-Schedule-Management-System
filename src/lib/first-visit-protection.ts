@@ -1,38 +1,32 @@
-import type { FirstVisitProtection, FirstVisitProtectionMode } from '@/types/api';
+import type { BookingPaymentMode, FirstVisitPaymentMode, OwnerFirstVisitPayment } from '@/types/api';
 import { dollarsToCents, formatCurrency } from '@/lib/utils';
 
 export const DEFAULT_FIRST_VISIT_DEPOSIT_CENTS = 2500;
-export const MIN_FIRST_VISIT_DEPOSIT_CENTS = 500;
-export const MAX_FIRST_VISIT_DEPOSIT_CENTS = 50_000;
+export const MIN_FIRST_VISIT_DEPOSIT_CENTS = 100;
+export const MAX_FIRST_VISIT_DEPOSIT_CENTS = 100_000;
 
-export const FIRST_VISIT_PROTECTION_API_HINT =
-  'Staging API does not persist first-visit protection yet. Beauty-Backend-API needs PATCH /organizations/:id { firstVisitProtection } and GET/POST /public/organizations/:slug firstVisitProtection.';
-
-export function normalizeFirstVisitProtection(
-  value: FirstVisitProtection | null | undefined,
-): FirstVisitProtection {
+export function readOwnerFirstVisitPayment(
+  value: OwnerFirstVisitPayment | null | undefined,
+): OwnerFirstVisitPayment {
   if (!value) {
     return {
-      enabled: false,
-      mode: 'deposit',
+      mode: 'off',
       depositCents: DEFAULT_FIRST_VISIT_DEPOSIT_CENTS,
+      stripeReady: false,
+      stripeAccountId: null,
+      publishableKey: null,
     };
   }
   return {
-    enabled: Boolean(value.enabled),
-    mode: value.mode === 'card_on_file' ? 'card_on_file' : 'deposit',
+    mode: value.mode === 'deposit' || value.mode === 'card_on_file' ? value.mode : 'off',
     depositCents:
-      value.mode === 'card_on_file'
-        ? value.depositCents ?? null
-        : value.depositCents && value.depositCents > 0
-          ? value.depositCents
-          : DEFAULT_FIRST_VISIT_DEPOSIT_CENTS,
+      value.mode === 'deposit' && value.depositCents && value.depositCents > 0
+        ? value.depositCents
+        : value.depositCents ?? DEFAULT_FIRST_VISIT_DEPOSIT_CENTS,
+    stripeReady: Boolean(value.stripeReady),
+    stripeAccountId: value.stripeAccountId ?? null,
+    publishableKey: value.publishableKey ?? null,
   };
-}
-
-export function protectionEquals(a: FirstVisitProtection, b: FirstVisitProtection | null | undefined): boolean {
-  if (!b) return false;
-  return a.enabled === b.enabled && a.mode === b.mode && (a.depositCents ?? null) === (b.depositCents ?? null);
 }
 
 export function parseDepositDollars(raw: string): number | null {
@@ -50,14 +44,17 @@ export function depositDollarsInput(cents: number | null | undefined): string {
   return (value / 100).toFixed(2);
 }
 
-export function firstVisitProtectionHeadline(mode: FirstVisitProtectionMode, depositCents?: number | null): string {
+export function firstVisitPaymentHeadline(mode: FirstVisitPaymentMode, depositCents?: number | null): string {
   if (mode === 'card_on_file') return 'Card required to hold a first visit';
-  return depositCents
-    ? `${formatCurrency(depositCents)} deposit due for a first visit`
-    : 'Deposit due for a first visit';
+  if (mode === 'deposit') {
+    return depositCents
+      ? `${formatCurrency(depositCents)} deposit due for a first visit`
+      : 'Deposit due for a first visit';
+  }
+  return '';
 }
 
-export function firstVisitProtectionClientCopy(mode: FirstVisitProtectionMode, depositCents?: number | null): string {
+export function firstVisitPaymentClientCopy(mode: BookingPaymentMode, depositCents?: number | null): string {
   if (mode === 'card_on_file') {
     return 'New clients save a card to hold this appointment. The studio can charge a no-show fee if you miss it. Returning clients skip this step.';
   }
@@ -66,7 +63,7 @@ export function firstVisitProtectionClientCopy(mode: FirstVisitProtectionMode, d
 }
 
 export function firstVisitBookLabel(
-  mode: FirstVisitProtectionMode,
+  mode: BookingPaymentMode,
   depositCents?: number | null,
   pending?: boolean,
 ): string {
@@ -75,7 +72,7 @@ export function firstVisitBookLabel(
   return depositCents ? `Pay ${formatCurrency(depositCents)} and book` : 'Pay deposit and book';
 }
 
-export function firstVisitConfirmCopy(mode: FirstVisitProtectionMode, depositCents?: number | null): string {
+export function firstVisitConfirmCopy(mode: BookingPaymentMode, depositCents?: number | null): string {
   if (mode === 'card_on_file') {
     return 'Your card is on file to hold this first visit.';
   }
@@ -84,7 +81,6 @@ export function firstVisitConfirmCopy(mode: FirstVisitProtectionMode, depositCen
     : 'Your deposit is paid and will apply to this visit.';
 }
 
-export function intentIdFromClientSecret(clientSecret: string): string {
-  const [id] = clientSecret.split('_secret_');
-  return id ?? clientSecret;
+export function intentTypeForMode(mode: BookingPaymentMode): 'payment' | 'setup' {
+  return mode === 'card_on_file' ? 'setup' : 'payment';
 }

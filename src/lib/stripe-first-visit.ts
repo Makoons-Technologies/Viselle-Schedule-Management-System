@@ -1,5 +1,9 @@
 import type { Stripe, StripeElements } from '@stripe/stripe-js';
-import { intentIdFromClientSecret } from '@/lib/first-visit-protection';
+
+function intentIdFromClientSecret(clientSecret: string): string {
+  const [id] = clientSecret.split('_secret_');
+  return id ?? clientSecret;
+}
 
 export type FirstVisitIntentType = 'payment' | 'setup';
 

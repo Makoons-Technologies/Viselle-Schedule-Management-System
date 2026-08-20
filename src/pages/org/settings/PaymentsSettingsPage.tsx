@@ -170,7 +170,11 @@ export function PaymentsSettingsPage() {
         </Panel>
       )}
 
-      <FirstVisitProtectionSection orgId={orgId} stripeReady={Boolean(ready)} />
+      <FirstVisitProtectionSection
+        orgId={orgId}
+        stripeReady={Boolean(ready)}
+        firstVisitPayment={data?.firstVisitPayment}
+      />
     </div>
   );
 }
