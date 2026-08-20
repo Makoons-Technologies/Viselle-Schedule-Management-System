@@ -35,7 +35,7 @@ function AppLayoutContent() {
           <MobileSidebar />
           <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
             <Topbar />
-            <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain p-4 sm:px-6 sm:pt-6 desktop-shell:pb-6">
+            <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain touch-pan-y p-4 sm:px-6 sm:pt-6 desktop-shell:pb-6 [-webkit-overflow-scrolling:touch]">
               <Outlet />
             </main>
           </div>

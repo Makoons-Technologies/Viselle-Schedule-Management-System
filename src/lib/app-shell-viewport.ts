@@ -6,6 +6,10 @@ export const FIRST_SHELL_SETTLE_DELAYS_MS = [0, 16, 32, 64, 128, 250, 500, 1000]
 
 const FIRST_SHELL_SESSION_KEY = 'viselle-pwa-first-shell-viewport';
 
+/** Largest keyboard-closed height seen this orientation. Survives iOS shrinking 100vh after the keyboard. */
+let rememberedClosedHeightPx = 0;
+let vhProbe: HTMLDivElement | null = null;
+
 export function isStandaloneWebApp(): boolean {
   if (typeof window === 'undefined') return false;
   const iosStandalone = Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
@@ -32,12 +36,53 @@ export function measureBrowserAppHeight(): number {
   return Math.max(inner, Math.round(vv.height + vv.offsetTop));
 }
 
-/** CSS value for --app-height. iOS standalone uses 100vh; browser mode uses measured pixels. */
+/** Live CSS 100vh in pixels. Can shrink after the iOS keyboard even when the screen did not. */
+export function measureCss100vh(): number {
+  if (typeof document === 'undefined' || !document.body) return 0;
+  if (!vhProbe) {
+    vhProbe = document.createElement('div');
+    vhProbe.setAttribute('aria-hidden', 'true');
+    vhProbe.style.cssText =
+      'position:fixed;top:0;left:0;width:0;height:100vh;visibility:hidden;pointer-events:none;';
+    document.body.appendChild(vhProbe);
+  }
+  return vhProbe.offsetHeight;
+}
+
+export function resetRememberedAppHeight(): void {
+  rememberedClosedHeightPx = 0;
+}
+
+export function getRememberedClosedHeightPx(): number {
+  return rememberedClosedHeightPx;
+}
+
+function observeClosedHeight(px: number): void {
+  if (px > rememberedClosedHeightPx) {
+    rememberedClosedHeightPx = px;
+  }
+}
+
+/** CSS value for --app-height. iOS standalone keeps the pre-keyboard floor so the tab bar does not lift. */
 export function getAppHeightCSSValue(): string {
-  if (isIosStandaloneWebApp() && !isKeyboardOpen()) {
+  const measured = measureBrowserAppHeight();
+  const keyboard = isKeyboardOpen();
+
+  if (keyboard) {
+    return `${measured}px`;
+  }
+
+  const cssVh = measureCss100vh();
+  observeClosedHeight(Math.max(measured, cssVh));
+
+  if (isIosStandaloneWebApp()) {
+    if (rememberedClosedHeightPx > 0) {
+      return `max(100vh, ${rememberedClosedHeightPx}px)`;
+    }
     return '100vh';
   }
-  return `${measureBrowserAppHeight()}px`;
+
+  return `${measured}px`;
 }
 
 export function setAppHeightCSSProperty(root: HTMLElement = document.documentElement): void {
