@@ -8,6 +8,7 @@ import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { cn } from '@/lib/utils';
 import { redirectToStripeUrl } from '@/lib/safe-redirect';
+import { FirstVisitProtectionSection } from '@/components/settings/FirstVisitProtectionSection';
 import { Panel, sectionMutedClass } from '@/components/common/Panel';
 import { LoadingState } from '@/components/common/LoadingState';
 import { TrialLockedControl } from '@/components/common/TrialLockedControl';
@@ -168,6 +169,8 @@ export function PaymentsSettingsPage() {
           </div>
         </Panel>
       )}
+
+      <FirstVisitProtectionSection orgId={orgId} stripeReady={Boolean(ready)} />
     </div>
   );
 }

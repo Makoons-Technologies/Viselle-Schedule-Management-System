@@ -4,7 +4,41 @@ import {
   getSubdomainBookingUrl,
   isSubdomainBookingHost,
 } from '@/lib/subdomain-booking';
-import type { Service, SiteTemplate, BookingBranding } from '@/types/api';
+import type {
+  FirstVisitProtectionMode,
+  Service,
+  SiteTemplate,
+  BookingBranding,
+} from '@/types/api';
+
+export interface PublicFirstVisitProtection {
+  enabled: boolean;
+  mode: FirstVisitProtectionMode;
+  depositCents?: number | null;
+  collectionReady?: boolean;
+}
+
+export type FirstVisitProtectionReason =
+  | 'first_visit'
+  | 'returning_client'
+  | 'protection_off'
+  | 'stripe_not_ready'
+  | 'endpoint_unavailable';
+
+export interface PublicFirstVisitStripeSession {
+  publishableKey: string;
+  stripeAccountId: string;
+  clientSecret: string;
+  intentType: 'payment' | 'setup';
+}
+
+export interface PublicFirstVisitProtectionResult {
+  required: boolean;
+  mode: FirstVisitProtectionMode | null;
+  depositCents: number | null;
+  reason: FirstVisitProtectionReason;
+  stripe: PublicFirstVisitStripeSession | null;
+}
 
 export interface PublicOrganization {
   id: string;
@@ -17,6 +51,11 @@ export interface PublicOrganization {
   city?: string | null;
   address?: string | null;
   phone?: string | null;
+  /**
+   * BEA-24 policy for the booking page. Absent on older APIs — treat as off.
+   * `collectionReady` is true when Stripe Connect can take the card/deposit now.
+   */
+  firstVisitProtection?: PublicFirstVisitProtection | null;
   bookingSite: {
     hostingMode: string;
     siteTemplate: SiteTemplate | null;
@@ -142,6 +181,21 @@ export const publicBookingApi = {
       .get<{ availableSlots: PublicSlot[] }>(path, { params: query })
       .then((r) => r.data);
   },
+  /**
+   * Creates a PaymentIntent (deposit) or SetupIntent (card-on-file) when this
+   * customer is a first visit and the org has protection enabled.
+   * Staging API: POST /public/organizations/:slug/first-visit-protection
+   */
+  createFirstVisitProtection: (
+    slug: string,
+    data: {
+      serviceId: string;
+      customer: { firstName: string; lastName: string; email?: string; phone?: string };
+    },
+  ) =>
+    apiClient
+      .post<PublicFirstVisitProtectionResult>(`/public/organizations/${slug}/first-visit-protection`, data)
+      .then((r) => r.data),
   book: (
     slug: string,
     data: {
@@ -152,6 +206,8 @@ export const publicBookingApi = {
       timezone: string;
       appointmentNotes?: string;
       smsOptIn?: boolean;
+      paymentIntentId?: string;
+      setupIntentId?: string;
     },
   ) =>
     apiClient

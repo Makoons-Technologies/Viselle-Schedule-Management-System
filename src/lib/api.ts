@@ -393,8 +393,34 @@ export const orgApi = {
     apiClient
       .patch<{ staffPermissions: StaffPermissions }>(`/organizations/${orgId}/staff-permissions`, data)
       .then((r) => r.data),
-  updateOrganization: (orgId: string, data: Pick<Partial<Organization>, 'name' | 'slug' | 'publicBookingEnabled' | 'batchCheckoutEnabled' | 'emailRemindersOptIn' | 'smsRemindersOptIn' | 'emailReminderHoursBefore' | 'smsReminderHoursBefore' | 'confirmationRequestsOptIn' | 'confirmationDaysBefore' | 'staffEmailRemindersOptIn' | 'staffSmsRemindersOptIn' | 'staffPushRemindersOptIn' | 'staffReminderHoursBefore' | 'lowStockAlertsOptIn' | 'lowStockAlertEmail' | 'lowStockAlertSms' | 'lowStockAlertPush' | 'city' | 'address' | 'phone'>) =>
-    apiClient.patch<{ organization: Organization }>(`/organizations/${orgId}`, data).then((r) => r.data),
+  updateOrganization: (
+    orgId: string,
+    data: Pick<
+      Partial<Organization>,
+      | 'name'
+      | 'slug'
+      | 'publicBookingEnabled'
+      | 'batchCheckoutEnabled'
+      | 'emailRemindersOptIn'
+      | 'smsRemindersOptIn'
+      | 'emailReminderHoursBefore'
+      | 'smsReminderHoursBefore'
+      | 'confirmationRequestsOptIn'
+      | 'confirmationDaysBefore'
+      | 'staffEmailRemindersOptIn'
+      | 'staffSmsRemindersOptIn'
+      | 'staffPushRemindersOptIn'
+      | 'staffReminderHoursBefore'
+      | 'lowStockAlertsOptIn'
+      | 'lowStockAlertEmail'
+      | 'lowStockAlertSms'
+      | 'lowStockAlertPush'
+      | 'city'
+      | 'address'
+      | 'phone'
+      | 'firstVisitProtection'
+    >,
+  ) => apiClient.patch<{ organization: Organization }>(`/organizations/${orgId}`, data).then((r) => r.data),
   deleteOrganization: (orgId: string) =>
     apiClient.delete<LeaveOrDeleteOrgResponse>(`/organizations/${orgId}`).then((r) => r.data),
   getWebsite: (orgId: string) =>

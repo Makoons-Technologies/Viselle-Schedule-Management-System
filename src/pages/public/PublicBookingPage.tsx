@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { BookingDateChips, buildDateRange } from '@/components/booking/BookingDateChips';
+import { FirstVisitProtectionCard } from '@/components/booking/FirstVisitProtectionCard';
 import {
   BookingPageTitle,
   BookingPublicShell,
@@ -17,7 +18,15 @@ import { bookingChoiceClass, bookingTheme } from '@/components/booking/booking-t
 import { LoadingState } from '@/components/common/LoadingState';
 import { PageSeo } from '@/components/seo/PageSeo';
 import { SmsOptInCheckbox } from '@/components/booking/SmsOptInCheckbox';
+import { ApiError } from '@/lib/api';
+import {
+  firstVisitBookLabel,
+  firstVisitConfirmCopy,
+  firstVisitProtectionHeadline,
+} from '@/lib/first-visit-protection';
 import { publicBookingApi, getManageBookingUrl } from '@/lib/public-booking';
+import type { FirstVisitCardSession } from '@/lib/stripe-first-visit';
+import { createFirstVisitCardSession } from '@/lib/stripe-first-visit';
 import { SMS_UNDER_REVIEW_OPT_IN_NOTE } from '@/lib/sms';
 import { centsToDollars, filterFutureAppointmentSlots, formatDateTime, appointmentScheduleFromIso, cn } from '@/lib/utils';
 import type { Service, BookingBranding } from '@/types/api';
@@ -44,6 +53,10 @@ export function PublicBookingPage({ slugOverride }: PublicBookingPageProps = {})
   const [notes, setNotes] = useState('');
   const [confirmed, setConfirmed] = useState(false);
   const [managementToken, setManagementToken] = useState<string | null>(null);
+  const [cardSession, setCardSession] = useState<FirstVisitCardSession | null>(null);
+  const [cardSessionError, setCardSessionError] = useState<string | null>(null);
+  const [confirmingCard, setConfirmingCard] = useState(false);
+  const [protectionCollected, setProtectionCollected] = useState(false);
 
   const orgQuery = useQuery({
     queryKey: ['public-org', slug],
@@ -87,8 +100,92 @@ export function PublicBookingPage({ slugOverride }: PublicBookingPageProps = {})
     enabled: !!slug && !!serviceId && !!accountId && (step === 'schedule' || step === 'details'),
   });
 
+  const protectionPolicy = orgQuery.data?.organization.firstVisitProtection;
+  const protectionEnabled = Boolean(protectionPolicy?.enabled);
+  const identityReady = Boolean(
+    customer.firstName.trim() && customer.lastName.trim() && customer.email.trim(),
+  );
+
+  const protectionQuery = useQuery({
+    queryKey: [
+      'public-first-visit-protection',
+      slug,
+      serviceId,
+      customer.firstName.trim(),
+      customer.lastName.trim(),
+      customer.email.trim(),
+      customer.phone.trim(),
+    ],
+    queryFn: async () => {
+      try {
+        return await publicBookingApi.createFirstVisitProtection(slug, {
+          serviceId: serviceId!,
+          customer: {
+            firstName: customer.firstName.trim(),
+            lastName: customer.lastName.trim(),
+            email: customer.email.trim() || undefined,
+            phone: customer.phone.trim() || undefined,
+          },
+        });
+      } catch (err) {
+        if (err instanceof ApiError && (err.status === 404 || err.status === 501)) {
+          return {
+            required: false,
+            mode: protectionPolicy?.mode ?? null,
+            depositCents: protectionPolicy?.depositCents ?? null,
+            reason: 'endpoint_unavailable' as const,
+            stripe: null,
+          };
+        }
+        throw err;
+      }
+    },
+    enabled: step === 'details' && protectionEnabled && !!slug && !!serviceId && identityReady,
+    staleTime: 60_000,
+    retry: false,
+  });
+
+  useEffect(() => {
+    const stripe = protectionQuery.data?.stripe;
+    if (!stripe) {
+      setCardSession(null);
+      setCardSessionError(null);
+      return;
+    }
+
+    let cancelled = false;
+    let session: FirstVisitCardSession | null = null;
+    setCardSessionError(null);
+    void createFirstVisitCardSession({
+      clientSecret: stripe.clientSecret,
+      intentType: stripe.intentType,
+      stripeAccountId: stripe.stripeAccountId,
+      publishableKey: stripe.publishableKey,
+    })
+      .then((next) => {
+        if (cancelled) {
+          next.destroy();
+          return;
+        }
+        session = next;
+        setCardSession(next);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setCardSession(null);
+          setCardSessionError(err instanceof Error ? err.message : 'Could not load card form');
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      session?.destroy();
+      setCardSession(null);
+    };
+  }, [protectionQuery.data?.stripe?.clientSecret, protectionQuery.data?.stripe?.intentType, protectionQuery.data?.stripe?.stripeAccountId, protectionQuery.data?.stripe?.publishableKey]);
+
   const bookMutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (intents?: { paymentIntentId?: string; setupIntentId?: string }) =>
       publicBookingApi.book(slug, {
         accountId: slot!.accountId,
         serviceId: serviceId!,
@@ -102,6 +199,8 @@ export function PublicBookingPage({ slugOverride }: PublicBookingPageProps = {})
         timezone: TIMEZONE,
         appointmentNotes: notes || undefined,
         smsOptIn: smsOptIn || undefined,
+        paymentIntentId: intents?.paymentIntentId,
+        setupIntentId: intents?.setupIntentId,
       }),
     onSuccess: (data) => {
       setManagementToken(data.managementToken ?? null);
@@ -110,6 +209,26 @@ export function PublicBookingPage({ slugOverride }: PublicBookingPageProps = {})
     },
     onError: (err: Error) => toast.error(err.message),
   });
+
+  const submitBooking = async () => {
+    if (cardSession) {
+      setConfirmingCard(true);
+      try {
+        const confirmedIntent = await cardSession.confirm();
+        setProtectionCollected(true);
+        bookMutation.mutate({
+          paymentIntentId: confirmedIntent.intentType === 'payment' ? confirmedIntent.intentId : undefined,
+          setupIntentId: confirmedIntent.intentType === 'setup' ? confirmedIntent.intentId : undefined,
+        });
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Card confirmation failed');
+      } finally {
+        setConfirmingCard(false);
+      }
+      return;
+    }
+    bookMutation.mutate(undefined);
+  };
 
   const phoneTrimmed = customer.phone.trim();
   const emailTrimmed = customer.email.trim();
@@ -216,6 +335,11 @@ export function PublicBookingPage({ slugOverride }: PublicBookingPageProps = {})
           <CheckCircle2 className={cn('mb-4 h-14 w-14', theme.accent)} />
           <h1 className="text-xl font-bold text-neutral-900">You&apos;re booked!</h1>
           <p className="mt-2 text-sm text-neutral-600">{formatDateTime(slot!.startTime)}</p>
+          {protectionCollected && protectionPolicy?.enabled ? (
+            <p className="mt-2 max-w-sm text-sm text-neutral-600">
+              {firstVisitConfirmCopy(protectionPolicy.mode, protectionPolicy.depositCents)}
+            </p>
+          ) : null}
           {manageUrl ? (
             <div className="mt-6 w-full max-w-sm space-y-3">
               <a
@@ -268,6 +392,11 @@ export function PublicBookingPage({ slugOverride }: PublicBookingPageProps = {})
       {step === 'service' && (
         <>
           <BookingPageTitle siteTemplate={siteTemplate} branding={branding}>Book appointment</BookingPageTitle>
+          {protectionEnabled && protectionPolicy ? (
+            <p className={cn('mb-4 text-sm', theme.mutedText)}>
+              {firstVisitProtectionHeadline(protectionPolicy.mode, protectionPolicy.depositCents)}
+            </p>
+          ) : null}
           <BookingSectionLabel siteTemplate={siteTemplate} branding={branding}>1. Choose a service</BookingSectionLabel>
           {servicesQuery.isLoading ? (
             <LoadingState />
@@ -466,6 +595,23 @@ export function PublicBookingPage({ slugOverride }: PublicBookingPageProps = {})
                 )}
               </div>
             )}
+            {protectionEnabled && protectionPolicy && protectionQuery.data?.reason !== 'returning_client' ? (
+              <FirstVisitProtectionCard
+                mode={protectionQuery.data?.mode ?? protectionPolicy.mode}
+                depositCents={protectionQuery.data?.depositCents ?? protectionPolicy.depositCents}
+                theme={theme}
+                session={cardSession}
+                sessionError={
+                  cardSessionError ??
+                  (protectionQuery.error instanceof Error ? protectionQuery.error.message : null)
+                }
+                sessionLoading={identityReady && protectionQuery.isLoading}
+                collectionReady={protectionPolicy.collectionReady}
+              />
+            ) : null}
+            {protectionEnabled && !customer.email.trim() ? (
+              <p className="text-xs text-red-600">Email is required so we can tell if this is a first visit.</p>
+            ) : null}
             <div>
               <label className={cn('mb-1.5 block text-xs font-medium', theme.mutedText)}>Notes (optional)</label>
               <textarea
@@ -483,15 +629,28 @@ export function PublicBookingPage({ slugOverride }: PublicBookingPageProps = {})
                 !customer.firstName ||
                 !customer.lastName ||
                 bookMutation.isPending ||
-                (needsSmsOptIn && !smsOptIn)
+                confirmingCard ||
+                (needsSmsOptIn && !smsOptIn) ||
+                (protectionEnabled && !customer.email.trim()) ||
+                (protectionEnabled && identityReady && protectionQuery.isLoading) ||
+                Boolean(protectionQuery.data?.required && protectionQuery.data.stripe && !cardSession)
               }
-              onClick={() => bookMutation.mutate()}
+              onClick={() => void submitBooking()}
               className={cn(
                 'w-full rounded-full py-4 text-base font-semibold transition-colors disabled:opacity-40',
                 theme.primaryBtn,
               )}
             >
-              {bookMutation.isPending ? 'Booking…' : 'Book appointment'}
+              {bookMutation.isPending || confirmingCard
+                ? protectionEnabled && protectionPolicy && (cardSession || protectionQuery.data?.required)
+                  ? firstVisitBookLabel(protectionPolicy.mode, protectionPolicy.depositCents, true)
+                  : 'Booking…'
+                : protectionEnabled && protectionPolicy && (cardSession || protectionQuery.data?.required)
+                  ? firstVisitBookLabel(
+                      protectionQuery.data?.mode ?? protectionPolicy.mode,
+                      protectionQuery.data?.depositCents ?? protectionPolicy.depositCents,
+                    )
+                  : 'Book appointment'}
             </button>
           </BookingStickyAction>
         </>
