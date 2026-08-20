@@ -443,6 +443,10 @@ export function GetStartedPage() {
   const trialValidateSeq = useRef(0);
   const cartPreviewSeq = useRef(0);
   const formSectionRef = useRef<HTMLDivElement>(null);
+  const ownerNameRef = useRef<HTMLInputElement>(null);
+  const ownerEmailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const confirmPasswordRef = useRef<HTMLInputElement>(null);
   committedTrialCodeRef.current = committedTrialCode;
   trialOfferRef.current = trialOffer;
 
@@ -694,7 +698,8 @@ export function GetStartedPage() {
       case 'business':
         return businessName.trim().length > 0 && slug.length >= 2 && slugStatus === 'available';
       case 'account':
-        return Object.keys(accountErrors).length === 0;
+        // Autofill can fill the DOM without a React change event — validate on Continue instead.
+        return true;
       case 'plan':
         return Boolean(tier) && Boolean(catalog);
       case 'website':
@@ -710,7 +715,6 @@ export function GetStartedPage() {
         return false;
     }
   }, [
-    accountErrors,
     businessName,
     catalog,
     currentStep,
@@ -780,11 +784,28 @@ export function GetStartedPage() {
     }
   }
 
+  function syncAccountFieldsFromDom() {
+    const next = {
+      ownerName: ownerNameRef.current?.value ?? ownerName,
+      ownerEmail: ownerEmailRef.current?.value ?? ownerEmail,
+      password: passwordRef.current?.value ?? password,
+      confirmPassword: confirmPasswordRef.current?.value ?? confirmPassword,
+    };
+    setOwnerName(next.ownerName);
+    setOwnerEmail(next.ownerEmail);
+    setPassword(next.password);
+    setConfirmPassword(next.confirmPassword);
+    return next;
+  }
+
   function goNext() {
     setError(null);
-    if (currentStep === 'account' && Object.keys(accountErrors).length > 0) {
-      setAccountShowAllErrors(true);
-      return;
+    if (currentStep === 'account') {
+      const next = syncAccountFieldsFromDom();
+      if (Object.keys(getAccountFieldErrors(next)).length > 0) {
+        setAccountShowAllErrors(true);
+        return;
+      }
     }
     if (currentStep === 'business' && !canContinue) {
       return;
@@ -1006,6 +1027,7 @@ export function GetStartedPage() {
                     <Input
                       id="ownerName"
                       name="name"
+                      ref={ownerNameRef}
                       value={ownerName}
                       onChange={(e) => setOwnerName(e.target.value)}
                       onBlur={() => markAccountTouched('ownerName')}
@@ -1021,6 +1043,7 @@ export function GetStartedPage() {
                     <Input
                       id="ownerEmail"
                       name="email"
+                      ref={ownerEmailRef}
                       type="email"
                       inputMode="email"
                       autoCapitalize="none"
@@ -1044,6 +1067,7 @@ export function GetStartedPage() {
                     <PasswordInput
                       id="password"
                       name="password"
+                      ref={passwordRef}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       onBlur={() => markAccountTouched('password')}
@@ -1061,6 +1085,7 @@ export function GetStartedPage() {
                     <PasswordInput
                       id="confirmPassword"
                       name="confirmPassword"
+                      ref={confirmPasswordRef}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       onBlur={() => markAccountTouched('confirmPassword')}
