@@ -89,7 +89,40 @@ export const apiClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+/** Login/reset must not send a leftover session token — a 401 then looks like a failed password. */
+const PUBLIC_AUTH_PATHS = ['/auth/login', '/auth/forgot-password', '/auth/set-password'];
+
+function isPublicAuthRequest(url: string | undefined): boolean {
+  if (!url) return false;
+  try {
+    const path = url.startsWith('http') ? new URL(url).pathname : url;
+    return PUBLIC_AUTH_PATHS.some((p) => path.includes(p));
+  } catch {
+    return PUBLIC_AUTH_PATHS.some((p) => url.includes(p));
+  }
+}
+
+export function getApiErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof ApiError && err.message.trim()) return err.message;
+  if (err instanceof Error && err.message.trim()) return err.message;
+  return fallback;
+}
+
+export function getLoginErrorMessage(err: unknown): string {
+  if (err instanceof ApiError && err.code === 'PASSWORD_SETUP_REQUIRED') {
+    return 'Check your email for an invite link, or use Forgot password to request a new one.';
+  }
+  if (err instanceof ApiError && err.status === 401) {
+    return err.message.trim() || 'Incorrect email or password.';
+  }
+  return getApiErrorMessage(err, 'Sign in failed');
+}
+
 apiClient.interceptors.request.use((config) => {
+  if (isPublicAuthRequest(config.url)) {
+    delete config.headers.Authorization;
+    return config;
+  }
   const token = localStorage.getItem(TOKEN_KEY);
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -102,19 +135,23 @@ apiClient.interceptors.response.use(
   (error: AxiosError<ApiErrorBody>) => {
     const data = error.response?.data;
     if (data?.error) {
-      throw new ApiError(
-        data.error.code,
-        data.error.message,
-        error.response?.status ?? 500,
-        data.error.details,
+      return Promise.reject(
+        new ApiError(
+          data.error.code,
+          data.error.message,
+          error.response?.status ?? 500,
+          data.error.details,
+        ),
       );
     }
-    throw new ApiError(
-      'NETWORK_ERROR',
-      error.response?.status === 413
-        ? 'Image must be 2 MB or smaller'
-        : error.message || 'Network request failed',
-      error.response?.status ?? 0,
+    return Promise.reject(
+      new ApiError(
+        'NETWORK_ERROR',
+        error.response?.status === 413
+          ? 'Image must be 2 MB or smaller'
+          : error.message || 'Network request failed',
+        error.response?.status ?? 0,
+      ),
     );
   },
 );

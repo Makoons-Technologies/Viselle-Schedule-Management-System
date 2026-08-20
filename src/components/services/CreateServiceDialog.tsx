@@ -101,15 +101,20 @@ export function CreateServiceDialog({ orgId, open, onOpenChange, service }: Crea
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <Label>Duration (minutes)</Label>
-              <Input type="number" {...register('durationMinutes', { valueAsNumber: true })} />
+              <Input
+                inputMode="numeric"
+                autoComplete="off"
+                {...register('durationMinutes', { valueAsNumber: true })}
+              />
             </div>
             <div>
               <Label>Price ($)</Label>
               <Input
-                type="number"
+                inputMode="decimal"
                 min={0}
                 step={0.01}
                 placeholder="49.00"
+                autoComplete="off"
                 {...register('priceDollars', { valueAsNumber: true })}
               />
             </div>
