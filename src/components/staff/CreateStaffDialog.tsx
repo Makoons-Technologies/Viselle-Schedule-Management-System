@@ -1,10 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
-import { orgApi } from '@/lib/api';
+import { getApiErrorMessage, orgApi } from '@/lib/api';
+import { withoutReactFormReset } from '@/lib/form-submit';
 import type { Account } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -50,9 +51,17 @@ export function CreateStaffDialog({
     resolver: zodResolver(schema),
     defaultValues: { role: 'staff', isBookable: true, status: 'active' },
   });
+  const wasOpen = useRef(false);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      wasOpen.current = false;
+      return;
+    }
+    // Only seed when the dialog opens. A failed Create must not wipe fields
+    // (React 19 form reset + reset() identity changes).
+    if (wasOpen.current) return;
+    wasOpen.current = true;
     setSubmitError(null);
     if (account) {
       reset({
@@ -114,9 +123,10 @@ export function CreateStaffDialog({
       queryClient.invalidateQueries({ queryKey: ['accounts', orgId] });
       onOpenChange(false);
     },
-    onError: (err: Error) => {
-      setSubmitError(err.message);
-      toast.error(err.message);
+    onError: (err: unknown) => {
+      const message = getApiErrorMessage(err, 'Could not save this staff member. Try again.');
+      setSubmitError(message);
+      toast.error(message);
     },
   });
 
@@ -140,10 +150,12 @@ export function CreateStaffDialog({
           <DialogTitle>{isEditing ? 'Edit staff member' : 'Add staff member'}</DialogTitle>
         </DialogHeader>
         <form
-          onSubmit={handleSubmit((d) => {
-            setSubmitError(null);
-            mutation.mutate(d);
-          })}
+          onSubmit={withoutReactFormReset(
+            handleSubmit((d) => {
+              setSubmitError(null);
+              mutation.mutate(d);
+            }),
+          )}
           className="space-y-4"
         >
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

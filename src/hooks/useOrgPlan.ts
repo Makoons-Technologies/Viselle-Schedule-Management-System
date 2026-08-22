@@ -11,12 +11,16 @@ export function useOrgPlan(orgId: string | undefined) {
     queryKey: ['org-plan', orgId],
     queryFn: () => orgApi.getPlan(orgId!),
     enabled: !!orgId && !isPlatformOwner,
+    retry: 1,
+    retryDelay: 400,
   });
 
   const ownerSettingsQuery = useQuery({
     queryKey: ['owner-settings', orgId],
     queryFn: () => ownerApi.getSettings(orgId!),
     enabled: !!orgId && isPlatformOwner,
+    retry: 1,
+    retryDelay: 400,
     select: (data): { plan: OrgPlanFeatures } => ({
       plan: {
         subscriptionTier: data.settings.subscriptionTier ?? null,
@@ -47,5 +51,7 @@ export function useOrgPlan(orgId: string | undefined) {
     plan,
     isLoading: query.isLoading,
     isError: query.isError,
+    error: query.error,
+    refetch: query.refetch,
   };
 }

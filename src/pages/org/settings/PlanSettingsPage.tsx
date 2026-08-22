@@ -8,11 +8,12 @@ import { useOrgCanceled } from '@/hooks/useOrgCanceled';
 import { useOrgMustChoosePlan } from '@/hooks/useOrgMustChoosePlan';
 import { useOrgPlan } from '@/hooks/useOrgPlan';
 import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
-import { orgApi } from '@/lib/api';
+import { getApiErrorMessage, orgApi } from '@/lib/api';
 import { isOrgInActiveTrial, ORG_CANCELED_MESSAGE, TRIAL_EXPIRED_MESSAGE } from '@/lib/trial';
 import { LoadingState } from '@/components/common/LoadingState';
 import { SmsUnderReviewNotice } from '@/components/common/SmsUnderReviewNotice';
 import { PlanComparisonSection } from '@/components/settings/PlanComparisonSection';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { centsToDollars } from '@/lib/utils';
 import { getPlanTier, type PlanTierId } from '@/lib/plan-features';
@@ -21,7 +22,7 @@ import { isSmsSendingEnabled } from '@/lib/sms';
 export function PlanSettingsPage() {
   const orgId = useOrgId();
   const { user } = useAuth();
-  const { plan, isLoading } = useOrgPlan(orgId);
+  const { plan, isLoading, isError, error, refetch } = useOrgPlan(orgId);
   const mustChoosePlan = useOrgMustChoosePlan();
   const canceled = useOrgCanceled();
   const trialExpired = useOrgTrialExpired();
@@ -91,6 +92,23 @@ export function PlanSettingsPage() {
   }, [orgId, queryClient, searchParams, setSearchParams]);
 
   if (isLoading) return <LoadingState />;
+  if (isError) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Plan</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-red-700 dark:text-red-300" role="alert">
+            {getApiErrorMessage(error, 'Could not load your plan. Try again.')}
+          </p>
+          <Button type="button" size="sm" variant="outline" onClick={() => void refetch()}>
+            Retry
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
   if (!plan) return null;
 
   const knownTier: PlanTierId | null =
