@@ -125,6 +125,20 @@ function isAxiosNetworkFailure(err: RequestFailureLike): boolean {
   );
 }
 
+/** True when the browser never got an HTTP response (axios Network Error / ERR_FAILED). */
+export function isUnreachableRequestError(err: unknown): boolean {
+  if (err instanceof ApiError) {
+    return err.status === 0 || err.message === UNREACHABLE_SERVER_MESSAGE;
+  }
+  if (err instanceof Error && (err.message === 'Network Error' || err.message === 'Network request failed')) {
+    return true;
+  }
+  if (err && typeof err === 'object') {
+    return isAxiosNetworkFailure(err as RequestFailureLike);
+  }
+  return false;
+}
+
 /** User-facing copy when the API body has no `error` payload (network / 5xx / 413). */
 export function getFallbackRequestErrorMessage(err: RequestFailureLike): string {
   const status = err.response?.status ?? (err.status && err.status > 0 ? err.status : undefined);

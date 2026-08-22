@@ -1,7 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
-import { orgApi, ownerApi } from '@/lib/api';
+import { ApiError, isUnreachableRequestError, orgApi, ownerApi } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import type { OrgPlanFeatures } from '@/types/api';
+
+function shouldRetryPlanFetch(failureCount: number, error: unknown): boolean {
+  if (failureCount >= 1) return false;
+  if (isUnreachableRequestError(error)) return true;
+  return error instanceof ApiError && error.status >= 500;
+}
 
 export function useOrgPlan(orgId: string | undefined) {
   const { user } = useAuth();
@@ -11,7 +17,7 @@ export function useOrgPlan(orgId: string | undefined) {
     queryKey: ['org-plan', orgId],
     queryFn: () => orgApi.getPlan(orgId!),
     enabled: !!orgId && !isPlatformOwner,
-    retry: 1,
+    retry: shouldRetryPlanFetch,
     retryDelay: 400,
   });
 
@@ -19,7 +25,7 @@ export function useOrgPlan(orgId: string | undefined) {
     queryKey: ['owner-settings', orgId],
     queryFn: () => ownerApi.getSettings(orgId!),
     enabled: !!orgId && isPlatformOwner,
-    retry: 1,
+    retry: shouldRetryPlanFetch,
     retryDelay: 400,
     select: (data): { plan: OrgPlanFeatures } => ({
       plan: {

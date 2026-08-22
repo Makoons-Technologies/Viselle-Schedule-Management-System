@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
-import { getApiErrorMessage, orgApi } from '@/lib/api';
+import { getApiErrorMessage, isUnreachableRequestError, orgApi } from '@/lib/api';
 import { withoutReactFormReset } from '@/lib/form-submit';
+import { findReconciledStaffAccount } from '@/lib/staff-create';
 import type { Account } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -97,17 +98,30 @@ export function CreateStaffDialog({
         return orgApi.updateAccount(orgId, account!.id, payload);
       }
 
-      const result = await orgApi.createAccount(orgId, { ...payload, role: data.role ?? 'staff' });
-      const created = result.account;
-      if (!created?.id) {
-        throw new Error('Staff was not created. Try again or contact support.');
+      try {
+        const result = await orgApi.createAccount(orgId, { ...payload, role: data.role ?? 'staff' });
+        const created = result.account;
+        if (!created?.id) {
+          throw new Error('Staff was not created. Try again or contact support.');
+        }
+        if (created.role === 'org_owner' || existingAccountIds.includes(created.id)) {
+          throw new Error(
+            'No new staff member was added. That email is already used on this team — use a different email.',
+          );
+        }
+        return result;
+      } catch (err) {
+        if (!isUnreachableRequestError(err)) throw err;
+        // Isolation QA: same ERR_FAILED class as check-in (server OK, UI Network Error).
+        const listed = await orgApi.listAccounts(orgId).catch(() => null);
+        const reconciled = listed
+          ? findReconciledStaffAccount(listed.accounts, data.email, existingAccountIds)
+          : undefined;
+        if (reconciled) {
+          return { account: reconciled };
+        }
+        throw err;
       }
-      if (created.role === 'org_owner' || existingAccountIds.includes(created.id)) {
-        throw new Error(
-          'No new staff member was added. That email is already used on this team — use a different email.',
-        );
-      }
-      return result;
     },
     onSuccess: (result) => {
       setSubmitError(null);
