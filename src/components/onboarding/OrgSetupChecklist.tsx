@@ -41,6 +41,10 @@ export function OrgSetupChecklist({ orgId }: { orgId: string }) {
   const bookingOn = orgData?.organization.publicBookingEnabled === true;
   const live = hasService && hasHours && bookingOn;
 
+  if (live) {
+    return null;
+  }
+
   const items = [
     {
       id: 'services',
@@ -66,11 +70,10 @@ export function OrgSetupChecklist({ orgId }: { orgId: string }) {
     <Card className="mb-6 border-brand-200 dark:border-brand-900/60">
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <CardTitle className="text-base">{live ? 'You are live' : 'Go live'}</CardTitle>
+          <CardTitle className="text-base">Go live</CardTitle>
           <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-            {live
-              ? 'Hours, a service, and a public booking page. Share the link above with clients.'
-              : 'Minimum to take online bookings: a service, hours, and the booking page switched on. Then copy the link at the top of this page.'}
+            Minimum to take online bookings: a service, hours, and the booking page switched on. Then copy the link at
+            the top of this page.
           </p>
         </div>
         {eligible && (

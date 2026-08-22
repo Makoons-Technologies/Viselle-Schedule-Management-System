@@ -4,13 +4,16 @@ import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
+import { useOrgCanceled } from '@/hooks/useOrgCanceled';
 import { useOrgMustChoosePlan } from '@/hooks/useOrgMustChoosePlan';
 import { useOrgPlan } from '@/hooks/useOrgPlan';
-import { orgApi } from '@/lib/api';
-import { isOrgInActiveTrial } from '@/lib/trial';
+import { useOrgTrialExpired } from '@/hooks/useOrgTrialExpired';
+import { getApiErrorMessage, orgApi } from '@/lib/api';
+import { isOrgInActiveTrial, ORG_CANCELED_MESSAGE, TRIAL_EXPIRED_MESSAGE } from '@/lib/trial';
 import { LoadingState } from '@/components/common/LoadingState';
 import { SmsUnderReviewNotice } from '@/components/common/SmsUnderReviewNotice';
 import { PlanComparisonSection } from '@/components/settings/PlanComparisonSection';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { centsToDollars } from '@/lib/utils';
 import { getPlanTier, type PlanTierId } from '@/lib/plan-features';
@@ -19,8 +22,10 @@ import { isSmsSendingEnabled } from '@/lib/sms';
 export function PlanSettingsPage() {
   const orgId = useOrgId();
   const { user } = useAuth();
-  const { plan, isLoading } = useOrgPlan(orgId);
+  const { plan, isLoading, isError, error, refetch } = useOrgPlan(orgId);
   const mustChoosePlan = useOrgMustChoosePlan();
+  const canceled = useOrgCanceled();
+  const trialExpired = useOrgTrialExpired();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const checkoutHandled = useRef(false);
@@ -87,6 +92,23 @@ export function PlanSettingsPage() {
   }, [orgId, queryClient, searchParams, setSearchParams]);
 
   if (isLoading) return <LoadingState />;
+  if (isError) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Plan</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-red-700 dark:text-red-300" role="alert">
+            {getApiErrorMessage(error, 'Could not load your plan. Try again.')}
+          </p>
+          <Button type="button" size="sm" variant="outline" onClick={() => void refetch()}>
+            Retry
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
   if (!plan) return null;
 
   const knownTier: PlanTierId | null =
@@ -101,7 +123,27 @@ export function PlanSettingsPage() {
 
   return (
     <div className="space-y-6">
-      {mustChoosePlan && !plan.hasStripeSubscription && (
+      {trialExpired && (
+        <div className="rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-950 dark:border-red-800 dark:bg-red-950/40 dark:text-red-100">
+          <p className="font-semibold">Trial expired</p>
+          <p className="mt-1">
+            {TRIAL_EXPIRED_MESSAGE} Choose a plan below to pay with Stripe Checkout. Salon
+            tools stay locked until you upgrade.
+          </p>
+        </div>
+      )}
+
+      {canceled && (
+        <div className="rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-950 dark:border-red-800 dark:bg-red-950/40 dark:text-red-100">
+          <p className="font-semibold">Organization canceled</p>
+          <p className="mt-1">
+            {ORG_CANCELED_MESSAGE} Choose a plan below to pay with Stripe Checkout. Calendar,
+            bookings, staff, and checkout stay closed until billing is active again.
+          </p>
+        </div>
+      )}
+
+      {mustChoosePlan && !canceled && !trialExpired && !plan.hasStripeSubscription && (
         <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
           <p className="font-semibold">Subscribe to unlock your salon</p>
           <p className="mt-1">
@@ -179,6 +221,8 @@ export function PlanSettingsPage() {
         currentTier={plan.subscriptionTier}
         hasStripeSubscription={plan.hasStripeSubscription}
         isOnActiveTrial={isOnActiveTrial}
+        isCanceled={canceled}
+        isTrialExpired={trialExpired}
       />
     </div>
   );

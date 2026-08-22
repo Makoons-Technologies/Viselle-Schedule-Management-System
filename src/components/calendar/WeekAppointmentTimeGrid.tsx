@@ -161,7 +161,7 @@ export function WeekAppointmentTimeGrid({
   return (
     <div
       className={cn(
-        'overflow-x-auto shadow-sm',
+        'overflow-x-auto overflow-y-hidden overscroll-x-contain shadow-sm',
         panelClassName,
         className,
       )}

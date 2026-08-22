@@ -24,6 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 
 export function BookingWebsitePage() {
   const orgId = useOrgId();
@@ -103,6 +104,7 @@ export function BookingWebsitePage() {
   const liveHost = displayBookingHost(liveUrl);
   const pathHost = displayBookingHost(pathUrl);
   const customSitePending = isCustomSite && share.kind !== 'custom';
+  const pathBookingEnabled = website.pathBookingEnabled !== false;
   const hasSubdomainAddon = data.subdomainHostingEnabled;
   const orgLabel = data.organizationName?.trim() || 'Booking website';
   const pageTitle = customWebsiteEnabled
@@ -144,9 +146,17 @@ export function BookingWebsitePage() {
 
   const handleTemplateChange = (template: SiteTemplate) => {
     updateMutation.mutate({
-      ...(hostingMode === 'path' || hostingMode === 'subdomain' ? { hostingMode } : {}),
       siteTemplate: template,
     });
+  };
+
+  const copyPathUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(pathUrl);
+      toast.success('Link copied');
+    } catch {
+      toast.error('Could not copy booking link');
+    }
   };
 
   return (
@@ -195,26 +205,63 @@ export function BookingWebsitePage() {
             />
           )}
 
-          {canEditThirdPartyUrl && hostingMode === 'path' && (
-            <DeveloperApiSection
-              orgId={orgId!}
-              data={data}
-              active={false}
-              embedded
-              customUrlSlot={
-                <CustomSiteUrlFields
-                  draft={customUrlDraft}
-                  onDraftChange={setCustomUrlDraft}
-                  onSave={saveCustomUrl}
-                  pending={updateMutation.isPending}
-                  trialExpired={trialExpired}
-                  liveHost={liveHost}
-                  liveUrl={liveUrl}
-                  showLive={false}
-                  onCopy={() => void copyUrl()}
-                />
-              }
+          {canEditThirdPartyUrl && (
+            <CustomSiteUrlFields
+              draft={customUrlDraft}
+              onDraftChange={setCustomUrlDraft}
+              onSave={saveCustomUrl}
+              pending={updateMutation.isPending}
+              trialExpired={trialExpired}
+              liveHost={liveHost}
+              liveUrl={liveUrl}
+              showLive={isCustomSite && !customSitePending}
+              fallbackHost={isCustomSite ? pathHost : undefined}
+              onCopy={() => void copyUrl()}
             />
+          )}
+
+          {customWebsiteEnabled && (
+            <div className="min-w-0 space-y-2 rounded-lg border border-brand-200 bg-brand-50/50 p-4 dark:border-brand-900/50 dark:bg-brand-950/20">
+              <Label>Your website</Label>
+              <p className="text-xs text-stone-500 dark:text-stone-400">
+                Viselle manages this custom website. Contact us if you need the URL changed.
+              </p>
+              {share.kind === 'custom' ? (
+                <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch">
+                  <code className="block min-w-0 flex-1 break-all rounded-md border border-stone-200 bg-white px-3 py-2 text-xs text-brand-700 dark:border-stone-700 dark:bg-stone-900 dark:text-brand-300 sm:text-sm">
+                    {liveHost}
+                  </code>
+                  <div className="flex shrink-0 gap-2">
+                    <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={() => void copyUrl()}>
+                      <Copy className="h-4 w-4" />
+                      Copy
+                    </Button>
+                    <Button asChild variant="outline" size="sm" className="flex-1 sm:flex-none">
+                      <a href={liveUrl} target="_blank" rel="noreferrer">
+                        <ExternalLink className="h-4 w-4" />
+                        Open
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-amber-700 dark:text-amber-400">
+                  Live custom URL not set yet — dashboard “Your link” falls back to the included page below.
+                </p>
+              )}
+            </div>
+          )}
+
+          {canEditThirdPartyUrl && hostingMode === 'external_api' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-stone-500 dark:text-stone-400"
+              onClick={useIncludedBookingPage}
+              disabled={trialExpired || updateMutation.isPending}
+            >
+              Use included booking page instead
+            </Button>
           )}
 
           {(!hasSubdomainAddon || !isCustomSite) && !customWebsiteEnabled && hostingMode !== 'subdomain' && (
@@ -237,186 +284,121 @@ export function BookingWebsitePage() {
         </CardContent>
       </Card>
 
-      {isCustomSite ? (
-        <DeveloperApiSection
-          orgId={orgId!}
-          data={data}
-          active
-          customUrlSlot={
-            customWebsiteEnabled ? (
-              <div className="min-w-0 space-y-2 rounded-lg border border-brand-200 bg-brand-50/50 p-4 dark:border-brand-900/50 dark:bg-brand-950/20">
-                <Label>Your website</Label>
-                <p className="text-xs text-stone-500 dark:text-stone-400">
-                  Viselle manages this custom website. Contact us if you need the URL changed.
-                </p>
-                {share.kind === 'custom' ? (
-                  <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch">
-                    <code className="block min-w-0 flex-1 break-all rounded-md border border-stone-200 bg-white px-3 py-2 text-xs text-brand-700 dark:border-stone-700 dark:bg-stone-900 dark:text-brand-300 sm:text-sm">
-                      {liveHost}
-                    </code>
-                    <div className="flex shrink-0 gap-2">
-                      <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={() => void copyUrl()}>
-                        <Copy className="h-4 w-4" />
-                        Copy
-                      </Button>
-                      <Button asChild variant="outline" size="sm" className="flex-1 sm:flex-none">
-                        <a href={liveUrl} target="_blank" rel="noreferrer">
-                          <ExternalLink className="h-4 w-4" />
-                          Open
-                        </a>
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-xs text-amber-700 dark:text-amber-400">
-                    Live URL not set yet — dashboard falls back to the included page:{' '}
-                    <span className="font-mono">{pathHost}</span>
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <CustomSiteUrlFields
-                  draft={customUrlDraft}
-                  onDraftChange={setCustomUrlDraft}
-                  onSave={saveCustomUrl}
-                  pending={updateMutation.isPending}
-                  trialExpired={trialExpired}
-                  liveHost={liveHost}
-                  liveUrl={liveUrl}
-                  showLive={!customSitePending}
-                  fallbackHost={pathHost}
-                  onCopy={() => void copyUrl()}
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-stone-500 dark:text-stone-400"
-                  onClick={useIncludedBookingPage}
-                  disabled={trialExpired || updateMutation.isPending}
-                >
-                  Use included booking page instead
-                </Button>
-              </div>
-            )
-          }
-        />
-      ) : (
-        <>
-          <Card className="overflow-hidden border-brand-200 bg-gradient-to-br from-brand-50 to-white dark:border-stone-700 dark:from-stone-900 dark:to-stone-900">
-            <CardHeader>
-              <CardTitle className="flex flex-wrap items-center gap-2 text-base text-stone-900 dark:text-stone-50">
-                <Globe className="h-4 w-4 shrink-0 text-brand-700 dark:text-brand-300" />
-                {hostingMode === 'subdomain' ? 'Your hosted subdomain' : 'Your booking page (included)'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid min-w-0 gap-6 lg:grid-cols-2">
-                <div className="min-w-0 space-y-4">
-                  <p className="text-sm leading-relaxed text-stone-600 dark:text-stone-200">
-                    {hostingMode === 'subdomain'
-                      ? 'Clients book on your Viselle subdomain. Share this link anywhere you promote the business.'
-                      : 'Every plan includes a booking page on Viselle. Share this link on Instagram, Google, or your existing website.'}
-                  </p>
-                  <div className="min-w-0">
-                    <Label className="text-stone-800 dark:text-stone-100">Your link</Label>
-                    <div className="mt-1 flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-stretch">
-                      <code className="block min-w-0 flex-1 break-all rounded-md border border-stone-200 bg-white px-3 py-2 text-xs text-brand-700 dark:border-stone-700 dark:bg-stone-800 dark:text-brand-300 sm:text-sm">
-                        {liveHost}
-                      </code>
-                      <div className="flex shrink-0 gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 sm:flex-none"
-                          onClick={() => void copyUrl()}
-                        >
-                          <Copy className="h-4 w-4" />
-                          Copy
-                        </Button>
-                        <Button asChild variant="outline" size="sm" className="flex-1 sm:flex-none">
-                          <a href={liveUrl} target="_blank" rel="noreferrer">
-                            <ExternalLink className="h-4 w-4" />
-                            Preview
-                          </a>
-                        </Button>
-                      </div>
-                    </div>
-                    <p className="mt-2 break-words text-xs text-stone-500 dark:text-stone-300">
-                      {hostingMode === 'subdomain' ? (
-                        <>
-                          Included Viselle page:{' '}
-                          <span className="font-mono text-stone-600 dark:text-stone-200">{pathHost}</span>
-                        </>
-                      ) : (
-                        <>
-                          Format:{' '}
-                          <span className="font-mono text-stone-600 dark:text-stone-200">
-                            viselle.net/book/{data.organizationSlug}
-                          </span>
-                        </>
-                      )}
-                    </p>
+      <Card className="overflow-hidden border-brand-200 bg-gradient-to-br from-brand-50 to-white dark:border-stone-700 dark:from-stone-900 dark:to-stone-900">
+        <CardHeader>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <CardTitle className="flex flex-wrap items-center gap-2 text-base text-stone-900 dark:text-stone-50">
+              <Globe className="h-4 w-4 shrink-0 text-brand-700 dark:text-brand-300" />
+              Included booking page
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="path-booking-enabled" className="text-sm font-normal text-stone-600 dark:text-stone-300">
+                {pathBookingEnabled ? 'On' : 'Off'}
+              </Label>
+              <Switch
+                id="path-booking-enabled"
+                checked={pathBookingEnabled}
+                disabled={trialExpired || updateMutation.isPending}
+                onCheckedChange={(v) => updateMutation.mutate({ pathBookingEnabled: v })}
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid min-w-0 gap-6 lg:grid-cols-2">
+            <div className="min-w-0 space-y-4">
+              <p className="text-sm leading-relaxed text-stone-600 dark:text-stone-200">
+                Every plan includes this page. It stays available even if we build you a custom website or you book
+                through the API.
+              </p>
+              <div className="min-w-0">
+                <Label className="text-stone-800 dark:text-stone-100">Your included link</Label>
+                <div className="mt-1 flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-stretch">
+                  <code className="block min-w-0 flex-1 break-all rounded-md border border-stone-200 bg-white px-3 py-2 text-xs text-brand-700 dark:border-stone-700 dark:bg-stone-800 dark:text-brand-300 sm:text-sm">
+                    {pathHost}
+                  </code>
+                  <div className="flex shrink-0 gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 sm:flex-none"
+                      onClick={() => void copyPathUrl()}
+                      disabled={!pathBookingEnabled}
+                    >
+                      <Copy className="h-4 w-4" />
+                      Copy
+                    </Button>
+                    <Button asChild variant="outline" size="sm" className="flex-1 sm:flex-none">
+                      <a href={pathUrl} target="_blank" rel="noreferrer">
+                        <ExternalLink className="h-4 w-4" />
+                        Preview
+                      </a>
+                    </Button>
                   </div>
                 </div>
+                <p className="mt-2 break-words text-xs text-stone-500 dark:text-stone-300">
+                  {pathBookingEnabled
+                    ? 'Visitors can book here even when your dashboard link is a custom site or subdomain.'
+                    : 'This page is off. Visitors see that online booking is unavailable at this URL. Your custom site and API are unchanged.'}
+                </p>
+              </div>
+            </div>
+            <BookingPagePreview
+              template={website.siteTemplate ?? 'classic'}
+              branding={branding}
+              className="min-w-0"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <LayoutTemplate className="h-4 w-4" />
+            Page style
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="mb-4 text-sm text-stone-600 dark:text-stone-300">
+            This is how the included booking page looks. A hosted subdomain uses the same look.
+          </p>
+          <div className="grid min-w-0 gap-4 lg:grid-cols-3">
+            {data.siteTemplates.map((template) => (
+              <div key={template.id} className="min-w-0 space-y-3">
+                <button
+                  type="button"
+                  onClick={() => handleTemplateChange(template.id)}
+                  disabled={updateMutation.isPending || trialExpired}
+                  title={trialExpired ? 'Trial expired — upgrade to make changes' : undefined}
+                  className={cn(
+                    'w-full rounded-lg border bg-white p-4 text-left transition-colors hover:border-brand-300 dark:bg-stone-800/60 dark:hover:border-brand-600',
+                    website.siteTemplate === template.id
+                      ? 'border-brand-500 ring-2 ring-brand-100 dark:ring-brand-900/60'
+                      : 'border-stone-200 dark:border-stone-700',
+                  )}
+                >
+                  <p className="font-medium text-stone-900 dark:text-stone-100">{template.name}</p>
+                  <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">{template.description}</p>
+                </button>
                 <BookingPagePreview
-                  template={website.siteTemplate ?? 'classic'}
+                  template={template.id}
                   branding={branding}
-                  className="min-w-0"
+                  className="hidden min-w-0 sm:block"
                 />
               </div>
-            </CardContent>
-          </Card>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <LayoutTemplate className="h-4 w-4" />
-                Page style
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="mb-4 text-sm text-stone-600 dark:text-stone-300">
-                {hostingMode === 'subdomain'
-                  ? 'Choose how your hosted booking page looks.'
-                  : 'Choose how your booking page looks. This also applies to a hosted subdomain if you upgrade.'}
-              </p>
-              <div className="grid min-w-0 gap-4 lg:grid-cols-3">
-                {data.siteTemplates.map((template) => (
-                  <div key={template.id} className="min-w-0 space-y-3">
-                    <button
-                      type="button"
-                      onClick={() => handleTemplateChange(template.id)}
-                      disabled={updateMutation.isPending || trialExpired}
-                      title={trialExpired ? 'Trial expired — upgrade to make changes' : undefined}
-                      className={cn(
-                        'w-full rounded-lg border bg-white p-4 text-left transition-colors hover:border-brand-300 dark:bg-stone-800/60 dark:hover:border-brand-600',
-                        website.siteTemplate === template.id
-                          ? 'border-brand-500 ring-2 ring-brand-100 dark:ring-brand-900/60'
-                          : 'border-stone-200 dark:border-stone-700',
-                      )}
-                    >
-                      <p className="font-medium text-stone-900 dark:text-stone-100">{template.name}</p>
-                      <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">{template.description}</p>
-                    </button>
-                    <BookingPagePreview
-                      template={template.id}
-                      branding={branding}
-                      className="hidden min-w-0 sm:block"
-                    />
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+      <BookingBrandingSection
+        orgId={orgId!}
+        website={website}
+        siteTemplate={website.siteTemplate ?? 'classic'}
+      />
 
-          <BookingBrandingSection
-            orgId={orgId!}
-            website={website}
-            siteTemplate={website.siteTemplate ?? 'classic'}
-          />
-        </>
-      )}
+      <DeveloperApiSection orgId={orgId!} data={data} />
 
       <div className="flex flex-wrap items-center gap-2 text-sm text-stone-500 dark:text-stone-400">
         <Label>Status</Label>

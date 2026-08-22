@@ -137,30 +137,47 @@ export const ORG_OWNER_TOUR_STEPS: OrgOwnerTourStep[] = [
   },
 ];
 
-const STORAGE_PREFIX = 'viselle.org-owner-tour.v1:';
+const STORAGE_PREFIX = 'viselle.org-owner-tour.v2:';
+const LEGACY_STORAGE_PREFIX = 'viselle.org-owner-tour.v1:';
 
 export type OrgOwnerTourStorage = 'done' | 'skipped';
 
-export function orgOwnerTourStorageKey(orgId: string): string {
-  return `${STORAGE_PREFIX}${orgId}`;
+export function orgOwnerTourStorageKey(userId: string, orgId: string): string {
+  return `${STORAGE_PREFIX}${userId}:${orgId}`;
 }
 
-export function readOrgOwnerTourStorage(orgId: string): OrgOwnerTourStorage | null {
+function legacyOrgOwnerTourStorageKey(orgId: string): string {
+  return `${LEGACY_STORAGE_PREFIX}${orgId}`;
+}
+
+export function readOrgOwnerTourStorage(userId: string, orgId: string): OrgOwnerTourStorage | null {
   try {
-    const raw = localStorage.getItem(orgOwnerTourStorageKey(orgId));
+    const key = orgOwnerTourStorageKey(userId, orgId);
+    const raw = localStorage.getItem(key);
     if (raw === 'done' || raw === 'skipped') return raw;
+
+    const legacyRaw = localStorage.getItem(legacyOrgOwnerTourStorageKey(orgId));
+    if (legacyRaw === 'done' || legacyRaw === 'skipped') {
+      localStorage.setItem(key, legacyRaw);
+      return legacyRaw;
+    }
   } catch {
     /* private mode */
   }
   return null;
 }
 
-export function writeOrgOwnerTourStorage(orgId: string, value: OrgOwnerTourStorage): void {
+export function writeOrgOwnerTourStorage(userId: string, orgId: string, value: OrgOwnerTourStorage): void {
   try {
-    localStorage.setItem(orgOwnerTourStorageKey(orgId), value);
+    localStorage.setItem(orgOwnerTourStorageKey(userId, orgId), value);
   } catch {
     /* private mode */
   }
+}
+
+/** True when this user has skipped or finished the tour for this org. */
+export function hasOrgOwnerTourBeenDismissed(userId: string, orgId: string): boolean {
+  return readOrgOwnerTourStorage(userId, orgId) !== null;
 }
 
 export function orgTourTargetFromTo(to: string): OrgOwnerTourTarget | undefined {

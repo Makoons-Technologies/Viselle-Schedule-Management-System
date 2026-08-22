@@ -89,6 +89,14 @@ export function getOrgSettingsHubGroups(
   return groups;
 }
 
+/** Plan / Account only — same lockout nav for canceled owners and Open salon. */
+export function getCanceledBillingNavigation(orgBase: string): OrgNavLink[] {
+  return [
+    { label: 'Plan', to: `${orgBase}/settings/plan`, icon: Sparkles },
+    { label: 'Account', to: `${orgBase}/settings/account`, icon: UserCircle },
+  ];
+}
+
 export function getOrgNavigation(
   orgBase: string,
   options: { showAdminSettings: boolean; showRecurring: boolean },

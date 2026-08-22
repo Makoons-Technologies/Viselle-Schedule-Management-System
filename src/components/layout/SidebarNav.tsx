@@ -3,7 +3,6 @@ import {
   Clock,
   LayoutDashboard,
   Shield,
-  Sparkles,
   UserCircle,
 } from 'lucide-react';
 
@@ -15,10 +14,11 @@ import { useOrgOwnerTour } from '@/context/OrgOwnerTourContext';
 
 import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgAdminAccess } from '@/hooks/useOrgAdminAccess';
-import { useOrgMustChoosePlan } from '@/hooks/useOrgMustChoosePlan';
+import { useOrgProductClosed } from '@/hooks/useOrgProductClosed';
+import { useOrgNeedsBilling } from '@/hooks/useOrgNeedsBilling';
 import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 
-import { getOrgNavigation } from '@/components/layout/org-navigation';
+import { getCanceledBillingNavigation, getOrgNavigation } from '@/components/layout/org-navigation';
 import {
   getPlatformNavigation,
   getPlatformOrgNavigation,
@@ -255,7 +255,8 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
   const showRecurring = true;
   const canManageStaff = useOrgAdminAccess(effectiveOrgId ?? undefined);
   const writeLocked = useOrgWriteLocked();
-  const mustChoosePlan = useOrgMustChoosePlan();
+  const needsBilling = useOrgNeedsBilling();
+  const productClosed = useOrgProductClosed();
 
   if (!user) return null;
 
@@ -268,6 +269,17 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
       showAdminSettings: false,
       showRecurring: false,
     });
+
+    if (productClosed) {
+      return (
+        <NavSectionWithGroups
+          onNavigate={onNavigate}
+          mobile={mobile}
+          mainItems={[{ label: 'Account', to: `${orgBase}/settings/account`, icon: UserCircle }]}
+          settingsItems={[]}
+        />
+      );
+    }
 
     const staffItems = [
       ...orgNav.main,
@@ -309,6 +321,17 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
 
     if (inSalonContext && selectedOrgId) {
       const orgBase = `/orgs/${selectedOrgId}`;
+      if (productClosed) {
+        return (
+          <NavSectionWithGroups
+            onNavigate={onNavigate}
+            mobile={mobile}
+            title={`${selectedOrg?.name ?? 'Salon'} · Operations`}
+            mainItems={getCanceledBillingNavigation(orgBase)}
+            settingsItems={[]}
+          />
+        );
+      }
       const orgNav = getOrgNavigation(orgBase, { showAdminSettings: true, showRecurring });
 
       return (
@@ -368,15 +391,12 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
     showRecurring,
   });
 
-  if (mustChoosePlan) {
+  if (needsBilling) {
     return (
       <NavSectionWithGroups
         onNavigate={onNavigate}
         mobile={mobile}
-        mainItems={[
-          { label: 'Plan', to: `${orgBase}/settings/plan`, icon: Sparkles },
-          { label: 'Account', to: `${orgBase}/settings/account`, icon: UserCircle },
-        ]}
+        mainItems={getCanceledBillingNavigation(orgBase)}
         settingsItems={[]}
       />
     );

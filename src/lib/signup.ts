@@ -1,6 +1,7 @@
 import axios from 'axios';
-import { ApiError } from '@/lib/api';
-import type { ResolvedTrialOffer, TrialCampaign } from '@/types/api';
+import { ApiError, getFallbackRequestErrorMessage } from '@/lib/api';
+import { getPlanTier } from '@/lib/plan-features';
+import type { ResolvedTrialOffer, TrialCampaign, TrialPaymentMode } from '@/types/api';
 
 const signupClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL as string,
@@ -19,7 +20,11 @@ signupClient.interceptors.response.use(
         data.error.details,
       );
     }
-    throw new ApiError('NETWORK_ERROR', error.message || 'Network request failed', error.response?.status ?? 0);
+    throw new ApiError(
+      error.response?.status && error.response.status >= 500 ? 'SERVER_ERROR' : 'NETWORK_ERROR',
+      getFallbackRequestErrorMessage(error),
+      error.response?.status ?? 0,
+    );
   },
 );
 
@@ -90,6 +95,84 @@ export function formatCents(cents: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 }
 
+const LOCAL_SIGNUP_ADDONS: Record<
+  SignupCatalogAddon['id'],
+  Pick<SignupCatalogAddon, 'id' | 'name' | 'interval' | 'priceLabel'>
+> = {
+  subdomain: { id: 'subdomain', name: 'Hosted subdomain', interval: 'quote', priceLabel: 'TBD' },
+  custom_website: {
+    id: 'custom_website',
+    name: 'Custom website build',
+    interval: 'quote',
+    priceLabel: 'To be determined',
+  },
+};
+
+/**
+ * Local cart that matches Beauty-Backend-API `calculateSignupCart`.
+ * Used so trial codes can resolve Due today to $0 without waiting on /signup/cart/preview
+ * (that route is a pure calc, but a failed/hung preview used to leave the UI on Calculating).
+ */
+export function calculateSignupCart(input: {
+  tier: SignupTierId;
+  subdomainAddon: boolean;
+  customWebsiteAddon: boolean;
+  trialPaymentMode?: TrialPaymentMode | null;
+}): SignupCart {
+  const plan = getPlanTier(input.tier);
+  const items: SignupCart['items'] = [
+    {
+      id: `plan-${input.tier}`,
+      name: `${plan.name} plan`,
+      amountCents: plan.monthlyPriceCents,
+      interval: 'month',
+    },
+  ];
+
+  if (input.customWebsiteAddon) {
+    const addon = LOCAL_SIGNUP_ADDONS.custom_website;
+    items.push({
+      id: addon.id,
+      name: addon.name,
+      amountCents: 0,
+      interval: addon.interval,
+      priceLabel: addon.priceLabel,
+    });
+    items.push({
+      id: 'included-booking-page',
+      name: 'Free booking page (until your site launches)',
+      amountCents: 0,
+      interval: 'once',
+    });
+  } else if (input.subdomainAddon) {
+    const addon = LOCAL_SIGNUP_ADDONS.subdomain;
+    items.push({
+      id: addon.id,
+      name: addon.name,
+      amountCents: 0,
+      interval: addon.interval,
+      priceLabel: addon.priceLabel,
+    });
+  } else {
+    items.push({
+      id: 'included-booking-page',
+      name: 'Free booking page',
+      amountCents: 0,
+      interval: 'once',
+    });
+  }
+
+  const monthlyRecurringCents = items
+    .filter((item) => item.interval === 'month')
+    .reduce((sum, item) => sum + item.amountCents, 0);
+
+  return {
+    items,
+    dueTodayCents: input.trialPaymentMode ? 0 : monthlyRecurringCents,
+    monthlyRecurringCents,
+  };
+}
+
 export function getStartedPath(params?: {
   plan?: SignupTierId;
   subdomain?: boolean;
@@ -123,9 +206,17 @@ export async function previewSignupCart(input: {
   tier: SignupTierId;
   subdomainAddon: boolean;
   customWebsiteAddon: boolean;
-  trialPaymentMode?: 'stripe_trial' | 'free_no_card' | null;
+  trialPaymentMode?: TrialPaymentMode | null;
 }) {
-  const { data } = await signupClient.post<{ cart: SignupCart }>('/signup/cart/preview', input);
+  const body = {
+    tier: input.tier,
+    subdomainAddon: input.subdomainAddon,
+    customWebsiteAddon: input.customWebsiteAddon,
+    ...(input.trialPaymentMode ? { trialPaymentMode: input.trialPaymentMode } : {}),
+  };
+  const { data } = await signupClient.post<{ cart: SignupCart }>('/signup/cart/preview', body, {
+    timeout: 8000,
+  });
   return data.cart;
 }
 

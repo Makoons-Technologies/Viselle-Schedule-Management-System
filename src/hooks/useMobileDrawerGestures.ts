@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-
-/** Matches Tailwind `md` — desktop sidebar shows at 768px+. */
-const MOBILE_MAX = '(max-width: 767px)';
+import { MOBILE_SHELL_MEDIA } from '@/lib/viewport';
 
 /**
  * Edge strip where we claim horizontal swipes for the drawer and block the
@@ -41,6 +39,35 @@ function isNearHorizontalEdge(clientX: number): boolean {
   return clientX <= EDGE_WIDTH_PX || clientX >= window.innerWidth - EDGE_WIDTH_PX;
 }
 
+function isDrawerScrollTarget(target: Node | null): boolean {
+  if (!target || !(target instanceof Element)) return false;
+  return target.closest('[data-mobile-drawer-scroll]') !== null;
+}
+
+function isInteractiveDrawerTarget(target: Node | null): boolean {
+  if (!target || !(target instanceof Element)) return false;
+  return (
+    target.closest(
+      'a, button, [role="button"], input, select, textarea, label, [data-radix-collection-item]',
+    ) !== null
+  );
+}
+
+function isInsidePanel(panel: HTMLDivElement | null, target: Node | null): boolean {
+  return !!(panel && target && panel.contains(target));
+}
+
+function isScrollableDrawerNav(element: Element): boolean {
+  return element.scrollHeight > element.clientHeight + 1;
+}
+
+function drawerNavWantsVerticalScroll(element: Element, dy: number): boolean {
+  if (Math.abs(dy) < LOCK_AXIS_PX) return false;
+  if (!isScrollableDrawerNav(element)) return false;
+  if (dy < 0) return element.scrollTop > 0;
+  return element.scrollTop + element.clientHeight < element.scrollHeight - 1;
+}
+
 /**
  * Native-feeling mobile drawer gestures:
  * - swipe right from a left edge strip to open
@@ -53,10 +80,13 @@ export function useMobileDrawerGestures(
   setOpen: (open: boolean) => void,
   enabled = true,
 ): MobileDrawerGestures {
-  const isMobile = useMediaQuery(MOBILE_MAX);
+  const isMobile = useMediaQuery(MOBILE_SHELL_MEDIA);
   const active = enabled && isMobile;
   const panelRef = useRef<HTMLDivElement | null>(null);
   const sessionRef = useRef<TouchSession | null>(null);
+  const pendingCloseRef = useRef<Pick<TouchSession, 'startX' | 'startY' | 'startT' | 'lastX' | 'lastT' | 'panelWidth'> | null>(
+    null,
+  );
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const openRef = useRef(open);
@@ -64,6 +94,7 @@ export function useMobileDrawerGestures(
 
   const clearSession = useCallback(() => {
     sessionRef.current = null;
+    pendingCloseRef.current = null;
     setDragOffset(0);
     setIsDragging(false);
   }, []);
@@ -100,26 +131,32 @@ export function useMobileDrawerGestures(
       if (event.touches.length !== 1) return;
       const touch = event.touches[0];
       const target = event.target as Node | null;
+      const panel = panelRef.current;
+      const insidePanel = isInsidePanel(panel, target);
+      const passThroughTap =
+        openRef.current &&
+        insidePanel &&
+        (isDrawerScrollTarget(target) || isInteractiveDrawerTarget(target));
+
+      // Links, buttons, and the nav scroller must receive native taps (esp. landscape).
+      if (passThroughTap) return;
+
       const nearEdge = isNearHorizontalEdge(touch.clientX);
 
-      // iOS 13.4+: preventing default on edge touchstart blocks swipe-back/forward.
-      if (nearEdge && event.cancelable) {
+      // iOS 13.4+: edge touchstart blocks swipe-back/forward — never on open-panel taps.
+      if (nearEdge && event.cancelable && !(openRef.current && insidePanel)) {
         event.preventDefault();
       }
 
       if (openRef.current) {
-        const panel = panelRef.current;
-        if (!panel || !target || !panel.contains(target)) return;
-        sessionRef.current = {
+        if (!insidePanel) return;
+        pendingCloseRef.current = {
           startX: touch.clientX,
           startY: touch.clientY,
           startT: event.timeStamp,
           lastX: touch.clientX,
           lastT: event.timeStamp,
-          velocityX: 0,
-          axis: 'none',
-          mode: 'panel-close',
-          panelWidth: panel.getBoundingClientRect().width || 288,
+          panelWidth: panel?.getBoundingClientRect().width || 288,
         };
         return;
       }
@@ -140,10 +177,40 @@ export function useMobileDrawerGestures(
     };
 
     const onTouchMove = (event: TouchEvent) => {
-      const session = sessionRef.current;
-      if (!session || event.touches.length !== 1) return;
+      if (event.touches.length !== 1) return;
 
       const touch = event.touches[0];
+
+      if (!sessionRef.current && pendingCloseRef.current && openRef.current) {
+        const pending = pendingCloseRef.current;
+        const dx = touch.clientX - pending.startX;
+        const dy = touch.clientY - pending.startY;
+        if (Math.abs(dx) < LOCK_AXIS_PX && Math.abs(dy) < LOCK_AXIS_PX) return;
+
+        const scrollEl = panelRef.current?.querySelector('[data-mobile-drawer-scroll]');
+        if (scrollEl instanceof HTMLElement && drawerNavWantsVerticalScroll(scrollEl, dy)) {
+          pendingCloseRef.current = null;
+          return;
+        }
+
+        if (Math.abs(dx) <= Math.abs(dy) * 1.15) {
+          pendingCloseRef.current = null;
+          return;
+        }
+
+        sessionRef.current = {
+          ...pending,
+          velocityX: 0,
+          axis: 'horizontal',
+          mode: 'panel-close',
+        };
+        pendingCloseRef.current = null;
+        setIsDragging(true);
+      }
+
+      const session = sessionRef.current;
+      if (!session) return;
+
       const dx = touch.clientX - session.startX;
       const dy = touch.clientY - session.startY;
       const dt = event.timeStamp - session.lastT;
@@ -155,6 +222,15 @@ export function useMobileDrawerGestures(
 
       if (session.axis === 'none') {
         if (Math.abs(dx) < LOCK_AXIS_PX && Math.abs(dy) < LOCK_AXIS_PX) return;
+
+        const scrollEl = panelRef.current?.querySelector('[data-mobile-drawer-scroll]');
+        if (scrollEl instanceof HTMLElement && drawerNavWantsVerticalScroll(scrollEl, dy)) {
+          sessionRef.current = null;
+          setIsDragging(false);
+          setDragOffset(0);
+          return;
+        }
+
         // Prefer vertical when ambiguous so nav list scroll still works.
         session.axis = Math.abs(dx) > Math.abs(dy) * 1.15 ? 'horizontal' : 'vertical';
         if (session.axis === 'vertical') {
@@ -180,6 +256,8 @@ export function useMobileDrawerGestures(
     };
 
     const onTouchEnd = (event: TouchEvent) => {
+      pendingCloseRef.current = null;
+
       const session = sessionRef.current;
       if (!session) return;
 
@@ -218,6 +296,7 @@ export function useMobileDrawerGestures(
     };
 
     const onTouchCancel = () => {
+      pendingCloseRef.current = null;
       if (!sessionRef.current) return;
       sessionRef.current = null;
       setDragOffset(0);

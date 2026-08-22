@@ -13,7 +13,8 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useOrg } from '@/context/OrgContext';
 import { useOrgId } from '@/hooks/useOrgId';
-import { useOrgMustChoosePlan } from '@/hooks/useOrgMustChoosePlan';
+import { useOrgNeedsBilling } from '@/hooks/useOrgNeedsBilling';
+import { useOrgProductClosed } from '@/hooks/useOrgProductClosed';
 import { isOrgSettingsPath } from '@/components/layout/org-navigation';
 import { getPlatformOrgBase, isPlatformOrgAdminPath } from '@/components/layout/platform-navigation';
 import { cn } from '@/lib/utils';
@@ -28,9 +29,8 @@ interface BottomNavItem {
   match: (pathname: string, orgBase: string) => boolean;
 }
 
-/** Opaque fill — translucent white lets the PWA maroon body show through under the home indicator. */
 const bottomNavClassName =
-  'fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-white px-2 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-1 dark:border-stone-800 dark:bg-stone-900 md:hidden';
+  'shrink-0 border-t border-stone-200 bg-white px-safe-or-2 pb-safe-or-2 pt-1 dark:border-stone-800 dark:bg-stone-900 desktop-shell:hidden';
 
 function BottomNavLink({ item, active }: { item: BottomNavItem; active: boolean }) {
   const { isActive: tourActive, currentTarget } = useOrgOwnerTour();
@@ -42,7 +42,7 @@ function BottomNavLink({ item, active }: { item: BottomNavItem; active: boolean 
       to={item.to}
       data-tour={target}
       className={cn(
-        'flex min-h-[3.25rem] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 text-[10px] font-medium transition-colors sm:text-xs',
+        'flex min-h-12 min-w-0 flex-1 flex-col items-center justify-end gap-0.5 rounded-lg px-1 py-1 text-[10px] font-medium transition-colors sm:text-xs',
         active ? 'text-brand-700 dark:text-brand-300' : 'text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200',
         highlighted && 'ring-2 ring-brand-500 ring-offset-2 ring-offset-white dark:ring-offset-stone-900',
       )}
@@ -59,7 +59,8 @@ export function MobileBottomNav() {
   const location = useLocation();
   const routeOrgId = useOrgId();
   const { selectedOrgId } = useOrg();
-  const mustChoosePlan = useOrgMustChoosePlan();
+  const needsBilling = useOrgNeedsBilling();
+  const productClosed = useOrgProductClosed();
 
   if (!user) return null;
 
@@ -68,6 +69,29 @@ export function MobileBottomNav() {
     if (!orgId) return null;
 
     const orgBase = `/orgs/${orgId}`;
+
+    if (productClosed) {
+      const items: BottomNavItem[] = [
+        {
+          key: 'account',
+          label: 'Account',
+          to: `${orgBase}/settings/account`,
+          icon: UserCircle,
+          match: (p, base) => p.startsWith(`${base}/settings/account`),
+        },
+      ];
+
+      return (
+        <nav className={bottomNavClassName} aria-label="Primary navigation">
+          <div className="mx-auto flex max-w-lg items-stretch justify-center gap-1">
+            {items.map((item) => (
+              <BottomNavLink key={item.key} item={item} active={item.match(location.pathname, orgBase)} />
+            ))}
+          </div>
+        </nav>
+      );
+    }
+
     const items: BottomNavItem[] = [
       {
         key: 'dashboard',
@@ -184,8 +208,9 @@ export function MobileBottomNav() {
 
   const orgBase = `/orgs/${orgId}`;
 
+  const billingOnlyNav = productClosed || (needsBilling && user.role === 'org_owner');
   const items: BottomNavItem[] =
-    mustChoosePlan && user.role === 'org_owner'
+    billingOnlyNav
       ? [
           {
             key: 'plan',
@@ -241,7 +266,7 @@ export function MobileBottomNav() {
             key={item.key}
             item={item}
             active={
-              mustChoosePlan && user.role === 'org_owner'
+              billingOnlyNav
                 ? item.match(location.pathname, orgBase)
                 : item.match(location.pathname, orgBase) &&
                   !isOrgSettingsPath(location.pathname, orgBase)

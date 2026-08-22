@@ -6,6 +6,62 @@ Versioning: **x.y.z** — patch (z) = unnoticeable unless a bug hits you; minor 
 
 Phases: Viselle is in **beta** (3-month trials). Path: alpha → beta → **GA** (1.0.0+).
 
+## [0.6.1] — 2026-08-22 (alpha)
+
+Staging promote: BEA-37 staff create CORS/OPTIONS fix; PWA safe-area; login and input fixes; expired vs canceled copy; typed URL shortcuts; Preview Stripe test keys.
+
+### Frontend
+
+- BEA-37: keep Add staff form and show real network errors
+- Invalidate stale trial-code validation on get-started
+- BEA-49: Keep PWA toasts, cart, and bottom nav inside the safe area
+- Follow-up: scope BEA-47 input guard and keep get-started autofill
+- BEA-44/48: expired vs canceled copy and typed URL shortcuts
+- BEA-46/47: show login 401s and stop doubled keystrokes
+- BEA-42: lock canceled orgs for platform Open salon
+- BEA-38: lock canceled billing orgs out of the product shell
+- BEA-37: show Add staff errors instead of silent close
+- BEA-36: resolve BETA cart to $0 instead of stuck Calculating
+- BEA-33: sign into the new org after get-started trial
+- Keep first-visit on Payments; put device notifications only in General.
+- Adapt first-visit booking UI to the Beauty-Backend-API contract.
+- Add first-visit deposit and card-on-file booking UI.
+- Fix PWA hamburger opening a blank overlay
+- Merge PWA push toggle and viewport fix to staging
+- Fix landscape mobile drawer taps blocked by gesture preventDefault.
+- Fix mobile drawer nav scroll in landscape.
+- Fix iOS PWA first-login bottom gap by using 100vh in standalone.
+- Stop auto-starting the org owner tour after skip or finish.
+- Hide go-live checklist when org is already live.
+- Fix PWA bottom gap after keyboard dismiss by settling viewport in the right order.
+- Fix mobile drawer gestures and scroll in landscape.
+- Fix PWA first-load bottom gap by syncing viewport height early and keeping the tab bar in the layout flow.
+- Keep phone landscape on the mobile shell with bottom nav, and add a desktop sidebar hide toggle.
+- Drop PWA-specific bottom nav viewport hacks and use standard mobile safe-area padding instead.
+- Keep PWA tab buttons visible while extending the bar background into the iOS dead band below the viewport.
+- Pull the PWA tab bar down into the iOS dead band under the CSS viewport so the T-gap under the labels is gone.
+- Pin the installed PWA to the real webview so the tab bar sits on the screen edge instead of a theme-color gutter.
+- Drop the empty PWA bottom strip so tab buttons sit on the screen edge like a native app.
+- Stop stacking home-indicator insets so the PWA tab buttons sit on the bottom of the screen.
+- Keep the PWA tab buttons on screen by pinning the bar to the visible bottom instead of a too-tall layout.
+- Paint the PWA tab bar to the physical bottom so the maroon home-indicator lip is gone.
+- Remove device push notifications from settings and the PWA service worker.
+- Stop iOS PWA scroll from snagging and the bottom nav from sitting up after the keyboard.
+- Always show the included booking page with a toggle, even when a custom website is the dashboard link.
+- Stop treating the Viselle custom-website toggle as API access; show Developer API on every org.
+- Let platform admin add a custom website request from the inbox.
+- Let platform admin go live from the custom-website inbox so a finished build can lock the URL on the org.
+
+### API
+
+- BEA-37: finish OPTIONS so Isolation staff Create can POST
+- BEA-37: keep staff row when invite email fails
+- BEA-44: lock expired-trial public booking with TRIAL_EXPIRED
+- BEA-43: Let expire-job owners sign in to reach billing
+- BEA-38: Enforce canceled org status on the API
+- BEA-40: Org-scope appointment info API
+- BEA-24: first-visit deposit / card-on-file on the public booking API
+
 ## [0.6.0] — 2026-08-18 (alpha)
 
 Lock Viselle-hosted subdomain and custom websites to platform admin, keep 3rd-party booking URLs on the org dashboard, and ship booking-website, CRM, and reminder polish from staging.
@@ -35,6 +91,7 @@ Lock Viselle-hosted subdomain and custom websites to platform admin, keep 3rd-pa
 
 ### API
 
+- Upgrade production database to more performant hardware for faster queries and lower latency.
 - Let org owners load every customer note with its service so CRM can show full history.
 - Lock hosted subdomain and Viselle custom websites to platform admin so orgs cannot self-provision them.
 - Protect public booking from abuse with rate limits, without charging for the API.

@@ -2,7 +2,7 @@ import { forwardRef, type InputHTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
-  ({ className, type, ...props }, ref) => (
+  ({ className, type, onChange, onInput, ...props }, ref) => (
     <input
       type={type}
       className={cn(
@@ -11,6 +11,9 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
       )}
       ref={ref}
       {...props}
+      onChange={onChange}
+      // React onChange already listens to the native input event. Calling both doubles keystrokes.
+      onInput={onChange ? undefined : onInput}
     />
   ),
 );

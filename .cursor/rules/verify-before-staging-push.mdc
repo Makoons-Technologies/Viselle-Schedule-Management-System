@@ -1,29 +1,32 @@
 ---
-description: Run verification before staging push; fix failures before pushing
+description: Verify before pushing the current branch; never push to main
 alwaysApply: true
 ---
 
-# Verify before staging push
+# Verify before push
 
-Complements `auto-commit-staging`. **Do not push broken work to `staging`** hoping CI will catch it.
+Complements `auto-commit-staging`. **Do not push broken work** hoping CI will catch it.
 
 ## Workflow
 
 1. After meaningful work, run **relevant verification** before commit/push.
-2. If anything fails → **investigate, fix, and re-run checks**. Repeat until they pass.
-3. Only then commit and push to `staging` (per `auto-commit-staging`).
-4. If checks cannot pass after reasonable effort, **stop and report the blocker** to the user — do not push.
+2. If anything fails → investigate, fix, and re-run. Repeat until they pass.
+3. Then commit and push the **current branch** (see `auto-commit-staging`).
+4. If checks cannot pass after reasonable effort, **stop and report the blocker** — do not push.
+5. On **`main`**: do not commit or push. Tell the user that is not allowed.
 
-## Typical verify commands (this repo)
+## Typical verify (this repo)
 
 Pick what matches the change; not every task needs every command:
 
 - `npm run build` — default after UI/API client/type changes (`tsc` + Vite)
-- `npm run lint` — when lint-related rules or broad refactors touched many files
+- `npm run lint` — when lint rules or broad refactors touched many files
 
-Report results from **actual command output**, not assumptions (see `shell-autonomy`).
+**Staging → main** is stricter: full test/build gates + API production migrations — see `staging-and-releases`.
 
-## Safety (unchanged)
+Report results from **actual command output** (see `shell-autonomy`).
+
+## Safety
 
 - Never commit secrets (`.env`, `prod.env`, live API tokens).
-- Never force-push to `main`. No destructive git ops unless the user explicitly requests them.
+- Never commit or push to `main`. No destructive git ops unless the user explicitly requests them.

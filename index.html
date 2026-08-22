@@ -5,7 +5,7 @@
     <link rel="icon" type="image/svg+xml" href="/viselle-logo.svg?v=20260811a" />
     <link rel="icon" type="image/png" href="/favicon.png?v=20260811a" sizes="48x48" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260811a" />
-    <link rel="manifest" href="/manifest.webmanifest?v=20260811a" />
+    <link rel="manifest" href="/manifest.webmanifest?v=20260819a" />
     <meta name="theme-color" content="#2a0f1e" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-title" content="Viselle" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=overlays-content"
     />
     <title>Viselle</title>
     <meta
@@ -94,6 +94,93 @@
         if (dark) {
           document.documentElement.classList.add('dark');
           document.documentElement.style.colorScheme = 'dark';
+        }
+      })();
+    </script>
+    <script>
+      (function () {
+        var KEYBOARD_THRESHOLD = 80;
+        var SETTLE_DELAYS = [50, 150, 350, 700];
+        var KEYBOARD_CLOSE_DELAYS = [80, 200, 400, 600];
+        var keyboardWasOpen = false;
+
+        function isStandaloneWebApp() {
+          return !!(
+            navigator.standalone ||
+            window.matchMedia('(display-mode: standalone)').matches
+          );
+        }
+
+        function isIosStandaloneWebApp() {
+          if (!isStandaloneWebApp()) return false;
+          var ua = navigator.userAgent || '';
+          var iPadOs = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+          return /iPhone|iPad|iPod/i.test(ua) || iPadOs;
+        }
+
+        function isKeyboardOpen() {
+          var vv = window.visualViewport;
+          return !!(vv && window.innerHeight - vv.height > KEYBOARD_THRESHOLD);
+        }
+
+        function measureBrowserAppHeight() {
+          var vv = window.visualViewport;
+          var h = window.innerHeight;
+          if (vv) h = Math.max(h, Math.round(vv.height + vv.offsetTop));
+          return h;
+        }
+
+        function getAppHeightCSSValue() {
+          if (isIosStandaloneWebApp() && !isKeyboardOpen()) return '100vh';
+          return measureBrowserAppHeight() + 'px';
+        }
+
+        function resetWindowScroll() {
+          if (window.scrollX || window.scrollY) window.scrollTo(0, 0);
+          if (document.documentElement.scrollTop) document.documentElement.scrollTop = 0;
+          if (document.body.scrollTop) document.body.scrollTop = 0;
+        }
+
+        function scheduleSettle(delays) {
+          for (var i = 0; i < delays.length; i++) {
+            window.setTimeout(onViewportSettle, delays[i]);
+          }
+        }
+
+        function onViewportSettle() {
+          if (isKeyboardOpen()) {
+            keyboardWasOpen = true;
+            return;
+          }
+          if (keyboardWasOpen) {
+            keyboardWasOpen = false;
+            scheduleSettle(KEYBOARD_CLOSE_DELAYS);
+          }
+          resetWindowScroll();
+          document.documentElement.style.setProperty('--app-height', getAppHeightCSSValue());
+        }
+
+        function onFocusOut(event) {
+          var target = event.target;
+          if (!target || !target.matches) return;
+          if (!target.matches('input, textarea, select, [contenteditable="true"]')) return;
+          scheduleSettle(KEYBOARD_CLOSE_DELAYS);
+        }
+
+        if (isIosStandaloneWebApp()) {
+          document.documentElement.style.setProperty('--app-height', '100vh');
+        }
+
+        onViewportSettle();
+        requestAnimationFrame(onViewportSettle);
+        scheduleSettle(SETTLE_DELAYS);
+        window.addEventListener('resize', onViewportSettle);
+        window.addEventListener('orientationchange', onViewportSettle);
+        window.addEventListener('pageshow', onViewportSettle);
+        window.addEventListener('focusout', onFocusOut);
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener('resize', onViewportSettle);
+          window.visualViewport.addEventListener('scroll', onViewportSettle);
         }
       })();
     </script>

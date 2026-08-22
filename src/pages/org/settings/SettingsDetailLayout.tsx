@@ -3,7 +3,7 @@ import { SettingsBackHeader } from '@/components/settings/SettingsBackHeader';
 import { useAuth } from '@/context/AuthContext';
 import { useOrgAdminAccess } from '@/hooks/useOrgAdminAccess';
 import { useOrgId } from '@/hooks/useOrgId';
-import { useOrgMustChoosePlan } from '@/hooks/useOrgMustChoosePlan';
+import { useOrgNeedsBilling } from '@/hooks/useOrgNeedsBilling';
 
 const SETTINGS_TITLES: Record<string, string> = {
   general: 'General',
@@ -24,7 +24,7 @@ export function SettingsDetailLayout() {
   const orgId = useOrgId();
   const { user } = useAuth();
   const location = useLocation();
-  const mustChoosePlan = useOrgMustChoosePlan();
+  const needsBilling = useOrgNeedsBilling();
   const isStaffPermissions = location.pathname.endsWith('/staff-permissions');
   const isPlanPage = location.pathname.endsWith('/plan');
   const canManageOrg = user?.role === 'org_owner' || user?.role === 'platform_owner';
@@ -38,7 +38,7 @@ export function SettingsDetailLayout() {
     return <Navigate to={`/orgs/${orgId}/dashboard`} replace />;
   }
 
-  const hideBack = isPlanPage && mustChoosePlan;
+  const hideBack = isPlanPage && needsBilling;
 
   return (
     <div className={isPlanPage ? 'mx-auto max-w-5xl' : 'mx-auto max-w-3xl'}>

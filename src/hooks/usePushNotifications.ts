@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { pushApi } from '@/lib/api';
+import { ApiError, pushApi } from '@/lib/api';
+
+function pushFailureMessage(err: unknown, fallback: string): string {
+  if (err instanceof ApiError && (err.status === 404 || err.code === 'NOT_FOUND')) {
+    return 'Push is not available on this server yet. The staging API still needs the /push routes restored.';
+  }
+  return err instanceof Error ? err.message : fallback;
+}
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -64,7 +71,7 @@ export function usePushNotifications() {
       setSubscribed(true);
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to enable notifications');
+      setError(pushFailureMessage(err, 'Failed to enable notifications'));
       return false;
     } finally {
       setBusy(false);
@@ -84,7 +91,7 @@ export function usePushNotifications() {
       setSubscribed(false);
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to disable notifications');
+      setError(pushFailureMessage(err, 'Failed to disable notifications'));
       return false;
     } finally {
       setBusy(false);

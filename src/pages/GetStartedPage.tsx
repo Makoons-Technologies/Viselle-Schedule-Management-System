@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Building2,
@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils';
 import { contactPath } from '@/lib/contact';
 import { redirectToStripeUrl } from '@/lib/safe-redirect';
 import {
+  calculateSignupCart,
   checkSlugAvailable,
   createSignupCheckout,
   fetchLiveHomepageTrial,
@@ -42,6 +43,8 @@ import {
   type SignupWebsiteOption,
 } from '@/lib/signup';
 import { ApiError } from '@/lib/api';
+import { signedInHomePath } from '@/lib/auth-redirect';
+import { useAuth } from '@/context/AuthContext';
 import type { ResolvedTrialOffer, TrialCampaign } from '@/types/api';
 
 const STEPS = [
@@ -56,13 +59,6 @@ const emailSchema = z.string().trim().email();
 
 function isValidEmail(value: string): boolean {
   return emailSchema.safeParse(value).success;
-}
-
-/** Sync controlled inputs with browser autofill (onChange alone can miss it). */
-function syncInputValue(setter: (value: string) => void) {
-  return (event: FormEvent<HTMLInputElement>) => {
-    setter(event.currentTarget.value);
-  };
 }
 
 type AccountFieldErrors = {
@@ -98,12 +94,26 @@ function getAccountFieldErrors(input: {
   return errors;
 }
 
-function CartSummary({ cart, compact }: { cart: SignupCart | null; compact?: boolean }) {
+function CartSummary({
+  cart,
+  compact,
+  loading,
+}: {
+  cart: SignupCart | null;
+  compact?: boolean;
+  loading?: boolean;
+}) {
   if (!cart) {
     return (
       <div className="text-sm text-stone-500 dark:text-stone-400">
-        <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
-        Calculating…
+        {loading ? (
+          <>
+            <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
+            Calculating…
+          </>
+        ) : (
+          'Cart unavailable'
+        )}
       </div>
     );
   }
@@ -195,7 +205,7 @@ function TrialCodeField({
         <Input
           id={id}
           value={trialCode}
-          onChange={(e) => onChange(e.target.value.toUpperCase())}
+          onChange={(e) => onChange(e.target.value)}
           onBlur={() => {
             if (!disabled) onCommit();
           }}
@@ -206,8 +216,9 @@ function TrialCodeField({
             }
           }}
           placeholder="Optional"
-          className="pl-9"
+          className="pl-9 uppercase"
           autoComplete="off"
+          autoCorrect="off"
           spellCheck={false}
           disabled={disabled}
           title={disabled ? 'A homepage trial is already applied' : undefined}
@@ -338,7 +349,7 @@ function SignupCartPanel({
           {loadingCart && !cart ? (
             <Loader2 className="h-5 w-5 animate-spin text-stone-400" />
           ) : (
-            <CartSummary cart={cart} compact />
+            <CartSummary cart={cart} compact loading={loadingCart} />
           )}
           {loadingCart && cart && (
             <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">
@@ -370,6 +381,7 @@ function useIsLgUp() {
 
 export function GetStartedPage() {
   const navigate = useNavigate();
+  const { login, logout } = useAuth();
   const isLgUp = useIsLgUp();
   const [searchParams] = useSearchParams();
   const initialPlan = (searchParams.get('plan') as SignupTierId | null) ?? 'professional';
@@ -383,7 +395,13 @@ export function GetStartedPage() {
     addons: SignupCatalogAddon[];
     included: { name: string; description: string };
   } | null>(null);
-  const [cart, setCart] = useState<SignupCart | null>(null);
+  const [cart, setCart] = useState<SignupCart | null>(() =>
+    calculateSignupCart({
+      tier: ['starter', 'professional', 'business'].includes(initialPlan) ? initialPlan : 'professional',
+      subdomainAddon: false,
+      customWebsiteAddon: false,
+    }),
+  );
   const [loadingCart, setLoadingCart] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -415,11 +433,20 @@ export function GetStartedPage() {
   const [trialOffer, setTrialOffer] = useState<ResolvedTrialOffer | null>(null);
   const [committedTrialCode, setCommittedTrialCode] = useState('');
   const [homepageTrial, setHomepageTrial] = useState<TrialCampaign | null>(null);
-  const [provisionedResult, setProvisionedResult] = useState<{ organizationId: string; slug: string } | null>(null);
+  const [provisionedResult, setProvisionedResult] = useState<{
+    organizationId: string;
+    slug: string;
+    signedIn: boolean;
+  } | null>(null);
   const committedTrialCodeRef = useRef(committedTrialCode);
   const trialOfferRef = useRef(trialOffer);
   const trialValidateSeq = useRef(0);
+  const cartPreviewSeq = useRef(0);
   const formSectionRef = useRef<HTMLDivElement>(null);
+  const ownerNameRef = useRef<HTMLInputElement>(null);
+  const ownerEmailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const confirmPasswordRef = useRef<HTMLInputElement>(null);
   committedTrialCodeRef.current = committedTrialCode;
   trialOfferRef.current = trialOffer;
 
@@ -464,12 +491,10 @@ export function GetStartedPage() {
       return;
     }
 
-    if (trimmed === committedTrialCodeRef.current) {
+    if (trimmed === committedTrialCodeRef.current && trialOfferRef.current) {
       // Cancel any in-flight validation for a different draft.
       trialValidateSeq.current += 1;
-      setTrialCodeStatus(
-        trialOfferRef.current ? 'valid' : committedTrialCodeRef.current ? 'invalid' : 'idle',
-      );
+      setTrialCodeStatus('valid');
       return;
     }
 
@@ -496,6 +521,19 @@ export function GetStartedPage() {
     void commitTrialCode(initialCode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleTrialCodeChange = useCallback((next: string) => {
+    trialValidateSeq.current += 1;
+    setTrialCode(next);
+    setTrialCodeStatus('idle');
+    setTrialOffer(null);
+  }, []);
+
+  const trialCodeDraftMatchesCommit = trialCode.trim().toUpperCase() === committedTrialCode;
+  const trialCodeReadyForCheckout =
+    trialCodeDraftMatchesCommit &&
+    trialCodeStatus !== 'checking' &&
+    (trialCodeStatus === 'valid' || (trialCodeStatus === 'idle' && committedTrialCode.length === 0));
 
   const homepageTrialSelected = trialParam && Boolean(homepageTrial);
 
@@ -577,7 +615,16 @@ export function GetStartedPage() {
   }, [slug]);
 
   const refreshCart = useCallback(async () => {
-    setLoadingCart(true);
+    const seq = ++cartPreviewSeq.current;
+    const local = calculateSignupCart({
+      tier,
+      subdomainAddon,
+      customWebsiteAddon,
+      trialPaymentMode: activeTrialPaymentMode,
+    });
+    setCart(local);
+    // Keep Start free trial enabled: a hung/failed preview must not wipe a valid $0 trial cart.
+    setLoadingCart(false);
     try {
       const next = await previewSignupCart({
         tier,
@@ -585,17 +632,32 @@ export function GetStartedPage() {
         customWebsiteAddon,
         trialPaymentMode: activeTrialPaymentMode,
       });
+      if (seq !== cartPreviewSeq.current || !next) return;
       setCart(next);
     } catch {
-      setCart(null);
-    } finally {
-      setLoadingCart(false);
+      // Local cart already matches the API calculator for free_no_card / stripe_trial.
     }
   }, [tier, subdomainAddon, customWebsiteAddon, activeTrialPaymentMode]);
 
   useEffect(() => {
     void refreshCart();
   }, [refreshCart]);
+
+  const localCart = useMemo(
+    () =>
+      calculateSignupCart({
+        tier,
+        subdomainAddon,
+        customWebsiteAddon,
+        trialPaymentMode: activeTrialPaymentMode,
+      }),
+    [activeTrialPaymentMode, customWebsiteAddon, subdomainAddon, tier],
+  );
+  // Prefer the API cart only when it already reflects the current trial (Due today $0).
+  // Otherwise show the local $0/paid cart in the same render as BETA validating —
+  // a stale $49 cart or a failed preview must not leave Calculating / a disabled CTA.
+  const displayCart =
+    cart && cart.dueTodayCents === localCart.dueTodayCents ? cart : localCart;
 
   const bookingBase = (import.meta.env.VITE_BOOKING_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? 'https://viselle.net';
 
@@ -647,30 +709,36 @@ export function GetStartedPage() {
       case 'business':
         return businessName.trim().length > 0 && slug.length >= 2 && slugStatus === 'available';
       case 'account':
-        return Object.keys(accountErrors).length === 0;
+        // Autofill can fill the DOM without a React change event — validate on Continue instead.
+        return true;
       case 'plan':
         return Boolean(tier) && Boolean(catalog);
       case 'website':
         return true;
       case 'checkout':
-        return Boolean(cart) && !loadingCart && trialCodeStatus !== 'checking' && trialCodeStatus !== 'invalid';
+        return (
+          Boolean(displayCart) &&
+          trialCodeReadyForCheckout &&
+          (isFreeTrialCheckout || !loadingCart)
+        );
       default:
         return false;
     }
   }, [
-    accountErrors,
     businessName,
-    cart,
     catalog,
     currentStep,
+    displayCart,
+    isFreeTrialCheckout,
     loadingCart,
     slug,
     slugStatus,
     tier,
-    trialCodeStatus,
+    trialCodeReadyForCheckout,
   ]);
 
   async function handleCheckout() {
+    if (!trialCodeReadyForCheckout) return;
     setError(null);
     setSubmitting(true);
     try {
@@ -688,9 +756,27 @@ export function GetStartedPage() {
       });
 
       if (result.provisioned && result.organizationId && result.slug) {
-        setProvisionedResult({ organizationId: result.organizationId, slug: result.slug });
-        setSubmitting(false);
-        window.setTimeout(() => navigate('/login', { replace: true }), 1800);
+        // Leftover browser session must not win — /login auto-sends signed-in users
+        // back to their previous org (QA: Isolation Studio calendar).
+        logout();
+        setProvisionedResult({
+          organizationId: result.organizationId,
+          slug: result.slug,
+          signedIn: false,
+        });
+        try {
+          const signedIn = await login(ownerEmail.trim(), password);
+          setProvisionedResult({
+            organizationId: result.organizationId,
+            slug: result.slug,
+            signedIn: true,
+          });
+          setSubmitting(false);
+          window.setTimeout(() => navigate(signedInHomePath(signedIn), { replace: true }), 900);
+        } catch {
+          setSubmitting(false);
+          window.setTimeout(() => navigate('/login', { replace: true }), 1800);
+        }
         return;
       }
 
@@ -709,11 +795,28 @@ export function GetStartedPage() {
     }
   }
 
+  function syncAccountFieldsFromDom() {
+    const next = {
+      ownerName: ownerNameRef.current?.value ?? ownerName,
+      ownerEmail: ownerEmailRef.current?.value ?? ownerEmail,
+      password: passwordRef.current?.value ?? password,
+      confirmPassword: confirmPasswordRef.current?.value ?? confirmPassword,
+    };
+    setOwnerName(next.ownerName);
+    setOwnerEmail(next.ownerEmail);
+    setPassword(next.password);
+    setConfirmPassword(next.confirmPassword);
+    return next;
+  }
+
   function goNext() {
     setError(null);
-    if (currentStep === 'account' && Object.keys(accountErrors).length > 0) {
-      setAccountShowAllErrors(true);
-      return;
+    if (currentStep === 'account') {
+      const next = syncAccountFieldsFromDom();
+      if (Object.keys(getAccountFieldErrors(next)).length > 0) {
+        setAccountShowAllErrors(true);
+        return;
+      }
     }
     if (currentStep === 'business' && !canContinue) {
       return;
@@ -785,7 +888,9 @@ export function GetStartedPage() {
               <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-600 dark:text-emerald-400" />
               <CardTitle className="mt-4">Your free trial is ready!</CardTitle>
               <CardDescription>
-                {businessName} is all set — taking you to sign in as {ownerEmail}…
+                {provisionedResult.signedIn
+                  ? `${businessName} is all set — opening your dashboard as ${ownerEmail}…`
+                  : `${businessName} is all set — taking you to sign in as ${ownerEmail}…`}
               </CardDescription>
             </CardHeader>
           </Card>
@@ -796,7 +901,7 @@ export function GetStartedPage() {
   }
 
   return (
-    <div className={cn(MARKETING_SHELL_CLASS, !isLgUp && 'pb-44')}>
+    <div className={cn(MARKETING_SHELL_CLASS, !isLgUp && 'pb-[calc(11rem+var(--safe-area-bottom))]')}>
       <PageSeo {...marketingSeo.getStarted} />
       <MarketingHeader />
 
@@ -878,7 +983,6 @@ export function GetStartedPage() {
                       name="organization"
                       value={businessName}
                       onChange={(e) => setBusinessName(e.target.value)}
-                      onInput={syncInputValue(setBusinessName)}
                       placeholder="Luna Hair Studio"
                       autoComplete="organization"
                     />
@@ -934,9 +1038,9 @@ export function GetStartedPage() {
                     <Input
                       id="ownerName"
                       name="name"
+                      ref={ownerNameRef}
                       value={ownerName}
                       onChange={(e) => setOwnerName(e.target.value)}
-                      onInput={syncInputValue(setOwnerName)}
                       onBlur={() => markAccountTouched('ownerName')}
                       autoComplete="name"
                       aria-invalid={Boolean(visibleAccountErrors.ownerName)}
@@ -950,6 +1054,7 @@ export function GetStartedPage() {
                     <Input
                       id="ownerEmail"
                       name="email"
+                      ref={ownerEmailRef}
                       type="email"
                       inputMode="email"
                       autoCapitalize="none"
@@ -957,7 +1062,6 @@ export function GetStartedPage() {
                       spellCheck={false}
                       value={ownerEmail}
                       onChange={(e) => setOwnerEmail(e.target.value)}
-                      onInput={syncInputValue(setOwnerEmail)}
                       onBlur={() => {
                         setOwnerEmail((current) => current.trim());
                         markAccountTouched('ownerEmail');
@@ -974,9 +1078,9 @@ export function GetStartedPage() {
                     <PasswordInput
                       id="password"
                       name="password"
+                      ref={passwordRef}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      onInput={syncInputValue(setPassword)}
                       onBlur={() => markAccountTouched('password')}
                       autoComplete="new-password"
                       aria-invalid={Boolean(visibleAccountErrors.password)}
@@ -992,9 +1096,9 @@ export function GetStartedPage() {
                     <PasswordInput
                       id="confirmPassword"
                       name="confirmPassword"
+                      ref={confirmPasswordRef}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      onInput={syncInputValue(setConfirmPassword)}
                       onBlur={() => markAccountTouched('confirmPassword')}
                       autoComplete="new-password"
                       aria-invalid={Boolean(visibleAccountErrors.confirmPassword)}
@@ -1210,7 +1314,7 @@ export function GetStartedPage() {
             <aside>
               <SignupCartPanel
                 variant="sidebar"
-                cart={cart}
+                cart={displayCart}
                 loadingCart={loadingCart}
                 trialCode={trialCode}
                 trialCodeStatus={trialCodeStatus}
@@ -1218,7 +1322,7 @@ export function GetStartedPage() {
                 useHomepageCampaign={useHomepageCampaign}
                 homepageTrial={homepageTrial}
                 trialCodeDisabled={homepageTrialSelected}
-                onTrialCodeChange={setTrialCode}
+                onTrialCodeChange={handleTrialCodeChange}
                 onTrialCodeCommit={() => void commitTrialCode(trialCode)}
                 inputId="trialCode"
               />
@@ -1228,14 +1332,14 @@ export function GetStartedPage() {
       </div>
 
       {!isLgUp && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-white/95 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] backdrop-blur dark:border-stone-700 dark:bg-stone-950/95 dark:shadow-[0_-8px_30px_rgba(0,0,0,0.35)]">
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-white/95 px-safe pb-safe-or-3 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] backdrop-blur dark:border-stone-700 dark:bg-stone-950/95 dark:shadow-[0_-8px_30px_rgba(0,0,0,0.35)]">
           <div className="mx-auto max-w-6xl px-4 py-3 sm:px-6">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
               Your cart
             </p>
             <SignupCartPanel
               variant="mobileBar"
-              cart={cart}
+              cart={displayCart}
               loadingCart={loadingCart}
               trialCode={trialCode}
               trialCodeStatus={trialCodeStatus}
@@ -1243,7 +1347,7 @@ export function GetStartedPage() {
               useHomepageCampaign={useHomepageCampaign}
               homepageTrial={homepageTrial}
               trialCodeDisabled={homepageTrialSelected}
-              onTrialCodeChange={setTrialCode}
+              onTrialCodeChange={handleTrialCodeChange}
               onTrialCodeCommit={() => void commitTrialCode(trialCode)}
               inputId="trialCode-mobile"
             />

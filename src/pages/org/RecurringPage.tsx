@@ -194,12 +194,12 @@ function RecurringRulesList({
 }) {
   return (
     <Panel className="overflow-hidden">
-      <div className="md:hidden">
+      <div className="desktop-shell:hidden">
         {rules.map((rule) => (
           <RecurringRuleCard key={rule.id} rule={rule} onEdit={onEdit} onDelete={onDelete} trialLocked={trialLocked} />
         ))}
       </div>
-      <div className="hidden md:block">
+      <div className="hidden desktop-shell:block">
         <RecurringRulesTable rules={rules} onEdit={onEdit} onDelete={onDelete} trialLocked={trialLocked} />
       </div>
     </Panel>

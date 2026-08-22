@@ -33,21 +33,33 @@ export function MobileSidebar() {
           side="left"
           style={{
             ...panelStyle,
+            // Pin to the measured app viewport (landscape-safe); inline styles beat sheet h-full/inset-y-0.
+            top: 0,
+            bottom: 'auto',
+            height: 'var(--app-height, 100dvh)',
+            maxHeight: 'var(--app-height, 100dvh)',
             // Full-bleed panel; top inset only — footer owns the bottom safe area so
             // Powered-by can sit lower without leaving a maroon gap under the sheet.
-            paddingTop: 'env(safe-area-inset-top, 0px)',
+            paddingTop: 'var(--safe-area-top)',
           }}
           overlayStyle={overlayStyle}
           className={cn(
-            'flex h-full w-[min(100vw-1rem,18rem)] max-w-xs flex-col gap-0 p-0 sm:p-0 touch-pan-y',
+            'flex w-[min(100vw-1rem,18rem)] max-w-xs flex-col gap-0 overflow-hidden p-0 sm:p-0',
             panelClassName,
           )}
         >
           <SheetTitle className="sr-only">Navigation menu</SheetTitle>
-          <SidebarBrand subtitle={subtitle} />
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain p-3 [&_a]:min-h-11 [&_a]:py-2.5 [&_a]:text-[0.9375rem] [&_button]:min-h-11">
-            <SidebarNav onNavigate={close} mobile />
-            <div className="mt-auto border-t border-stone-200 pt-4 dark:border-stone-800">
+          <div className="shrink-0">
+            <SidebarBrand subtitle={subtitle} />
+          </div>
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div
+              data-mobile-drawer-scroll
+              className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain touch-pan-y p-3 [&_a]:min-h-11 [&_a]:py-2.5 [&_a]:text-[0.9375rem] [&_button]:min-h-11"
+            >
+              <SidebarNav onNavigate={close} mobile />
+            </div>
+            <div className="shrink-0 border-t border-stone-200 p-3 pt-4 dark:border-stone-800">
               <ReferAFriendTrigger
                 mobile
                 onClick={() => {
@@ -59,7 +71,7 @@ export function MobileSidebar() {
           </div>
           <div
             className="shrink-0 border-t border-stone-200 px-4 pt-3 text-right dark:border-stone-800"
-            style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
+            style={{ paddingBottom: 'max(0.75rem, var(--safe-area-bottom))' }}
           >
             <PoweredByMakoons className="text-right" />
           </div>

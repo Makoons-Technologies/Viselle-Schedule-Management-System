@@ -65,7 +65,8 @@ export function OrganizationStatusBadge({ status }: { status: OrganizationStatus
 }
 
 export function BillingStatusBadge({ status }: { status: BillingStatus }) {
-  return <Badge variant={billingVariants[status]}>{status.replace('_', ' ')}</Badge>;
+  const label = status === 'cancelled' ? 'Canceled' : status.replace('_', ' ');
+  return <Badge variant={billingVariants[status]}>{label}</Badge>;
 }
 
 const hostingVariants: Record<
@@ -93,7 +94,7 @@ export function WebsiteHostingBadge({
     case 'subdomain':
       return <Badge variant={hostingVariants.subdomain}>Hosted subdomain</Badge>;
     case 'external_api':
-      return <Badge variant={hostingVariants.external_api}>3rd party + API</Badge>;
+      return <Badge variant={hostingVariants.external_api}>Own website</Badge>;
     case 'path':
     case 'none':
     default:

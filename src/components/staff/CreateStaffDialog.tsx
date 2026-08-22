@@ -1,10 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
-import { orgApi } from '@/lib/api';
+import { getApiErrorMessage, isUnreachableRequestError, orgApi } from '@/lib/api';
+import { withoutReactFormReset } from '@/lib/form-submit';
+import { findReconciledStaffAccount } from '@/lib/staff-create';
 import type { Account } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -30,20 +32,38 @@ interface CreateStaffDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   account?: Account | null;
+  /** Account ids already on the staff list — used to reject a no-op create. */
+  existingAccountIds?: string[];
 }
 
-export function CreateStaffDialog({ orgId, open, onOpenChange, account }: CreateStaffDialogProps) {
+export function CreateStaffDialog({
+  orgId,
+  open,
+  onOpenChange,
+  account,
+  existingAccountIds = [],
+}: CreateStaffDialogProps) {
   const queryClient = useQueryClient();
   const isEditing = !!account;
   const isOrgOwner = account?.role === 'org_owner';
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { role: 'staff', isBookable: true, status: 'active' },
   });
+  const wasOpen = useRef(false);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      wasOpen.current = false;
+      return;
+    }
+    // Only seed when the dialog opens. A failed Create must not wipe fields
+    // (React 19 form reset + reset() identity changes).
+    if (wasOpen.current) return;
+    wasOpen.current = true;
+    setSubmitError(null);
     if (account) {
       reset({
         firstName: account.firstName,
@@ -60,7 +80,7 @@ export function CreateStaffDialog({ orgId, open, onOpenChange, account }: Create
   }, [open, account, reset]);
 
   const mutation = useMutation({
-    mutationFn: (data: FormData) => {
+    mutationFn: async (data: FormData) => {
       const payload = {
         firstName: data.firstName,
         lastName: data.lastName,
@@ -74,29 +94,84 @@ export function CreateStaffDialog({ orgId, open, onOpenChange, account }: Create
           : { role: data.role ?? 'staff' }),
       };
 
-      return isEditing
-        ? orgApi.updateAccount(orgId, account!.id, payload)
-        : orgApi.createAccount(orgId, { ...payload, role: data.role ?? 'staff' });
+      if (isEditing) {
+        return orgApi.updateAccount(orgId, account!.id, payload);
+      }
+
+      try {
+        const result = await orgApi.createAccount(orgId, { ...payload, role: data.role ?? 'staff' });
+        const created = result.account;
+        if (!created?.id) {
+          throw new Error('Staff was not created. Try again or contact support.');
+        }
+        if (created.role === 'org_owner' || existingAccountIds.includes(created.id)) {
+          throw new Error(
+            'No new staff member was added. That email is already used on this team — use a different email.',
+          );
+        }
+        return result;
+      } catch (err) {
+        if (!isUnreachableRequestError(err)) throw err;
+        // Isolation QA: same ERR_FAILED class as check-in (server OK, UI Network Error).
+        const listed = await orgApi.listAccounts(orgId).catch(() => null);
+        const reconciled = listed
+          ? findReconciledStaffAccount(listed.accounts, data.email, existingAccountIds)
+          : undefined;
+        if (reconciled) {
+          return { account: reconciled };
+        }
+        throw err;
+      }
     },
-    onSuccess: () => {
-      toast.success(
-        isEditing
-          ? 'Staff member updated'
-          : 'Staff member created — they will receive an email to set their password',
-      );
+    onSuccess: (result) => {
+      setSubmitError(null);
+      if (isEditing) {
+        toast.success('Staff member updated');
+      } else if (result && 'emailSent' in result && result.emailSent === false) {
+        toast.warning(
+          'Staff member added, but the invite email could not be sent. They can use Forgot password on the sign-in page.',
+        );
+      } else {
+        toast.success('Staff member created — they will receive an email to set their password');
+      }
       queryClient.invalidateQueries({ queryKey: ['accounts', orgId] });
       onOpenChange(false);
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: unknown) => {
+      const message = getApiErrorMessage(err, 'Could not save this staff member. Try again.');
+      setSubmitError(message);
+      toast.error(message);
+    },
   });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && mutation.isPending) return;
+        onOpenChange(next);
+      }}
+    >
+      <DialogContent
+        onPointerDownOutside={(event) => {
+          if (mutation.isPending) event.preventDefault();
+        }}
+        onEscapeKeyDown={(event) => {
+          if (mutation.isPending) event.preventDefault();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit staff member' : 'Add staff member'}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-4">
+        <form
+          onSubmit={withoutReactFormReset(
+            handleSubmit((d) => {
+              setSubmitError(null);
+              mutation.mutate(d);
+            }),
+          )}
+          className="space-y-4"
+        >
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <Label>First name</Label>
@@ -162,12 +237,17 @@ export function CreateStaffDialog({ orgId, open, onOpenChange, account }: Create
               Staff manage their own password from the sign-in page.
             </p>
           )}
+          {submitError ? (
+            <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200" role="alert">
+              {submitError}
+            </p>
+          ) : null}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
               Cancel
             </Button>
             <Button type="submit" disabled={mutation.isPending}>
-              {isEditing ? 'Save changes' : 'Create'}
+              {mutation.isPending ? (isEditing ? 'Saving…' : 'Creating…') : isEditing ? 'Save changes' : 'Create'}
             </Button>
           </DialogFooter>
         </form>

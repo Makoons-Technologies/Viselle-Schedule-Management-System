@@ -1,17 +1,25 @@
 import { useAuth } from '@/context/AuthContext';
+import { useSidebarCollapse } from '@/context/SidebarCollapseContext';
 import { ReferAFriendPanel } from '@/components/layout/ReferAFriendPanel';
 import { SidebarBrand, SidebarNav } from '@/components/layout/SidebarNav';
 import { PoweredByMakoons } from '@/components/common/PoweredByMakoons';
+import { cn } from '@/lib/utils';
 
 export function Sidebar() {
   const { user } = useAuth();
+  const { collapsed } = useSidebarCollapse();
 
   if (!user) return null;
 
   const subtitle = user.role === 'platform_owner' ? 'Platform Admin' : undefined;
 
   return (
-    <aside className="hidden w-60 shrink-0 flex-col border-r border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900 md:flex">
+    <aside
+      className={cn(
+        'hidden w-60 shrink-0 flex-col border-r border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900 desktop-shell:flex',
+        collapsed && 'desktop-shell:hidden',
+      )}
+    >
       <SidebarBrand subtitle={subtitle} />
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3">
         <SidebarNav />

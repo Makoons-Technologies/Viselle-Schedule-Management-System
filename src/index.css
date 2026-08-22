@@ -2,6 +2,10 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Portrait phones + landscape phones (short height) keep the mobile shell. */
+@custom-variant mobile-shell (@media (max-width: 767px), ((orientation: landscape) and (max-height: 767px)));
+@custom-variant desktop-shell (@media (min-width: 768px) and (min-height: 768px));
+
 @theme {
   --color-brand-50: #fdf4f8;
   --color-brand-100: #fbe8f2;
@@ -30,6 +34,51 @@
     linear-gradient(160deg, #2a0f1e 0%, #0f172a 55%, #1e1b4b 100%);
 }
 
+/*
+ * Safe-area tokens for installed PWA / iOS Safari (viewport-fit=cover).
+ * Components should use these utilities instead of nested env() in Tailwind
+ * arbitrary classes — commas inside env()/max() are easy to drop.
+ */
+:root {
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+}
+
+@utility pt-safe {
+  padding-top: var(--safe-area-top);
+}
+@utility pr-safe {
+  padding-right: var(--safe-area-right);
+}
+@utility pb-safe {
+  padding-bottom: var(--safe-area-bottom);
+}
+@utility pl-safe {
+  padding-left: var(--safe-area-left);
+}
+@utility px-safe {
+  padding-left: var(--safe-area-left);
+  padding-right: var(--safe-area-right);
+}
+@utility px-safe-or-2 {
+  padding-left: max(0.5rem, var(--safe-area-left));
+  padding-right: max(0.5rem, var(--safe-area-right));
+}
+@utility pb-safe-or-2 {
+  padding-bottom: max(0.5rem, var(--safe-area-bottom));
+}
+@utility pb-safe-or-3 {
+  padding-bottom: max(0.75rem, var(--safe-area-bottom));
+}
+@utility p-safe-or-4 {
+  padding-top: max(1rem, var(--safe-area-top));
+  padding-right: max(1rem, var(--safe-area-right));
+  padding-bottom: max(1rem, var(--safe-area-bottom));
+  padding-left: max(1rem, var(--safe-area-left));
+}
+
 @layer base {
   * {
     @apply border-stone-200 dark:border-stone-800;
@@ -49,12 +98,43 @@
   }
 
   /*
-   * Installed PWA: keep the status-bar / overscroll region dark so iOS does not
-   * flash a white strip above the marketing gradient (black-translucent).
+   * Authenticated app shell: only <main> scrolls.
+   */
+  html.app-shell,
+  html.app-shell body,
+  html.app-shell #root {
+    height: var(--app-height, 100dvh);
+    max-height: var(--app-height, 100dvh);
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  /* iOS standalone: 100dvh/innerHeight lie on cold start (WebKit #254868). After the
+   * keyboard, 100vh can shrink and leave a lip; JS sets --app-height to max(100vh, remembered). */
+  @media (display-mode: standalone) {
+    html.app-shell,
+    html.app-shell body,
+    html.app-shell #root {
+      height: var(--app-height, 100vh);
+      max-height: var(--app-height, 100vh);
+    }
+  }
+
+  html.app-shell body {
+    background-color: #ffffff;
+  }
+
+  html.dark.app-shell body {
+    background-color: #1c1917;
+  }
+
+  /*
+   * Installed PWA marketing pages: keep the status-bar / overscroll region dark.
+   * The app shell overrides this so the tab bar is not sitting on maroon.
    */
   @media (display-mode: standalone) {
-    html,
-    body {
+    html:not(.app-shell),
+    html:not(.app-shell) body {
       background-color: #2a0f1e;
     }
   }
@@ -63,7 +143,7 @@
    * iOS Safari zooms focused inputs under 16px. Keep 16px on small screens even when
    * components use text-sm; desktop can stay denser.
    */
-  @media (max-width: 767px) {
+  @media (max-width: 767px), ((orientation: landscape) and (max-height: 767px)) {
     input,
     select,
     textarea {

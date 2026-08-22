@@ -1,5 +1,5 @@
 ---
-description: Staging-first git workflow, semver, Vercel staging, and public release notes
+description: Staging-first git workflow, semver, and staging → main promote gates
 alwaysApply: true
 ---
 
@@ -7,35 +7,30 @@ alwaysApply: true
 
 ## Branches
 
-- **`staging`** — default integration branch. Day-to-day work merges here first.
-- **`main`** — production (viselle.net / production Vercel). Promote only via staging → main when cutting a release.
+- **`staging`** — default integration. Day-to-day work merges here first (deploys staging Vercel).
+- **Feature branches** — stay there until the user wants them on `staging` (avoids a deploy per commit).
+- **`main`** — production (viselle.net). Promote only via staging → main when cutting a release.
 
-No force-push to `main`.
+Never commit or push to `main` in day-to-day work. If the session is on `main`, stop and tell the user. No force-push to `main`.
 
 ## Semver (start at 0.0.1)
 
-When promoting staging → main, bump **one** of:
-
-| Part | Meaning |
-|------|---------|
-| **z (patch)** | User won’t notice unless a bug affects them |
-| **y (minor)** | User will notice; no retraining / no breaking change |
-| **x (major)** | Breaks compatibility or requires user retraining |
+When promoting staging → main, bump **one** of: **z** patch (user won’t notice), **y** minor (user notices, no break), **x** major (break / retraining).
 
 Phases: **alpha** (0.x) → **beta** (3-month trials) → **GA** (1.0.0+).
 
 ## Release notes
 
-Public page: `/releases` (no auth). Source of truth: `CHANGELOG.md` (also rendered via `src/content/releases.md`). Keep them in sync when cutting a release. Link lives in the marketing footer.
+Public page: `/releases`. Source: `CHANGELOG.md` and `src/content/releases.md` — keep in sync when cutting a release.
 
-## Release cut (required for every staging → main)
+## Before every staging → main (required)
 
-Never merge `staging` → `main` without bumping. Use:
+Do **not** merge or cut a release until all of this passes. Report **command output**, not assumptions.
 
-`npm run cut-release -- --bump patch|minor|major` (or on Windows: `node scripts/cut-release.mjs --bump=patch`).
+1. **Tests** — run `npm run test` if that script exists; this repo’s default gate is `npm run build` (`tsc` + Vite). Also run **all unit tests** in Beauty-Backend-API (`npm run test`). Fix failures before continuing.
+2. **Database migrations** — in the API repo, compare `supabase/migrations/` on `staging` vs `main`. Apply anything that landed on staging but not yet on **production** (staging DB may already have it). Use the API apply-migration scripts. Never invent ad-hoc schema.
+3. Then `npm run cut-release -- --bump patch|minor|major` (Windows: `node scripts/cut-release.mjs --bump=patch`). Preview with `--dry-run`. Bump **both** this repo and Beauty-Backend-API to the same version, merge staging → main, tag `vX.Y.Z`, deploy.
 
-The script auto-gathers commit subjects since the last `vX.Y.Z` tag (or `origin/main`), writes VERSION / package.json / CHANGELOG / `src/content/releases.md`, and (when the sibling API repo is present) includes API commits under an **API** section. Preview with `--dry-run`. Bump **both** this repo and Beauty-Backend-API to the same version, then merge, tag `vX.Y.Z`, and deploy.
+## Environments
 
-## Environments (separate DBs)
-
-Staging frontend (Vercel `staging` branch) must point `VITE_API_BASE_URL` at the **staging API**, which uses a **separate Supabase project** from production. Never point staging UI at production API/DB for day-to-day testing that mutates data.
+Staging frontend must point `VITE_API_BASE_URL` at the **staging API** (separate Supabase from production). Never point staging UI at production API/DB for mutating tests.

@@ -32,6 +32,11 @@ const FAQ_ITEMS = [
       'Go to Settings → Org settings and enable public booking, then visit Settings → Booking website to customize it.',
   },
   {
+    question: 'What is the "Go live" box on my dashboard?',
+    answer:
+      'While you are setting up, the dashboard shows a Go live checklist: add at least one service, set your hours, and turn on your booking page. When all three are done, the box disappears — you are live and can share the booking link at the top of the dashboard. You can still manage services, hours, and your booking page from Settings anytime.',
+  },
+  {
     question: 'A client double-booked or a slot looks wrong — what do I do?',
     answer:
       'Check Availability for the staff member involved, and confirm the appointment\'s timezone. If it still looks wrong, submit a ticket below with the appointment details.',

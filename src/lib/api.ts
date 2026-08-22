@@ -18,6 +18,8 @@ import type {
   LeaveOrDeleteOrgResponse,
   LoginResponse,
   Organization,
+  FirstVisitPaymentMode,
+  OwnerFirstVisitPayment,
   OrganizationOwnerSummary,
   OrgPlanFeatures,
   OrganizationSettings,
@@ -87,7 +89,102 @@ export const apiClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+/** Login/reset must not send a leftover session token — a 401 then looks like a failed password. */
+const PUBLIC_AUTH_PATHS = ['/auth/login', '/auth/forgot-password', '/auth/set-password'];
+
+function isPublicAuthRequest(url: string | undefined): boolean {
+  if (!url) return false;
+  try {
+    const path = url.startsWith('http') ? new URL(url).pathname : url;
+    return PUBLIC_AUTH_PATHS.some((p) => path.includes(p));
+  } catch {
+    return PUBLIC_AUTH_PATHS.some((p) => url.includes(p));
+  }
+}
+
+export const UNREACHABLE_SERVER_MESSAGE =
+  'Could not reach the server. Check your connection and try again.';
+export const SERVER_REQUEST_FAILED_MESSAGE = 'The server could not complete this request. Try again.';
+
+type RequestFailureLike = {
+  message?: string;
+  code?: string;
+  status?: number;
+  response?: { status?: number } | null;
+};
+
+function isAxiosNetworkFailure(err: RequestFailureLike): boolean {
+  const status = err.response?.status ?? err.status;
+  if (status && status > 0) return false;
+  return (
+    err.code === 'ERR_NETWORK' ||
+    err.code === 'NETWORK_ERROR' ||
+    err.message === 'Network Error' ||
+    err.message === 'Network request failed' ||
+    !err.response
+  );
+}
+
+/** True when the browser never got an HTTP response (axios Network Error / ERR_FAILED). */
+export function isUnreachableRequestError(err: unknown): boolean {
+  if (err instanceof ApiError) {
+    return err.status === 0 || err.message === UNREACHABLE_SERVER_MESSAGE;
+  }
+  if (err instanceof Error && (err.message === 'Network Error' || err.message === 'Network request failed')) {
+    return true;
+  }
+  if (err && typeof err === 'object') {
+    return isAxiosNetworkFailure(err as RequestFailureLike);
+  }
+  return false;
+}
+
+/** User-facing copy when the API body has no `error` payload (network / 5xx / 413). */
+export function getFallbackRequestErrorMessage(err: RequestFailureLike): string {
+  const status = err.response?.status ?? (err.status && err.status > 0 ? err.status : undefined);
+  if (status === 413) return 'Image must be 2 MB or smaller';
+  if (status && status >= 500) return SERVER_REQUEST_FAILED_MESSAGE;
+  if (isAxiosNetworkFailure(err)) return UNREACHABLE_SERVER_MESSAGE;
+  return err.message?.trim() || 'Network request failed';
+}
+
+export function getApiErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof ApiError) {
+    if (err.status === 413) return 'Image must be 2 MB or smaller';
+    if (err.status >= 500) return err.message.trim() || SERVER_REQUEST_FAILED_MESSAGE;
+    if (err.status === 0 || err.code === 'NETWORK_ERROR') {
+      const message = err.message.trim();
+      if (!message || message === 'Network Error' || message === 'Network request failed') {
+        return UNREACHABLE_SERVER_MESSAGE;
+      }
+      return message;
+    }
+    if (err.message.trim()) return err.message;
+  }
+  if (err instanceof Error && err.message.trim()) {
+    if (err.message === 'Network Error' || err.message === 'Network request failed') {
+      return UNREACHABLE_SERVER_MESSAGE;
+    }
+    return err.message;
+  }
+  return fallback;
+}
+
+export function getLoginErrorMessage(err: unknown): string {
+  if (err instanceof ApiError && err.code === 'PASSWORD_SETUP_REQUIRED') {
+    return 'Check your email for an invite link, or use Forgot password to request a new one.';
+  }
+  if (err instanceof ApiError && err.status === 401) {
+    return err.message.trim() || 'Incorrect email or password.';
+  }
+  return getApiErrorMessage(err, 'Sign in failed');
+}
+
 apiClient.interceptors.request.use((config) => {
+  if (isPublicAuthRequest(config.url)) {
+    delete config.headers.Authorization;
+    return config;
+  }
   const token = localStorage.getItem(TOKEN_KEY);
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -100,19 +197,21 @@ apiClient.interceptors.response.use(
   (error: AxiosError<ApiErrorBody>) => {
     const data = error.response?.data;
     if (data?.error) {
-      throw new ApiError(
-        data.error.code,
-        data.error.message,
-        error.response?.status ?? 500,
-        data.error.details,
+      return Promise.reject(
+        new ApiError(
+          data.error.code,
+          data.error.message,
+          error.response?.status ?? 500,
+          data.error.details,
+        ),
       );
     }
-    throw new ApiError(
-      'NETWORK_ERROR',
-      error.response?.status === 413
-        ? 'Image must be 2 MB or smaller'
-        : error.message || 'Network request failed',
-      error.response?.status ?? 0,
+    return Promise.reject(
+      new ApiError(
+        error.response?.status && error.response.status >= 500 ? 'SERVER_ERROR' : 'NETWORK_ERROR',
+        getFallbackRequestErrorMessage(error),
+        error.response?.status ?? 0,
+      ),
     );
   },
 );
@@ -176,9 +275,11 @@ export const ownerApi = {
       .then((r) => r.data),
   getOrganization: (id: string) =>
     apiClient
-      .get<{ organization: Organization; owner: OrganizationOwnerSummary | null }>(
-        `/owner/organizations/${id}`,
-      )
+      .get<{
+        organization: Organization;
+        owner?: OrganizationOwnerSummary | null;
+        firstVisitPayment?: OwnerFirstVisitPayment;
+      }>(`/owner/organizations/${id}`)
       .then((r) => r.data),
   updateOrganization: (id: string, data: Partial<Organization>) =>
     apiClient.patch<{ organization: Organization }>(`/owner/organizations/${id}`, data).then((r) => r.data),
@@ -313,6 +414,15 @@ export const ownerApi = {
     apiClient
       .get<{ requests: CustomWebsiteRequest[] }>('/owner/custom-website-requests', { params })
       .then((r) => r.data),
+  createCustomWebsiteRequest: (data: {
+    businessName: string;
+    contactName: string;
+    contactEmail: string;
+    organizationId?: string | null;
+  }) =>
+    apiClient
+      .post<{ request: CustomWebsiteRequest }>('/owner/custom-website-requests', data)
+      .then((r) => r.data),
   getCustomWebsiteRequest: (requestId: string) =>
     apiClient
       .get<{ request: CustomWebsiteRequest; notes: CustomWebsiteRequestNote[] }>(
@@ -352,7 +462,13 @@ export const supportApi = {
 
 export const orgApi = {
   getOrganization: (orgId: string) =>
-    apiClient.get<{ organization: Organization }>(`/organizations/${orgId}`).then((r) => r.data),
+    apiClient
+      .get<{
+        organization: Organization;
+        owner?: OrganizationOwnerSummary | null;
+        firstVisitPayment?: OwnerFirstVisitPayment;
+      }>(`/organizations/${orgId}`)
+      .then((r) => r.data),
   getPlan: (orgId: string) =>
     apiClient.get<{ plan: OrgPlanFeatures }>(`/organizations/${orgId}/plan`).then((r) => r.data),
   changePlan: (orgId: string, tier: Exclude<SubscriptionTier, 'custom'>) =>
@@ -384,8 +500,42 @@ export const orgApi = {
     apiClient
       .patch<{ staffPermissions: StaffPermissions }>(`/organizations/${orgId}/staff-permissions`, data)
       .then((r) => r.data),
-  updateOrganization: (orgId: string, data: Pick<Partial<Organization>, 'name' | 'slug' | 'publicBookingEnabled' | 'batchCheckoutEnabled' | 'emailRemindersOptIn' | 'smsRemindersOptIn' | 'emailReminderHoursBefore' | 'smsReminderHoursBefore' | 'confirmationRequestsOptIn' | 'confirmationDaysBefore' | 'staffEmailRemindersOptIn' | 'staffSmsRemindersOptIn' | 'staffPushRemindersOptIn' | 'staffReminderHoursBefore' | 'lowStockAlertsOptIn' | 'lowStockAlertEmail' | 'lowStockAlertSms' | 'lowStockAlertPush' | 'city' | 'address' | 'phone'>) =>
-    apiClient.patch<{ organization: Organization }>(`/organizations/${orgId}`, data).then((r) => r.data),
+  updateOrganization: (
+    orgId: string,
+    data: Pick<
+      Partial<Organization>,
+      | 'name'
+      | 'slug'
+      | 'publicBookingEnabled'
+      | 'batchCheckoutEnabled'
+      | 'emailRemindersOptIn'
+      | 'smsRemindersOptIn'
+      | 'emailReminderHoursBefore'
+      | 'smsReminderHoursBefore'
+      | 'confirmationRequestsOptIn'
+      | 'confirmationDaysBefore'
+      | 'staffEmailRemindersOptIn'
+      | 'staffSmsRemindersOptIn'
+      | 'staffPushRemindersOptIn'
+      | 'staffReminderHoursBefore'
+      | 'lowStockAlertsOptIn'
+      | 'lowStockAlertEmail'
+      | 'lowStockAlertSms'
+      | 'lowStockAlertPush'
+      | 'city'
+      | 'address'
+      | 'phone'
+    > & {
+      firstVisitPaymentMode?: FirstVisitPaymentMode;
+      firstVisitDepositCents?: number | null;
+    },
+  ) =>
+    apiClient
+      .patch<{ organization: Organization; firstVisitPayment?: OwnerFirstVisitPayment }>(
+        `/organizations/${orgId}`,
+        data,
+      )
+      .then((r) => r.data),
   deleteOrganization: (orgId: string) =>
     apiClient.delete<LeaveOrDeleteOrgResponse>(`/organizations/${orgId}`).then((r) => r.data),
   getWebsite: (orgId: string) =>
@@ -410,7 +560,9 @@ export const orgApi = {
   listAccounts: (orgId: string) =>
     apiClient.get<{ accounts: Account[] }>(`/organizations/${orgId}/accounts`).then((r) => r.data),
   createAccount: (orgId: string, data: CreateAccountInput) =>
-    apiClient.post<{ account: Account }>(`/organizations/${orgId}/accounts`, data).then((r) => r.data),
+    apiClient
+      .post<{ account: Account; emailSent?: boolean }>(`/organizations/${orgId}/accounts`, data)
+      .then((r) => r.data),
   updateAccount: (
     orgId: string,
     accountId: string,

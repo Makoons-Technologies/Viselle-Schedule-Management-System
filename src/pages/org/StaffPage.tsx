@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Clock, Plus, Trash2, Users, Wrench } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { orgApi } from '@/lib/api';
+import { getApiErrorMessage, orgApi } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgPlan } from '@/hooks/useOrgPlan';
@@ -30,7 +30,7 @@ export function StaffPage() {
   const orgId = useOrgId();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { plan } = useOrgPlan(orgId);
+  const { plan, isError: planError, error: planLoadError, refetch: refetchPlan } = useOrgPlan(orgId);
   const trialExpired = useOrgWriteLocked();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
@@ -101,6 +101,14 @@ export function StaffPage() {
           </TrialLockedControl>
         }
       />
+      {planError ? (
+        <p className="-mt-2 mb-4 text-sm text-red-700 dark:text-red-300" role="alert">
+          {getApiErrorMessage(planLoadError, 'Could not load plan limits.')}{' '}
+          <button type="button" className="font-medium underline" onClick={() => void refetchPlan()}>
+            Retry
+          </button>
+        </p>
+      ) : null}
       {staffLimit !== null ? (
         <p className="-mt-2 mb-4 text-sm text-stone-500">
           {staffLimit === 0
@@ -237,6 +245,7 @@ export function StaffPage() {
       <CreateStaffDialog
         orgId={orgId}
         account={editingAccount}
+        existingAccountIds={accounts.map((a) => a.id)}
         open={dialogOpen}
         onOpenChange={(open) => {
           setDialogOpen(open);

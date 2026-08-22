@@ -3,12 +3,12 @@
 > Readable HTML version (no login): [viselle.net/docs/api](https://viselle.net/docs/api)
 > Raw markdown: `GET /api/v1/docs/public-booking-api`
 
-This is the API that powers Viselle's booking pages. If you host booking on **your own
-website or app** (hosting mode `external_api`), use these endpoints directly instead of
-Viselle's hosted booking page.
+This is the API that powers Viselle's booking pages. It is **included** with every
+organization — you do not switch a hosting mode or turn on a custom website to use it.
 
-If you're using the free included link or the hosted subdomain (`path` / `subdomain` hosting
-modes), you don't need this — Viselle's booking page already calls this API for you.
+Viselle-hosted pages (the included `/book/…` link and `yourspa.viselle.net`) already call
+this API for you. If you book from **your own website or app**, generate an API key in
+**Settings → Booking website** and call these endpoints directly.
 
 ## Base URL
 
@@ -21,19 +21,23 @@ URL, unless noted otherwise.
 
 ## Authentication
 
-Auth requirements depend on your organization's **hosting mode**, configured in
-**Settings → Booking website** in the Viselle console (or `/owner/organizations/:id/website` for
-platform staff):
+The Public Booking API is available in every hosting mode. A key is only required when
+you call it from **your own site** (or any non-Viselle page). Viselle-hosted booking
+pages do not send a key.
 
-| Hosting mode | Auth required |
+| Who is calling | Auth required |
 |---|---|
-| `path` / `subdomain` (Viselle-hosted booking page) | None — same-origin requests only |
-| `external_api` (booking embedded on your own domain) | **API key + origin allowlist**, see below |
+| Viselle-hosted booking page (`path` / `subdomain`) | None |
+| Your website or app (any hosting mode) | **API key + origin allowlist**, see below |
+| Dashboard link set to an external site (`external_api`) | **API key + origin allowlist** |
+
+A Viselle-built custom website uses the same API. Turning that add-on on does **not**
+enable or disable API access.
 
 ### Getting an API key
 
 1. In the Viselle console, go to **Settings → Booking website**.
-2. Switch hosting mode to **External API**.
+2. Open **Developer API** (it is on every org — you do not switch hosting mode).
 3. Click **Generate API key**. The full key is shown once — copy and store it securely
    (only a short prefix is shown afterwards for identification).
 4. Add the domain(s) that will call the API to **Allowed origins** (e.g.

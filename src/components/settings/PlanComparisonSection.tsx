@@ -29,6 +29,10 @@ interface PlanComparisonSectionProps {
   hasStripeSubscription: boolean;
   /** Active (non-expired) trial — unpaid trials have no locked conversion tier. */
   isOnActiveTrial?: boolean;
+  /** Canceled org — reopen via Checkout even if a Stripe subscription id remains. */
+  isCanceled?: boolean;
+  /** Expire-job org — subscribe via Checkout; copy must say expired, not canceled. */
+  isTrialExpired?: boolean;
 }
 
 type PlanCtaLabel =
@@ -45,8 +49,9 @@ function ctaLabel(
   target: PlanTierId,
   hasStripeSubscription: boolean,
   isOnActiveTrial: boolean,
+  isCanceled: boolean,
 ): PlanCtaLabel {
-  if (isOnActiveTrial && !hasStripeSubscription) {
+  if (isCanceled || (isOnActiveTrial && !hasStripeSubscription)) {
     return 'Subscribe';
   }
   if (current === target) {
@@ -64,17 +69,22 @@ export function PlanComparisonSection({
   currentTier,
   hasStripeSubscription,
   isOnActiveTrial = false,
+  isCanceled = false,
+  isTrialExpired = false,
 }: PlanComparisonSectionProps) {
   const queryClient = useQueryClient();
   const [pendingTier, setPendingTier] = useState<PlanTierId | null>(null);
+  const needsCheckout = isCanceled || isTrialExpired;
 
   const storedCurrent: PlanTierId | null =
     currentTier === 'starter' || currentTier === 'professional' || currentTier === 'business'
       ? currentTier
       : null;
-  /** Unpaid trial: ignore stored conversion tier so nothing looks pre-selected. */
+  /** Unpaid trial, expired, or canceled: ignore stored conversion tier so every plan is Subscribe. */
   const normalizedCurrent: PlanTierId | null =
-    isOnActiveTrial && !hasStripeSubscription ? null : storedCurrent;
+    needsCheckout || (isOnActiveTrial && !hasStripeSubscription) ? null : storedCurrent;
+  /** Canceled / expired Stripe subs cannot be prorated — reopen through Checkout. */
+  const billingLinked = hasStripeSubscription && !needsCheckout;
 
   const changeMutation = useMutation({
     mutationFn: (tier: PlanTierId) => orgApi.changePlan(orgId, tier),
@@ -125,14 +135,14 @@ export function PlanComparisonSection({
   const dialogOpen = pendingTier !== null;
   const dialogLabel =
     pendingTier != null
-      ? (ctaLabel(normalizedCurrent, pendingTier, hasStripeSubscription, isOnActiveTrial) as
+      ? (ctaLabel(normalizedCurrent, pendingTier, billingLinked, isOnActiveTrial, needsCheckout) as
           | PlanChangeCtaLabel
           | 'Current plan'
           | 'Unavailable')
       : null;
 
   function openPlanChange(tier: PlanTierId) {
-    const label = ctaLabel(normalizedCurrent, tier, hasStripeSubscription, isOnActiveTrial);
+    const label = ctaLabel(normalizedCurrent, tier, billingLinked, isOnActiveTrial, needsCheckout);
     if (label === 'Current plan' || label === 'Unavailable') return;
     setPendingTier(tier);
   }
@@ -143,11 +153,15 @@ export function PlanComparisonSection({
         <CardHeader>
           <CardTitle className="text-base">Compare plans</CardTitle>
           <CardDescription>
-            {isOnActiveTrial && !hasStripeSubscription
+            {isTrialExpired
+              ? 'Your trial has expired. Choose a plan to upgrade with Stripe Checkout — salon tools stay locked until you subscribe.'
+              : isCanceled
+              ? 'This organization is canceled. Choose a plan to reactivate with Stripe Checkout — salon tools stay closed until billing is active.'
+              : isOnActiveTrial && !hasStripeSubscription
               ? 'Your trial includes every feature below. Columns show what you keep after you subscribe — pick any plan; nothing is locked in yet.'
               : isOnActiveTrial
                 ? 'Checkmarks show what each tier includes. During your trial you can subscribe to your current plan or upgrade — downgrades are unavailable until the trial ends.'
-                : hasStripeSubscription
+                : billingLinked
                   ? 'Checkmarks show what each tier includes. Upgrade or downgrade anytime — feature access updates immediately. You’ll be asked to trim staff if the new plan has a lower seat limit.'
                   : 'Checkmarks show what each tier includes. Choose a plan to pay with Stripe Checkout and activate your account.'}
           </CardDescription>
@@ -160,7 +174,19 @@ export function PlanComparisonSection({
             </p>
           )}
 
-          {isOnActiveTrial && !hasStripeSubscription && (
+          {isTrialExpired && (
+            <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-950 dark:border-red-900 dark:bg-red-950/40 dark:text-red-100">
+              Selecting a plan opens Stripe Checkout so you can upgrade after the trial.
+            </p>
+          )}
+
+          {isCanceled && (
+            <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-950 dark:border-red-900 dark:bg-red-950/40 dark:text-red-100">
+              Selecting a plan opens Stripe Checkout so you can reactivate this organization.
+            </p>
+          )}
+
+          {isOnActiveTrial && !hasStripeSubscription && !needsCheckout && (
             <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100">
               Included on your trial — SMS reminders, recurring appointments, multi-staff, and
               unlimited seats are available now. Subscribe below when you are ready to continue after
@@ -168,7 +194,7 @@ export function PlanComparisonSection({
             </p>
           )}
 
-          {!hasStripeSubscription && !isOnActiveTrial && (
+          {!billingLinked && !isOnActiveTrial && !needsCheckout && (
             <p className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-950 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-100">
               No card is linked yet. Selecting a plan opens Stripe Checkout so you can subscribe and
               unlock the app.
@@ -245,8 +271,9 @@ export function PlanComparisonSection({
                     const label = ctaLabel(
                       normalizedCurrent,
                       tier.id,
-                      hasStripeSubscription,
+                      billingLinked,
                       isOnActiveTrial,
+                      needsCheckout,
                     );
                     const isCurrent = label === 'Current plan';
                     const isUnavailable = label === 'Unavailable';
@@ -276,7 +303,7 @@ export function PlanComparisonSection({
                           onClick={() => openPlanChange(tier.id)}
                         >
                           {pending && pendingTier === tier.id
-                            ? hasStripeSubscription
+                            ? billingLinked
                               ? 'Updating…'
                               : 'Redirecting…'
                             : label}
@@ -312,7 +339,7 @@ export function PlanComparisonSection({
             currentTier={normalizedCurrent}
             targetTier={pendingTier}
             ctaLabel={dialogLabel}
-            hasStripeSubscription={hasStripeSubscription}
+            hasStripeSubscription={billingLinked}
             confirming={pending}
             onConfirmStripeChange={(tier) => changeMutation.mutate(tier)}
             onConfirmCheckout={(tier) => checkoutMutation.mutate(tier)}

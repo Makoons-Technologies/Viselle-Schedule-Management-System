@@ -1,4 +1,4 @@
-/* Viselle PWA — installability + Web Push (Phase 2+). */
+/* Viselle PWA — installability + Web Push. */
 self.addEventListener('install', () => {
   self.skipWaiting();
 });

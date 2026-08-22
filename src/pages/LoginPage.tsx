@@ -5,7 +5,9 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { useAuth } from '@/context/AuthContext';
-import { ApiError } from '@/lib/api';
+import { getLoginErrorMessage } from '@/lib/api';
+import { signedInHomePath } from '@/lib/auth-redirect';
+import { withoutReactFormReset } from '@/lib/form-submit';
 import { LoadingState } from '@/components/common/LoadingState';
 import { PoweredByMakoons } from '@/components/common/PoweredByMakoons';
 import { ViselleLogo } from '@/components/common/ViselleLogo';
@@ -30,40 +32,38 @@ export function LoginPage() {
   const { login, isAuthenticated, isLoading, user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+  const [authError, setAuthError] = useState<string | null>(null);
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { email: '', password: '' },
   });
 
   if (!isLoading && isAuthenticated && user) {
-    if (user.role === 'platform_owner') return <Navigate to="/platform/dashboard" replace />;
-    if (user.role === 'org_owner') return <Navigate to={`/orgs/${user.organizationId}/dashboard`} replace />;
-    return <Navigate to={`/orgs/${user.organizationId}/calendar`} replace />;
+    return <Navigate to={signedInHomePath(user)} replace />;
   }
 
-  if (isLoading) return <LoadingState />;
+  // Keep the form mounted while a submit is in flight so a 401 cannot remount and wipe fields.
+  if (isLoading && !loading) return <LoadingState />;
 
   const onSubmit = async (data: FormData) => {
     setLoading(true);
+    setAuthError(null);
     try {
-      const user = await login(data.email, data.password);
-      if (user.role === 'platform_owner') navigate('/platform/dashboard');
-      else if (user.role === 'org_owner') navigate(`/orgs/${user.organizationId}/dashboard`);
-      else navigate(`/orgs/${user.organizationId}/calendar`);
+      const nextUser = await login(data.email, data.password);
       toast.success('Welcome back!');
+      navigate(signedInHomePath(nextUser));
     } catch (err) {
-      if (err instanceof ApiError && err.code === 'PASSWORD_SETUP_REQUIRED') {
-        toast.error('Check your email for an invite link, or use Forgot password to request a new one.');
-      } else {
-        toast.error(err instanceof Error ? err.message : 'Login failed');
-      }
+      const message = getLoginErrorMessage(err);
+      setAuthError(message);
+      toast.error(message);
+      reset({ email: data.email, password: '' });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className={cn(MARKETING_SHELL_CLASS, 'flex flex-col items-center justify-center gap-4 p-4')}>
+    <div className={cn(MARKETING_SHELL_CLASS, 'flex flex-col items-center justify-center gap-4 p-safe-or-4')}>
       <PageSeo {...marketingSeo.login} />
       <Card className="w-full max-w-md border-white/15 bg-white/95 shadow-2xl">
         <CardHeader className="text-center">
@@ -74,10 +74,10 @@ export function LoginPage() {
           <CardDescription>Schedule Management System</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={withoutReactFormReset(handleSubmit(onSubmit))} className="space-y-4">
             <div>
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" {...register('email')} />
+              <Input id="email" type="email" autoComplete="username" {...register('email')} />
               {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>}
             </div>
             <div>
@@ -85,6 +85,11 @@ export function LoginPage() {
               <PasswordInput id="password" autoComplete="current-password" {...register('password')} />
               {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password.message}</p>}
             </div>
+            {authError && (
+              <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200" role="alert">
+                {authError}
+              </p>
+            )}
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Signing in...' : 'Sign in'}
             </Button>
