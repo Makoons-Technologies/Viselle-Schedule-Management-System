@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgPlan } from '@/hooks/useOrgPlan';
 import { useAuth } from '@/context/AuthContext';
+import { getApiErrorMessage } from '@/lib/api';
 import { ThemeSettingsSection } from '@/components/settings/ThemeSettingsSection';
 import { PushNotificationsCard } from '@/components/settings/PushNotificationsCard';
 import { LoadingState } from '@/components/common/LoadingState';
@@ -12,7 +13,7 @@ import { centsToDollars } from '@/lib/utils';
 export function GeneralSettingsPage() {
   const orgId = useOrgId();
   const { user } = useAuth();
-  const { plan, isLoading } = useOrgPlan(orgId);
+  const { plan, isLoading, isError, error, refetch } = useOrgPlan(orgId);
   const canManagePlan = user?.role === 'org_owner' || user?.role === 'platform_owner';
 
   return (
@@ -21,6 +22,20 @@ export function GeneralSettingsPage() {
         <>
           {isLoading ? (
             <LoadingState />
+          ) : isError ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Your plan</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-red-700 dark:text-red-300" role="alert">
+                  {getApiErrorMessage(error, 'Could not load your plan. Try again.')}
+                </p>
+                <Button type="button" size="sm" variant="outline" onClick={() => void refetch()}>
+                  Retry
+                </Button>
+              </CardContent>
+            </Card>
           ) : plan ? (
             <Card>
               <CardHeader>

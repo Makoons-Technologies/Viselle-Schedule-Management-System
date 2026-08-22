@@ -102,9 +102,71 @@ function isPublicAuthRequest(url: string | undefined): boolean {
   }
 }
 
+export const UNREACHABLE_SERVER_MESSAGE =
+  'Could not reach the server. Check your connection and try again.';
+export const SERVER_REQUEST_FAILED_MESSAGE = 'The server could not complete this request. Try again.';
+
+type RequestFailureLike = {
+  message?: string;
+  code?: string;
+  status?: number;
+  response?: { status?: number } | null;
+};
+
+function isAxiosNetworkFailure(err: RequestFailureLike): boolean {
+  const status = err.response?.status ?? err.status;
+  if (status && status > 0) return false;
+  return (
+    err.code === 'ERR_NETWORK' ||
+    err.code === 'NETWORK_ERROR' ||
+    err.message === 'Network Error' ||
+    err.message === 'Network request failed' ||
+    !err.response
+  );
+}
+
+/** True when the browser never got an HTTP response (axios Network Error / ERR_FAILED). */
+export function isUnreachableRequestError(err: unknown): boolean {
+  if (err instanceof ApiError) {
+    return err.status === 0 || err.message === UNREACHABLE_SERVER_MESSAGE;
+  }
+  if (err instanceof Error && (err.message === 'Network Error' || err.message === 'Network request failed')) {
+    return true;
+  }
+  if (err && typeof err === 'object') {
+    return isAxiosNetworkFailure(err as RequestFailureLike);
+  }
+  return false;
+}
+
+/** User-facing copy when the API body has no `error` payload (network / 5xx / 413). */
+export function getFallbackRequestErrorMessage(err: RequestFailureLike): string {
+  const status = err.response?.status ?? (err.status && err.status > 0 ? err.status : undefined);
+  if (status === 413) return 'Image must be 2 MB or smaller';
+  if (status && status >= 500) return SERVER_REQUEST_FAILED_MESSAGE;
+  if (isAxiosNetworkFailure(err)) return UNREACHABLE_SERVER_MESSAGE;
+  return err.message?.trim() || 'Network request failed';
+}
+
 export function getApiErrorMessage(err: unknown, fallback: string): string {
-  if (err instanceof ApiError && err.message.trim()) return err.message;
-  if (err instanceof Error && err.message.trim()) return err.message;
+  if (err instanceof ApiError) {
+    if (err.status === 413) return 'Image must be 2 MB or smaller';
+    if (err.status >= 500) return err.message.trim() || SERVER_REQUEST_FAILED_MESSAGE;
+    if (err.status === 0 || err.code === 'NETWORK_ERROR') {
+      const message = err.message.trim();
+      if (!message || message === 'Network Error' || message === 'Network request failed') {
+        return UNREACHABLE_SERVER_MESSAGE;
+      }
+      return message;
+    }
+    if (err.message.trim()) return err.message;
+  }
+  if (err instanceof Error && err.message.trim()) {
+    if (err.message === 'Network Error' || err.message === 'Network request failed') {
+      return UNREACHABLE_SERVER_MESSAGE;
+    }
+    return err.message;
+  }
   return fallback;
 }
 
@@ -146,10 +208,8 @@ apiClient.interceptors.response.use(
     }
     return Promise.reject(
       new ApiError(
-        'NETWORK_ERROR',
-        error.response?.status === 413
-          ? 'Image must be 2 MB or smaller'
-          : error.message || 'Network request failed',
+        error.response?.status && error.response.status >= 500 ? 'SERVER_ERROR' : 'NETWORK_ERROR',
+        getFallbackRequestErrorMessage(error),
         error.response?.status ?? 0,
       ),
     );

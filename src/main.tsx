@@ -15,6 +15,7 @@ import { captureInstallPromptEvents } from '@/lib/pwa-install';
 import { registerServiceWorker } from '@/lib/register-sw';
 import './index.css';
 import '@/lib/canceled-salon-lockout.fixtures';
+import '@/lib/api-error.fixtures';
 
 applyPlatformTheme(readStoredThemeId());
 initColorMode();

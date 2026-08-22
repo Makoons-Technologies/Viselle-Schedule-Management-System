@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { ApiError } from '@/lib/api';
+import { ApiError, getFallbackRequestErrorMessage } from '@/lib/api';
 import { getPlanTier } from '@/lib/plan-features';
 import type { ResolvedTrialOffer, TrialCampaign, TrialPaymentMode } from '@/types/api';
 
@@ -20,7 +20,11 @@ signupClient.interceptors.response.use(
         data.error.details,
       );
     }
-    throw new ApiError('NETWORK_ERROR', error.message || 'Network request failed', error.response?.status ?? 0);
+    throw new ApiError(
+      error.response?.status && error.response.status >= 500 ? 'SERVER_ERROR' : 'NETWORK_ERROR',
+      getFallbackRequestErrorMessage(error),
+      error.response?.status ?? 0,
+    );
   },
 );
 
