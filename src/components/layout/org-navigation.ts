@@ -112,7 +112,9 @@ export function getOrgNavigation(
     main.push({ label: 'Recurring', to: `${orgBase}/recurring`, icon: Repeat });
   }
 
-  main.push({ label: 'Hours', to: `${orgBase}/availability`, icon: Clock });
+  if (options.showAdminSettings) {
+    main.push({ label: 'Hours', to: `${orgBase}/availability`, icon: Clock });
+  }
 
   const settings: OrgNavLink[] = options.showAdminSettings
     ? [{ label: 'Settings', to: `${orgBase}/settings`, icon: Settings }]

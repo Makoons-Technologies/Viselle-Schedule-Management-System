@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { orgApi } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -10,19 +11,28 @@ import { SettingsBackHeader } from '@/components/settings/SettingsBackHeader';
 import { LoadingState } from '@/components/common/LoadingState';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { AuthUser } from '@/types/api';
+
+function loggedInAccountId(user: AuthUser | null | undefined, orgId: string): string {
+  if (!user) return '';
+  if (user.accountId) return user.accountId;
+  return user.memberships?.find((membership) => membership.organizationId === orgId)?.accountId ?? '';
+}
 
 export function AvailabilityPage() {
   const orgId = useOrgId();
   const { user } = useAuth();
   const trialExpired = useOrgWriteLocked();
   const queryClient = useQueryClient();
-  const [accountId, setAccountId] = useState('');
+  const selfAccountId = loggedInAccountId(user, orgId);
+  const canViewOthers = user?.role === 'org_owner' || user?.role === 'platform_owner';
+  const [accountId, setAccountId] = useState(selfAccountId);
   const [removingRuleId, setRemovingRuleId] = useState<string | null>(null);
 
   const { data: accountsData } = useQuery({
     queryKey: ['accounts', orgId],
     queryFn: () => orgApi.listAccounts(orgId),
-    enabled: !!orgId,
+    enabled: !!orgId && canViewOthers,
   });
 
   const { data: rulesData, isLoading } = useQuery({
@@ -61,43 +71,48 @@ export function AvailabilityPage() {
   const rules = rulesData?.availabilityRules ?? [];
 
   useEffect(() => {
-    if (accountId || accounts.length === 0) return;
-    const membershipAccountId = user?.memberships?.find((m) => m.organizationId === orgId)?.accountId;
-    const self =
-      accounts.find((account) => account.id === user?.accountId) ??
-      accounts.find((account) => account.id === membershipAccountId) ??
-      accounts.find((account) => account.role === 'org_owner' && account.userId === user?.id) ??
-      (user?.role === 'org_owner' ? accounts.find((account) => account.role === 'org_owner') : undefined);
-    if (self) setAccountId(self.id);
-  }, [accounts, accountId, user, orgId]);
+    setAccountId(selfAccountId);
+  }, [orgId, selfAccountId]);
+
+  if (user?.role === 'staff') {
+    return <Navigate to="/staff/availability" replace />;
+  }
 
   return (
     <div className="mx-auto max-w-3xl">
       <SettingsBackHeader title="Hours" backTo={`/orgs/${orgId}/settings`} />
       <p className="-mt-2 mb-6 text-sm text-stone-500">
-        Set your weekly bookable hours, or pick another staff member. Multiple blocks on the same day are allowed when times do not overlap.
+        {canViewOthers
+          ? 'Your hours are selected first. Switch to another staff member only if you need to edit theirs. Multiple blocks on the same day are allowed when times do not overlap.'
+          : 'Your weekly bookable hours. Multiple blocks on the same day are allowed when times do not overlap.'}
       </p>
-      <div className="mb-6 max-w-sm">
-        <Label>Whose hours</Label>
-        <Select value={accountId} onValueChange={setAccountId}>
-          <SelectTrigger><SelectValue placeholder="Select staff" /></SelectTrigger>
-          <SelectContent>
-            {accounts.map((account) => {
-              const isYou = account.id === user?.accountId || (account.role === 'org_owner' && account.userId === user?.id);
-              const ownerLabel = account.role === 'org_owner' ? 'owner' : null;
-              const suffix = [isYou ? 'you' : null, ownerLabel].filter(Boolean).join(', ');
-              return (
-                <SelectItem key={account.id} value={account.id}>
-                  {account.firstName} {account.lastName}
-                  {suffix ? ` (${suffix})` : ''}
-                </SelectItem>
-              );
-            })}
-          </SelectContent>
-        </Select>
-      </div>
+      {canViewOthers ? (
+        <div className="mb-6 max-w-sm">
+          <Label>Whose hours</Label>
+          <Select value={accountId} onValueChange={setAccountId}>
+            <SelectTrigger><SelectValue placeholder="Select staff" /></SelectTrigger>
+            <SelectContent>
+              {accounts.map((account) => {
+                const isYou = account.id === selfAccountId;
+                const ownerLabel = account.role === 'org_owner' ? 'owner' : null;
+                const suffix = [isYou ? 'you' : null, ownerLabel].filter(Boolean).join(', ');
+                return (
+                  <SelectItem key={account.id} value={account.id}>
+                    {account.firstName} {account.lastName}
+                    {suffix ? ` (${suffix})` : ''}
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        </div>
+      ) : null}
       {!accountId ? (
-        <p className="text-sm text-stone-500">Choose someone to manage their weekly availability.</p>
+        <p className="text-sm text-stone-500">
+          {canViewOthers
+            ? 'Choose someone to manage their weekly availability.'
+            : 'Your staff profile is still loading.'}
+        </p>
       ) : isLoading ? (
         <LoadingState />
       ) : (

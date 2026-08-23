@@ -56,7 +56,7 @@ export function StaffAvailabilityPage() {
   return (
     <div>
       <PageHeader
-        title="My Availability"
+        title="Hours"
         description={
           canEdit
             ? 'Your weekly bookable hours'

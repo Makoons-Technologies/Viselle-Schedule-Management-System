@@ -283,7 +283,7 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
 
     const staffItems = [
       ...orgNav.main,
-      { label: 'My Availability', to: '/staff/availability', icon: Clock },
+      { label: 'Hours', to: '/staff/availability', icon: Clock },
     ];
 
     if (canManageStaff && !writeLocked) {
