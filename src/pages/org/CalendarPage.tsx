@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { addDays, endOfWeek, format, parseISO, startOfWeek } from 'date-fns';
-import { ListChecks, Plus, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { addDays, format, parseISO, startOfDay } from 'date-fns';
+import { ListChecks, Plus, SlidersHorizontal, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { orgApi } from '@/lib/api';
@@ -17,16 +17,21 @@ import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { AppointmentDetailSheet } from '@/components/appointments/AppointmentDetailSheet';
 import { BatchCheckoutSheet, type BatchCheckoutItem } from '@/components/appointments/BatchCheckoutSheet';
 import { CreateAppointmentDialog } from '@/components/appointments/CreateAppointmentDialog';
-import { HideCancelledToggle } from '@/components/appointments/HideCancelledToggle';
-import { MyAppointmentsOnlyToggle } from '@/components/calendar/MyAppointmentsOnlyToggle';
 import { StaffScheduleFilter } from '@/components/calendar/StaffScheduleFilter';
 import { WeekAppointmentTimeGrid } from '@/components/calendar/WeekAppointmentTimeGrid';
 import { CalendarAppointmentChip } from '@/components/calendar/CalendarAppointmentChip';
 import { WeekCalendarNav } from '@/components/calendar/WeekCalendarNav';
-import { PageHeader } from '@/components/common/PageHeader';
 import { LoadingState } from '@/components/common/LoadingState';
 import { TrialLockedControl } from '@/components/common/TrialLockedControl';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 function sortDayKeys(keys: string[]): string[] {
   return [...keys].sort();
@@ -52,7 +57,7 @@ export function CalendarPage() {
   /** Matches Tailwind `md` — same breakpoint as mobile bottom nav. */
   const isMobile = useMediaQuery('(max-width: 767px)');
   const { myAppointmentsOnly, setMyAppointmentsOnly } = useMyAppointmentsOnly();
-  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 0 }));
+  const [weekStart, setWeekStart] = useState(() => startOfDay(new Date()));
   const [selectedAppointment, setSelectedAppointment] = useState<{
     id: string;
     startTime: string;
@@ -69,7 +74,7 @@ export function CalendarPage() {
   const [zoomedDayKeys, setZoomedDayKeys] = useState<string[] | null>(null);
   const daySelectionAnchorRef = useRef<string | null>(null);
 
-  const weekEnd = endOfWeek(weekStart, { weekStartsOn: 0 });
+  const weekEnd = addDays(weekStart, 6);
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
   const dayKeys = useMemo(() => days.map((day) => format(day, 'yyyy-MM-dd')), [days]);
   const isDayZoomed = !!zoomedDayKeys && zoomedDayKeys.length > 0;
@@ -215,7 +220,7 @@ export function CalendarPage() {
   };
 
   const changeWeek = (nextStart: Date) => {
-    setWeekStart(nextStart);
+    setWeekStart(startOfDay(nextStart));
     exitDayZoom();
   };
 
@@ -287,127 +292,136 @@ export function CalendarPage() {
   if (isLoading) return <LoadingState />;
 
   return (
-    <div>
-      <PageHeader
-        title="Calendar"
-        description={
-          selectMode
-            ? 'Select checked-in appointments to check out together'
-            : isDayZoomed
-              ? zoomedDayKeys.length === 1
-                ? 'Focused day view — show full week to zoom out'
-                : `Focused ${zoomedDayKeys.length}-day view — show full week to zoom out`
-              : isMobile && myAppointmentsOnly
-                ? 'Week view of your appointments — tap day headers to zoom'
-                : isMobile || (resolvedStaffIds.length === staffAccounts.length && staffAccounts.length > 0)
-                  ? 'Week view of all appointments — tap day headers to zoom'
-                  : 'Week view of selected schedules — tap day headers to zoom'
-        }
-        actions={
-          <div className="flex items-center gap-2">
-            {batchCheckoutEnabled && (
-              selectMode ? (
-                <>
-                  <Button variant="outline" onClick={exitSelectMode}>
-                    <X className="h-4 w-4" /> Cancel selection
-                  </Button>
-                  <TrialLockedControl locked={trialExpired}>
-                    <Button
-                      onClick={() => setBatchCheckoutOpen(true)}
-                      disabled={trialExpired || selectedItems.length === 0}
-                    >
-                      Check out ({selectedItems.length})
-                    </Button>
-                  </TrialLockedControl>
-                </>
-              ) : (
-                <Button variant="outline" onClick={() => setSelectMode(true)}>
-                  <ListChecks className="h-4 w-4" /> Select
-                </Button>
-              )
-            )}
-            {permissions.canCreateAppointments && (
+    <div className="flex min-h-0 flex-1 flex-col gap-2">
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <WeekCalendarNav
+          compact
+          label={weekNavLabel}
+          onPrevious={() => changeWeek(addDays(weekStart, -7))}
+          onNext={() => changeWeek(addDays(weekStart, 7))}
+          trailing={
+            isDayZoomed ? (
+              <Button variant="outline" size="sm" onClick={exitDayZoom} className="h-8">
+                <ZoomOut className="h-3.5 w-3.5" /> Full week
+              </Button>
+            ) : null
+          }
+        />
+        {batchCheckoutEnabled && (
+          selectMode ? (
+            <>
+              <Button variant="outline" size="sm" className="h-8" onClick={exitSelectMode}>
+                <X className="h-3.5 w-3.5" /> Cancel
+              </Button>
               <TrialLockedControl locked={trialExpired}>
                 <Button
-                  disabled={trialExpired}
-                  onClick={() => {
-                    setCreateDefaultDate(undefined);
-                    setCreateOpen(true);
-                  }}
+                  size="sm"
+                  className="h-8"
+                  onClick={() => setBatchCheckoutOpen(true)}
+                  disabled={trialExpired || selectedItems.length === 0}
                 >
-                  <Plus className="h-4 w-4" /> New Appointment
+                  Check out ({selectedItems.length})
                 </Button>
               </TrialLockedControl>
-            )}
-          </div>
-        }
-      />
-      <WeekCalendarNav
-        label={weekNavLabel}
-        onPrevious={() => changeWeek(addDays(weekStart, -7))}
-        onNext={() => changeWeek(addDays(weekStart, 7))}
-        leading={
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="desktop-shell:hidden">
-              <MyAppointmentsOnlyToggle
-                checked={myAppointmentsOnly}
-                onCheckedChange={setMyAppointmentsOnly}
-              />
-            </div>
-            <div className="hidden desktop-shell:block">
-              <StaffScheduleFilter
-                accounts={staffAccounts}
-                selectedIds={resolvedStaffIds}
-                onSelectedIdsChange={setSelectedStaffIds}
-              />
-            </div>
-            <HideCancelledToggle checked={hideCancelled} onCheckedChange={setHideCancelled} />
-          </div>
-        }
-        trailing={
-          isDayZoomed ? (
-            <Button variant="outline" size="sm" onClick={exitDayZoom} className="min-h-10">
-              <ZoomOut className="h-4 w-4" /> Full week
+            </>
+          ) : (
+            <Button variant="outline" size="sm" className="h-8" onClick={() => setSelectMode(true)}>
+              <ListChecks className="h-3.5 w-3.5" /> Select
             </Button>
-          ) : null
-        }
-      />
+          )
+        )}
+        {permissions.canCreateAppointments && (
+          <TrialLockedControl locked={trialExpired}>
+            <Button
+              size="sm"
+              className="h-8"
+              disabled={trialExpired}
+              onClick={() => {
+                setCreateDefaultDate(undefined);
+                setCreateOpen(true);
+              }}
+            >
+              <Plus className="h-3.5 w-3.5" /> New Appointment
+            </Button>
+          </TrialLockedControl>
+        )}
+        <div className="hidden desktop-shell:block">
+          <StaffScheduleFilter
+            accounts={staffAccounts}
+            selectedIds={resolvedStaffIds}
+            onSelectedIdsChange={setSelectedStaffIds}
+          />
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon" className="h-8 w-8" aria-label="Calendar options">
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64">
+            <DropdownMenuLabel>Filters</DropdownMenuLabel>
+            <DropdownMenuCheckboxItem
+              checked={hideCancelled}
+              onCheckedChange={(checked) => setHideCancelled(checked === true)}
+              onSelect={(event) => event.preventDefault()}
+            >
+              Hide cancelled
+            </DropdownMenuCheckboxItem>
+            {isMobile && (
+              <DropdownMenuCheckboxItem
+                checked={myAppointmentsOnly}
+                onCheckedChange={(checked) => setMyAppointmentsOnly(checked === true)}
+                onSelect={(event) => event.preventDefault()}
+              >
+                My appointments only
+              </DropdownMenuCheckboxItem>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>Status colors</DropdownMenuLabel>
+            {(Object.keys(APPOINTMENT_CALENDAR_LIP_CLASS) as Array<keyof typeof APPOINTMENT_CALENDAR_LIP_CLASS>)
+              .filter((state) => state !== 'cancelled')
+              .map((state) => (
+                <div
+                  key={state}
+                  className="flex items-center gap-2 px-2 py-1.5 text-sm text-stone-700 dark:text-stone-200"
+                >
+                  <span
+                    className={cn('h-1.5 w-6 rounded-full', APPOINTMENT_CALENDAR_LIP_CLASS[state])}
+                    aria-hidden
+                  />
+                  {APPOINTMENT_CALENDAR_LIP_LABEL[state]}
+                </div>
+              ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
       {!isDayZoomed && selectedDayKeys.length > 0 && (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-stone-200 bg-white px-3 py-3 shadow-sm dark:border-stone-700 dark:bg-stone-900 sm:px-4">
-          <p className="text-sm text-stone-700 dark:text-stone-200">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm shadow-sm dark:border-stone-700 dark:bg-stone-900">
+          <p className="text-stone-700 dark:text-stone-200">
             {selectedDayKeys.length === 1
               ? '1 day selected'
               : `${selectedDayKeys.length} days selected`}
             <span className="ml-1 text-stone-500 dark:text-stone-400">
-              — tap more headers to extend the range, or drag across them
+              — tap more headers to extend the range
             </span>
           </p>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={clearDaySelection} className="min-h-10">
+            <Button variant="ghost" size="sm" onClick={clearDaySelection} className="h-8">
               Clear
             </Button>
             <Button
               size="sm"
-              className="min-h-10"
+              className="h-8"
               onClick={() => applyDayZoom(selectedDayKeys)}
             >
-              <ZoomIn className="h-4 w-4" />
+              <ZoomIn className="h-3.5 w-3.5" />
               {selectedDayKeys.length === 1 ? 'View day' : `View ${selectedDayKeys.length} days`}
             </Button>
           </div>
         </div>
       )}
-      <div className="mb-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-stone-600 dark:text-stone-300">
-        {(Object.keys(APPOINTMENT_CALENDAR_LIP_CLASS) as Array<keyof typeof APPOINTMENT_CALENDAR_LIP_CLASS>)
-          .filter((state) => state !== 'cancelled')
-          .map((state) => (
-            <span key={state} className="inline-flex items-center gap-1.5">
-              <span className={cn('h-1.5 w-6 rounded-full', APPOINTMENT_CALENDAR_LIP_CLASS[state])} aria-hidden />
-              {APPOINTMENT_CALENDAR_LIP_LABEL[state]}
-            </span>
-          ))}
-      </div>
       <WeekAppointmentTimeGrid
+        className="min-h-0 flex-1"
         days={days}
         appointments={appointments}
         selectedDayKeys={selectedDayKeys}

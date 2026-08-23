@@ -46,9 +46,14 @@ export function appointmentBlockGeometry(
   return { topRem, heightRem, startMinutes, endMinutes };
 }
 
+export function currentTimeMinutes(now = new Date()): number {
+  return now.getHours() * 60 + now.getMinutes();
+}
+
 export function buildWeekTimeSlots(
   appointments: Array<{ startTime: string; endTime?: string }>,
   slotMinutes = SLOT_MINUTES,
+  extraMinutes: number[] = [],
 ): number[] {
   let min = DEFAULT_DAY_START;
   let max = DEFAULT_DAY_END;
@@ -60,6 +65,11 @@ export function buildWeekTimeSlots(
       : start + slotMinutes;
     min = Math.min(min, start);
     max = Math.max(max, end);
+  }
+
+  for (const minutes of extraMinutes) {
+    min = Math.min(min, minutes);
+    max = Math.max(max, minutes + slotMinutes);
   }
 
   min = Math.floor(min / slotMinutes) * slotMinutes;

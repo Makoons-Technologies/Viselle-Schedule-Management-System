@@ -1,4 +1,6 @@
 import {
+  useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -9,6 +11,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import type { Appointment } from '@/types/api';
 import {
   buildWeekTimeSlots,
+  currentTimeMinutes,
   formatMinutesLabel,
   groupAppointmentsByDay,
   layoutDayAppointments,
@@ -74,10 +77,29 @@ export function WeekAppointmentTimeGrid({
   );
   const dayKeys = allColumns.map((column) => column.key);
   const selectedKeySet = useMemo(() => new Set(selectedDayKeys), [selectedDayKeys]);
-  const timeSlots = buildWeekTimeSlots(appointments, SLOT_MINUTES);
+  const includesToday = columns.some((column) => column.isToday);
+  const [nowMinutes, setNowMinutes] = useState(currentTimeMinutes);
+
+  useEffect(() => {
+    if (!includesToday) return;
+    const id = window.setInterval(() => setNowMinutes(currentTimeMinutes()), 30_000);
+    return () => window.clearInterval(id);
+  }, [includesToday]);
+
+  const timeSlots = buildWeekTimeSlots(
+    appointments,
+    SLOT_MINUTES,
+    includesToday ? [nowMinutes] : [],
+  );
   const gridStartMinutes = timeSlots[0] ?? 8 * 60;
   const gridHeightRem = timeSlots.length * SLOT_HEIGHT_REM;
+  const nowTopRem = minutesToOffsetRem(nowMinutes, gridStartMinutes);
+  const showNowLine =
+    includesToday &&
+    nowMinutes >= gridStartMinutes &&
+    nowMinutes <= gridStartMinutes + timeSlots.length * SLOT_MINUTES;
   const byDay = groupAppointmentsByDay(appointments, dayKeys);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   /** Which stack member is on top, keyed by overlap-group id. */
   const [stackFrontByKey, setStackFrontByKey] = useState<Record<string, number>>({});
   const dragRef = useRef<{
@@ -86,6 +108,15 @@ export function WeekAppointmentTimeGrid({
     moved: boolean;
   } | null>(null);
   const headerRowRef = useRef<HTMLDivElement | null>(null);
+
+  useLayoutEffect(() => {
+    if (!showNowLine) return;
+    const scroller = scrollRef.current;
+    if (!scroller) return;
+    const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    const headerHeight = headerRowRef.current?.offsetHeight ?? 0;
+    scroller.scrollTop = headerHeight + nowTopRem * rem - scroller.clientHeight / 2;
+  }, [showNowLine, nowTopRem, dayKeys.join(',')]);
 
   const cycleStack = (stackKey: string, stackSize: number, delta: number) => {
     setStackFrontByKey((prev) => {
@@ -160,8 +191,9 @@ export function WeekAppointmentTimeGrid({
 
   return (
     <div
+      ref={scrollRef}
       className={cn(
-        'overflow-x-auto overflow-y-hidden overscroll-x-contain shadow-sm',
+        'min-h-0 overflow-auto overscroll-contain shadow-sm',
         panelClassName,
         className,
       )}
@@ -169,7 +201,7 @@ export function WeekAppointmentTimeGrid({
       <div style={{ minWidth: `${gridMinWidthRem}rem` }}>
         <div
           ref={headerRowRef}
-          className="flex border-b border-stone-200 bg-stone-50/90 dark:border-stone-700 dark:bg-stone-800/80"
+          className="sticky top-0 z-30 flex border-b border-stone-200 bg-stone-50/95 dark:border-stone-700 dark:bg-stone-800/95"
         >
           <div className="sticky left-0 z-20 w-16 shrink-0 border-r border-stone-200 bg-stone-50/95 dark:border-stone-700 dark:bg-stone-800/95 sm:w-20" />
           {columns.map((column) => (
@@ -186,7 +218,16 @@ export function WeekAppointmentTimeGrid({
           ))}
         </div>
 
-        <div className="flex">
+        <div className="relative flex">
+          {showNowLine && (
+            <div
+              className="pointer-events-none absolute inset-x-0 z-20 flex items-center"
+              style={{ top: `${nowTopRem}rem` }}
+            >
+              <span className="ml-12 h-2 w-2 shrink-0 rounded-full bg-rose-500 sm:ml-16" />
+              <div className="h-0.5 flex-1 bg-rose-500" />
+            </div>
+          )}
           <div
             className="relative sticky left-0 z-10 w-16 shrink-0 border-r border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900 sm:w-20"
             style={{ height: `${gridHeightRem}rem` }}

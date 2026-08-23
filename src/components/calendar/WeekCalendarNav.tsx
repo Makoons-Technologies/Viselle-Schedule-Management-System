@@ -11,6 +11,7 @@ interface WeekCalendarNavProps {
   leading?: ReactNode;
   trailing?: ReactNode;
   className?: string;
+  compact?: boolean;
 }
 
 export function WeekCalendarNav({
@@ -20,25 +21,50 @@ export function WeekCalendarNav({
   leading,
   trailing,
   className,
+  compact = false,
 }: WeekCalendarNavProps) {
   return (
     <div
       className={cn(
-        'mb-4 flex flex-col gap-3 px-3 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-4',
-        panelClassName,
+        compact
+          ? 'flex items-center gap-1.5'
+          : 'mb-4 flex flex-col gap-3 px-3 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-4',
+        !compact && panelClassName,
         className,
       )}
     >
       {leading && <div className="shrink-0">{leading}</div>}
-      <div className="flex flex-wrap items-center justify-center gap-2 sm:ml-auto">
+      <div
+        className={cn(
+          'flex flex-wrap items-center gap-2',
+          !compact && 'justify-center sm:ml-auto',
+        )}
+      >
         <div className="flex items-center justify-center gap-1">
-          <Button variant="outline" size="icon" onClick={onPrevious} title="Previous week">
+          <Button
+            variant="outline"
+            size="icon"
+            className={compact ? 'h-8 w-8' : undefined}
+            onClick={onPrevious}
+            title="Previous week"
+          >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="min-w-[10rem] px-2 text-center text-sm font-semibold">
+          <span
+            className={cn(
+              'px-2 text-center font-semibold tabular-nums',
+              compact ? 'min-w-[8.5rem] text-xs' : 'min-w-[10rem] text-sm',
+            )}
+          >
             {label}
           </span>
-          <Button variant="outline" size="icon" onClick={onNext} title="Next week">
+          <Button
+            variant="outline"
+            size="icon"
+            className={compact ? 'h-8 w-8' : undefined}
+            onClick={onNext}
+            title="Next week"
+          >
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
