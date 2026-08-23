@@ -38,12 +38,14 @@ function nextAppointmentOnDay(
   appointments: Array<{ startTime: string }>,
   dayKey: string,
   afterMinutes: number,
+  options?: { inclusive?: boolean },
 ): number | undefined {
+  const inclusive = options?.inclusive === true;
   let nextMinutes: number | undefined;
   for (const appointment of appointments) {
     if (appointment.startTime.slice(0, 10) !== dayKey) continue;
     const minutes = appointmentStartMinutes(appointment.startTime);
-    if (minutes <= afterMinutes) continue;
+    if (inclusive ? minutes < afterMinutes : minutes <= afterMinutes) continue;
     if (nextMinutes === undefined || minutes < nextMinutes) nextMinutes = minutes;
   }
   return nextMinutes;
@@ -351,6 +353,40 @@ assert(
   'closest slot to noon prefers the nearer morning time',
 );
 assert(closestAvailableSlot([], 10 * 60) === undefined, 'no slots → no closest pick');
+
+assert(
+  nextAppointmentOnDay(jumpAppointments, '2026-08-24', 11 * 60 + 30) === 14 * 60,
+  'exclusive next after 11:30 skips that booking',
+);
+assert(
+  nextAppointmentOnDay(jumpAppointments, '2026-08-24', 11 * 60 + 30, { inclusive: true }) === 14 * 60,
+  'inclusive 11:30 with no 11:30 booking still finds 14:00',
+);
+const elevenThirtyDay = [
+  ...jumpAppointments,
+  { startTime: '2026-08-24T11:30:00.000Z' },
+];
+assert(
+  nextAppointmentOnDay(elevenThirtyDay, '2026-08-24', 11 * 60 + 30) === 14 * 60,
+  'exclusive viewport-aligned 11:30 would skip it (the QA bug)',
+);
+assert(
+  nextAppointmentOnDay(elevenThirtyDay, '2026-08-24', 11 * 60 + 30, { inclusive: true }) === 11 * 60 + 30,
+  'inclusive Down keeps the visible 11:30 at the viewport top',
+);
+assert(
+  nextAppointmentOnDay(elevenThirtyDay, '2026-08-24', 3 * 60 + 30, { inclusive: true }) === 9 * 60,
+  'from early-morning / now-line viewport, Down still finds later same-day bookings',
+);
+assert(
+  nextAppointmentOnDay(
+    [{ startTime: '2026-08-23T11:30:00.000Z' }],
+    '2026-08-23',
+    0,
+    { inclusive: true },
+  ) === 11 * 60 + 30,
+  'Sunday 11:30 is found from the top of that day',
+);
 
 if (process.exitCode) {
   console.error('\nVerification failed.');

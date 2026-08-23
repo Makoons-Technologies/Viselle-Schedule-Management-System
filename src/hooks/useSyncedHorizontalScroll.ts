@@ -1,14 +1,12 @@
 import { useEffect, type RefObject } from 'react';
-
-/** After the last scroll event, keep treating that pane as the driver until inertia ends. */
-const DRIVER_IDLE_MS = 180;
+import { getScrollLeft, setScrollLeft } from '@/lib/scroll-helpers';
 
 /**
  * Keep two overflow-x panes aligned without killing native momentum.
  *
  * Writing `scrollLeft` back onto the pane the user (or trackpad inertia) is
- * still driving cancels compositor scrolling. The first pane that emits a
- * scroll event becomes the driver; its follower is puppeted until events stop.
+ * still driving cancels compositor scrolling. Only pointer/wheel/touch on a
+ * pane may become the driver; follower echoes never take over.
  */
 export function useSyncedHorizontalScroll(
   firstRef: RefObject<HTMLElement | null>,
@@ -20,30 +18,48 @@ export function useSyncedHorizontalScroll(
     if (!first || !second) return;
 
     let driver: HTMLElement | null = null;
-    let idleTimer = 0;
+    let syncing = false;
 
-    const syncFrom = (source: HTMLElement, target: HTMLElement) => {
+    const bindDriver = (el: HTMLElement) => {
+      const mark = () => {
+        driver = el;
+      };
+      el.addEventListener('pointerdown', mark, { passive: true });
+      el.addEventListener('wheel', mark, { passive: true });
+      el.addEventListener('touchstart', mark, { passive: true });
+      return () => {
+        el.removeEventListener('pointerdown', mark);
+        el.removeEventListener('wheel', mark);
+        el.removeEventListener('touchstart', mark);
+      };
+    };
+
+    const syncFrom = (source: HTMLElement | null, target: HTMLElement | null) => {
+      if (!source || !target || syncing) return;
       if (driver && driver !== source) return;
-      driver = source;
-      window.clearTimeout(idleTimer);
-      idleTimer = window.setTimeout(() => {
-        driver = null;
-      }, DRIVER_IDLE_MS);
-      if (target.scrollLeft !== source.scrollLeft) {
-        target.scrollLeft = source.scrollLeft;
-      }
+      if (!driver) driver = source;
+      const left = getScrollLeft(source);
+      if (getScrollLeft(target) === left) return;
+      syncing = true;
+      setScrollLeft(target, left);
+      requestAnimationFrame(() => {
+        syncing = false;
+      });
     };
 
     const onFirstScroll = () => syncFrom(first, second);
     const onSecondScroll = () => syncFrom(second, first);
 
+    const unbindFirst = bindDriver(first);
+    const unbindSecond = bindDriver(second);
     first.addEventListener('scroll', onFirstScroll, { passive: true });
     second.addEventListener('scroll', onSecondScroll, { passive: true });
 
     return () => {
+      unbindFirst();
+      unbindSecond();
       first.removeEventListener('scroll', onFirstScroll);
       second.removeEventListener('scroll', onSecondScroll);
-      window.clearTimeout(idleTimer);
     };
   }, [firstRef, secondRef]);
 }
