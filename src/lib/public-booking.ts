@@ -90,22 +90,27 @@ export function readPublicOrganization(data: unknown, depth = 0): PublicOrganiza
       ...org,
       firstVisitPayment:
         org.firstVisitPayment ??
-        (isRecord(data.firstVisitPayment) ? (data.firstVisitPayment as PublicFirstVisitPayment) : null),
+        (isRecord(data.firstVisitPayment)
+          ? (data.firstVisitPayment as unknown as PublicFirstVisitPayment)
+          : null),
     };
   }
 
   if (!rootLooksLikeOrg) return null;
 
   const org = data as unknown as PublicOrganization;
-  const nestedPayment = nested && isRecord(nested.firstVisitPayment)
-    ? (nested.firstVisitPayment as PublicFirstVisitPayment)
-    : null;
+  const nestedPayment =
+    nested && isRecord(nested.firstVisitPayment)
+      ? (nested.firstVisitPayment as unknown as PublicFirstVisitPayment)
+      : null;
 
   return {
     ...org,
-    firstVisitPayment: org.firstVisitPayment ?? (isRecord(data.firstVisitPayment)
-      ? (data.firstVisitPayment as PublicFirstVisitPayment)
-      : nestedPayment),
+    firstVisitPayment:
+      org.firstVisitPayment ??
+      (isRecord(data.firstVisitPayment)
+        ? (data.firstVisitPayment as unknown as PublicFirstVisitPayment)
+        : nestedPayment),
   };
 }
 
