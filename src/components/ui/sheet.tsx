@@ -32,12 +32,15 @@ type SheetContentProps = ComponentPropsWithoutRef<typeof DialogPrimitive.Content
   VariantProps<typeof sheetVariants> & {
     overlayClassName?: string;
     overlayStyle?: CSSProperties;
+    /** Keep the portal mounted while closed (interactive swipe-to-open peek). */
+    forceMount?: boolean;
   };
 
 export const SheetContent = forwardRef<HTMLDivElement, SheetContentProps>(
-  ({ side, className, children, overlayClassName, overlayStyle, ...props }, ref) => (
-    <DialogPrimitive.Portal>
+  ({ side, className, children, overlayClassName, overlayStyle, forceMount, ...props }, ref) => (
+    <DialogPrimitive.Portal forceMount={forceMount || undefined}>
       <DialogPrimitive.Overlay
+        forceMount={forceMount || undefined}
         className={cn(
           'fixed inset-0 z-50 bg-black/40 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
           overlayClassName,
@@ -46,6 +49,7 @@ export const SheetContent = forwardRef<HTMLDivElement, SheetContentProps>(
       />
       <DialogPrimitive.Content
         ref={ref}
+        forceMount={forceMount || undefined}
         // Keep `fixed` from sheetVariants. `relative` here is merged away by
         // tailwind-merge and drops `fixed`, so the portaled panel sits after
         // #root and is clipped by html.app-shell overflow — a blank overlay.

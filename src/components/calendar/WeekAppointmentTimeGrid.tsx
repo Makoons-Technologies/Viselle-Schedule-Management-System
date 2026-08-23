@@ -17,7 +17,9 @@ import {
   layoutDayAppointments,
   minutesFromGridOffset,
   minutesToOffsetRem,
-  nextAppointmentInWeekOrder,
+  nextAppointmentOnDay,
+  firstAppointmentAfterDay,
+  DEFAULT_DAY_START,
   SLOT_HEIGHT_REM,
   SLOT_MINUTES,
 } from '@/components/calendar/week-time-grid';
@@ -101,7 +103,7 @@ export function WeekAppointmentTimeGrid({
     SLOT_MINUTES,
     includesToday ? [nowMinutes] : [],
   );
-  const gridStartMinutes = timeSlots[0] ?? 8 * 60;
+  const gridStartMinutes = timeSlots[0] ?? DEFAULT_DAY_START;
   const gridHeightRem = timeSlots.length * SLOT_HEIGHT_REM;
   const nowTopRem = minutesToOffsetRem(nowMinutes, gridStartMinutes);
   const showNowLine =
@@ -117,11 +119,25 @@ export function WeekAppointmentTimeGrid({
   const programmaticScrollRef = useRef(false);
   const [jumpCursor, setJumpCursor] = useState<{ dayKey: string; minutes: number } | null>(null);
   const [viewportMinutes, setViewportMinutes] = useState(gridStartMinutes - 1);
+  const [navDayKey, setNavDayKey] = useState<string | null>(null);
   const originDayKey = columns.find((column) => column.isToday)?.key ?? visibleDayKeys[0];
-  const jumpAfter = jumpCursor ?? { dayKey: originDayKey ?? '', minutes: viewportMinutes };
-  const nextJumpTarget = originDayKey
-    ? nextAppointmentInWeekOrder(appointments, visibleDayKeys, jumpAfter)
+  const activeDayKey = navDayKey && visibleDayKeys.includes(navDayKey) ? navDayKey : originDayKey;
+  const afterMinutes =
+    jumpCursor && jumpCursor.dayKey === activeDayKey ? jumpCursor.minutes : viewportMinutes;
+  const nextOnActiveDay = activeDayKey
+    ? nextAppointmentOnDay(appointments, activeDayKey, afterMinutes)
     : undefined;
+  const nextDayTarget = activeDayKey
+    ? firstAppointmentAfterDay(appointments, visibleDayKeys, activeDayKey)
+    : undefined;
+  const jumpDirection: 'down' | 'up' | null = nextOnActiveDay
+    ? 'down'
+    : nextDayTarget
+      ? 'up'
+      : null;
+  const nextJumpTarget = nextOnActiveDay
+    ? { dayKey: activeDayKey, minutes: nextOnActiveDay }
+    : nextDayTarget;
   /** Which stack member is on top, keyed by overlap-group id. */
   const [stackFrontByKey, setStackFrontByKey] = useState<Record<string, number>>({});
   const dragRef = useRef<{
@@ -176,6 +192,33 @@ export function WeekAppointmentTimeGrid({
     return gridStartMinutes + (offsetPx / rem / SLOT_HEIGHT_REM) * SLOT_MINUTES;
   };
 
+  const readLeadingDayKey = (): string | null => {
+    const scroller = scrollRef.current;
+    const body = bodyRef.current;
+    if (!scroller || !body) return visibleDayKeys[0] ?? null;
+    const gutter = body.querySelector<HTMLElement>('.sticky.left-0');
+    const gutterWidth = gutter?.getBoundingClientRect().width ?? 64;
+    const probeX = scroller.getBoundingClientRect().left + gutterWidth + 8;
+    const columns = Array.from(body.querySelectorAll<HTMLElement>('[data-day-column]'));
+    for (const el of columns) {
+      const rect = el.getBoundingClientRect();
+      if (probeX >= rect.left && probeX <= rect.right) {
+        return el.dataset.dayColumn ?? null;
+      }
+    }
+    let best: string | null = null;
+    let bestDist = Infinity;
+    for (const el of columns) {
+      const rect = el.getBoundingClientRect();
+      const dist = Math.min(Math.abs(rect.left - probeX), Math.abs(rect.right - probeX));
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = el.dataset.dayColumn ?? null;
+      }
+    }
+    return best ?? visibleDayKeys[0] ?? null;
+  };
+
   const beginProgrammaticScroll = () => {
     programmaticScrollRef.current = true;
     window.setTimeout(() => {
@@ -184,29 +227,45 @@ export function WeekAppointmentTimeGrid({
   };
 
   useEffect(() => {
-    const scroller = mainScroller();
-    if (!scroller) return;
-    const onScroll = () => {
+    const vertical = mainScroller();
+    const horizontal = scrollRef.current;
+    if (!vertical) return;
+    let dayResetTimer = 0;
+    const onVerticalScroll = () => {
       setViewportMinutes(readViewportMinutes());
       if (programmaticScrollRef.current) return;
       setJumpCursor(null);
+      window.clearTimeout(dayResetTimer);
+      dayResetTimer = window.setTimeout(() => {
+        setNavDayKey(readLeadingDayKey());
+      }, 180);
     };
-    scroller.addEventListener('scroll', onScroll, { passive: true });
+    const onHorizontalScroll = () => {
+      if (programmaticScrollRef.current) return;
+      setJumpCursor(null);
+      window.clearTimeout(dayResetTimer);
+      dayResetTimer = window.setTimeout(() => {
+        setNavDayKey(readLeadingDayKey());
+      }, 180);
+    };
+    vertical.addEventListener('scroll', onVerticalScroll, { passive: true });
+    horizontal?.addEventListener('scroll', onHorizontalScroll, { passive: true });
     setViewportMinutes(readViewportMinutes());
-    return () => scroller.removeEventListener('scroll', onScroll);
+    setNavDayKey(readLeadingDayKey());
+    return () => {
+      vertical.removeEventListener('scroll', onVerticalScroll);
+      horizontal?.removeEventListener('scroll', onHorizontalScroll);
+      window.clearTimeout(dayResetTimer);
+    };
   }, [showNowLine, visibleDayKeys.join(',')]);
 
   const jumpToNextAppointment = () => {
-    const after = jumpCursor ?? {
-      dayKey: originDayKey ?? '',
-      minutes: readViewportMinutes(),
-    };
-    const next = nextAppointmentInWeekOrder(appointments, visibleDayKeys, after);
-    if (!next) return;
-    setJumpCursor(next);
+    if (!nextJumpTarget) return;
+    setJumpCursor(nextJumpTarget);
+    setNavDayKey(nextJumpTarget.dayKey);
     beginProgrammaticScroll();
-    scrollMainToMinutes(next.minutes, 'start');
-    const columnEl = bodyRef.current?.querySelector(`[data-day-column="${next.dayKey}"]`);
+    scrollMainToMinutes(nextJumpTarget.minutes, 'start');
+    const columnEl = bodyRef.current?.querySelector(`[data-day-column="${nextJumpTarget.dayKey}"]`);
     columnEl?.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' });
   };
 
@@ -382,16 +441,24 @@ export function WeekAppointmentTimeGrid({
           })}
       </div>
     </div>
-    {nextJumpTarget && (
+    {nextJumpTarget && jumpDirection && (
       <Button
         type="button"
         size="icon"
         className="fixed right-3 z-40 h-11 w-11 rounded-full shadow-lg bottom-[calc(5rem+var(--safe-area-bottom))] desktop-shell:bottom-6"
-        aria-label="Scroll to next appointment"
-        title="Next appointment"
+        aria-label={
+          jumpDirection === 'up'
+            ? "Go to next day's first appointment"
+            : 'Scroll to next appointment'
+        }
+        title={jumpDirection === 'up' ? 'Next day' : 'Next appointment'}
         onClick={jumpToNextAppointment}
       >
-        <ChevronDown className="h-5 w-5" />
+        {jumpDirection === 'up' ? (
+          <ChevronUp className="h-5 w-5" />
+        ) : (
+          <ChevronDown className="h-5 w-5" />
+        )}
       </Button>
     )}
     </>

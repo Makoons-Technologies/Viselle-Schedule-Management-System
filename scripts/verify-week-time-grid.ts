@@ -15,31 +15,67 @@ function minutesToOffsetRem(minutes: number, gridStartMinutes: number): number {
   return ((minutes - gridStartMinutes) / SLOT_MINUTES) * SLOT_HEIGHT_REM;
 }
 
+function nextAppointmentOnDay(
+  appointments: Array<{ startTime: string }>,
+  dayKey: string,
+  afterMinutes: number,
+): number | undefined {
+  let nextMinutes: number | undefined;
+  for (const appointment of appointments) {
+    if (appointment.startTime.slice(0, 10) !== dayKey) continue;
+    const minutes = appointmentStartMinutes(appointment.startTime);
+    if (minutes <= afterMinutes) continue;
+    if (nextMinutes === undefined || minutes < nextMinutes) nextMinutes = minutes;
+  }
+  return nextMinutes;
+}
+
+function firstAppointmentAfterDay(
+  appointments: Array<{ startTime: string }>,
+  dayKeys: string[],
+  afterDayKey: string,
+): { dayKey: string; minutes: number } | undefined {
+  const startIndex = dayKeys.indexOf(afterDayKey);
+  const from = startIndex < 0 ? 0 : startIndex + 1;
+  for (let i = from; i < dayKeys.length; i += 1) {
+    const minutes = nextAppointmentOnDay(appointments, dayKeys[i], -1);
+    if (minutes !== undefined) {
+      return { dayKey: dayKeys[i], minutes };
+    }
+  }
+  return undefined;
+}
+
 function nextAppointmentInWeekOrder(
   appointments: Array<{ startTime: string }>,
   dayKeys: string[],
   after: { dayKey: string; minutes: number },
 ): { dayKey: string; minutes: number } | undefined {
-  const startIndex = Math.max(0, dayKeys.indexOf(after.dayKey));
-
-  for (let dayIndex = startIndex; dayIndex < dayKeys.length; dayIndex += 1) {
-    const dayKey = dayKeys[dayIndex];
-    const minMinutes = dayIndex === startIndex && dayKeys[startIndex] === after.dayKey
-      ? after.minutes
-      : -1;
-    let nextMinutes: number | undefined;
-    for (const appointment of appointments) {
-      if (appointment.startTime.slice(0, 10) !== dayKey) continue;
-      const minutes = appointmentStartMinutes(appointment.startTime);
-      if (minutes <= minMinutes) continue;
-      if (nextMinutes === undefined || minutes < nextMinutes) nextMinutes = minutes;
-    }
-    if (nextMinutes !== undefined) {
-      return { dayKey, minutes: nextMinutes };
-    }
+  const sameDay = nextAppointmentOnDay(appointments, after.dayKey, after.minutes);
+  if (sameDay !== undefined) {
+    return { dayKey: after.dayKey, minutes: sameDay };
   }
+  return firstAppointmentAfterDay(appointments, dayKeys, after.dayKey);
+}
 
-  return undefined;
+function buildWeekTimeSlots(
+  appointments: Array<{ startTime: string; endTime?: string }> = [],
+): number[] {
+  const defaultStart = 0;
+  const defaultEnd = 24 * 60;
+  let min = defaultStart;
+  let max = defaultEnd;
+  for (const appointment of appointments) {
+    const start = appointmentStartMinutes(appointment.startTime);
+    const end = appointment.endTime ? appointmentStartMinutes(appointment.endTime) : start + SLOT_MINUTES;
+    min = Math.min(min, start);
+    max = Math.max(max, end);
+  }
+  min = Math.floor(min / SLOT_MINUTES) * SLOT_MINUTES;
+  max = Math.ceil(max / SLOT_MINUTES) * SLOT_MINUTES;
+  const slots: number[] = [];
+  for (let time = min; time < max; time += SLOT_MINUTES) slots.push(time);
+  return slots;
 }
 
 function minutesFromGridOffset(
@@ -266,6 +302,20 @@ assert(
 assert(
   nextAppointmentInWeekOrder(jumpAppointments, jumpDays, { dayKey: '2026-08-25', minutes: 8 * 60 + 30 }) === undefined,
   'no next appointment after the last day in order',
+);
+
+const defaultSlots = buildWeekTimeSlots([]);
+assert(defaultSlots[0] === 0, 'empty week grid starts at 12:00 AM');
+assert(defaultSlots.includes(12 * 60), 'empty week grid includes 12:00 PM');
+assert(defaultSlots[defaultSlots.length - 1] === 23 * 60 + 30, 'empty week grid ends at 11:30 PM');
+assert(
+  nextAppointmentOnDay(jumpAppointments, '2026-08-24', 14 * 60) === undefined,
+  'next-on-day does not walk to the following day',
+);
+const followingDay = firstAppointmentAfterDay(jumpAppointments, jumpDays, '2026-08-24');
+assert(
+  followingDay?.dayKey === '2026-08-25' && followingDay.minutes === 8 * 60 + 30,
+  "end-of-day up control lands on the next day's first booking",
 );
 
 if (process.exitCode) {

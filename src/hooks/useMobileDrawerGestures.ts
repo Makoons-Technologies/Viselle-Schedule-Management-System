@@ -33,6 +33,8 @@ export interface MobileDrawerGestures {
   panelStyle: CSSProperties | undefined;
   panelClassName: string | undefined;
   overlayStyle: CSSProperties | undefined;
+  /** Mount the closed sheet so an edge swipe can translate it with the finger. */
+  forceMount: boolean;
 }
 
 function isNearHorizontalEdge(clientX: number): boolean {
@@ -89,14 +91,21 @@ export function useMobileDrawerGestures(
   );
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [keepMounted, setKeepMounted] = useState(false);
+  const keepMountedTimerRef = useRef(0);
+  const [suppressEnter, setSuppressEnter] = useState(false);
   const openRef = useRef(open);
   openRef.current = open;
+  const peeking = !open && (isDragging || dragOffset > 0 || keepMounted);
 
   const clearSession = useCallback(() => {
     sessionRef.current = null;
     pendingCloseRef.current = null;
     setDragOffset(0);
     setIsDragging(false);
+    window.clearTimeout(keepMountedTimerRef.current);
+    setKeepMounted(false);
+    setSuppressEnter(false);
   }, []);
 
   // Snap transform when the controlled open state changes outside an active drag.
@@ -245,13 +254,16 @@ export function useMobileDrawerGestures(
       if (session.axis !== 'horizontal') return;
       if (event.cancelable) event.preventDefault();
 
+      const width = panelRef.current?.getBoundingClientRect().width || session.panelWidth;
+      session.panelWidth = width;
+
       if (session.mode === 'edge-open') {
-        // Track distance only; open happens on release (avoids remount races).
+        setKeepMounted(true);
+        setIsDragging(true);
+        setDragOffset(Math.min(width, Math.max(0, dx)));
         return;
       }
 
-      const width = panelRef.current?.getBoundingClientRect().width || session.panelWidth;
-      session.panelWidth = width;
       setDragOffset(Math.min(0, dx));
     };
 
@@ -278,8 +290,22 @@ export function useMobileDrawerGestures(
       if (session.mode === 'edge-open') {
         const shouldOpen = dx >= OPEN_DISTANCE_PX || velocityX >= OPEN_VELOCITY;
         setIsDragging(false);
-        setDragOffset(0);
-        if (shouldOpen) setOpen(true);
+        if (shouldOpen) {
+          setSuppressEnter(true);
+          setDragOffset(0);
+          setOpen(true);
+          window.clearTimeout(keepMountedTimerRef.current);
+          keepMountedTimerRef.current = window.setTimeout(() => {
+            setSuppressEnter(false);
+            setKeepMounted(false);
+          }, 220);
+        } else {
+          setDragOffset(0);
+          window.clearTimeout(keepMountedTimerRef.current);
+          keepMountedTimerRef.current = window.setTimeout(() => {
+            setKeepMounted(false);
+          }, 220);
+        }
         return;
       }
 
@@ -304,39 +330,102 @@ export function useMobileDrawerGestures(
     };
 
     // touchstart must be non-passive so edge preventDefault can cancel history gestures.
+    const pointerAsTouch = (event: PointerEvent): TouchEvent => {
+      const point = { clientX: event.clientX, clientY: event.clientY };
+      return {
+        touches: [point],
+        changedTouches: [point],
+        target: event.target,
+        timeStamp: event.timeStamp,
+        cancelable: event.cancelable,
+        preventDefault: () => {
+          if (event.cancelable) event.preventDefault();
+        },
+      } as unknown as TouchEvent;
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.pointerType === 'touch' || event.button !== 0) return;
+      onTouchStart(pointerAsTouch(event));
+    };
+    const onPointerMove = (event: PointerEvent) => {
+      if (event.pointerType === 'touch') return;
+      if (!sessionRef.current && !pendingCloseRef.current) return;
+      onTouchMove(pointerAsTouch(event));
+    };
+    const onPointerUp = (event: PointerEvent) => {
+      if (event.pointerType === 'touch') return;
+      onTouchEnd(pointerAsTouch(event));
+    };
+
+    // touchstart must be non-passive so edge preventDefault can cancel history gestures.
     document.addEventListener('touchstart', onTouchStart, { passive: false });
     document.addEventListener('touchmove', onTouchMove, { passive: false });
     document.addEventListener('touchend', onTouchEnd, { passive: true });
     document.addEventListener('touchcancel', onTouchCancel, { passive: true });
+    document.addEventListener('pointerdown', onPointerDown, { passive: false });
+    document.addEventListener('pointermove', onPointerMove, { passive: false });
+    document.addEventListener('pointerup', onPointerUp, { passive: true });
+    document.addEventListener('pointercancel', onTouchCancel, { passive: true });
 
     return () => {
       document.removeEventListener('touchstart', onTouchStart);
       document.removeEventListener('touchmove', onTouchMove);
       document.removeEventListener('touchend', onTouchEnd);
       document.removeEventListener('touchcancel', onTouchCancel);
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('pointermove', onPointerMove);
+      document.removeEventListener('pointerup', onPointerUp);
+      document.removeEventListener('pointercancel', onTouchCancel);
     };
   }, [active, clearSession, setOpen]);
 
-  const panelStyle: CSSProperties | undefined =
-    active && (isDragging || dragOffset !== 0)
-      ? {
-          transform: `translate3d(${dragOffset}px, 0, 0)`,
-          transition: isDragging ? 'none' : 'transform 200ms ease-out',
-        }
-      : undefined;
-
   const width = panelRef.current?.getBoundingClientRect().width || 288;
-  const dismissProgress = open && dragOffset < 0 ? Math.min(1, Math.abs(dragOffset) / width) : 0;
+  const panelStyle: CSSProperties | undefined = (() => {
+    if (!active) return undefined;
+    if (peeking) {
+      return {
+        transform: `translate3d(${dragOffset - width}px, 0, 0)`,
+        transition: isDragging ? 'none' : 'transform 200ms ease-out',
+      };
+    }
+    if (isDragging || dragOffset !== 0) {
+      return {
+        transform: `translate3d(${dragOffset}px, 0, 0)`,
+        transition: isDragging ? 'none' : 'transform 200ms ease-out',
+      };
+    }
+    return undefined;
+  })();
 
-  const overlayStyle: CSSProperties | undefined =
-    active && isDragging && open && dragOffset < 0
-      ? { opacity: Math.max(0, 1 - dismissProgress) }
-      : undefined;
+  const dismissProgress = open && dragOffset < 0 ? Math.min(1, Math.abs(dragOffset) / width) : 0;
+  const revealProgress = !open && dragOffset > 0 ? Math.min(1, dragOffset / width) : 0;
+
+  const overlayStyle: CSSProperties | undefined = (() => {
+    if (!active) return undefined;
+    if (isDragging && open && dragOffset < 0) {
+      return { opacity: Math.max(0, 1 - dismissProgress) };
+    }
+    if (peeking) {
+      return {
+        opacity: revealProgress,
+        pointerEvents: revealProgress > 0.05 ? 'auto' : 'none',
+        animation: 'none',
+        transition: isDragging ? 'none' : 'opacity 200ms ease-out',
+      };
+    }
+    return undefined;
+  })();
 
   return {
     panelRef,
     panelStyle,
-    panelClassName: active && isDragging ? '!duration-0 !animate-none' : undefined,
+    panelClassName:
+      active && (isDragging || suppressEnter)
+        ? '!duration-0 !animate-none data-[state=closed]:!opacity-100 data-[state=closed]:!translate-x-0'
+        : peeking
+          ? '!animate-none data-[state=closed]:!opacity-100 data-[state=closed]:!translate-x-0'
+          : undefined,
     overlayStyle,
+    forceMount: peeking,
   };
 }
