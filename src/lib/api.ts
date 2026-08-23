@@ -102,9 +102,10 @@ const PUBLIC_CATALOG_PATH_MARKER = '/public/';
 
 function requestPathname(url: string): string {
   try {
-    return url.startsWith('http') ? new URL(url).pathname : url;
+    const path = url.startsWith('http') ? new URL(url).pathname : url;
+    return path.split(/[?#]/, 1)[0] ?? path;
   } catch {
-    return url;
+    return url.split(/[?#]/, 1)[0] ?? url;
   }
 }
 

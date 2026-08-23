@@ -35,6 +35,12 @@ function assertPublicBookingAuthFixtures(): void {
   if (shouldOmitAuthHeader('/organizations/aaaaaaaa-0000-4000-8000-000000000010/stripe-connect/status')) {
     throw new Error('Connect status reads must still send the session JWT');
   }
+  if (shouldOmitAuthHeader('/organizations/aaaaaaaa-0000-4000-8000-000000000010?redirect=/public/catalog')) {
+    throw new Error('query-string /public/ must not strip an owner JWT');
+  }
+  if (!shouldOmitAuthHeader('/public/organizations/grokbot-isolation-studio?preview=1')) {
+    throw new Error('public catalog with a query string must still omit the JWT');
+  }
 
   if (
     publicBookingLockReason({ errorCode: 'FORBIDDEN' }) !== 'unavailable' ||
