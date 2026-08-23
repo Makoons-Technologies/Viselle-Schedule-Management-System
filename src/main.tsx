@@ -16,6 +16,7 @@ import { registerServiceWorker } from '@/lib/register-sw';
 import './index.css';
 import '@/lib/canceled-salon-lockout.fixtures';
 import '@/lib/api-error.fixtures';
+import '@/lib/public-booking.fixtures';
 
 applyPlatformTheme(readStoredThemeId());
 initColorMode();

@@ -25,7 +25,12 @@ import {
   intentTypeForMode,
 } from '@/lib/first-visit-protection';
 import { ApiError } from '@/lib/api';
-import { publicBookingApi, getManageBookingUrl } from '@/lib/public-booking';
+import {
+  publicBookingApi,
+  getManageBookingUrl,
+  isPublicPathBookingOpen,
+  readPublicOrganization,
+} from '@/lib/public-booking';
 import { publicBookingLockReason } from '@/lib/trial';
 import type { FirstVisitCardSession } from '@/lib/stripe-first-visit';
 import { createFirstVisitCardSession } from '@/lib/stripe-first-visit';
@@ -67,17 +72,16 @@ export function PublicBookingPage({ slugOverride }: PublicBookingPageProps = {})
     enabled: !!slug,
   });
 
-  const siteTemplate = orgQuery.data?.organization.bookingSite?.siteTemplate ?? 'classic';
-  const branding: BookingBranding | null = orgQuery.data?.organization.bookingSite?.branding ?? null;
+  const org = readPublicOrganization(orgQuery.data);
+  const siteTemplate = org?.bookingSite?.siteTemplate ?? 'classic';
+  const branding: BookingBranding | null = org?.bookingSite?.branding ?? null;
   const theme = bookingTheme(siteTemplate, branding);
+  const pathBookingOpen = isPublicPathBookingOpen(org, { hostedSubdomain: Boolean(slugOverride) });
 
   const servicesQuery = useQuery({
     queryKey: ['public-services', slug],
     queryFn: () => publicBookingApi.getServices(slug),
-    enabled:
-      !!slug &&
-      !!orgQuery.data?.organization.publicBookingEnabled &&
-      (Boolean(slugOverride) || orgQuery.data.organization.bookingSite?.pathBookingEnabled !== false),
+    enabled: !!slug && pathBookingOpen,
   });
 
   const accountsQuery = useQuery({
@@ -103,7 +107,7 @@ export function PublicBookingPage({ slugOverride }: PublicBookingPageProps = {})
     enabled: !!slug && !!serviceId && !!accountId && (step === 'schedule' || step === 'details'),
   });
 
-  const paymentPolicy = orgQuery.data?.organization.firstVisitPayment;
+  const paymentPolicy = org?.firstVisitPayment;
   const policyOn = Boolean(paymentPolicy && paymentPolicy.mode !== 'off');
   const emailTrimmed = customer.email.trim();
   const phoneTrimmed = customer.phone.trim();
@@ -223,8 +227,8 @@ export function PublicBookingPage({ slugOverride }: PublicBookingPageProps = {})
     bookMutation.mutate(undefined);
   };
 
-  const smsRemindersEnabled = Boolean(orgQuery.data?.organization.smsRemindersEnabled);
-  const smsSendingOn = orgQuery.data?.organization.smsSendingEnabled === true;
+  const smsRemindersEnabled = Boolean(org?.smsRemindersEnabled);
+  const smsSendingOn = org?.smsSendingEnabled === true;
   const consentQuery = useQuery({
     queryKey: ['public-sms-consent', slug, emailTrimmed, phoneTrimmed],
     queryFn: () =>
@@ -263,20 +267,11 @@ export function PublicBookingPage({ slugOverride }: PublicBookingPageProps = {})
     );
   }
 
-  const org = orgQuery.data?.organization;
-  const pathBookingOff =
-    !slugOverride && org?.bookingSite?.pathBookingEnabled === false;
   const publicLockReason = publicBookingLockReason({
     errorCode: orgQuery.error instanceof ApiError ? orgQuery.error.code : null,
     organization: org,
   });
-  if (
-    orgQuery.isError ||
-    !org ||
-    !org.publicBookingEnabled ||
-    pathBookingOff ||
-    publicLockReason === 'expired'
-  ) {
+  if (orgQuery.isError || !org || !pathBookingOpen || publicLockReason === 'expired') {
     return (
       <BookingUnavailableLock
         slug={slug}

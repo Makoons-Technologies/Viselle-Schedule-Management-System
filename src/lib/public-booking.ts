@@ -1,4 +1,4 @@
-import { apiClient } from '@/lib/api';
+import { ApiError, apiClient } from '@/lib/api';
 import {
   getSubdomainBookingSlug,
   getSubdomainBookingUrl,
@@ -66,6 +66,62 @@ export interface PublicOrganization {
     /** Included viselle.net/book/:slug page. Undefined on older APIs means on. */
     pathBookingEnabled?: boolean;
   } | null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+/**
+ * Live public GET returns `{ organization: { publicBookingEnabled, ... } }`.
+ * Older docs/clients used flat top-level fields. Treat the wrapper as the org
+ * and `publicBookingEnabled` is undefined → /book shows unavailable on a 200.
+ */
+export function readPublicOrganization(data: unknown, depth = 0): PublicOrganization | null {
+  if (!isRecord(data) || depth > 3) return null;
+
+  const nested = isRecord(data.organization) ? data.organization : null;
+  const rootLooksLikeOrg = typeof data.id === 'string' && typeof data.publicBookingEnabled === 'boolean';
+
+  if (!rootLooksLikeOrg && nested) {
+    const org = readPublicOrganization(nested, depth + 1);
+    if (!org) return null;
+    return {
+      ...org,
+      firstVisitPayment:
+        org.firstVisitPayment ??
+        (isRecord(data.firstVisitPayment)
+          ? (data.firstVisitPayment as unknown as PublicFirstVisitPayment)
+          : null),
+    };
+  }
+
+  if (!rootLooksLikeOrg) return null;
+
+  const org = data as unknown as PublicOrganization;
+  const nestedPayment =
+    nested && isRecord(nested.firstVisitPayment)
+      ? (nested.firstVisitPayment as unknown as PublicFirstVisitPayment)
+      : null;
+
+  return {
+    ...org,
+    firstVisitPayment:
+      org.firstVisitPayment ??
+      (isRecord(data.firstVisitPayment)
+        ? (data.firstVisitPayment as unknown as PublicFirstVisitPayment)
+        : nestedPayment),
+  };
+}
+
+/** Included /book/:key is open when public booking is on and path booking is not explicitly off. */
+export function isPublicPathBookingOpen(
+  org: PublicOrganization | null | undefined,
+  options: { hostedSubdomain?: boolean } = {},
+): boolean {
+  if (!org?.publicBookingEnabled) return false;
+  if (options.hostedSubdomain) return true;
+  return org.bookingSite?.pathBookingEnabled !== false;
 }
 
 export interface PublicAccount {
@@ -161,17 +217,12 @@ export interface BookAppointmentResponse {
 
 export const publicBookingApi = {
   getOrganization: async (slug: string) => {
-    const { data } = await apiClient.get<{
-      organization?: PublicOrganization;
-      firstVisitPayment?: PublicFirstVisitPayment;
-    }>(`/public/organizations/${slug}`);
-    const organization = data.organization ?? (data as PublicOrganization);
-    return {
-      organization: {
-        ...organization,
-        firstVisitPayment: organization.firstVisitPayment ?? data.firstVisitPayment ?? null,
-      },
-    };
+    const { data } = await apiClient.get<unknown>(`/public/organizations/${slug}`);
+    const organization = readPublicOrganization(data);
+    if (!organization) {
+      throw new ApiError('NOT_FOUND', 'Organization not found', 404);
+    }
+    return { organization };
   },
   getSmsConsent: (slug: string, params: { email?: string; phone?: string }) =>
     apiClient
