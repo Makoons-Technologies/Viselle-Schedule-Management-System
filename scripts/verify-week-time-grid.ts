@@ -15,6 +15,21 @@ function minutesToOffsetRem(minutes: number, gridStartMinutes: number): number {
   return ((minutes - gridStartMinutes) / SLOT_MINUTES) * SLOT_HEIGHT_REM;
 }
 
+function nextAppointmentMinutesAfter(
+  appointments: Array<{ startTime: string }>,
+  afterMinutes: number,
+  dayKeys?: string[],
+): number | undefined {
+  let next: number | undefined;
+  for (const appointment of appointments) {
+    if (dayKeys && !dayKeys.includes(appointment.startTime.slice(0, 10))) continue;
+    const minutes = appointmentStartMinutes(appointment.startTime);
+    if (minutes <= afterMinutes) continue;
+    if (next === undefined || minutes < next) next = minutes;
+  }
+  return next;
+}
+
 function minutesFromGridOffset(
   offsetPx: number,
   remPx: number,
@@ -212,6 +227,28 @@ assert(
   minutesFromGridOffset(SLOT_HEIGHT_REM * remPx * 20, remPx, gridStart, 20) ===
     gridStart + 19 * SLOT_MINUTES,
   'tap past last slot clamps to last slot',
+);
+
+const jumpAppointments = [
+  { startTime: '2026-08-24T09:00:00.000Z' },
+  { startTime: '2026-08-24T14:00:00.000Z' },
+  { startTime: '2026-08-25T08:30:00.000Z' },
+];
+assert(
+  nextAppointmentMinutesAfter(jumpAppointments, 8 * 60) === 8 * 60 + 30,
+  'next after 8:00 is 8:30 (earliest later clock time across days)',
+);
+assert(
+  nextAppointmentMinutesAfter(jumpAppointments, 8 * 60 + 30) === 9 * 60,
+  'next after 8:30 is 9:00',
+);
+assert(
+  nextAppointmentMinutesAfter(jumpAppointments, 14 * 60) === undefined,
+  'no next appointment after the last clock time',
+);
+assert(
+  nextAppointmentMinutesAfter(jumpAppointments, 8 * 60, ['2026-08-24']) === 9 * 60,
+  'day filter skips the other day’s 8:30',
 );
 
 if (process.exitCode) {

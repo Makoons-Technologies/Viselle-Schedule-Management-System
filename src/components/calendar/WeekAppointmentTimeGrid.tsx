@@ -17,11 +17,13 @@ import {
   layoutDayAppointments,
   minutesFromGridOffset,
   minutesToOffsetRem,
+  nextAppointmentMinutesAfter,
   SLOT_HEIGHT_REM,
   SLOT_MINUTES,
 } from '@/components/calendar/week-time-grid';
 import { buildWeekColumns, type WeekCalendarColumn } from '@/components/calendar/WeekCalendarTable';
 import { panelClassName } from '@/components/common/Panel';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 /** Far-right hit strip for overlap cycle arrows (~32px; tall targets stay tappable). */
@@ -99,8 +101,15 @@ export function WeekAppointmentTimeGrid({
     includesToday &&
     nowMinutes >= gridStartMinutes &&
     nowMinutes <= gridStartMinutes + timeSlots.length * SLOT_MINUTES;
+  const visibleDayKeys = columns.map((column) => column.key);
   const byDay = groupAppointmentsByDay(appointments, dayKeys);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+  const hasJumpableAppointment = nextAppointmentMinutesAfter(
+    appointments,
+    gridStartMinutes - 1,
+    visibleDayKeys,
+  ) != null;
   /** Which stack member is on top, keyed by overlap-group id. */
   const [stackFrontByKey, setStackFrontByKey] = useState<Record<string, number>>({});
   const dragRef = useRef<{
@@ -121,6 +130,41 @@ export function WeekAppointmentTimeGrid({
     const gridTop = grid.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
     scroller.scrollTop = gridTop + headerHeight + nowTopRem * rem - scroller.clientHeight / 2;
   }, [showNowLine, dayKeys.join(',')]);
+
+  const scrollMainToMinutes = (minutes: number, align: 'center' | 'start') => {
+    const grid = scrollRef.current;
+    if (!grid) return;
+    const scroller = grid.closest('main');
+    if (!scroller) return;
+    const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    const headerHeight = headerRowRef.current?.offsetHeight ?? 0;
+    const gridTop =
+      grid.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+    const offsetRem = minutesToOffsetRem(minutes, gridStartMinutes);
+    const top =
+      align === 'center'
+        ? gridTop + headerHeight + offsetRem * rem - scroller.clientHeight / 2
+        : gridTop + offsetRem * rem - 12;
+    scroller.scrollTo({ top, behavior: align === 'start' ? 'smooth' : 'auto' });
+  };
+
+  const jumpToNextAppointment = () => {
+    const grid = scrollRef.current;
+    const body = bodyRef.current;
+    const scroller = grid?.closest('main');
+    if (!grid || !body || !scroller) return;
+    const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    const headerHeight = headerRowRef.current?.offsetHeight ?? 0;
+    const offsetPx = Math.max(
+      0,
+      scroller.getBoundingClientRect().top + headerHeight - body.getBoundingClientRect().top,
+    );
+    const visibleMinutes =
+      gridStartMinutes + (offsetPx / rem / SLOT_HEIGHT_REM) * SLOT_MINUTES;
+    const nextMinutes = nextAppointmentMinutesAfter(appointments, visibleMinutes, visibleDayKeys);
+    if (nextMinutes == null) return;
+    scrollMainToMinutes(nextMinutes, 'start');
+  };
 
   const cycleStack = (stackKey: string, stackSize: number, delta: number) => {
     setStackFrontByKey((prev) => {
@@ -194,6 +238,7 @@ export function WeekAppointmentTimeGrid({
   const gridMinWidthRem = 5 + columns.length * columnMinWidthRem;
 
   return (
+    <>
     <div
       ref={scrollRef}
       className={cn(
@@ -222,7 +267,7 @@ export function WeekAppointmentTimeGrid({
           ))}
         </div>
 
-        <div className="relative flex">
+        <div ref={bodyRef} className="relative flex">
           {showNowLine && (
             <div
               className="pointer-events-none absolute inset-x-0 z-20 flex items-center"
@@ -276,6 +321,19 @@ export function WeekAppointmentTimeGrid({
         </div>
       </div>
     </div>
+    {hasJumpableAppointment && (
+      <Button
+        type="button"
+        size="icon"
+        className="fixed right-3 z-40 h-11 w-11 rounded-full shadow-lg bottom-[calc(5rem+var(--safe-area-bottom))] desktop-shell:bottom-6"
+        aria-label="Scroll to next appointment"
+        title="Next appointment"
+        onClick={jumpToNextAppointment}
+      >
+        <ChevronDown className="h-5 w-5" />
+      </Button>
+    )}
+    </>
   );
 }
 

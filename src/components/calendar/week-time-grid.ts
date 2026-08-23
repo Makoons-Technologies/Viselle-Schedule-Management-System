@@ -12,6 +12,22 @@ export function appointmentStartMinutes(iso: string): number {
   return hours * 60 + minutes;
 }
 
+/** Earliest clock time after `afterMinutes` among appointments on the given days. */
+export function nextAppointmentMinutesAfter(
+  appointments: Array<{ startTime: string }>,
+  afterMinutes: number,
+  dayKeys?: string[],
+): number | undefined {
+  let next: number | undefined;
+  for (const appointment of appointments) {
+    if (dayKeys && !dayKeys.includes(appointment.startTime.slice(0, 10))) continue;
+    const minutes = appointmentStartMinutes(appointment.startTime);
+    if (minutes <= afterMinutes) continue;
+    if (next === undefined || minutes < next) next = minutes;
+  }
+  return next;
+}
+
 export function formatMinutesLabel(minutes: number): string {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
