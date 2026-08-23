@@ -366,6 +366,7 @@ export interface Account {
   role: AccountRole;
   status: AccountStatus;
   isBookable: boolean;
+  commissionPercent?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -683,6 +684,7 @@ export interface CreateAccountInput {
   phone?: string;
   role: AccountRole;
   isBookable: boolean;
+  commissionPercent?: number;
 }
 
 export interface CreateServiceInput {
@@ -806,4 +808,159 @@ export interface CustomWebsiteRequestNote {
   authorEmail: string;
   body: string;
   createdAt: string;
+}
+
+export type HomepageBlockType =
+  | 'welcome'
+  | 'announcement'
+  | 'stats'
+  | 'setup'
+  | 'bookingCta'
+  | 'featuredServices'
+  | 'upcoming'
+  | 'revenue';
+
+export interface HomepageBlock {
+  id: string;
+  type: HomepageBlockType;
+  visible: boolean;
+  title?: string;
+  body?: string;
+  serviceIds?: string[];
+}
+
+export type OrgFormStatus = 'draft' | 'published' | 'archived';
+
+export interface FormioComponent {
+  type: string;
+  key?: string;
+  label?: string;
+  input?: boolean;
+  placeholder?: string;
+  content?: string;
+  validate?: { required?: boolean };
+  values?: Array<{ label: string; value: string }>;
+  components?: FormioComponent[];
+}
+
+export interface FormioSchema {
+  display?: string;
+  components: FormioComponent[];
+}
+
+export interface OrgForm {
+  id: string;
+  organizationId: string;
+  name: string;
+  description?: string | null;
+  schema: FormioSchema;
+  status: OrgFormStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrgFormSubmission {
+  id: string;
+  organizationId: string;
+  formId: string;
+  customerId?: string | null;
+  appointmentId?: string | null;
+  data: Record<string, unknown>;
+  submittedByUserId?: string | null;
+  createdAt: string;
+}
+
+export type WaitlistStatus = 'waiting' | 'offered' | 'booked' | 'cancelled';
+
+export interface WaitlistEntry {
+  id: string;
+  organizationId: string;
+  customerId: string;
+  serviceId?: string | null;
+  accountId?: string | null;
+  preferredDate?: string | null;
+  notes?: string | null;
+  status: WaitlistStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type GiftCardStatus = 'active' | 'redeemed' | 'void';
+
+export interface GiftCard {
+  id: string;
+  organizationId: string;
+  code: string;
+  originalCents: number;
+  remainingCents: number;
+  customerId?: string | null;
+  status: GiftCardStatus;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ServicePackage {
+  id: string;
+  organizationId: string;
+  name: string;
+  serviceId?: string | null;
+  visitCount: number;
+  priceCents: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CustomerPackageStatus = 'active' | 'used' | 'void';
+
+export interface CustomerPackage {
+  id: string;
+  organizationId: string;
+  packageId: string;
+  customerId: string;
+  remainingVisits: number;
+  status: CustomerPackageStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MembershipPlan {
+  id: string;
+  organizationId: string;
+  name: string;
+  priceCents: number;
+  interval: 'month' | 'year';
+  visitsIncluded?: number | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CustomerMembershipStatus = 'active' | 'paused' | 'cancelled';
+
+export interface CustomerMembership {
+  id: string;
+  organizationId: string;
+  planId: string;
+  customerId: string;
+  status: CustomerMembershipStatus;
+  nextBillOn: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CommissionRow {
+  accountId: string;
+  name: string;
+  salesCents: number;
+  tipCents: number;
+  commissionCents: number;
+  saleCount: number;
+}
+
+export interface CommissionReport {
+  from: string;
+  to: string;
+  rows: CommissionRow[];
 }

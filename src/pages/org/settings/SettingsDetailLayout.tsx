@@ -6,6 +6,10 @@ import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgNeedsBilling } from '@/hooks/useOrgNeedsBilling';
 
 const SETTINGS_TITLES: Record<string, string> = {
+  homepage: 'Homepage',
+  packages: 'Packages',
+  memberships: 'Memberships',
+  commissions: 'Commissions',
   general: 'General',
   plan: 'Plan',
   org: 'Organization',
@@ -39,9 +43,10 @@ export function SettingsDetailLayout() {
   }
 
   const hideBack = isPlanPage && needsBilling;
+  const wide = isPlanPage || location.pathname.endsWith('/homepage');
 
   return (
-    <div className={isPlanPage ? 'mx-auto max-w-5xl' : 'mx-auto max-w-3xl'}>
+    <div className={wide ? 'mx-auto max-w-6xl' : 'mx-auto max-w-3xl'}>
       {!hideBack && (
         <SettingsBackHeader title={getSettingsTitle(location.pathname)} backTo={`/orgs/${orgId}/settings`} />
       )}

@@ -86,6 +86,9 @@ export function AppointmentCheckoutSheet({
   const [customTipDollars, setCustomTipDollars] = useState('');
   const [productPickerOpen, setProductPickerOpen] = useState(false);
   const [cashConfirmOpen, setCashConfirmOpen] = useState(false);
+  const [rebookOpen, setRebookOpen] = useState(false);
+  const [rebookDate, setRebookDate] = useState('');
+  const [rebookTime, setRebookTime] = useState('10:00');
   const customTipInputRef = useRef<HTMLInputElement>(null);
 
   const service = appointmentInfo?.service;
@@ -106,6 +109,7 @@ export function AppointmentCheckoutSheet({
       setCustomTipDollars('');
       setProductPickerOpen(false);
       setCashConfirmOpen(false);
+      setRebookOpen(false);
     }
   }, [open, service, appointment?.id, appointment?.serviceId]);
 
@@ -156,8 +160,7 @@ export function AppointmentCheckoutSheet({
     onSuccess: () => {
       toast.success('Cash payment recorded');
       setCashConfirmOpen(false);
-      onSuccess();
-      onOpenChange(false);
+      finishPaid();
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -174,11 +177,37 @@ export function AppointmentCheckoutSheet({
 
   const cardReady = isCardCheckoutReady(connectStatus);
 
+  const finishPaid = useCallback(() => {
+    onSuccess();
+    const start = appointment?.startTime ? new Date(appointment.startTime) : new Date();
+    const next = new Date(start);
+    next.setDate(next.getDate() + 28);
+    setRebookDate(next.toISOString().slice(0, 10));
+    setRebookTime(appointment?.startTime ? appointment.startTime.slice(11, 16) : '10:00');
+    setRebookOpen(true);
+  }, [appointment?.startTime, onSuccess]);
+
   const completeCardPayment = useCallback(() => {
     toast.success('Card payment successful');
-    onSuccess();
-    onOpenChange(false);
-  }, [onSuccess, onOpenChange]);
+    finishPaid();
+  }, [finishPaid]);
+
+  const rebookMutation = useMutation({
+    mutationFn: () =>
+      orgApi.createAppointment(orgId, {
+        accountId: appointment!.accountId,
+        serviceId: appointment!.serviceId,
+        customerId: appointment!.customerId,
+        startTime: `${rebookDate}T${rebookTime}:00.000Z`,
+        timezone: appointment?.timezone || 'America/New_York',
+      }),
+    onSuccess: () => {
+      toast.success('Next visit booked');
+      setRebookOpen(false);
+      onOpenChange(false);
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
 
   const appointmentId = appointment?.id;
 
@@ -603,6 +632,50 @@ export function AppointmentCheckoutSheet({
                 <Banknote className="h-4 w-4" />
               )}
               Confirm paid
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={rebookOpen}
+        onOpenChange={(next) => {
+          setRebookOpen(next);
+          if (!next) onOpenChange(false);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Book their next visit?</DialogTitle>
+            <DialogDescription>
+              They are still at the chair. Lock in the same service
+              {appointmentInfo?.customer
+                ? ` for ${appointmentInfo.customer.firstName}`
+                : ''}{' '}
+              before they walk out.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <p className="mb-1 text-sm font-medium">Date</p>
+              <Input type="date" value={rebookDate} onChange={(event) => setRebookDate(event.target.value)} />
+            </div>
+            <div>
+              <p className="mb-1 text-sm font-medium">Time</p>
+              <Input type="time" value={rebookTime} onChange={(event) => setRebookTime(event.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => { setRebookOpen(false); onOpenChange(false); }}>
+              Not now
+            </Button>
+            <Button
+              type="button"
+              disabled={!rebookDate || !rebookTime || rebookMutation.isPending}
+              onClick={() => rebookMutation.mutate()}
+            >
+              {rebookMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Book next visit
             </Button>
           </DialogFooter>
         </DialogContent>

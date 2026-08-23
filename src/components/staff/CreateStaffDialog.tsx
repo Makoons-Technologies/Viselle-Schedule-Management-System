@@ -22,6 +22,7 @@ const schema = z.object({
   phone: z.string().optional(),
   role: z.enum(['admin', 'staff']),
   isBookable: z.boolean(),
+  commissionPercent: z.number().min(0).max(100),
   status: z.enum(['active', 'inactive']),
 });
 
@@ -50,7 +51,7 @@ export function CreateStaffDialog({
 
   const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { role: 'staff', isBookable: true, status: 'active' },
+    defaultValues: { role: 'staff', isBookable: true, commissionPercent: 0, status: 'active' },
   });
   const wasOpen = useRef(false);
 
@@ -72,11 +73,12 @@ export function CreateStaffDialog({
         phone: account.phone ?? '',
         role: account.role === 'admin' ? 'admin' : 'staff',
         isBookable: account.isBookable,
+        commissionPercent: account.commissionPercent ?? 0,
         status: account.status === 'inactive' ? 'inactive' : 'active',
       });
       return;
     }
-    reset({ role: 'staff', isBookable: true, status: 'active', firstName: '', lastName: '', email: '', phone: '' });
+    reset({ role: 'staff', isBookable: true, commissionPercent: 0, status: 'active', firstName: '', lastName: '', email: '', phone: '' });
   }, [open, account, reset]);
 
   const mutation = useMutation({
@@ -87,6 +89,7 @@ export function CreateStaffDialog({
         email: data.email,
         phone: data.phone?.trim() || undefined,
         isBookable: data.isBookable,
+        commissionPercent: data.commissionPercent,
         ...(isEditing
           ? isOrgOwner
             ? {}
@@ -225,6 +228,11 @@ export function CreateStaffDialog({
           <div className="flex items-center gap-2">
             <Switch checked={watch('isBookable')} onCheckedChange={(v) => setValue('isBookable', v)} />
             <Label>Bookable for appointments</Label>
+          </div>
+          <div>
+            <Label>Commission percent</Label>
+            <Input type="number" min={0} max={100} step={0.5} {...register('commissionPercent', { valueAsNumber: true })} />
+            <p className="mt-1 text-xs text-stone-500">Share of service sales this person earns. Tips still go 100% to them.</p>
           </div>
           {!isEditing && (
             <p className="text-sm text-stone-500 dark:text-stone-400">

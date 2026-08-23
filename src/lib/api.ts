@@ -65,6 +65,20 @@ import type {
   TrialPaymentMode,
   TrialLockedTier,
   ReferralStat,
+  HomepageBlock,
+  OrgForm,
+  OrgFormStatus,
+  FormioSchema,
+  OrgFormSubmission,
+  WaitlistEntry,
+  WaitlistStatus,
+  GiftCard,
+  ServicePackage,
+  CustomerPackage,
+  MembershipPlan,
+  CustomerMembership,
+  CustomerMembershipStatus,
+  CommissionReport,
 } from '@/types/api';
 
 const TOKEN_KEY = 'viselle_auth_token';
@@ -823,6 +837,110 @@ export const orgApi = {
     apiClient.post<{ secret: string }>(`/organizations/${orgId}/stripe-connect/terminal/connection-token`).then((r) => r.data),
   registerTerminalReader: (orgId: string, data: { registrationCode: string; label?: string }) =>
     apiClient.post<{ readerId: string; label: string }>(`/organizations/${orgId}/stripe-connect/terminal/register-reader`, data).then((r) => r.data),
+
+  getHomepageLayout: (orgId: string) =>
+    apiClient.get<{ blocks: HomepageBlock[] }>(`/organizations/${orgId}/homepage-layout`).then((r) => r.data),
+  saveHomepageLayout: (orgId: string, blocks: HomepageBlock[]) =>
+    apiClient.put<{ blocks: HomepageBlock[] }>(`/organizations/${orgId}/homepage-layout`, { blocks }).then((r) => r.data),
+
+  listForms: (orgId: string) =>
+    apiClient.get<{ forms: OrgForm[] }>(`/organizations/${orgId}/forms`).then((r) => r.data),
+  getForm: (orgId: string, formId: string) =>
+    apiClient.get<{ form: OrgForm }>(`/organizations/${orgId}/forms/${formId}`).then((r) => r.data),
+  createForm: (orgId: string, data: { name: string; description?: string; schema?: FormioSchema }) =>
+    apiClient.post<{ form: OrgForm }>(`/organizations/${orgId}/forms`, data).then((r) => r.data),
+  updateForm: (
+    orgId: string,
+    formId: string,
+    data: { name?: string; description?: string | null; schema?: FormioSchema; status?: OrgFormStatus },
+  ) => apiClient.patch<{ form: OrgForm }>(`/organizations/${orgId}/forms/${formId}`, data).then((r) => r.data),
+  deleteForm: (orgId: string, formId: string) =>
+    apiClient.delete(`/organizations/${orgId}/forms/${formId}`).then((r) => r.data),
+  listFormSubmissions: (orgId: string, formId?: string) =>
+    apiClient
+      .get<{ submissions: OrgFormSubmission[] }>(`/organizations/${orgId}/form-submissions`, {
+        params: formId ? { formId } : undefined,
+      })
+      .then((r) => r.data),
+  submitForm: (
+    orgId: string,
+    formId: string,
+    data: { data: Record<string, unknown>; customerId?: string; appointmentId?: string },
+  ) =>
+    apiClient
+      .post<{ submission: OrgFormSubmission }>(`/organizations/${orgId}/forms/${formId}/submissions`, data)
+      .then((r) => r.data),
+
+  listWaitlist: (orgId: string) =>
+    apiClient.get<{ entries: WaitlistEntry[] }>(`/organizations/${orgId}/waitlist`).then((r) => r.data),
+  addWaitlist: (
+    orgId: string,
+    data: { customerId: string; serviceId?: string; accountId?: string; preferredDate?: string; notes?: string },
+  ) => apiClient.post<{ entry: WaitlistEntry }>(`/organizations/${orgId}/waitlist`, data).then((r) => r.data),
+  updateWaitlist: (orgId: string, entryId: string, data: { status?: WaitlistStatus; notes?: string | null }) =>
+    apiClient.patch<{ entry: WaitlistEntry }>(`/organizations/${orgId}/waitlist/${entryId}`, data).then((r) => r.data),
+
+  listGiftCards: (orgId: string) =>
+    apiClient.get<{ giftCards: GiftCard[] }>(`/organizations/${orgId}/gift-cards`).then((r) => r.data),
+  createGiftCard: (orgId: string, data: { amountCents: number; customerId?: string; notes?: string }) =>
+    apiClient.post<{ giftCard: GiftCard }>(`/organizations/${orgId}/gift-cards`, data).then((r) => r.data),
+  redeemGiftCard: (orgId: string, data: { code: string; amountCents: number }) =>
+    apiClient.post<{ giftCard: GiftCard }>(`/organizations/${orgId}/gift-cards/redeem`, data).then((r) => r.data),
+  voidGiftCard: (orgId: string, giftCardId: string) =>
+    apiClient.post<{ giftCard: GiftCard }>(`/organizations/${orgId}/gift-cards/${giftCardId}/void`).then((r) => r.data),
+
+  listPackages: (orgId: string) =>
+    apiClient.get<{ packages: ServicePackage[] }>(`/organizations/${orgId}/packages`).then((r) => r.data),
+  createPackage: (
+    orgId: string,
+    data: { name: string; serviceId?: string; visitCount: number; priceCents: number },
+  ) => apiClient.post<{ package: ServicePackage }>(`/organizations/${orgId}/packages`, data).then((r) => r.data),
+  updatePackage: (orgId: string, packageId: string, data: Partial<ServicePackage>) =>
+    apiClient.patch<{ package: ServicePackage }>(`/organizations/${orgId}/packages/${packageId}`, data).then((r) => r.data),
+  listCustomerPackages: (orgId: string) =>
+    apiClient
+      .get<{ customerPackages: CustomerPackage[] }>(`/organizations/${orgId}/customer-packages`)
+      .then((r) => r.data),
+  sellPackage: (orgId: string, data: { packageId: string; customerId: string }) =>
+    apiClient
+      .post<{ customerPackage: CustomerPackage }>(`/organizations/${orgId}/customer-packages`, data)
+      .then((r) => r.data),
+  usePackageVisit: (orgId: string, customerPackageId: string) =>
+    apiClient
+      .post<{ customerPackage: CustomerPackage }>(
+        `/organizations/${orgId}/customer-packages/${customerPackageId}/use-visit`,
+      )
+      .then((r) => r.data),
+
+  listMembershipPlans: (orgId: string) =>
+    apiClient.get<{ plans: MembershipPlan[] }>(`/organizations/${orgId}/membership-plans`).then((r) => r.data),
+  createMembershipPlan: (
+    orgId: string,
+    data: { name: string; priceCents: number; interval?: 'month' | 'year'; visitsIncluded?: number | null },
+  ) => apiClient.post<{ plan: MembershipPlan }>(`/organizations/${orgId}/membership-plans`, data).then((r) => r.data),
+  updateMembershipPlan: (orgId: string, planId: string, data: Partial<MembershipPlan>) =>
+    apiClient
+      .patch<{ plan: MembershipPlan }>(`/organizations/${orgId}/membership-plans/${planId}`, data)
+      .then((r) => r.data),
+  listMemberships: (orgId: string) =>
+    apiClient.get<{ memberships: CustomerMembership[] }>(`/organizations/${orgId}/memberships`).then((r) => r.data),
+  subscribeMembership: (orgId: string, data: { planId: string; customerId: string; nextBillOn: string }) =>
+    apiClient.post<{ membership: CustomerMembership }>(`/organizations/${orgId}/memberships`, data).then((r) => r.data),
+  updateMembership: (
+    orgId: string,
+    membershipId: string,
+    data: { status?: CustomerMembershipStatus; nextBillOn?: string },
+  ) =>
+    apiClient
+      .patch<{ membership: CustomerMembership }>(`/organizations/${orgId}/memberships/${membershipId}`, data)
+      .then((r) => r.data),
+  recordMembershipBill: (orgId: string, membershipId: string) =>
+    apiClient
+      .post<{ membership: CustomerMembership }>(`/organizations/${orgId}/memberships/${membershipId}/record-bill`)
+      .then((r) => r.data),
+
+  getCommissions: (orgId: string, params: { from: string; to: string }) =>
+    apiClient.get<CommissionReport>(`/organizations/${orgId}/commissions`, { params }).then((r) => r.data),
 };
 
 export const appointmentApi = {

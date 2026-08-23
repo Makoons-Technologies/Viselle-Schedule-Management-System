@@ -44,6 +44,15 @@ import { OrgSettingsPage } from '@/pages/org/settings/OrgSettingsPage';
 import { AccountSettingsPage } from '@/pages/org/settings/AccountSettingsPage';
 import { PaymentsSettingsPage } from '@/pages/org/settings/PaymentsSettingsPage';
 import { StaffPermissionsSettingsPage } from '@/pages/org/settings/StaffPermissionsSettingsPage';
+import { HomepageEditorPage } from '@/pages/org/settings/HomepageEditorPage';
+import { PackagesPage } from '@/pages/org/settings/PackagesPage';
+import { MembershipsPage } from '@/pages/org/settings/MembershipsPage';
+import { CommissionsPage } from '@/pages/org/settings/CommissionsPage';
+import { WaitlistPage } from '@/pages/org/WaitlistPage';
+import { FormsPage } from '@/pages/org/FormsPage';
+import { FormBuilderPage } from '@/pages/org/FormBuilderPage';
+import { FormFillPage } from '@/pages/org/FormFillPage';
+import { GiftCardsPage } from '@/pages/org/GiftCardsPage';
 import { RecurringPage } from '@/pages/org/RecurringPage';
 import { StaffAdminPermissionsPage } from '@/pages/staff/StaffAdminPermissionsPage';
 import { StaffAvailabilityPage } from '@/pages/staff/StaffAvailabilityPage';
@@ -163,6 +172,11 @@ export const appRoutes = [
                           { path: 'appointments', element: <AppointmentsPage /> },
                           { path: 'customers', element: <CustomersPage /> },
                           { path: 'customers/:customerId', element: <CustomerDetailPage /> },
+                          { path: 'waitlist', element: <WaitlistPage /> },
+                          { path: 'forms', element: <FormsPage /> },
+                          { path: 'forms/:formId', element: <FormBuilderPage /> },
+                          { path: 'forms/:formId/fill', element: <FormFillPage /> },
+                          { path: 'gift-cards', element: <GiftCardsPage /> },
                           {
                             element: <ProtectedRoute roles={['platform_owner', 'org_owner']} />,
                             children: [
@@ -189,6 +203,10 @@ export const appRoutes = [
                                           { path: 'products', element: <ProductsPage /> },
                                           { path: 'payments', element: <PaymentsSettingsPage /> },
                                           { path: 'staff-permissions', element: <StaffPermissionsSettingsPage /> },
+                                          { path: 'homepage', element: <HomepageEditorPage /> },
+                                          { path: 'packages', element: <PackagesPage /> },
+                                          { path: 'memberships', element: <MembershipsPage /> },
+                                          { path: 'commissions', element: <CommissionsPage /> },
                                         ],
                                       },
                                     ],
