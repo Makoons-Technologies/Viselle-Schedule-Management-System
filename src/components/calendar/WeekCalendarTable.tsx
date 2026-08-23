@@ -49,7 +49,7 @@ export function WeekCalendarTable({
   return (
     <div
       className={cn(
-        'overflow-x-auto overflow-y-hidden overscroll-x-contain shadow-sm',
+        'overflow-x-auto overflow-y-hidden overscroll-x-contain [-webkit-overflow-scrolling:touch] shadow-sm',
         panelClassName,
         className,
       )}

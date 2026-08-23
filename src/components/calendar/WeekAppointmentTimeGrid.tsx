@@ -23,7 +23,12 @@ import {
 } from '@/components/calendar/week-time-grid';
 import { buildWeekColumns, type WeekCalendarColumn } from '@/components/calendar/WeekCalendarTable';
 import { Button } from '@/components/ui/button';
+import { useSyncedHorizontalScroll } from '@/hooks/useSyncedHorizontalScroll';
 import { cn } from '@/lib/utils';
+
+/** Native overflow-x so trackpad/touch keep compositor momentum (no JS physics). */
+const CALENDAR_HSCROLL_CLASS =
+  'overflow-x-auto overflow-y-hidden overscroll-x-contain [-webkit-overflow-scrolling:touch]';
 
 /** Far-right hit strip for overlap cycle arrows (~32px; tall targets stay tappable). */
 const STACK_RAIL_CLASS = 'w-8';
@@ -109,7 +114,6 @@ export function WeekAppointmentTimeGrid({
   const headerScrollRef = useRef<HTMLDivElement | null>(null);
   const chromeRef = useRef<HTMLDivElement | null>(null);
   const bodyRef = useRef<HTMLDivElement | null>(null);
-  const syncingScroll = useRef(false);
   const programmaticScrollRef = useRef(false);
   const [jumpCursor, setJumpCursor] = useState<{ dayKey: string; minutes: number } | null>(null);
   const [viewportMinutes, setViewportMinutes] = useState(gridStartMinutes - 1);
@@ -126,6 +130,8 @@ export function WeekAppointmentTimeGrid({
     moved: boolean;
   } | null>(null);
   const headerRowRef = useRef<HTMLDivElement | null>(null);
+
+  useSyncedHorizontalScroll(headerScrollRef, scrollRef);
 
   const mainScroller = () =>
     bodyRef.current?.closest('main') ?? scrollRef.current?.closest('main');
@@ -204,15 +210,6 @@ export function WeekAppointmentTimeGrid({
     columnEl?.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' });
   };
 
-  const syncHorizontalScroll = (source: HTMLElement, target: HTMLElement | null) => {
-    if (!target || syncingScroll.current) return;
-    syncingScroll.current = true;
-    target.scrollLeft = source.scrollLeft;
-    requestAnimationFrame(() => {
-      syncingScroll.current = false;
-    });
-  };
-
   const cycleStack = (stackKey: string, stackSize: number, delta: number) => {
     setStackFrontByKey((prev) => {
       const current = prev[stackKey] ?? 0;
@@ -247,7 +244,11 @@ export function WeekAppointmentTimeGrid({
     if (isZoomed || !onDayHeaderRangeSelect) return;
     if (event.button !== 0) return;
     dragRef.current = { pointerId: event.pointerId, anchorKey: columnKey, moved: false };
-    event.currentTarget.setPointerCapture(event.pointerId);
+    // Capture only for mouse range-select. Touch/pen capture cancels the
+    // header pane's native horizontal fling.
+    if (event.pointerType === 'mouse') {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
   };
 
   const handleHeaderPointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
@@ -312,8 +313,10 @@ export function WeekAppointmentTimeGrid({
       {toolbar ? <div className="mb-1.5">{toolbar}</div> : null}
       <div
         ref={headerScrollRef}
-        className="overflow-x-auto overflow-y-hidden rounded-t-xl border border-b-0 border-stone-200 bg-white shadow-sm [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden dark:border-stone-800 dark:bg-stone-900"
-        onScroll={(event) => syncHorizontalScroll(event.currentTarget, scrollRef.current)}
+        className={cn(
+          CALENDAR_HSCROLL_CLASS,
+          'rounded-t-xl border border-b-0 border-stone-200 bg-white shadow-sm [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden dark:border-stone-800 dark:bg-stone-900',
+        )}
       >
         {headerRow}
       </div>
@@ -321,10 +324,10 @@ export function WeekAppointmentTimeGrid({
     <div
       ref={scrollRef}
       className={cn(
-        'overflow-x-auto overflow-y-hidden rounded-b-xl border border-t-0 border-stone-200 bg-white shadow-sm dark:border-stone-800 dark:bg-stone-900',
+        CALENDAR_HSCROLL_CLASS,
+        'rounded-b-xl border border-t-0 border-stone-200 bg-white shadow-sm dark:border-stone-800 dark:bg-stone-900',
         className,
       )}
-      onScroll={(event) => syncHorizontalScroll(event.currentTarget, headerScrollRef.current)}
     >
       <div ref={bodyRef} className="relative flex" style={{ minWidth: `${gridMinWidthRem}rem` }}>
           {showNowLine && (
