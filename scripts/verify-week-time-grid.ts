@@ -15,19 +15,31 @@ function minutesToOffsetRem(minutes: number, gridStartMinutes: number): number {
   return ((minutes - gridStartMinutes) / SLOT_MINUTES) * SLOT_HEIGHT_REM;
 }
 
-function nextAppointmentMinutesAfter(
+function nextAppointmentInWeekOrder(
   appointments: Array<{ startTime: string }>,
-  afterMinutes: number,
-  dayKeys?: string[],
-): number | undefined {
-  let next: number | undefined;
-  for (const appointment of appointments) {
-    if (dayKeys && !dayKeys.includes(appointment.startTime.slice(0, 10))) continue;
-    const minutes = appointmentStartMinutes(appointment.startTime);
-    if (minutes <= afterMinutes) continue;
-    if (next === undefined || minutes < next) next = minutes;
+  dayKeys: string[],
+  after: { dayKey: string; minutes: number },
+): { dayKey: string; minutes: number } | undefined {
+  const startIndex = Math.max(0, dayKeys.indexOf(after.dayKey));
+
+  for (let dayIndex = startIndex; dayIndex < dayKeys.length; dayIndex += 1) {
+    const dayKey = dayKeys[dayIndex];
+    const minMinutes = dayIndex === startIndex && dayKeys[startIndex] === after.dayKey
+      ? after.minutes
+      : -1;
+    let nextMinutes: number | undefined;
+    for (const appointment of appointments) {
+      if (appointment.startTime.slice(0, 10) !== dayKey) continue;
+      const minutes = appointmentStartMinutes(appointment.startTime);
+      if (minutes <= minMinutes) continue;
+      if (nextMinutes === undefined || minutes < nextMinutes) nextMinutes = minutes;
+    }
+    if (nextMinutes !== undefined) {
+      return { dayKey, minutes: nextMinutes };
+    }
   }
-  return next;
+
+  return undefined;
 }
 
 function minutesFromGridOffset(
@@ -234,21 +246,26 @@ const jumpAppointments = [
   { startTime: '2026-08-24T14:00:00.000Z' },
   { startTime: '2026-08-25T08:30:00.000Z' },
 ];
+const jumpDays = ['2026-08-24', '2026-08-25'];
 assert(
-  nextAppointmentMinutesAfter(jumpAppointments, 8 * 60) === 8 * 60 + 30,
-  'next after 8:00 is 8:30 (earliest later clock time across days)',
+  nextAppointmentInWeekOrder(jumpAppointments, jumpDays, { dayKey: '2026-08-24', minutes: 8 * 60 })?.minutes === 9 * 60,
+  'next on the current day is the closest later booking (9:00)',
 );
 assert(
-  nextAppointmentMinutesAfter(jumpAppointments, 8 * 60 + 30) === 9 * 60,
-  'next after 8:30 is 9:00',
+  nextAppointmentInWeekOrder(jumpAppointments, jumpDays, { dayKey: '2026-08-24', minutes: 9 * 60 })?.minutes === 14 * 60,
+  'second tap on the same day continues later that day',
+);
+const nextDay = nextAppointmentInWeekOrder(jumpAppointments, jumpDays, {
+  dayKey: '2026-08-24',
+  minutes: 14 * 60,
+});
+assert(
+  nextDay?.dayKey === '2026-08-25' && nextDay.minutes === 8 * 60 + 30,
+  'after the last booking today, walk to the next day’s first appointment',
 );
 assert(
-  nextAppointmentMinutesAfter(jumpAppointments, 14 * 60) === undefined,
-  'no next appointment after the last clock time',
-);
-assert(
-  nextAppointmentMinutesAfter(jumpAppointments, 8 * 60, ['2026-08-24']) === 9 * 60,
-  'day filter skips the other day’s 8:30',
+  nextAppointmentInWeekOrder(jumpAppointments, jumpDays, { dayKey: '2026-08-25', minutes: 8 * 60 + 30 }) === undefined,
+  'no next appointment after the last day in order',
 );
 
 if (process.exitCode) {

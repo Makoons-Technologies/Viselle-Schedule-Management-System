@@ -12,20 +12,40 @@ export function appointmentStartMinutes(iso: string): number {
   return hours * 60 + minutes;
 }
 
-/** Earliest clock time after `afterMinutes` among appointments on the given days. */
-export function nextAppointmentMinutesAfter(
+export interface WeekAppointmentCursor {
+  dayKey: string;
+  minutes: number;
+}
+
+/**
+ * Next appointment after `after`, walking `dayKeys` in order.
+ * On the starting day only later clock times count; later days start from the first booking.
+ */
+export function nextAppointmentInWeekOrder(
   appointments: Array<{ startTime: string }>,
-  afterMinutes: number,
-  dayKeys?: string[],
-): number | undefined {
-  let next: number | undefined;
-  for (const appointment of appointments) {
-    if (dayKeys && !dayKeys.includes(appointment.startTime.slice(0, 10))) continue;
-    const minutes = appointmentStartMinutes(appointment.startTime);
-    if (minutes <= afterMinutes) continue;
-    if (next === undefined || minutes < next) next = minutes;
+  dayKeys: string[],
+  after: WeekAppointmentCursor,
+): WeekAppointmentCursor | undefined {
+  const startIndex = Math.max(0, dayKeys.indexOf(after.dayKey));
+
+  for (let dayIndex = startIndex; dayIndex < dayKeys.length; dayIndex += 1) {
+    const dayKey = dayKeys[dayIndex];
+    const minMinutes = dayIndex === startIndex && dayKeys[startIndex] === after.dayKey
+      ? after.minutes
+      : -1;
+    let nextMinutes: number | undefined;
+    for (const appointment of appointments) {
+      if (appointment.startTime.slice(0, 10) !== dayKey) continue;
+      const minutes = appointmentStartMinutes(appointment.startTime);
+      if (minutes <= minMinutes) continue;
+      if (nextMinutes === undefined || minutes < nextMinutes) nextMinutes = minutes;
+    }
+    if (nextMinutes !== undefined) {
+      return { dayKey, minutes: nextMinutes };
+    }
   }
-  return next;
+
+  return undefined;
 }
 
 export function formatMinutesLabel(minutes: number): string {

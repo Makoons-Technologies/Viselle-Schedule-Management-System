@@ -17,7 +17,7 @@ import {
   layoutDayAppointments,
   minutesFromGridOffset,
   minutesToOffsetRem,
-  nextAppointmentMinutesAfter,
+  nextAppointmentInWeekOrder,
   SLOT_HEIGHT_REM,
   SLOT_MINUTES,
 } from '@/components/calendar/week-time-grid';
@@ -110,11 +110,14 @@ export function WeekAppointmentTimeGrid({
   const chromeRef = useRef<HTMLDivElement | null>(null);
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const syncingScroll = useRef(false);
-  const hasJumpableAppointment = nextAppointmentMinutesAfter(
-    appointments,
-    gridStartMinutes - 1,
-    visibleDayKeys,
-  ) != null;
+  const programmaticScrollRef = useRef(false);
+  const [jumpCursor, setJumpCursor] = useState<{ dayKey: string; minutes: number } | null>(null);
+  const [viewportMinutes, setViewportMinutes] = useState(gridStartMinutes - 1);
+  const originDayKey = columns.find((column) => column.isToday)?.key ?? visibleDayKeys[0];
+  const jumpAfter = jumpCursor ?? { dayKey: originDayKey ?? '', minutes: viewportMinutes };
+  const nextJumpTarget = originDayKey
+    ? nextAppointmentInWeekOrder(appointments, visibleDayKeys, jumpAfter)
+    : undefined;
   /** Which stack member is on top, keyed by overlap-group id. */
   const [stackFrontByKey, setStackFrontByKey] = useState<Record<string, number>>({});
   const dragRef = useRef<{
@@ -154,21 +157,51 @@ export function WeekAppointmentTimeGrid({
     scroller.scrollTo({ top, behavior: align === 'start' ? 'smooth' : 'auto' });
   };
 
-  const jumpToNextAppointment = () => {
+  const readViewportMinutes = () => {
     const body = bodyRef.current;
     const scroller = mainScroller();
-    if (!body || !scroller) return;
+    if (!body || !scroller) return gridStartMinutes - 1;
     const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
     const chromeHeight = chromeRef.current?.offsetHeight ?? 0;
     const offsetPx = Math.max(
       0,
       scroller.getBoundingClientRect().top + chromeHeight - body.getBoundingClientRect().top,
     );
-    const visibleMinutes =
-      gridStartMinutes + (offsetPx / rem / SLOT_HEIGHT_REM) * SLOT_MINUTES;
-    const nextMinutes = nextAppointmentMinutesAfter(appointments, visibleMinutes, visibleDayKeys);
-    if (nextMinutes == null) return;
-    scrollMainToMinutes(nextMinutes, 'start');
+    return gridStartMinutes + (offsetPx / rem / SLOT_HEIGHT_REM) * SLOT_MINUTES;
+  };
+
+  const beginProgrammaticScroll = () => {
+    programmaticScrollRef.current = true;
+    window.setTimeout(() => {
+      programmaticScrollRef.current = false;
+    }, 600);
+  };
+
+  useEffect(() => {
+    const scroller = mainScroller();
+    if (!scroller) return;
+    const onScroll = () => {
+      setViewportMinutes(readViewportMinutes());
+      if (programmaticScrollRef.current) return;
+      setJumpCursor(null);
+    };
+    scroller.addEventListener('scroll', onScroll, { passive: true });
+    setViewportMinutes(readViewportMinutes());
+    return () => scroller.removeEventListener('scroll', onScroll);
+  }, [showNowLine, visibleDayKeys.join(',')]);
+
+  const jumpToNextAppointment = () => {
+    const after = jumpCursor ?? {
+      dayKey: originDayKey ?? '',
+      minutes: readViewportMinutes(),
+    };
+    const next = nextAppointmentInWeekOrder(appointments, visibleDayKeys, after);
+    if (!next) return;
+    setJumpCursor(next);
+    beginProgrammaticScroll();
+    scrollMainToMinutes(next.minutes, 'start');
+    const columnEl = bodyRef.current?.querySelector(`[data-day-column="${next.dayKey}"]`);
+    columnEl?.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' });
   };
 
   const syncHorizontalScroll = (source: HTMLElement, target: HTMLElement | null) => {
@@ -346,7 +379,7 @@ export function WeekAppointmentTimeGrid({
           })}
       </div>
     </div>
-    {hasJumpableAppointment && (
+    {nextJumpTarget && (
       <Button
         type="button"
         size="icon"
@@ -389,6 +422,7 @@ function DayColumn({
 }) {
   return (
     <div
+      data-day-column={column.key}
       className={cn(
         'relative min-w-0 flex-1 border-r border-stone-100 last:border-r-0 dark:border-stone-800',
         column.isToday && 'bg-brand-50/25 dark:bg-brand-900/20',
