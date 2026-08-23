@@ -1,12 +1,19 @@
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Calendar, Scissors, UserCircle, Users } from 'lucide-react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { Appointment, HomepageBlock, Service } from '@/types/api';
+import { toast } from 'sonner';
+import { CollapsibleBox, ResponsiveTable, ResponsiveTabs, columnsClass } from '@/components/builder/ResponsiveLayout';
+import { FormioRenderer, collectRequiredGaps } from '@/components/forms/FormioRenderer';
 import { DashboardBookingLink } from '@/components/dashboard/DashboardBookingLink';
 import { DashboardTrialStatus } from '@/components/dashboard/DashboardTrialStatus';
 import { RevenueChart } from '@/components/dashboard/RevenueChart';
 import { OrgSetupChecklist } from '@/components/onboarding/OrgSetupChecklist';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { getApiErrorMessage, orgApi } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
+import type { Appointment, HomepageBlock, Service } from '@/types/api';
 
 export const DEFAULT_HOMEPAGE_BLOCKS: HomepageBlock[] = [
   { id: 'welcome', type: 'welcome', visible: true, title: 'Welcome back', body: 'Here is how the salon looks today.' },
@@ -18,6 +25,14 @@ export const DEFAULT_HOMEPAGE_BLOCKS: HomepageBlock[] = [
   { id: 'upcoming', type: 'upcoming', visible: true },
   { id: 'revenue', type: 'revenue', visible: true },
 ];
+
+type HomepageContext = {
+  orgId: string;
+  showSetup: boolean;
+  stats: { upcoming: number; staff: number; services: number; customers: number };
+  services: Service[];
+  upcomingAppointments: Appointment[];
+};
 
 export function HomepageBlocks({
   orgId,
@@ -36,10 +51,11 @@ export function HomepageBlocks({
   services: Service[];
   upcomingAppointments: Appointment[];
 }) {
-  const visible = blocks.filter((block) => block.visible);
+  const ctx: HomepageContext = { orgId, showSetup, stats, services, upcomingAppointments };
+  const visible = blocks.filter((block) => block.visible !== false);
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       {canEdit ? (
         <div className="flex justify-end">
           <Link
@@ -51,125 +67,251 @@ export function HomepageBlocks({
         </div>
       ) : null}
 
-      {visible.map((block) => {
-        if (block.type === 'welcome') {
-          return (
-            <div key={block.id}>
-              <h2 className="text-2xl font-semibold text-stone-900 dark:text-stone-50">{block.title || 'Welcome back'}</h2>
-              {block.body ? <p className="mt-1 text-stone-600 dark:text-stone-400">{block.body}</p> : null}
-            </div>
-          );
-        }
-        if (block.type === 'announcement' && (block.title || block.body)) {
-          return (
-            <Card key={block.id} className="border-brand-200 bg-brand-50 dark:border-brand-900 dark:bg-brand-950/40">
-              <CardHeader>
-                <CardTitle className="text-base">{block.title || 'Announcement'}</CardTitle>
-              </CardHeader>
-              {block.body ? <CardContent className="text-sm text-stone-700 dark:text-stone-300">{block.body}</CardContent> : null}
-            </Card>
-          );
-        }
-        if (block.type === 'stats') {
-          const items = [
-            { label: 'Upcoming Appointments', value: stats.upcoming, icon: Calendar },
-            { label: 'Staff Members', value: stats.staff, icon: Users },
-            { label: 'Services', value: stats.services, icon: Scissors },
-            { label: 'Customers', value: stats.customers, icon: UserCircle },
-          ];
-          return (
-            <div key={block.id} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {items.map((item) => (
-                <Card key={item.label}>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium text-stone-500 dark:text-stone-400">{item.label}</CardTitle>
-                    <item.icon className="h-4 w-4 text-brand-600 dark:text-brand-400" />
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-3xl font-bold">{item.value}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          );
-        }
-        if (block.type === 'setup' && showSetup) {
-          return <OrgSetupChecklist key={block.id} orgId={orgId} />;
-        }
-        if (block.type === 'bookingCta') {
-          return (
-            <Card key={block.id}>
-              <CardHeader>
-                <CardTitle className="text-base">{block.title || 'Booking link'}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {block.body ? <p className="text-sm text-stone-600 dark:text-stone-400">{block.body}</p> : null}
-                <DashboardBookingLink orgId={orgId} />
-              </CardContent>
-            </Card>
-          );
-        }
-        if (block.type === 'featuredServices') {
-          const featured = services.filter((service) => (block.serviceIds ?? []).includes(service.id));
-          if (featured.length === 0) return null;
-          return (
-            <Card key={block.id}>
-              <CardHeader>
-                <CardTitle className="text-base">{block.title || 'Featured services'}</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-3 sm:grid-cols-2">
-                {featured.map((service) => (
-                  <div key={service.id} className="rounded-xl border border-stone-200 p-3 dark:border-stone-800">
-                    <p className="font-medium">{service.name}</p>
-                    <p className="text-sm text-stone-500">
-                      {service.durationMinutes} min
-                      {service.priceCents != null ? ` · ${formatCurrency(service.priceCents)}` : ''}
-                    </p>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          );
-        }
-        if (block.type === 'upcoming') {
-          const next = upcomingAppointments.slice(0, 5);
-          return (
-            <Card key={block.id}>
-              <CardHeader>
-                <CardTitle className="text-base">{block.title || 'Coming up'}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                {next.length === 0 ? (
-                  <p className="text-stone-500">No upcoming appointments.</p>
-                ) : (
-                  next.map((appointment) => (
-                    <div key={appointment.id} className="flex justify-between gap-3">
-                      <span className="truncate text-stone-800 dark:text-stone-200">
-                        {new Date(appointment.startTime).toLocaleString([], {
-                          weekday: 'short',
-                          month: 'short',
-                          day: 'numeric',
-                          hour: 'numeric',
-                          minute: '2-digit',
-                        })}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-          );
-        }
-        if (block.type === 'revenue') {
-          return (
-            <div key={block.id}>
-              <RevenueChart orgId={orgId} />
-            </div>
-          );
-        }
-        return null;
-      })}
+      {visible.map((block) => (
+        <BlockView key={block.id} block={block} ctx={ctx} />
+      ))}
       {!visible.some((block) => block.type === 'setup') ? <DashboardTrialStatus /> : null}
+    </div>
+  );
+}
+
+function BlockView({ block, ctx }: { block: HomepageBlock; ctx: HomepageContext }) {
+  if (block.visible === false) return null;
+
+  if (block.type === 'columns') {
+    const columns = block.columns?.length ? block.columns : [{ components: block.components ?? [] }];
+    return (
+      <div className={columnsClass(columns.length)}>
+        {columns.map((column, index) => (
+          <div key={index} className="min-w-0 space-y-4">
+            {(column.components ?? []).map((child) => (
+              <BlockView key={child.id} block={child} ctx={ctx} />
+            ))}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (block.type === 'tabs') {
+    const tabs = block.tabs?.length
+      ? block.tabs
+      : (block.components ?? []).map((tab) => ({ label: tab.title || tab.label || 'Tab', key: tab.id, components: tab.components ?? [] }));
+    return (
+      <ResponsiveTabs tabs={tabs}>
+        {(open) =>
+          (tabs[open]?.components ?? []).map((child) => <BlockView key={child.id} block={child} ctx={ctx} />)
+        }
+      </ResponsiveTabs>
+    );
+  }
+
+  if (block.type === 'table') {
+    const rows = block.rows ?? [];
+    return (
+      <ResponsiveTable
+        rows={rows}
+        renderCell={(rowIndex, cellIndex) =>
+          (rows[rowIndex]?.[cellIndex]?.components ?? []).map((child) => (
+            <BlockView key={child.id} block={child} ctx={ctx} />
+          ))
+        }
+      />
+    );
+  }
+
+  if (block.type === 'panel' || block.type === 'fieldset' || block.type === 'well' || block.type === 'container') {
+    return (
+      <CollapsibleBox title={block.title || block.label} collapsible={block.type === 'panel'}>
+        <div className="grid grid-cols-1 gap-4">
+          {(block.components ?? []).map((child) => (
+            <BlockView key={child.id} block={child} ctx={ctx} />
+          ))}
+        </div>
+      </CollapsibleBox>
+    );
+  }
+
+  if (block.type === 'form') {
+    return (
+      <Card className="min-w-0">
+        <CardHeader>
+          <CardTitle className="text-base">{block.title || 'Form'}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <HomepageForm orgId={ctx.orgId} formId={block.formId} />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return <Widget block={block} ctx={ctx} />;
+}
+
+function Widget({ block, ctx }: { block: HomepageBlock; ctx: HomepageContext }) {
+  if (block.type === 'welcome') {
+    return (
+      <div>
+        <h2 className="text-2xl font-semibold text-stone-900 dark:text-stone-50">{block.title || 'Welcome back'}</h2>
+        {block.body ? <p className="mt-1 text-stone-600 dark:text-stone-400">{block.body}</p> : null}
+      </div>
+    );
+  }
+  if (block.type === 'announcement' && (block.title || block.body)) {
+    return (
+      <Card className="border-brand-200 bg-brand-50 dark:border-brand-900 dark:bg-brand-950/40">
+        <CardHeader>
+          <CardTitle className="text-base">{block.title || 'Announcement'}</CardTitle>
+        </CardHeader>
+        {block.body ? <CardContent className="text-sm text-stone-700 dark:text-stone-300">{block.body}</CardContent> : null}
+      </Card>
+    );
+  }
+  if (block.type === 'stats') {
+    const items = [
+      { label: 'Upcoming Appointments', value: ctx.stats.upcoming, icon: Calendar },
+      { label: 'Staff Members', value: ctx.stats.staff, icon: Users },
+      { label: 'Services', value: ctx.stats.services, icon: Scissors },
+      { label: 'Customers', value: ctx.stats.customers, icon: UserCircle },
+    ];
+    return (
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {items.map((item) => (
+          <Card key={item.label}>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-stone-500 dark:text-stone-400">{item.label}</CardTitle>
+              <item.icon className="h-4 w-4 text-brand-600 dark:text-brand-400" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">{item.value}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+  if (block.type === 'setup' && ctx.showSetup) {
+    return <OrgSetupChecklist orgId={ctx.orgId} />;
+  }
+  if (block.type === 'bookingCta') {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{block.title || 'Booking link'}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {block.body ? <p className="text-sm text-stone-600 dark:text-stone-400">{block.body}</p> : null}
+          <DashboardBookingLink orgId={ctx.orgId} />
+        </CardContent>
+      </Card>
+    );
+  }
+  if (block.type === 'featuredServices') {
+    const featured = ctx.services.filter((service) => (block.serviceIds ?? []).includes(service.id));
+    if (featured.length === 0) return null;
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{block.title || 'Featured services'}</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2">
+          {featured.map((service) => (
+            <div key={service.id} className="rounded-xl border border-stone-200 p-3 dark:border-stone-800">
+              <p className="font-medium">{service.name}</p>
+              <p className="text-sm text-stone-500">
+                {service.durationMinutes} min
+                {service.priceCents != null ? ` · ${formatCurrency(service.priceCents)}` : ''}
+              </p>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
+  if (block.type === 'upcoming') {
+    const next = ctx.upcomingAppointments.slice(0, 5);
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{block.title || 'Coming up'}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          {next.length === 0 ? (
+            <p className="text-stone-500">No upcoming appointments.</p>
+          ) : (
+            next.map((appointment) => (
+              <div key={appointment.id} className="flex justify-between gap-3">
+                <span className="truncate text-stone-800 dark:text-stone-200">
+                  {new Date(appointment.startTime).toLocaleString([], {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                  })}
+                </span>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+  if (block.type === 'revenue') {
+    return <RevenueChart orgId={ctx.orgId} />;
+  }
+  if (block.content || block.body) {
+    return (
+      <div className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm whitespace-pre-wrap dark:border-stone-800 dark:bg-stone-950/40">
+        {block.title ? <p className="mb-1 font-medium">{block.title}</p> : null}
+        {block.body || block.content}
+      </div>
+    );
+  }
+  return null;
+}
+
+function HomepageForm({ orgId, formId }: { orgId: string; formId?: string }) {
+  const [values, setValues] = useState<Record<string, unknown>>({});
+  const query = useQuery({
+    queryKey: ['form', orgId, formId],
+    queryFn: () => orgApi.getForm(orgId, formId!),
+    enabled: Boolean(orgId && formId),
+  });
+  const submit = useMutation({
+    mutationFn: () => orgApi.submitForm(orgId, formId!, { data: values }),
+    onSuccess: () => {
+      toast.success('Saved');
+      setValues({});
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, 'Could not save this form')),
+  });
+
+  if (!formId) return <p className="text-sm text-stone-500">Choose a published form to show here.</p>;
+  if (query.isLoading) return <p className="text-sm text-stone-500">Loading form…</p>;
+  const form = query.data?.form;
+  if (!form?.schema) return <p className="text-sm text-stone-500">Form not found.</p>;
+  if (form.status !== 'published') {
+    return <p className="text-sm text-stone-500">Publish this form before collecting answers on the dashboard.</p>;
+  }
+
+  const missing = collectRequiredGaps(form.schema, values);
+  return (
+    <div className="min-w-0 space-y-4">
+      <FormioRenderer schema={form.schema} value={values} onChange={setValues} orgId={orgId} />
+      <Button
+        className="h-11 w-full sm:w-auto"
+        disabled={submit.isPending}
+        onClick={() => {
+          if (missing.length) {
+            toast.error(`Fill in: ${missing.join(', ')}`);
+            return;
+          }
+          submit.mutate();
+        }}
+      >
+        {submit.isPending ? 'Saving…' : 'Save answers'}
+      </Button>
     </div>
   );
 }

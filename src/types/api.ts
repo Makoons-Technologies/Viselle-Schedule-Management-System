@@ -810,7 +810,7 @@ export interface CustomWebsiteRequestNote {
   createdAt: string;
 }
 
-export type HomepageBlockType =
+export type HomepageWidgetType =
   | 'welcome'
   | 'announcement'
   | 'stats'
@@ -818,29 +818,91 @@ export type HomepageBlockType =
   | 'bookingCta'
   | 'featuredServices'
   | 'upcoming'
-  | 'revenue';
+  | 'revenue'
+  | 'form';
+
+export type HomepageBlockType = HomepageWidgetType | string;
+
+export interface HomepageColumn {
+  width?: number;
+  components: HomepageBlock[];
+}
+
+export interface HomepageTab {
+  label: string;
+  key?: string;
+  components: HomepageBlock[];
+}
 
 export interface HomepageBlock {
   id: string;
-  type: HomepageBlockType;
-  visible: boolean;
+  type: string;
+  visible?: boolean;
   title?: string;
   body?: string;
   serviceIds?: string[];
+  formId?: string;
+  label?: string;
+  content?: string;
+  placeholder?: string;
+  input?: boolean;
+  validate?: { required?: boolean };
+  values?: Array<{ label: string; value: string }>;
+  components?: HomepageBlock[];
+  columns?: HomepageColumn[];
+  tabs?: HomepageTab[];
+  rows?: Array<Array<{ components: HomepageBlock[] }>>;
 }
 
 export type OrgFormStatus = 'draft' | 'published' | 'archived';
+
+export interface FormioColumn {
+  width?: number;
+  currentWidth?: number;
+  components: FormioComponent[];
+}
 
 export interface FormioComponent {
   type: string;
   key?: string;
   label?: string;
+  title?: string;
+  legend?: string;
   input?: boolean;
   placeholder?: string;
+  description?: string;
   content?: string;
-  validate?: { required?: boolean };
+  html?: string;
+  tag?: string;
+  hidden?: boolean;
+  disabled?: boolean;
+  multiple?: boolean;
+  defaultValue?: unknown;
+  inputMask?: string;
+  prefix?: string;
+  suffix?: string;
+  action?: string;
+  theme?: string;
+  collapsible?: boolean;
+  collapsed?: boolean;
+  form?: string;
+  formId?: string;
+  image?: string;
+  questions?: Array<{ label: string; value: string }>;
+  validate?: {
+    required?: boolean;
+    min?: number;
+    max?: number;
+    minLength?: number;
+    maxLength?: number;
+    pattern?: string;
+  };
   values?: Array<{ label: string; value: string }>;
+  data?: { values?: Array<{ label: string; value: string }> };
   components?: FormioComponent[];
+  columns?: FormioColumn[];
+  rows?: Array<Array<{ components: FormioComponent[] }>>;
+  serviceIds?: string[];
 }
 
 export interface FormioSchema {

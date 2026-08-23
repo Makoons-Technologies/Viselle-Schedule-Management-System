@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { LoadingState } from '@/components/common/LoadingState';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Panel } from '@/components/common/Panel';
-import { FormioRenderer } from '@/components/forms/FormioRenderer';
+import { FormioRenderer, collectRequiredGaps } from '@/components/forms/FormioRenderer';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/context/AuthContext';
@@ -75,7 +75,7 @@ export function FormFillPage() {
   }
 
   const canSubmit = form.status === 'published';
-  const missing = canSubmit ? requiredGaps(schema, values) : [];
+  const missing = canSubmit ? collectRequiredGaps(schema, values) : [];
 
   return (
     <div className="mx-auto max-w-xl space-y-6">
@@ -104,7 +104,7 @@ export function FormFillPage() {
           ))}
         </select>
       </div>
-      <FormioRenderer schema={schema} value={values} onChange={setValues} disabled={!canSubmit} />
+      <FormioRenderer schema={schema} value={values} onChange={setValues} disabled={!canSubmit} orgId={orgId} />
       <Button
         className="h-11 w-full"
         disabled={!canSubmit || submit.isPending}
@@ -145,34 +145,21 @@ export function FormFillPage() {
   );
 }
 
-function requiredGaps(schema: FormioSchema, value: Record<string, unknown>): string[] {
-  const missing: string[] = [];
-  walk(schema.components ?? [], (component) => {
-    if (!component.input || !component.validate?.required || !component.key) return;
-    const answer = value[component.key];
-    const empty =
-      answer === undefined ||
-      answer === null ||
-      answer === false ||
-      (typeof answer === 'string' && answer.trim() === '');
-    if (empty) missing.push(component.label || component.key);
-  });
-  return missing;
-}
-
-function walk(components: FormioComponent[], visit: (component: FormioComponent) => void) {
-  for (const component of components) {
-    visit(component);
-    if (component.components?.length) walk(component.components, visit);
-  }
-}
-
 function labelFor(schema: FormioSchema, key: string): string {
   let found = key;
   walk(schema.components ?? [], (component) => {
     if (component.key === key && component.label) found = component.label;
   });
   return found;
+}
+
+function walk(components: FormioComponent[], visit: (component: FormioComponent) => void) {
+  for (const component of components) {
+    visit(component);
+    if (component.components?.length) walk(component.components, visit);
+    if (component.columns) for (const column of component.columns) walk(column.components ?? [], visit);
+    if (component.rows) for (const row of component.rows) for (const cell of row) walk(cell.components ?? [], visit);
+  }
 }
 
 function formatAnswer(answer: unknown): string {

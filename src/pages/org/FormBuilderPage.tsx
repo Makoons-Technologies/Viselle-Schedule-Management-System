@@ -33,6 +33,11 @@ export function FormBuilderPage() {
     queryFn: () => orgApi.getForm(orgId, formId!),
     enabled: !!orgId && !!formId,
   });
+  const formsQuery = useQuery({
+    queryKey: ['forms', orgId],
+    queryFn: () => orgApi.listForms(orgId),
+    enabled: !!orgId,
+  });
 
   const form = formQuery.data?.form;
 
@@ -122,7 +127,7 @@ export function FormBuilderPage() {
             <Label htmlFor="builder-form-name">Form name</Label>
             <Input id="builder-form-name" value={name} onChange={(event) => setName(event.target.value)} />
           </div>
-          <FormioBuilder schema={schema} onChange={setSchema} />
+          <FormioBuilder schema={schema} onChange={setSchema} orgId={orgId} forms={formsQuery.data?.forms ?? []} />
         </div>
       </DesktopOnlyGate>
     </div>
