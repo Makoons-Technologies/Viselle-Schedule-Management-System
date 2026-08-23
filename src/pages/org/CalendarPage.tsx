@@ -296,7 +296,7 @@ export function CalendarPage() {
   if (isLoading) return <LoadingState />;
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col gap-1.5 overflow-hidden">
+    <div className="flex flex-col gap-1.5">
       <div className="flex w-full min-w-0 shrink-0 flex-nowrap items-center gap-1 overflow-hidden">
         <WeekCalendarNav
           compact
@@ -446,7 +446,6 @@ export function CalendarPage() {
         </div>
       )}
       <WeekAppointmentTimeGrid
-        className="min-h-0 flex-1"
         days={days}
         appointments={appointments}
         selectedDayKeys={selectedDayKeys}

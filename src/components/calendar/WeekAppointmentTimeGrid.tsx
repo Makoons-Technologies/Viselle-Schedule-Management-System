@@ -112,12 +112,15 @@ export function WeekAppointmentTimeGrid({
 
   useLayoutEffect(() => {
     if (!showNowLine) return;
-    const scroller = scrollRef.current;
+    const grid = scrollRef.current;
+    if (!grid) return;
+    const scroller = grid.closest('main');
     if (!scroller) return;
     const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
     const headerHeight = headerRowRef.current?.offsetHeight ?? 0;
-    scroller.scrollTop = headerHeight + nowTopRem * rem - scroller.clientHeight / 2;
-  }, [showNowLine, nowTopRem, dayKeys.join(',')]);
+    const gridTop = grid.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+    scroller.scrollTop = gridTop + headerHeight + nowTopRem * rem - scroller.clientHeight / 2;
+  }, [showNowLine, dayKeys.join(',')]);
 
   const cycleStack = (stackKey: string, stackSize: number, delta: number) => {
     setStackFrontByKey((prev) => {
@@ -194,7 +197,7 @@ export function WeekAppointmentTimeGrid({
     <div
       ref={scrollRef}
       className={cn(
-        'h-full min-h-0 overflow-x-auto overflow-y-auto overscroll-y-contain touch-pan-x touch-pan-y shadow-sm [-webkit-overflow-scrolling:touch]',
+        'overflow-x-auto overflow-y-visible shadow-sm',
         panelClassName,
         className,
       )}
@@ -304,7 +307,7 @@ function DayColumn({
   return (
     <div
       className={cn(
-        'relative min-w-0 flex-1 touch-pan-x touch-pan-y border-r border-stone-100 last:border-r-0 dark:border-stone-800',
+        'relative min-w-0 flex-1 border-r border-stone-100 last:border-r-0 dark:border-stone-800',
         column.isToday && 'bg-brand-50/25 dark:bg-brand-900/20',
         onEmptySlotClick && 'cursor-pointer',
       )}
@@ -500,7 +503,7 @@ function DayHeader({
       data-day-key={column.key}
       className={cn(
         shellClass,
-        'min-h-[3.75rem] touch-pan-y touch-manipulation transition-colors select-none',
+        'min-h-[3.75rem] touch-manipulation transition-colors select-none',
         'hover:bg-stone-100/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500',
         'dark:hover:bg-stone-700/50',
         selected && 'hover:bg-brand-50 dark:hover:bg-brand-900/45',
