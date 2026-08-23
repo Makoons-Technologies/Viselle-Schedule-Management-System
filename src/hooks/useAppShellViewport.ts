@@ -38,12 +38,16 @@ export function useAppShellViewport() {
       }
     };
 
+    const syncAppHeight = () => {
+      setAppHeightCSSProperty();
+    };
+
     const onViewportSettle = () => {
       const keyboardOpen = isKeyboardOpen();
       if (keyboardOpen) {
         keyboardWasOpen = true;
         // Shrink to the visual viewport while the keyboard is up so the tab bar is not stranded.
-        setAppHeightCSSProperty();
+        syncAppHeight();
         return;
       }
 
@@ -53,10 +57,28 @@ export function useAppShellViewport() {
         scheduleSettle(KEYBOARD_CLOSE_DELAYS_MS);
       }
 
-      // Reset window scroll only when the layout viewport changed — not on visualViewport
-      // pan/scroll, which fights <main> scrolling and feels like a snag.
+      // Window scroller only, and only when it actually moved. Nested
+      // overflow-x (calendar) must keep native momentum.
       resetWindowScroll();
-      setAppHeightCSSProperty();
+      syncAppHeight();
+    };
+
+    const onVisualViewportResize = () => {
+      const keyboardOpen = isKeyboardOpen();
+      if (keyboardOpen) {
+        keyboardWasOpen = true;
+        syncAppHeight();
+        return;
+      }
+      if (keyboardWasOpen) {
+        keyboardWasOpen = false;
+        nudgeStandaloneViewportRecalc();
+        scheduleSettle(KEYBOARD_CLOSE_DELAYS_MS);
+        return;
+      }
+      // Height only. resetWindowScroll here snaps calendar overflow-x mid-flick
+      // (~64ms settle / iOS chrome hide) — QA BEA-67 snap-back.
+      syncAppHeight();
     };
 
     const onFocusOut = (event: FocusEvent) => {
@@ -87,9 +109,8 @@ export function useAppShellViewport() {
       scheduleSettle(SETTLE_DELAYS_MS);
     }
 
-    // Do not listen to visualViewport "scroll": iOS fires it during overscroll and
-    // resetting window scroll / --app-height mid-gesture snags the main page.
-    vv?.addEventListener('resize', onViewportSettle);
+    // visualViewport resize (iOS chrome / overscroll) must not reset window scroll.
+    vv?.addEventListener('resize', onVisualViewportResize);
     window.addEventListener('resize', onViewportSettle);
     window.addEventListener('orientationchange', onOrientationChange);
     window.addEventListener('load', onViewportSettle);
@@ -101,7 +122,7 @@ export function useAppShellViewport() {
       document.documentElement.style.removeProperty('--app-height');
       if (themeMeta && previousTheme) themeMeta.setAttribute('content', previousTheme);
       for (const id of settleTimers) window.clearTimeout(id);
-      vv?.removeEventListener('resize', onViewportSettle);
+      vv?.removeEventListener('resize', onVisualViewportResize);
       window.removeEventListener('resize', onViewportSettle);
       window.removeEventListener('orientationchange', onOrientationChange);
       window.removeEventListener('load', onViewportSettle);

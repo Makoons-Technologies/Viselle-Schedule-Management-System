@@ -26,6 +26,14 @@ import {
 import { buildWeekColumns, type WeekCalendarColumn } from '@/components/calendar/WeekCalendarTable';
 import { Button } from '@/components/ui/button';
 import { useSyncedHorizontalScroll } from '@/hooks/useSyncedHorizontalScroll';
+import {
+  findVerticalScroller,
+  getScrollLeft,
+  getScrollTop,
+  scrollElementTo,
+  setScrollLeft,
+  setScrollTop,
+} from '@/lib/scroll-helpers';
 import { cn } from '@/lib/utils';
 
 /** Native overflow-x so trackpad/touch keep compositor momentum (no JS physics). */
@@ -122,10 +130,16 @@ export function WeekAppointmentTimeGrid({
   const [navDayKey, setNavDayKey] = useState<string | null>(null);
   const originDayKey = columns.find((column) => column.isToday)?.key ?? visibleDayKeys[0];
   const activeDayKey = navDayKey && visibleDayKeys.includes(navDayKey) ? navDayKey : originDayKey;
+  const jumpedOnActiveDay = Boolean(jumpCursor && jumpCursor.dayKey === activeDayKey);
   const afterMinutes =
-    jumpCursor && jumpCursor.dayKey === activeDayKey ? jumpCursor.minutes : viewportMinutes;
+    jumpedOnActiveDay && jumpCursor ? jumpCursor.minutes : viewportMinutes;
   const nextOnActiveDay = activeDayKey
-    ? nextAppointmentOnDay(appointments, activeDayKey, afterMinutes)
+    ? nextAppointmentOnDay(appointments, activeDayKey, afterMinutes, {
+        // Viewport cursor is inclusive so a booking sitting at the top of the
+        // visible grid (QA: today's 11:30) is not treated as already passed.
+        // After a jump, stay exclusive so the same booking is not repeated.
+        inclusive: !jumpedOnActiveDay,
+      })
     : undefined;
   const nextDayTarget = activeDayKey
     ? firstAppointmentAfterDay(appointments, visibleDayKeys, activeDayKey)
@@ -150,7 +164,7 @@ export function WeekAppointmentTimeGrid({
   useSyncedHorizontalScroll(headerScrollRef, scrollRef);
 
   const mainScroller = () =>
-    bodyRef.current?.closest('main') ?? scrollRef.current?.closest('main');
+    findVerticalScroller(bodyRef.current) ?? findVerticalScroller(scrollRef.current);
 
   useLayoutEffect(() => {
     if (!showNowLine) return;
@@ -159,8 +173,8 @@ export function WeekAppointmentTimeGrid({
     if (!body || !scroller) return;
     const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
     const bodyTop =
-      body.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
-    scroller.scrollTop = bodyTop + nowTopRem * rem - scroller.clientHeight / 2;
+      body.getBoundingClientRect().top - scroller.getBoundingClientRect().top + getScrollTop(scroller);
+    setScrollTop(scroller, bodyTop + nowTopRem * rem - scroller.clientHeight / 2);
   }, [showNowLine, dayKeys.join(',')]);
 
   const scrollMainToMinutes = (minutes: number, align: 'center' | 'start') => {
@@ -170,13 +184,27 @@ export function WeekAppointmentTimeGrid({
     const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
     const chromeHeight = chromeRef.current?.offsetHeight ?? 0;
     const bodyTop =
-      body.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+      body.getBoundingClientRect().top - scroller.getBoundingClientRect().top + getScrollTop(scroller);
     const offsetRem = minutesToOffsetRem(minutes, gridStartMinutes);
     const top =
       align === 'center'
         ? bodyTop + offsetRem * rem - scroller.clientHeight / 2
         : bodyTop + offsetRem * rem - chromeHeight - 12;
-    scroller.scrollTo({ top, behavior: align === 'start' ? 'smooth' : 'auto' });
+    scrollElementTo(scroller, { top, behavior: align === 'start' ? 'smooth' : 'auto' });
+  };
+
+  /** Horizontal only — `scrollIntoView` on a full-height day column fights vertical jump. */
+  const scrollDayColumnInline = (dayKey: string) => {
+    const scroller = scrollRef.current;
+    const header = headerScrollRef.current;
+    const columnEl = bodyRef.current?.querySelector<HTMLElement>(`[data-day-column="${dayKey}"]`);
+    if (!scroller || !columnEl) return;
+    const gutter = bodyRef.current?.querySelector<HTMLElement>('.sticky.left-0');
+    const gutterWidth = gutter?.getBoundingClientRect().width ?? 64;
+    const delta = columnEl.getBoundingClientRect().left - (scroller.getBoundingClientRect().left + gutterWidth);
+    const nextLeft = Math.max(0, getScrollLeft(scroller) + delta);
+    setScrollLeft(scroller, nextLeft);
+    setScrollLeft(header, nextLeft);
   };
 
   const readViewportMinutes = () => {
@@ -265,8 +293,7 @@ export function WeekAppointmentTimeGrid({
     setNavDayKey(nextJumpTarget.dayKey);
     beginProgrammaticScroll();
     scrollMainToMinutes(nextJumpTarget.minutes, 'start');
-    const columnEl = bodyRef.current?.querySelector(`[data-day-column="${nextJumpTarget.dayKey}"]`);
-    columnEl?.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' });
+    scrollDayColumnInline(nextJumpTarget.dayKey);
   };
 
   const cycleStack = (stackKey: string, stackSize: number, delta: number) => {

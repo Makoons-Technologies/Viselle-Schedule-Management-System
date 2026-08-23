@@ -7,7 +7,7 @@ import {
   ReferAFriendTrigger,
 } from '@/components/layout/ReferAFriendPanel';
 import { SidebarBrand, SidebarNav } from '@/components/layout/SidebarNav';
-import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
 import { PoweredByMakoons } from '@/components/common/PoweredByMakoons';
 import { cn } from '@/lib/utils';
 
@@ -55,6 +55,7 @@ export function MobileSidebar() {
           )}
         >
           <SheetTitle className="sr-only">Navigation menu</SheetTitle>
+          <SheetDescription className="sr-only">Organization navigation drawer</SheetDescription>
           <div className="shrink-0">
             <SidebarBrand subtitle={subtitle} />
           </div>
