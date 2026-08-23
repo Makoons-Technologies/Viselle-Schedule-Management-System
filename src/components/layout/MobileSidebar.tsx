@@ -31,7 +31,7 @@ export function MobileSidebar() {
         <SheetContent
           ref={panelRef}
           side="left"
-          forceMount={forceMount}
+          forceMount={forceMount || undefined}
           overlayClassName={
             forceMount
               ? 'data-[state=closed]:!opacity-100 !animate-none'
