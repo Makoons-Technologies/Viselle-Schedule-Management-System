@@ -117,6 +117,8 @@ export function WeekAppointmentTimeGrid({
   const chromeRef = useRef<HTMLDivElement | null>(null);
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const programmaticScrollRef = useRef(false);
+  const userScrollIntentRef = useRef(false);
+  const programmaticIdleTimerRef = useRef(0);
   const [jumpCursor, setJumpCursor] = useState<{ dayKey: string; minutes: number } | null>(null);
   const [viewportMinutes, setViewportMinutes] = useState(gridStartMinutes - 1);
   const [navDayKey, setNavDayKey] = useState<string | null>(null);
@@ -225,9 +227,8 @@ export function WeekAppointmentTimeGrid({
 
   const beginProgrammaticScroll = () => {
     programmaticScrollRef.current = true;
-    window.setTimeout(() => {
-      programmaticScrollRef.current = false;
-    }, 600);
+    userScrollIntentRef.current = false;
+    window.clearTimeout(programmaticIdleTimerRef.current);
   };
 
   useEffect(() => {
@@ -235,31 +236,61 @@ export function WeekAppointmentTimeGrid({
     const horizontal = scrollRef.current;
     if (!vertical) return;
     let dayResetTimer = 0;
+
+    const markUserScroll = () => {
+      programmaticScrollRef.current = false;
+      userScrollIntentRef.current = true;
+    };
+
+    const onProgrammaticScrollTick = () => {
+      if (!programmaticScrollRef.current) return;
+      window.clearTimeout(programmaticIdleTimerRef.current);
+      programmaticIdleTimerRef.current = window.setTimeout(() => {
+        programmaticScrollRef.current = false;
+      }, 200);
+    };
+
+    const resetJumpFromUserScroll = () => {
+      if (programmaticScrollRef.current || !userScrollIntentRef.current) return;
+      setJumpCursor(null);
+      window.clearTimeout(dayResetTimer);
+      dayResetTimer = window.setTimeout(() => {
+        setNavDayKey(readLeadingDayKey());
+      }, 180);
+    };
+
     const onVerticalScroll = () => {
       setViewportMinutes(readViewportMinutes());
-      if (programmaticScrollRef.current) return;
-      setJumpCursor(null);
-      window.clearTimeout(dayResetTimer);
-      dayResetTimer = window.setTimeout(() => {
-        setNavDayKey(readLeadingDayKey());
-      }, 180);
+      onProgrammaticScrollTick();
+      resetJumpFromUserScroll();
     };
     const onHorizontalScroll = () => {
-      if (programmaticScrollRef.current) return;
-      setJumpCursor(null);
-      window.clearTimeout(dayResetTimer);
-      dayResetTimer = window.setTimeout(() => {
-        setNavDayKey(readLeadingDayKey());
-      }, 180);
+      onProgrammaticScrollTick();
+      resetJumpFromUserScroll();
     };
+
+    const userIntentOpts = { passive: true } as const;
     vertical.addEventListener('scroll', onVerticalScroll, { passive: true });
+    vertical.addEventListener('wheel', markUserScroll, userIntentOpts);
+    vertical.addEventListener('touchstart', markUserScroll, userIntentOpts);
+    vertical.addEventListener('pointerdown', markUserScroll, userIntentOpts);
     horizontal?.addEventListener('scroll', onHorizontalScroll, { passive: true });
+    horizontal?.addEventListener('wheel', markUserScroll, userIntentOpts);
+    horizontal?.addEventListener('touchstart', markUserScroll, userIntentOpts);
+    horizontal?.addEventListener('pointerdown', markUserScroll, userIntentOpts);
     setViewportMinutes(readViewportMinutes());
     setNavDayKey(readLeadingDayKey());
     return () => {
       vertical.removeEventListener('scroll', onVerticalScroll);
+      vertical.removeEventListener('wheel', markUserScroll);
+      vertical.removeEventListener('touchstart', markUserScroll);
+      vertical.removeEventListener('pointerdown', markUserScroll);
       horizontal?.removeEventListener('scroll', onHorizontalScroll);
+      horizontal?.removeEventListener('wheel', markUserScroll);
+      horizontal?.removeEventListener('touchstart', markUserScroll);
+      horizontal?.removeEventListener('pointerdown', markUserScroll);
       window.clearTimeout(dayResetTimer);
+      window.clearTimeout(programmaticIdleTimerRef.current);
     };
   }, [showNowLine, visibleDayKeys.join(',')]);
 
