@@ -24,6 +24,7 @@ import {
   isRecurringOptionsValid,
   recurringIntervalForFrequency,
 } from '@/components/appointments/recurring-options';
+import { closestAvailableSlot } from '@/components/calendar/week-time-grid';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { CustomerFieldChangesList } from '@/components/customers/CustomerFieldChangesList';
 import { helperTextClass } from '@/components/common/Panel';
@@ -85,6 +86,8 @@ interface CreateAppointmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultDate?: string;
+  /** Minutes from midnight for empty-slot create; used to pick the closest bookable start. */
+  defaultMinutes?: number;
 }
 
 export function CreateAppointmentDialog({
@@ -92,6 +95,7 @@ export function CreateAppointmentDialog({
   open,
   onOpenChange,
   defaultDate,
+  defaultMinutes,
 }: CreateAppointmentDialogProps) {
   const queryClient = useQueryClient();
   const { plan } = useOrgPlan(orgId);
@@ -186,6 +190,11 @@ export function CreateAppointmentDialog({
     [slotsData?.availableSlots],
   );
 
+  const hasStaffAndService = !!accountId && !!serviceId;
+  const hasClientIdentity = firstName.trim().length > 0 && lastName.trim().length > 0;
+  const showClientFields = hasStaffAndService;
+  const showScheduleFields = hasStaffAndService && hasClientIdentity;
+
   useEffect(() => {
     if (date && date < today) {
       setValue('date', today);
@@ -233,6 +242,12 @@ export function CreateAppointmentDialog({
       onOpenChange(false);
     }
   }, [open, trialExpired, onOpenChange]);
+
+  useEffect(() => {
+    if (!open || defaultMinutes == null || slots.length === 0 || startTime) return;
+    const closest = closestAvailableSlot(slots, defaultMinutes);
+    if (closest) setValue('startTime', closest.startTime);
+  }, [open, defaultMinutes, slots, startTime, setValue]);
 
   useEffect(() => {
     if (!makeRecurring) {
@@ -445,7 +460,12 @@ export function CreateAppointmentDialog({
                 {errors.serviceId && <p className="text-xs text-red-600 dark:text-red-400">Required</p>}
               </div>
             </div>
+            {!hasStaffAndService && (
+              <p className={helperTextClass}>Choose staff and a service to continue.</p>
+            )}
 
+            {showClientFields ? (
+              <>
             <CustomerAutocompleteFields
               customers={customers}
               firstName={firstName}
@@ -465,6 +485,9 @@ export function CreateAppointmentDialog({
                 email: errors.email?.message,
               }}
             />
+            {!hasClientIdentity && (
+              <p className={helperTextClass}>Add the client's first and last name to pick a time.</p>
+            )}
             {Boolean(plan?.smsRemindersEnabled && org?.smsRemindersOptIn) &&
               phone.trim().length > 0 &&
               !(
@@ -486,7 +509,11 @@ export function CreateAppointmentDialog({
                   </p>
                 </div>
               )}
+              </>
+            ) : null}
 
+            {showScheduleFields ? (
+              <>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <Label>Date</Label>
@@ -563,6 +590,8 @@ export function CreateAppointmentDialog({
                 defaultTime={defaultRecurringTime}
               />
             )}
+              </>
+            ) : null}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button

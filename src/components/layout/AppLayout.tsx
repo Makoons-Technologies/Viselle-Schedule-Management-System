@@ -39,7 +39,10 @@ function AppLayoutContent() {
             <Topbar />
             <main
               className={cn(
-                'min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain touch-pan-y [-webkit-overflow-scrolling:touch]',
+                'min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]',
+                // Calendar panes need nested overflow-x; pan-y on main intersects
+                // descendants and cancels native horizontal touch/trackpad inertia.
+                isCalendarRoute ? 'touch-pan-x touch-pan-y' : 'touch-pan-y',
                 isCalendarRoute
                   ? 'px-2 pb-2 pt-0 sm:px-3 desktop-shell:pb-2'
                   : 'p-4 sm:px-6 sm:pt-6 desktop-shell:pb-6',

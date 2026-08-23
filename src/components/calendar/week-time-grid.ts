@@ -3,8 +3,9 @@ import { appointmentScheduleFromIso } from '@/lib/utils';
 export const SLOT_MINUTES = 30;
 /** Visual height of one 30-minute row on the week calendar. */
 export const SLOT_HEIGHT_REM = 4;
-const DEFAULT_DAY_START = 8 * 60;
-const DEFAULT_DAY_END = 18 * 60;
+/** Full civil day so 12am–noon (and evening) slots are always reachable. */
+export const DEFAULT_DAY_START = 0;
+export const DEFAULT_DAY_END = 24 * 60;
 
 export function appointmentStartMinutes(iso: string): number {
   const { time } = appointmentScheduleFromIso(iso);
@@ -12,9 +13,69 @@ export function appointmentStartMinutes(iso: string): number {
   return hours * 60 + minutes;
 }
 
+/** Slot whose start is nearest `targetMinutes` (ties prefer the earlier start). */
+export function closestAvailableSlot<T extends { startTime: string }>(
+  slots: T[],
+  targetMinutes: number,
+): T | undefined {
+  let best: T | undefined;
+  let bestDist = Infinity;
+  let bestMinutes = 0;
+  for (const slot of slots) {
+    const minutes = appointmentStartMinutes(slot.startTime);
+    const dist = Math.abs(minutes - targetMinutes);
+    if (!best || dist < bestDist || (dist === bestDist && minutes < bestMinutes)) {
+      best = slot;
+      bestDist = dist;
+      bestMinutes = minutes;
+    }
+  }
+  return best;
+}
+
 export interface WeekAppointmentCursor {
   dayKey: string;
   minutes: number;
+}
+
+/** Later booking on `dayKey` only (does not walk to the next day). */
+export function nextAppointmentOnDay(
+  appointments: Array<{ startTime: string }>,
+  dayKey: string,
+  afterMinutes: number,
+): number | undefined {
+  let nextMinutes: number | undefined;
+  for (const appointment of appointments) {
+    if (appointment.startTime.slice(0, 10) !== dayKey) continue;
+    const minutes = appointmentStartMinutes(appointment.startTime);
+    if (minutes <= afterMinutes) continue;
+    if (nextMinutes === undefined || minutes < nextMinutes) nextMinutes = minutes;
+  }
+  return nextMinutes;
+}
+
+export function firstAppointmentOnDay(
+  appointments: Array<{ startTime: string }>,
+  dayKey: string,
+): number | undefined {
+  return nextAppointmentOnDay(appointments, dayKey, -1);
+}
+
+/** First booking on a later day than `afterDayKey`. */
+export function firstAppointmentAfterDay(
+  appointments: Array<{ startTime: string }>,
+  dayKeys: string[],
+  afterDayKey: string,
+): WeekAppointmentCursor | undefined {
+  const startIndex = dayKeys.indexOf(afterDayKey);
+  const from = startIndex < 0 ? 0 : startIndex + 1;
+  for (let i = from; i < dayKeys.length; i += 1) {
+    const minutes = firstAppointmentOnDay(appointments, dayKeys[i]);
+    if (minutes !== undefined) {
+      return { dayKey: dayKeys[i], minutes };
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -26,26 +87,11 @@ export function nextAppointmentInWeekOrder(
   dayKeys: string[],
   after: WeekAppointmentCursor,
 ): WeekAppointmentCursor | undefined {
-  const startIndex = Math.max(0, dayKeys.indexOf(after.dayKey));
-
-  for (let dayIndex = startIndex; dayIndex < dayKeys.length; dayIndex += 1) {
-    const dayKey = dayKeys[dayIndex];
-    const minMinutes = dayIndex === startIndex && dayKeys[startIndex] === after.dayKey
-      ? after.minutes
-      : -1;
-    let nextMinutes: number | undefined;
-    for (const appointment of appointments) {
-      if (appointment.startTime.slice(0, 10) !== dayKey) continue;
-      const minutes = appointmentStartMinutes(appointment.startTime);
-      if (minutes <= minMinutes) continue;
-      if (nextMinutes === undefined || minutes < nextMinutes) nextMinutes = minutes;
-    }
-    if (nextMinutes !== undefined) {
-      return { dayKey, minutes: nextMinutes };
-    }
+  const sameDay = nextAppointmentOnDay(appointments, after.dayKey, after.minutes);
+  if (sameDay !== undefined) {
+    return { dayKey: after.dayKey, minutes: sameDay };
   }
-
-  return undefined;
+  return firstAppointmentAfterDay(appointments, dayKeys, after.dayKey);
 }
 
 export function formatMinutesLabel(minutes: number): string {

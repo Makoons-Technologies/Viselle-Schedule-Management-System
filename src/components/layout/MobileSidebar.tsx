@@ -15,7 +15,7 @@ export function MobileSidebar() {
   const { user } = useAuth();
   const { open, setOpen, close } = useMobileNav();
   const [referOpen, setReferOpen] = useState(false);
-  const { panelRef, panelStyle, panelClassName, overlayStyle } = useMobileDrawerGestures(
+  const { panelRef, panelStyle, panelClassName, overlayStyle, forceMount } = useMobileDrawerGestures(
     open,
     setOpen,
     !!user,
@@ -31,6 +31,12 @@ export function MobileSidebar() {
         <SheetContent
           ref={panelRef}
           side="left"
+          forceMount={forceMount || undefined}
+          overlayClassName={
+            forceMount
+              ? 'data-[state=closed]:!opacity-100 !animate-none'
+              : undefined
+          }
           style={{
             ...panelStyle,
             // Pin to the measured app viewport (landscape-safe); inline styles beat sheet h-full/inset-y-0.

@@ -64,6 +64,7 @@ export function CalendarPage() {
   } | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [createDefaultDate, setCreateDefaultDate] = useState<string | undefined>(undefined);
+  const [createDefaultMinutes, setCreateDefaultMinutes] = useState<number | undefined>(undefined);
   /** null = default all staff selected once accounts load (desktop picker). */
   const [selectedStaffIds, setSelectedStaffIds] = useState<string[] | null>(null);
   const [selectMode, setSelectMode] = useState(false);
@@ -364,6 +365,7 @@ export function CalendarPage() {
                 disabled={trialExpired}
                 onClick={() => {
                   setCreateDefaultDate(undefined);
+                  setCreateDefaultMinutes(undefined);
                   setCreateOpen(true);
                 }}
               >
@@ -461,12 +463,13 @@ export function CalendarPage() {
         onDayHeaderActivate={(dayKey) => applyDayZoom([dayKey])}
         onEmptySlotClick={
           permissions.canCreateAppointments && !selectMode
-            ? ({ dayKey }) => {
+            ? ({ dayKey, minutes }) => {
                 if (trialExpired) {
                   toast.error(TRIAL_LOCKED_MESSAGE);
                   return;
                 }
                 setCreateDefaultDate(dayKey);
+                setCreateDefaultMinutes(minutes);
                 setCreateOpen(true);
               }
             : undefined
@@ -569,8 +572,15 @@ export function CalendarPage() {
       <CreateAppointmentDialog
         orgId={orgId}
         open={createOpen}
-        onOpenChange={setCreateOpen}
+        onOpenChange={(nextOpen) => {
+          setCreateOpen(nextOpen);
+          if (!nextOpen) {
+            setCreateDefaultDate(undefined);
+            setCreateDefaultMinutes(undefined);
+          }
+        }}
         defaultDate={createDefaultDate}
+        defaultMinutes={createDefaultMinutes}
       />
     </div>
   );
