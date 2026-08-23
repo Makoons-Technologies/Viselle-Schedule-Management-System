@@ -287,72 +287,99 @@ export function CalendarPage() {
 
   const weekNavLabel = isDayZoomed
     ? formatZoomLabel(zoomedDayKeys)
-    : `${format(weekStart, 'MMM d')} – ${format(weekEnd, 'MMM d, yyyy')}`;
+    : isMobile && format(weekStart, 'MMM') === format(weekEnd, 'MMM')
+      ? `${format(weekStart, 'MMM d')}–${format(weekEnd, 'd')}`
+      : isMobile
+        ? `${format(weekStart, 'MMM d')}–${format(weekEnd, 'MMM d')}`
+        : `${format(weekStart, 'MMM d')} – ${format(weekEnd, 'MMM d, yyyy')}`;
 
   if (isLoading) return <LoadingState />;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-2">
-      <div className="flex shrink-0 flex-wrap items-center gap-2">
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-1.5 overflow-hidden">
+      <div className="flex w-full min-w-0 shrink-0 flex-nowrap items-center gap-1 overflow-hidden">
         <WeekCalendarNav
           compact
           label={weekNavLabel}
           onPrevious={() => changeWeek(addDays(weekStart, -7))}
           onNext={() => changeWeek(addDays(weekStart, 7))}
-          trailing={
-            isDayZoomed ? (
-              <Button variant="outline" size="sm" onClick={exitDayZoom} className="h-8">
-                <ZoomOut className="h-3.5 w-3.5" /> Full week
-              </Button>
-            ) : null
-          }
         />
-        {batchCheckoutEnabled && (
-          selectMode ? (
-            <>
-              <Button variant="outline" size="sm" className="h-8" onClick={exitSelectMode}>
-                <X className="h-3.5 w-3.5" /> Cancel
-              </Button>
-              <TrialLockedControl locked={trialExpired}>
-                <Button
-                  size="sm"
-                  className="h-8"
-                  onClick={() => setBatchCheckoutOpen(true)}
-                  disabled={trialExpired || selectedItems.length === 0}
-                >
-                  Check out ({selectedItems.length})
-                </Button>
-              </TrialLockedControl>
-            </>
-          ) : (
-            <Button variant="outline" size="sm" className="h-8" onClick={() => setSelectMode(true)}>
-              <ListChecks className="h-3.5 w-3.5" /> Select
-            </Button>
-          )
-        )}
-        {permissions.canCreateAppointments && (
-          <TrialLockedControl locked={trialExpired}>
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+          {isDayZoomed ? (
             <Button
-              size="sm"
-              className="h-8"
-              disabled={trialExpired}
-              onClick={() => {
-                setCreateDefaultDate(undefined);
-                setCreateOpen(true);
-              }}
+              variant="outline"
+              size={isMobile ? 'icon' : 'sm'}
+              onClick={exitDayZoom}
+              className={isMobile ? 'h-8 w-8' : 'h-8'}
+              aria-label="Full week"
+              title="Full week"
             >
-              <Plus className="h-3.5 w-3.5" /> New Appointment
+              <ZoomOut className="h-3.5 w-3.5" />
+              {!isMobile && 'Full week'}
             </Button>
-          </TrialLockedControl>
-        )}
-        <div className="hidden desktop-shell:block">
-          <StaffScheduleFilter
-            accounts={staffAccounts}
-            selectedIds={resolvedStaffIds}
-            onSelectedIdsChange={setSelectedStaffIds}
-          />
-        </div>
-        <DropdownMenu>
+          ) : null}
+          {batchCheckoutEnabled && (
+            selectMode ? (
+              <>
+                <Button
+                  variant="outline"
+                  size={isMobile ? 'icon' : 'sm'}
+                  className={isMobile ? 'h-8 w-8' : 'h-8'}
+                  onClick={exitSelectMode}
+                  aria-label="Cancel selection"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  {!isMobile && 'Cancel'}
+                </Button>
+                <TrialLockedControl locked={trialExpired}>
+                  <Button
+                    size="sm"
+                    className="h-8 px-2"
+                    onClick={() => setBatchCheckoutOpen(true)}
+                    disabled={trialExpired || selectedItems.length === 0}
+                  >
+                    {isMobile ? `Out (${selectedItems.length})` : `Check out (${selectedItems.length})`}
+                  </Button>
+                </TrialLockedControl>
+              </>
+            ) : (
+              <Button
+                variant="outline"
+                size={isMobile ? 'icon' : 'sm'}
+                className={isMobile ? 'h-8 w-8' : 'h-8'}
+                onClick={() => setSelectMode(true)}
+                aria-label="Select"
+                title="Select"
+              >
+                <ListChecks className="h-3.5 w-3.5" />
+                {!isMobile && 'Select'}
+              </Button>
+            )
+          )}
+          {permissions.canCreateAppointments && (
+            <TrialLockedControl locked={trialExpired}>
+              <Button
+                size="sm"
+                className="h-8 px-2"
+                disabled={trialExpired}
+                onClick={() => {
+                  setCreateDefaultDate(undefined);
+                  setCreateOpen(true);
+                }}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                {isMobile ? 'New' : 'New Appointment'}
+              </Button>
+            </TrialLockedControl>
+          )}
+          <div className="hidden desktop-shell:block">
+            <StaffScheduleFilter
+              accounts={staffAccounts}
+              selectedIds={resolvedStaffIds}
+              onSelectedIdsChange={setSelectedStaffIds}
+            />
+          </div>
+          <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="icon" className="h-8 w-8" aria-label="Calendar options">
               <SlidersHorizontal className="h-3.5 w-3.5" />
@@ -393,17 +420,15 @@ export function CalendarPage() {
                 </div>
               ))}
           </DropdownMenuContent>
-        </DropdownMenu>
+          </DropdownMenu>
+        </div>
       </div>
       {!isDayZoomed && selectedDayKeys.length > 0 && (
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm shadow-sm dark:border-stone-700 dark:bg-stone-900">
-          <p className="text-stone-700 dark:text-stone-200">
+        <div className="flex shrink-0 items-center justify-between gap-2 rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-xs shadow-sm dark:border-stone-700 dark:bg-stone-900">
+          <p className="min-w-0 truncate text-stone-700 dark:text-stone-200">
             {selectedDayKeys.length === 1
               ? '1 day selected'
               : `${selectedDayKeys.length} days selected`}
-            <span className="ml-1 text-stone-500 dark:text-stone-400">
-              — tap more headers to extend the range
-            </span>
           </p>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={clearDaySelection} className="h-8">

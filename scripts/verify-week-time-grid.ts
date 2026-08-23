@@ -15,6 +15,20 @@ function minutesToOffsetRem(minutes: number, gridStartMinutes: number): number {
   return ((minutes - gridStartMinutes) / SLOT_MINUTES) * SLOT_HEIGHT_REM;
 }
 
+function minutesFromGridOffset(
+  offsetPx: number,
+  remPx: number,
+  gridStartMinutes: number,
+  slotCount: number,
+): number {
+  if (slotCount <= 0) return gridStartMinutes;
+  const slotIndex = Math.min(
+    slotCount - 1,
+    Math.max(0, Math.floor(offsetPx / (SLOT_HEIGHT_REM * remPx))),
+  );
+  return gridStartMinutes + slotIndex * SLOT_MINUTES;
+}
+
 function appointmentBlockGeometry(startTime: string, endTime: string, gridStartMinutes: number) {
   const startMinutes = appointmentStartMinutes(startTime);
   const endMinutes = Math.max(startMinutes + 1, appointmentStartMinutes(endTime));
@@ -184,6 +198,21 @@ assert(
 );
 assert(a.heightRem === 2 * SLOT_HEIGHT_REM, 'a 9:00–10:00 is two slots tall');
 assert(b.heightRem === 2 * SLOT_HEIGHT_REM, 'b 9:30–10:30 is two slots tall');
+
+const remPx = 16;
+assert(
+  minutesFromGridOffset(0, remPx, gridStart, 20) === gridStart,
+  'tap at top of column maps to first slot',
+);
+assert(
+  minutesFromGridOffset(SLOT_HEIGHT_REM * remPx, remPx, gridStart, 20) === gridStart + SLOT_MINUTES,
+  'tap one slot down maps to 8:30',
+);
+assert(
+  minutesFromGridOffset(SLOT_HEIGHT_REM * remPx * 20, remPx, gridStart, 20) ===
+    gridStart + 19 * SLOT_MINUTES,
+  'tap past last slot clamps to last slot',
+);
 
 if (process.exitCode) {
   console.error('\nVerification failed.');

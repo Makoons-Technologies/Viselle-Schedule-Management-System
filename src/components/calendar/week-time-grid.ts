@@ -32,6 +32,23 @@ export function minutesToOffsetRem(
   return ((minutes - gridStartMinutes) / slotMinutes) * slotHeightRem;
 }
 
+/** Map a click/tap Y offset inside a day column to a 30-minute slot. */
+export function minutesFromGridOffset(
+  offsetPx: number,
+  remPx: number,
+  gridStartMinutes: number,
+  slotCount: number,
+  slotHeightRem = SLOT_HEIGHT_REM,
+  slotMinutes = SLOT_MINUTES,
+): number {
+  if (slotCount <= 0) return gridStartMinutes;
+  const slotIndex = Math.min(
+    slotCount - 1,
+    Math.max(0, Math.floor(offsetPx / (slotHeightRem * remPx))),
+  );
+  return gridStartMinutes + slotIndex * slotMinutes;
+}
+
 export function appointmentBlockGeometry(
   startTime: string,
   endTime: string,

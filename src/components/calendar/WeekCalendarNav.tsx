@@ -27,7 +27,7 @@ export function WeekCalendarNav({
     <div
       className={cn(
         compact
-          ? 'flex items-center gap-1.5'
+          ? 'flex min-w-0 shrink items-center gap-0.5'
           : 'mb-4 flex flex-col gap-3 px-3 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-4',
         !compact && panelClassName,
         className,
@@ -36,15 +36,15 @@ export function WeekCalendarNav({
       {leading && <div className="shrink-0">{leading}</div>}
       <div
         className={cn(
-          'flex flex-wrap items-center gap-2',
-          !compact && 'justify-center sm:ml-auto',
+          'flex min-w-0 items-center gap-1',
+          compact ? 'flex-nowrap' : 'flex-wrap justify-center sm:ml-auto',
         )}
       >
-        <div className="flex items-center justify-center gap-1">
+        <div className="flex min-w-0 items-center justify-center gap-0.5">
           <Button
             variant="outline"
             size="icon"
-            className={compact ? 'h-8 w-8' : undefined}
+            className={compact ? 'h-8 w-8 shrink-0' : undefined}
             onClick={onPrevious}
             title="Previous week"
           >
@@ -52,8 +52,10 @@ export function WeekCalendarNav({
           </Button>
           <span
             className={cn(
-              'px-2 text-center font-semibold tabular-nums',
-              compact ? 'min-w-[8.5rem] text-xs' : 'min-w-[10rem] text-sm',
+              'text-center font-semibold tabular-nums',
+              compact
+                ? 'min-w-0 shrink truncate px-1 text-xs'
+                : 'min-w-[10rem] px-2 text-sm',
             )}
           >
             {label}
@@ -61,7 +63,7 @@ export function WeekCalendarNav({
           <Button
             variant="outline"
             size="icon"
-            className={compact ? 'h-8 w-8' : undefined}
+            className={compact ? 'h-8 w-8 shrink-0' : undefined}
             onClick={onNext}
             title="Next week"
           >

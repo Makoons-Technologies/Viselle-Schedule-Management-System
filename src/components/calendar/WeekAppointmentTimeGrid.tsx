@@ -15,6 +15,7 @@ import {
   formatMinutesLabel,
   groupAppointmentsByDay,
   layoutDayAppointments,
+  minutesFromGridOffset,
   minutesToOffsetRem,
   SLOT_HEIGHT_REM,
   SLOT_MINUTES,
@@ -193,7 +194,7 @@ export function WeekAppointmentTimeGrid({
     <div
       ref={scrollRef}
       className={cn(
-        'min-h-0 overflow-auto overscroll-contain shadow-sm',
+        'h-full min-h-0 overflow-x-auto overflow-y-auto overscroll-y-contain touch-pan-x touch-pan-y shadow-sm [-webkit-overflow-scrolling:touch]',
         panelClassName,
         className,
       )}
@@ -303,10 +304,30 @@ function DayColumn({
   return (
     <div
       className={cn(
-        'relative min-w-0 flex-1 border-r border-stone-100 last:border-r-0 dark:border-stone-800',
+        'relative min-w-0 flex-1 touch-pan-x touch-pan-y border-r border-stone-100 last:border-r-0 dark:border-stone-800',
         column.isToday && 'bg-brand-50/25 dark:bg-brand-900/20',
+        onEmptySlotClick && 'cursor-pointer',
       )}
       style={{ height: `${gridHeightRem}rem` }}
+      onClick={
+        onEmptySlotClick
+          ? (event) => {
+              if ((event.target as HTMLElement).closest('[data-appointment-block]')) return;
+              const rect = event.currentTarget.getBoundingClientRect();
+              const rem =
+                Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+              onEmptySlotClick({
+                dayKey: column.key,
+                minutes: minutesFromGridOffset(
+                  event.clientY - rect.top,
+                  rem,
+                  gridStartMinutes,
+                  timeSlots.length,
+                ),
+              });
+            }
+          : undefined
+      }
     >
       {timeSlots.map((slotMinutes) => (
         <div
@@ -315,21 +336,6 @@ function DayColumn({
           style={{ top: `${minutesToOffsetRem(slotMinutes, gridStartMinutes)}rem` }}
         />
       ))}
-
-      {onEmptySlotClick &&
-        timeSlots.map((slotMinutes) => (
-          <button
-            key={`${column.key}-slot-${slotMinutes}`}
-            type="button"
-            className="absolute inset-x-0 z-0 hover:bg-brand-500/5 focus-visible:bg-brand-500/10 focus-visible:outline-none"
-            style={{
-              top: `${minutesToOffsetRem(slotMinutes, gridStartMinutes)}rem`,
-              height: `${SLOT_HEIGHT_REM}rem`,
-            }}
-            aria-label={`Create appointment on ${column.dayLabel} at ${formatMinutesLabel(slotMinutes)}`}
-            onClick={() => onEmptySlotClick({ dayKey: column.key, minutes: slotMinutes })}
-          />
-        ))}
 
       {positioned.map(({ appointment, topRem, heightRem, stackKey, stackIndex, stackSize }) => {
         const frontIndex = stackKey ? (stackFrontByKey[stackKey] ?? 0) : 0;
@@ -340,6 +346,7 @@ function DayColumn({
         return (
           <div
             key={`${appointment.id}-${appointment.startTime}`}
+            data-appointment-block
             className="absolute px-0.5 sm:px-1"
             style={{
               top: `${topRem}rem`,
@@ -348,6 +355,7 @@ function DayColumn({
               width: '100%',
               zIndex,
             }}
+            onClick={(event) => event.stopPropagation()}
           >
             <div
               className={cn(
@@ -492,7 +500,7 @@ function DayHeader({
       data-day-key={column.key}
       className={cn(
         shellClass,
-        'min-h-[3.75rem] touch-manipulation transition-colors select-none',
+        'min-h-[3.75rem] touch-pan-y touch-manipulation transition-colors select-none',
         'hover:bg-stone-100/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500',
         'dark:hover:bg-stone-700/50',
         selected && 'hover:bg-brand-50 dark:hover:bg-brand-900/45',
