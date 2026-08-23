@@ -92,14 +92,28 @@ export const apiClient = axios.create({
 /** Login/reset must not send a leftover session token — a 401 then looks like a failed password. */
 const PUBLIC_AUTH_PATHS = ['/auth/login', '/auth/forgot-password', '/auth/set-password'];
 
-function isPublicAuthRequest(url: string | undefined): boolean {
-  if (!url) return false;
+/**
+ * Public catalog (`/public/organizations/:key`, services, slots, book).
+ * The API treats any `Authorization: Bearer` as an external booking API key.
+ * A leftover owner/staff JWT then 403s as "Invalid API key", and /book maps
+ * that to "Online booking is not available for this business."
+ */
+const PUBLIC_CATALOG_PATH_MARKER = '/public/';
+
+function requestPathname(url: string): string {
   try {
-    const path = url.startsWith('http') ? new URL(url).pathname : url;
-    return PUBLIC_AUTH_PATHS.some((p) => path.includes(p));
+    return url.startsWith('http') ? new URL(url).pathname : url;
   } catch {
-    return PUBLIC_AUTH_PATHS.some((p) => url.includes(p));
+    return url;
   }
+}
+
+/** True when the request must stay keyless (login/reset + public /book catalog). */
+export function shouldOmitAuthHeader(url: string | undefined): boolean {
+  if (!url) return false;
+  const path = requestPathname(url);
+  if (PUBLIC_AUTH_PATHS.some((p) => path.includes(p))) return true;
+  return path.includes(PUBLIC_CATALOG_PATH_MARKER);
 }
 
 export const UNREACHABLE_SERVER_MESSAGE =
@@ -181,7 +195,7 @@ export function getLoginErrorMessage(err: unknown): string {
 }
 
 apiClient.interceptors.request.use((config) => {
-  if (isPublicAuthRequest(config.url)) {
+  if (shouldOmitAuthHeader(config.url)) {
     delete config.headers.Authorization;
     return config;
   }
