@@ -13,7 +13,7 @@ import {
 } from '@/lib/customers';
 import { cn, formatDateTime, getDayOfWeekFromIso, todayDateOnlyLocal, filterFutureAppointmentSlots } from '@/lib/utils';
 import { TRIAL_LOCKED_MESSAGE } from '@/lib/trial';
-import type { Customer, RecurringFrequency } from '@/types/api';
+import type { Appointment, Customer, RecurringFrequency } from '@/types/api';
 import { CustomerAutocompleteFields } from '@/components/appointments/CustomerAutocompleteFields';
 import { SmsOptInCheckbox } from '@/components/booking/SmsOptInCheckbox';
 import { CustomerServiceNoteHistory } from '@/components/appointments/CustomerServiceNoteHistory';
@@ -88,6 +88,21 @@ interface CreateAppointmentDialogProps {
   defaultDate?: string;
   /** Minutes from midnight for empty-slot create; used to pick the closest bookable start. */
   defaultMinutes?: number;
+  /** Prefill staff when the calendar is filtered to a single person. */
+  defaultAccountId?: string;
+  /** Called with created rows so the calendar can show them immediately. */
+  onCreated?: (appointments: Appointment[]) => void;
+}
+
+function createdAppointmentsFromResult(result: unknown): Appointment[] {
+  if (!result || typeof result !== 'object') return [];
+  if ('createdAppointments' in result && Array.isArray(result.createdAppointments)) {
+    return result.createdAppointments as Appointment[];
+  }
+  if ('appointment' in result && result.appointment) {
+    return [result.appointment as Appointment];
+  }
+  return [];
 }
 
 export function CreateAppointmentDialog({
@@ -96,6 +111,8 @@ export function CreateAppointmentDialog({
   onOpenChange,
   defaultDate,
   defaultMinutes,
+  defaultAccountId,
+  onCreated,
 }: CreateAppointmentDialogProps) {
   const queryClient = useQueryClient();
   const { plan } = useOrgPlan(orgId);
@@ -232,9 +249,12 @@ export function CreateAppointmentDialog({
     setMergeConfirm(null);
     setSmsOptIn(false);
     resetSchedule([], {});
-    reset({ date: initialDate });
+    reset({
+      date: initialDate,
+      ...(defaultAccountId ? { accountId: defaultAccountId } : {}),
+    });
     skipSlotClearRef.current = true;
-  }, [open, initialDate, reset, resetSchedule]);
+  }, [open, initialDate, defaultAccountId, reset, resetSchedule]);
 
   useEffect(() => {
     if (open && trialExpired) {
@@ -321,14 +341,30 @@ export function CreateAppointmentDialog({
 
       return { createdAppointments: [created.appointment] };
     },
-    onSuccess: (_result, variables) => {
+    onSuccess: (result, variables) => {
+      const created = createdAppointmentsFromResult(result);
       if (variables.withRecurring) {
         toast.success('Recurring appointment created');
         queryClient.invalidateQueries({ queryKey: ['recurring', orgId] });
       } else {
-        toast.success('Appointment created');
+        toast.success(
+          created[0]?.startTime
+            ? `Appointment created · ${formatDateTime(created[0].startTime)}`
+            : 'Appointment created',
+        );
       }
-      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.setQueriesData<{ appointments: Appointment[] }>(
+        { queryKey: ['appointments'] },
+        (old) => {
+          if (!old?.appointments) return old;
+          const extras = created.filter((row) => !old.appointments.some((existing) => existing.id === row.id));
+          if (extras.length === 0) return old;
+          return { ...old, appointments: [...old.appointments, ...extras] };
+        },
+      );
+      onCreated?.(created);
+      void queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      void queryClient.refetchQueries({ queryKey: ['appointments'] });
       queryClient.invalidateQueries({ queryKey: ['customers', orgId] });
       reset({ date: today });
       setSelectedCustomerId(null);

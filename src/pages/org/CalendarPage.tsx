@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { addDays, format, parseISO, startOfDay } from 'date-fns';
 import { ListChecks, Plus, SlidersHorizontal, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
+import type { Appointment } from '@/types/api';
 import { toast } from 'sonner';
 import { orgApi } from '@/lib/api';
 import { APPOINTMENT_CALENDAR_LIP_CLASS, APPOINTMENT_CALENDAR_LIP_LABEL } from '@/lib/appointment-status';
@@ -19,6 +20,13 @@ import { BatchCheckoutSheet, type BatchCheckoutItem } from '@/components/appoint
 import { CreateAppointmentDialog } from '@/components/appointments/CreateAppointmentDialog';
 import { StaffScheduleFilter } from '@/components/calendar/StaffScheduleFilter';
 import { WeekAppointmentTimeGrid } from '@/components/calendar/WeekAppointmentTimeGrid';
+import { appointmentDayKey, appointmentStartMinutes } from '@/components/calendar/week-time-grid';
+import {
+  localDateFromDayKey,
+  revealStaffAfterCreate,
+  shouldClearDayZoom,
+  shouldDisableMyAppointmentsOnly,
+} from '@/components/calendar/calendar-create-visibility';
 import { CalendarAppointmentChip } from '@/components/calendar/CalendarAppointmentChip';
 import { WeekCalendarNav } from '@/components/calendar/WeekCalendarNav';
 import { LoadingState } from '@/components/common/LoadingState';
@@ -73,6 +81,9 @@ export function CalendarPage() {
   const { hideCancelled, setHideCancelled } = useHideCancelledAppointments();
   const [selectedDayKeys, setSelectedDayKeys] = useState<string[]>([]);
   const [zoomedDayKeys, setZoomedDayKeys] = useState<string[] | null>(null);
+  const [focusSlot, setFocusSlot] = useState<{ dayKey: string; minutes: number; nonce: number } | null>(
+    null,
+  );
   const daySelectionAnchorRef = useRef<string | null>(null);
 
   const weekEnd = addDays(weekStart, 6);
@@ -223,6 +234,35 @@ export function CalendarPage() {
   const changeWeek = (nextStart: Date) => {
     setWeekStart(startOfDay(nextStart));
     exitDayZoom();
+  };
+
+  const handleAppointmentsCreated = (created: Appointment[]) => {
+    const appointment = created[0];
+    if (!appointment) return;
+
+    setSelectedStaffIds((prev) => revealStaffAfterCreate(prev, appointment.accountId));
+    if (
+      shouldDisableMyAppointmentsOnly({
+        myAppointmentsOnly,
+        myAccountId,
+        createdAccountId: appointment.accountId,
+      })
+    ) {
+      setMyAppointmentsOnly(false);
+    }
+
+    const dayKey = appointmentDayKey(appointment.startTime);
+    if (shouldClearDayZoom(zoomedDayKeys, dayKey)) {
+      setZoomedDayKeys(null);
+    }
+    if (!dayKeys.includes(dayKey)) {
+      setWeekStart(startOfDay(localDateFromDayKey(dayKey)));
+    }
+    setFocusSlot({
+      dayKey,
+      minutes: appointmentStartMinutes(appointment.startTime),
+      nonce: Date.now(),
+    });
   };
 
   const keysBetween = (fromKey: string, toKey: string): string[] => {
@@ -461,6 +501,7 @@ export function CalendarPage() {
         onDayHeaderSelect={handleDayHeaderSelect}
         onDayHeaderRangeSelect={handleDayHeaderRangeSelect}
         onDayHeaderActivate={(dayKey) => applyDayZoom([dayKey])}
+        focusSlot={focusSlot}
         onEmptySlotClick={
           permissions.canCreateAppointments && !selectMode
             ? ({ dayKey, minutes }) => {
@@ -581,6 +622,16 @@ export function CalendarPage() {
         }}
         defaultDate={createDefaultDate}
         defaultMinutes={createDefaultMinutes}
+        defaultAccountId={
+          isMobile
+            ? myAppointmentsOnly && myAccountId
+              ? myAccountId
+              : undefined
+            : resolvedStaffIds.length === 1
+              ? resolvedStaffIds[0]
+              : undefined
+        }
+        onCreated={handleAppointmentsCreated}
       />
     </div>
   );

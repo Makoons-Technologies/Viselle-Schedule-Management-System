@@ -68,6 +68,8 @@ interface WeekAppointmentTimeGridProps {
   onDayHeaderActivate?: (dayKey: string) => void;
   /** Click an empty time slot to create an appointment (date = day key yyyy-MM-dd). */
   onEmptySlotClick?: (slot: { dayKey: string; minutes: number }) => void;
+  /** After creating, scroll this civil-time slot into view. */
+  focusSlot?: { dayKey: string; minutes: number; nonce: number } | null;
   /** Sticks above the day headers while the calendar scrolls. */
   toolbar?: ReactNode;
 }
@@ -83,6 +85,7 @@ export function WeekAppointmentTimeGrid({
   onDayHeaderRangeSelect,
   onDayHeaderActivate,
   onEmptySlotClick,
+  focusSlot = null,
   toolbar,
 }: WeekAppointmentTimeGridProps) {
   const allColumns = buildWeekColumns(days);
@@ -167,6 +170,7 @@ export function WeekAppointmentTimeGrid({
     findVerticalScroller(bodyRef.current) ?? findVerticalScroller(scrollRef.current);
 
   useLayoutEffect(() => {
+    if (focusSlot) return;
     if (!showNowLine) return;
     const body = bodyRef.current;
     const scroller = mainScroller();
@@ -175,7 +179,7 @@ export function WeekAppointmentTimeGrid({
     const bodyTop =
       body.getBoundingClientRect().top - scroller.getBoundingClientRect().top + getScrollTop(scroller);
     setScrollTop(scroller, bodyTop + nowTopRem * rem - scroller.clientHeight / 2);
-  }, [showNowLine, dayKeys.join(',')]);
+  }, [showNowLine, dayKeys.join(','), focusSlot]);
 
   const scrollMainToMinutes = (minutes: number, align: 'center' | 'start') => {
     const body = bodyRef.current;
@@ -206,6 +210,12 @@ export function WeekAppointmentTimeGrid({
     setScrollLeft(scroller, nextLeft);
     setScrollLeft(header, nextLeft);
   };
+
+  useLayoutEffect(() => {
+    if (!focusSlot) return;
+    scrollDayColumnInline(focusSlot.dayKey);
+    scrollMainToMinutes(focusSlot.minutes, 'center');
+  }, [focusSlot?.nonce, focusSlot?.dayKey, focusSlot?.minutes]);
 
   const readViewportMinutes = () => {
     const body = bodyRef.current;

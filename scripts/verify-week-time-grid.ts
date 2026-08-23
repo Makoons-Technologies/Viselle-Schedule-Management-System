@@ -354,6 +354,59 @@ assert(
 );
 assert(closestAvailableSlot([], 10 * 60) === undefined, 'no slots → no closest pick');
 
+function revealStaffAfterCreate(
+  selectedIds: string[] | null,
+  createdAccountId: string,
+): string[] | null {
+  if (selectedIds === null) return null;
+  if (selectedIds.includes(createdAccountId)) return selectedIds;
+  return [...selectedIds, createdAccountId];
+}
+
+function shouldDisableMyAppointmentsOnly(
+  myAppointmentsOnly: boolean,
+  myAccountId: string | null,
+  createdAccountId: string,
+): boolean {
+  return Boolean(myAppointmentsOnly && myAccountId && createdAccountId !== myAccountId);
+}
+
+function shouldClearDayZoom(zoomedDayKeys: string[] | null, createdDayKey: string): boolean {
+  if (!zoomedDayKeys || zoomedDayKeys.length === 0) return false;
+  return !zoomedDayKeys.includes(createdDayKey);
+}
+
+assert(
+  JSON.stringify(revealStaffAfterCreate([], 'staff-2')) === JSON.stringify(['staff-2']),
+  'empty staff filter must include the staff the new appointment was booked with',
+);
+assert(revealStaffAfterCreate(null, 'staff-2') === null, 'all-staff mode stays all-staff');
+assert(
+  JSON.stringify(revealStaffAfterCreate(['staff-1'], 'staff-2')) === JSON.stringify(['staff-1', 'staff-2']),
+  'partial staff filter adds the created staff rather than hiding the booking',
+);
+assert(
+  shouldDisableMyAppointmentsOnly(true, 'me', 'other') === true,
+  'mobile “my appointments” must turn off when booking another staff member',
+);
+assert(
+  shouldDisableMyAppointmentsOnly(true, 'me', 'me') === false,
+  'booking yourself keeps “my appointments” on',
+);
+assert(
+  shouldClearDayZoom(['2026-08-17'], '2026-08-24') === true,
+  'zoomed into another day must exit so the new booking is visible',
+);
+assert(
+  shouldClearDayZoom(['2026-08-24'], '2026-08-24') === false,
+  'zoomed into the created day stays zoomed',
+);
+
+assert(
+  '2026-08-24T14:00:00.000Z'.slice(0, 10) === '2026-08-24',
+  'appointment ISO for the clicked empty square lands on that day column',
+);
+
 assert(
   nextAppointmentOnDay(jumpAppointments, '2026-08-24', 11 * 60 + 30) === 14 * 60,
   'exclusive next after 11:30 skips that booking',
