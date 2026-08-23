@@ -11,6 +11,25 @@ function appointmentStartMinutes(iso: string): number {
   return start.getUTCHours() * 60 + start.getUTCMinutes();
 }
 
+function closestAvailableSlot<T extends { startTime: string }>(
+  slots: T[],
+  targetMinutes: number,
+): T | undefined {
+  let best: T | undefined;
+  let bestDist = Infinity;
+  let bestMinutes = 0;
+  for (const slot of slots) {
+    const minutes = appointmentStartMinutes(slot.startTime);
+    const dist = Math.abs(minutes - targetMinutes);
+    if (!best || dist < bestDist || (dist === bestDist && minutes < bestMinutes)) {
+      best = slot;
+      bestDist = dist;
+      bestMinutes = minutes;
+    }
+  }
+  return best;
+}
+
 function minutesToOffsetRem(minutes: number, gridStartMinutes: number): number {
   return ((minutes - gridStartMinutes) / SLOT_MINUTES) * SLOT_HEIGHT_REM;
 }
@@ -317,6 +336,21 @@ assert(
   followingDay?.dayKey === '2026-08-25' && followingDay.minutes === 8 * 60 + 30,
   "end-of-day up control lands on the next day's first booking",
 );
+
+const nearestSlots = [
+  { startTime: '2026-08-24T09:00:00.000Z' },
+  { startTime: '2026-08-24T10:00:00.000Z' },
+  { startTime: '2026-08-24T14:00:00.000Z' },
+];
+assert(
+  closestAvailableSlot(nearestSlots, 9 * 60 + 20)?.startTime === '2026-08-24T09:00:00.000Z',
+  'closest slot to 9:20 is 9:00',
+);
+assert(
+  closestAvailableSlot(nearestSlots, 12 * 60)?.startTime === '2026-08-24T10:00:00.000Z',
+  'closest slot to noon prefers the nearer morning time',
+);
+assert(closestAvailableSlot([], 10 * 60) === undefined, 'no slots → no closest pick');
 
 if (process.exitCode) {
   console.error('\nVerification failed.');

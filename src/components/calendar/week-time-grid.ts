@@ -13,6 +13,26 @@ export function appointmentStartMinutes(iso: string): number {
   return hours * 60 + minutes;
 }
 
+/** Slot whose start is nearest `targetMinutes` (ties prefer the earlier start). */
+export function closestAvailableSlot<T extends { startTime: string }>(
+  slots: T[],
+  targetMinutes: number,
+): T | undefined {
+  let best: T | undefined;
+  let bestDist = Infinity;
+  let bestMinutes = 0;
+  for (const slot of slots) {
+    const minutes = appointmentStartMinutes(slot.startTime);
+    const dist = Math.abs(minutes - targetMinutes);
+    if (!best || dist < bestDist || (dist === bestDist && minutes < bestMinutes)) {
+      best = slot;
+      bestDist = dist;
+      bestMinutes = minutes;
+    }
+  }
+  return best;
+}
+
 export interface WeekAppointmentCursor {
   dayKey: string;
   minutes: number;
