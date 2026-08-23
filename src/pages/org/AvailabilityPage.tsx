@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { orgApi } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { AvailabilityWeekCalendar } from '@/components/availability/AvailabilityWeekCalendar';
@@ -12,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 export function AvailabilityPage() {
   const orgId = useOrgId();
+  const { user } = useAuth();
   const trialExpired = useOrgWriteLocked();
   const queryClient = useQueryClient();
   const [accountId, setAccountId] = useState('');
@@ -58,27 +60,44 @@ export function AvailabilityPage() {
   const accounts = accountsData?.accounts ?? [];
   const rules = rulesData?.availabilityRules ?? [];
 
+  useEffect(() => {
+    if (accountId || accounts.length === 0) return;
+    const membershipAccountId = user?.memberships?.find((m) => m.organizationId === orgId)?.accountId;
+    const self =
+      accounts.find((account) => account.id === user?.accountId) ??
+      accounts.find((account) => account.id === membershipAccountId) ??
+      accounts.find((account) => account.role === 'org_owner' && account.userId === user?.id) ??
+      (user?.role === 'org_owner' ? accounts.find((account) => account.role === 'org_owner') : undefined);
+    if (self) setAccountId(self.id);
+  }, [accounts, accountId, user, orgId]);
+
   return (
     <div className="mx-auto max-w-3xl">
-      <SettingsBackHeader title="Availability" backTo={`/orgs/${orgId}/settings`} />
+      <SettingsBackHeader title="Hours" backTo={`/orgs/${orgId}/settings`} />
       <p className="-mt-2 mb-6 text-sm text-stone-500">
-        Weekly bookable hours by day. Multiple blocks on the same day are allowed when times do not overlap.
+        Set your weekly bookable hours, or pick another staff member. Multiple blocks on the same day are allowed when times do not overlap.
       </p>
       <div className="mb-6 max-w-sm">
-        <Label>Staff member</Label>
+        <Label>Whose hours</Label>
         <Select value={accountId} onValueChange={setAccountId}>
           <SelectTrigger><SelectValue placeholder="Select staff" /></SelectTrigger>
           <SelectContent>
-            {accounts.map((account) => (
-              <SelectItem key={account.id} value={account.id}>
-                {account.firstName} {account.lastName}
-              </SelectItem>
-            ))}
+            {accounts.map((account) => {
+              const isYou = account.id === user?.accountId || (account.role === 'org_owner' && account.userId === user?.id);
+              const ownerLabel = account.role === 'org_owner' ? 'owner' : null;
+              const suffix = [isYou ? 'you' : null, ownerLabel].filter(Boolean).join(', ');
+              return (
+                <SelectItem key={account.id} value={account.id}>
+                  {account.firstName} {account.lastName}
+                  {suffix ? ` (${suffix})` : ''}
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
       </div>
       {!accountId ? (
-        <p className="text-sm text-stone-500">Select a staff member to manage their weekly availability.</p>
+        <p className="text-sm text-stone-500">Choose someone to manage their weekly availability.</p>
       ) : isLoading ? (
         <LoadingState />
       ) : (

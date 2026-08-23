@@ -62,7 +62,7 @@ export function getOrgSettingsHubGroups(
       items: [
         { label: 'Services', to: `${orgBase}/settings/services`, icon: Scissors },
         { label: 'Products', to: `${orgBase}/settings/products`, icon: Package },
-        { label: 'Availability', to: `${orgBase}/availability`, icon: Clock },
+        { label: 'Hours', to: `${orgBase}/availability`, icon: Clock },
       ],
     });
 
@@ -112,6 +112,8 @@ export function getOrgNavigation(
     main.push({ label: 'Recurring', to: `${orgBase}/recurring`, icon: Repeat });
   }
 
+  main.push({ label: 'Hours', to: `${orgBase}/availability`, icon: Clock });
+
   const settings: OrgNavLink[] = options.showAdminSettings
     ? [{ label: 'Settings', to: `${orgBase}/settings`, icon: Settings }]
     : [];
@@ -124,7 +126,6 @@ export function isOrgSettingsPath(pathname: string, orgBase: string): boolean {
   if (pathname === `${orgBase}/settings` || pathname.startsWith(`${orgBase}/settings/`)) return true;
   return (
     pathname.startsWith(`${orgBase}/staff`) ||
-    pathname.startsWith(`${orgBase}/website`) ||
-    pathname.startsWith(`${orgBase}/availability`)
+    pathname.startsWith(`${orgBase}/website`)
   );
 }
