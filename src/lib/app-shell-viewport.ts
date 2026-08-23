@@ -90,11 +90,10 @@ export function setAppHeightCSSProperty(root: HTMLElement = document.documentEle
 }
 
 export function resetWindowScroll(): void {
-  if (window.scrollX !== 0 || window.scrollY !== 0) {
-    window.scrollTo(0, 0);
-  }
-  if (document.documentElement.scrollTop) document.documentElement.scrollTop = 0;
-  if (document.body.scrollTop) document.body.scrollTop = 0;
+  // Only the window scroller. Assigning documentElement/body.scrollTop = 0
+  // during a gesture cancels nested overflow momentum (calendar flick).
+  if (window.scrollX === 0 && window.scrollY === 0) return;
+  window.scrollTo(0, 0);
 }
 
 /** Brief scroll nudge can trigger iOS standalone viewport "docking" without rotating. */

@@ -43,12 +43,14 @@ export function nextAppointmentOnDay(
   appointments: Array<{ startTime: string }>,
   dayKey: string,
   afterMinutes: number,
+  options?: { inclusive?: boolean },
 ): number | undefined {
+  const inclusive = options?.inclusive === true;
   let nextMinutes: number | undefined;
   for (const appointment of appointments) {
     if (appointment.startTime.slice(0, 10) !== dayKey) continue;
     const minutes = appointmentStartMinutes(appointment.startTime);
-    if (minutes <= afterMinutes) continue;
+    if (inclusive ? minutes < afterMinutes : minutes <= afterMinutes) continue;
     if (nextMinutes === undefined || minutes < nextMinutes) nextMinutes = minutes;
   }
   return nextMinutes;

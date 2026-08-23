@@ -59,6 +59,23 @@ export function useAppShellViewport() {
       setAppHeightCSSProperty();
     };
 
+    const onVisualViewportResize = () => {
+      const keyboardOpen = isKeyboardOpen();
+      if (keyboardOpen) {
+        keyboardWasOpen = true;
+        setAppHeightCSSProperty();
+        return;
+      }
+      if (keyboardWasOpen) {
+        keyboardWasOpen = false;
+        nudgeStandaloneViewportRecalc();
+        scheduleSettle(KEYBOARD_CLOSE_DELAYS_MS);
+        return;
+      }
+      // Height only. resetWindowScroll here snaps calendar overflow-x mid-flick.
+      setAppHeightCSSProperty();
+    };
+
     const onFocusOut = (event: FocusEvent) => {
       if (!isEditableFocusTarget(event.target)) return;
       scheduleSettle(KEYBOARD_CLOSE_DELAYS_MS);
@@ -87,9 +104,8 @@ export function useAppShellViewport() {
       scheduleSettle(SETTLE_DELAYS_MS);
     }
 
-    // Do not listen to visualViewport "scroll": iOS fires it during overscroll and
-    // resetting window scroll / --app-height mid-gesture snags the main page.
-    vv?.addEventListener('resize', onViewportSettle);
+    // visualViewport resize (iOS chrome / overscroll) must not reset window scroll.
+    vv?.addEventListener('resize', onVisualViewportResize);
     window.addEventListener('resize', onViewportSettle);
     window.addEventListener('orientationchange', onOrientationChange);
     window.addEventListener('load', onViewportSettle);
@@ -101,7 +117,7 @@ export function useAppShellViewport() {
       document.documentElement.style.removeProperty('--app-height');
       if (themeMeta && previousTheme) themeMeta.setAttribute('content', previousTheme);
       for (const id of settleTimers) window.clearTimeout(id);
-      vv?.removeEventListener('resize', onViewportSettle);
+      vv?.removeEventListener('resize', onVisualViewportResize);
       window.removeEventListener('resize', onViewportSettle);
       window.removeEventListener('orientationchange', onOrientationChange);
       window.removeEventListener('load', onViewportSettle);

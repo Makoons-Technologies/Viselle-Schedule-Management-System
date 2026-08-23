@@ -125,7 +125,11 @@ export function WeekAppointmentTimeGrid({
   const afterMinutes =
     jumpCursor && jumpCursor.dayKey === activeDayKey ? jumpCursor.minutes : viewportMinutes;
   const nextOnActiveDay = activeDayKey
-    ? nextAppointmentOnDay(appointments, activeDayKey, afterMinutes)
+    ? nextAppointmentOnDay(appointments, activeDayKey, afterMinutes, {
+        // Viewport cursor must include the appointment aligned with the top
+        // (QA: Down skipped a visible 11:30). After a jump, stay exclusive.
+        inclusive: !(jumpCursor && jumpCursor.dayKey === activeDayKey),
+      })
     : undefined;
   const nextDayTarget = activeDayKey
     ? firstAppointmentAfterDay(appointments, visibleDayKeys, activeDayKey)

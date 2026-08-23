@@ -41,20 +41,6 @@ function isNearHorizontalEdge(clientX: number): boolean {
   return clientX <= EDGE_WIDTH_PX || clientX >= window.innerWidth - EDGE_WIDTH_PX;
 }
 
-function isDrawerScrollTarget(target: Node | null): boolean {
-  if (!target || !(target instanceof Element)) return false;
-  return target.closest('[data-mobile-drawer-scroll]') !== null;
-}
-
-function isInteractiveDrawerTarget(target: Node | null): boolean {
-  if (!target || !(target instanceof Element)) return false;
-  return (
-    target.closest(
-      'a, button, [role="button"], input, select, textarea, label, [data-radix-collection-item]',
-    ) !== null
-  );
-}
-
 function isInsidePanel(panel: HTMLDivElement | null, target: Node | null): boolean {
   return !!(panel && target && panel.contains(target));
 }
@@ -142,14 +128,6 @@ export function useMobileDrawerGestures(
       const target = event.target as Node | null;
       const panel = panelRef.current;
       const insidePanel = isInsidePanel(panel, target);
-      const passThroughTap =
-        openRef.current &&
-        insidePanel &&
-        (isDrawerScrollTarget(target) || isInteractiveDrawerTarget(target));
-
-      // Links, buttons, and the nav scroller must receive native taps (esp. landscape).
-      if (passThroughTap) return;
-
       const nearEdge = isNearHorizontalEdge(touch.clientX);
 
       // iOS 13.4+: edge touchstart blocks swipe-back/forward — never on open-panel taps.
