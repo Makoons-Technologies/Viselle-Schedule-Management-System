@@ -41,7 +41,7 @@ function AppLayoutContent() {
               className={cn(
                 'min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain touch-pan-y [-webkit-overflow-scrolling:touch]',
                 isCalendarRoute
-                  ? 'p-2 sm:px-3 sm:pt-2 desktop-shell:pb-2'
+                  ? 'px-2 pb-2 pt-0 sm:px-3 desktop-shell:pb-2'
                   : 'p-4 sm:px-6 sm:pt-6 desktop-shell:pb-6',
               )}
             >

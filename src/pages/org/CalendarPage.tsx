@@ -295,8 +295,8 @@ export function CalendarPage() {
 
   if (isLoading) return <LoadingState />;
 
-  return (
-    <div className="flex flex-col gap-1.5">
+  const calendarToolbar = (
+    <>
       <div className="flex w-full min-w-0 shrink-0 flex-nowrap items-center gap-1 overflow-hidden">
         <WeekCalendarNav
           compact
@@ -445,7 +445,13 @@ export function CalendarPage() {
           </div>
         </div>
       )}
+    </>
+  );
+
+  return (
+    <div>
       <WeekAppointmentTimeGrid
+        toolbar={calendarToolbar}
         days={days}
         appointments={appointments}
         selectedDayKeys={selectedDayKeys}

@@ -22,7 +22,6 @@ import {
   SLOT_MINUTES,
 } from '@/components/calendar/week-time-grid';
 import { buildWeekColumns, type WeekCalendarColumn } from '@/components/calendar/WeekCalendarTable';
-import { panelClassName } from '@/components/common/Panel';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -54,6 +53,8 @@ interface WeekAppointmentTimeGridProps {
   onDayHeaderActivate?: (dayKey: string) => void;
   /** Click an empty time slot to create an appointment (date = day key yyyy-MM-dd). */
   onEmptySlotClick?: (slot: { dayKey: string; minutes: number }) => void;
+  /** Sticks above the day headers while the calendar scrolls. */
+  toolbar?: ReactNode;
 }
 
 export function WeekAppointmentTimeGrid({
@@ -67,6 +68,7 @@ export function WeekAppointmentTimeGrid({
   onDayHeaderRangeSelect,
   onDayHeaderActivate,
   onEmptySlotClick,
+  toolbar,
 }: WeekAppointmentTimeGridProps) {
   const allColumns = buildWeekColumns(days);
   const isZoomed = !!zoomedDayKeys && zoomedDayKeys.length > 0;
@@ -104,7 +106,10 @@ export function WeekAppointmentTimeGrid({
   const visibleDayKeys = columns.map((column) => column.key);
   const byDay = groupAppointmentsByDay(appointments, dayKeys);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const headerScrollRef = useRef<HTMLDivElement | null>(null);
+  const chromeRef = useRef<HTMLDivElement | null>(null);
   const bodyRef = useRef<HTMLDivElement | null>(null);
+  const syncingScroll = useRef(false);
   const hasJumpableAppointment = nextAppointmentMinutesAfter(
     appointments,
     gridStartMinutes - 1,
@@ -119,51 +124,60 @@ export function WeekAppointmentTimeGrid({
   } | null>(null);
   const headerRowRef = useRef<HTMLDivElement | null>(null);
 
+  const mainScroller = () =>
+    bodyRef.current?.closest('main') ?? scrollRef.current?.closest('main');
+
   useLayoutEffect(() => {
     if (!showNowLine) return;
-    const grid = scrollRef.current;
-    if (!grid) return;
-    const scroller = grid.closest('main');
-    if (!scroller) return;
+    const body = bodyRef.current;
+    const scroller = mainScroller();
+    if (!body || !scroller) return;
     const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-    const headerHeight = headerRowRef.current?.offsetHeight ?? 0;
-    const gridTop = grid.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
-    scroller.scrollTop = gridTop + headerHeight + nowTopRem * rem - scroller.clientHeight / 2;
+    const bodyTop =
+      body.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+    scroller.scrollTop = bodyTop + nowTopRem * rem - scroller.clientHeight / 2;
   }, [showNowLine, dayKeys.join(',')]);
 
   const scrollMainToMinutes = (minutes: number, align: 'center' | 'start') => {
-    const grid = scrollRef.current;
-    if (!grid) return;
-    const scroller = grid.closest('main');
-    if (!scroller) return;
+    const body = bodyRef.current;
+    const scroller = mainScroller();
+    if (!body || !scroller) return;
     const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-    const headerHeight = headerRowRef.current?.offsetHeight ?? 0;
-    const gridTop =
-      grid.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+    const chromeHeight = chromeRef.current?.offsetHeight ?? 0;
+    const bodyTop =
+      body.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
     const offsetRem = minutesToOffsetRem(minutes, gridStartMinutes);
     const top =
       align === 'center'
-        ? gridTop + headerHeight + offsetRem * rem - scroller.clientHeight / 2
-        : gridTop + offsetRem * rem - 12;
+        ? bodyTop + offsetRem * rem - scroller.clientHeight / 2
+        : bodyTop + offsetRem * rem - chromeHeight - 12;
     scroller.scrollTo({ top, behavior: align === 'start' ? 'smooth' : 'auto' });
   };
 
   const jumpToNextAppointment = () => {
-    const grid = scrollRef.current;
     const body = bodyRef.current;
-    const scroller = grid?.closest('main');
-    if (!grid || !body || !scroller) return;
+    const scroller = mainScroller();
+    if (!body || !scroller) return;
     const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-    const headerHeight = headerRowRef.current?.offsetHeight ?? 0;
+    const chromeHeight = chromeRef.current?.offsetHeight ?? 0;
     const offsetPx = Math.max(
       0,
-      scroller.getBoundingClientRect().top + headerHeight - body.getBoundingClientRect().top,
+      scroller.getBoundingClientRect().top + chromeHeight - body.getBoundingClientRect().top,
     );
     const visibleMinutes =
       gridStartMinutes + (offsetPx / rem / SLOT_HEIGHT_REM) * SLOT_MINUTES;
     const nextMinutes = nextAppointmentMinutesAfter(appointments, visibleMinutes, visibleDayKeys);
     if (nextMinutes == null) return;
     scrollMainToMinutes(nextMinutes, 'start');
+  };
+
+  const syncHorizontalScroll = (source: HTMLElement, target: HTMLElement | null) => {
+    if (!target || syncingScroll.current) return;
+    syncingScroll.current = true;
+    target.scrollLeft = source.scrollLeft;
+    requestAnimationFrame(() => {
+      syncingScroll.current = false;
+    });
   };
 
   const cycleStack = (stackKey: string, stackSize: number, delta: number) => {
@@ -237,37 +251,49 @@ export function WeekAppointmentTimeGrid({
     : 6;
   const gridMinWidthRem = 5 + columns.length * columnMinWidthRem;
 
+  const headerRow = (
+    <div
+      ref={headerRowRef}
+      className="flex border-b border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800"
+      style={{ minWidth: `${gridMinWidthRem}rem` }}
+    >
+      <div className="sticky left-0 z-20 w-16 shrink-0 border-r border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800 sm:w-20" />
+      {columns.map((column) => (
+        <DayHeader
+          key={column.key}
+          column={column}
+          selectable={!isZoomed && !!onDayHeaderSelect}
+          selected={!isZoomed && selectedKeySet.has(column.key)}
+          onPointerDown={(event) => handleHeaderPointerDown(column.key, event)}
+          onPointerMove={handleHeaderPointerMove}
+          onPointerUp={(event) => handleHeaderPointerUp(column.key, event)}
+          onDoubleClick={() => onDayHeaderActivate?.(column.key)}
+        />
+      ))}
+    </div>
+  );
+
   return (
     <>
+    <div ref={chromeRef} className="sticky top-0 z-40 bg-stone-50 pt-2 dark:bg-stone-900">
+      {toolbar ? <div className="mb-1.5">{toolbar}</div> : null}
+      <div
+        ref={headerScrollRef}
+        className="overflow-x-auto overflow-y-hidden rounded-t-xl border border-b-0 border-stone-200 bg-white shadow-sm [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden dark:border-stone-800 dark:bg-stone-900"
+        onScroll={(event) => syncHorizontalScroll(event.currentTarget, scrollRef.current)}
+      >
+        {headerRow}
+      </div>
+    </div>
     <div
       ref={scrollRef}
       className={cn(
-        'overflow-x-auto overflow-y-visible shadow-sm',
-        panelClassName,
+        'overflow-x-auto overflow-y-hidden rounded-b-xl border border-t-0 border-stone-200 bg-white shadow-sm dark:border-stone-800 dark:bg-stone-900',
         className,
       )}
+      onScroll={(event) => syncHorizontalScroll(event.currentTarget, headerScrollRef.current)}
     >
-      <div style={{ minWidth: `${gridMinWidthRem}rem` }}>
-        <div
-          ref={headerRowRef}
-          className="sticky top-0 z-30 flex border-b border-stone-200 bg-stone-50/95 dark:border-stone-700 dark:bg-stone-800/95"
-        >
-          <div className="sticky left-0 z-20 w-16 shrink-0 border-r border-stone-200 bg-stone-50/95 dark:border-stone-700 dark:bg-stone-800/95 sm:w-20" />
-          {columns.map((column) => (
-            <DayHeader
-              key={column.key}
-              column={column}
-              selectable={!isZoomed && !!onDayHeaderSelect}
-              selected={!isZoomed && selectedKeySet.has(column.key)}
-              onPointerDown={(event) => handleHeaderPointerDown(column.key, event)}
-              onPointerMove={handleHeaderPointerMove}
-              onPointerUp={(event) => handleHeaderPointerUp(column.key, event)}
-              onDoubleClick={() => onDayHeaderActivate?.(column.key)}
-            />
-          ))}
-        </div>
-
-        <div ref={bodyRef} className="relative flex">
+      <div ref={bodyRef} className="relative flex" style={{ minWidth: `${gridMinWidthRem}rem` }}>
           {showNowLine && (
             <div
               className="pointer-events-none absolute inset-x-0 z-20 flex items-center"
@@ -318,7 +344,6 @@ export function WeekAppointmentTimeGrid({
               />
             );
           })}
-        </div>
       </div>
     </div>
     {hasJumpableAppointment && (
@@ -516,7 +541,7 @@ function DayHeader({
     <>
       <span
         className={cn(
-          'block text-[10px] font-semibold uppercase tracking-wider',
+          'block text-[9px] font-semibold uppercase leading-none tracking-wider',
           column.isToday
             ? 'text-brand-700 dark:text-brand-200'
             : 'text-stone-600 dark:text-stone-300',
@@ -527,12 +552,12 @@ function DayHeader({
       {column.dateLabel !== undefined && (
         <span
           className={cn(
-            'mt-1.5 inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold tabular-nums sm:h-9 sm:w-9',
+            'mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold tabular-nums',
             column.isToday || selected
               ? 'bg-brand-600 text-white shadow-sm dark:bg-brand-500'
               : 'text-stone-900 dark:text-stone-100',
             selected &&
-              'ring-2 ring-brand-300 ring-offset-2 ring-offset-stone-50 dark:ring-brand-400 dark:ring-offset-stone-800',
+              'ring-2 ring-brand-300 ring-offset-1 ring-offset-stone-50 dark:ring-brand-400 dark:ring-offset-stone-800',
           )}
         >
           {column.dateLabel}
@@ -542,7 +567,7 @@ function DayHeader({
   );
 
   const shellClass = cn(
-    'min-w-0 flex-1 border-r border-stone-200 px-1 py-3 text-center last:border-r-0 dark:border-stone-700 sm:px-2',
+    'min-w-0 flex-1 border-r border-stone-200 px-0.5 py-1 text-center last:border-r-0 dark:border-stone-700 sm:px-1',
     column.isToday && 'bg-brand-50 dark:bg-brand-900/55',
     selected && !column.isToday && 'bg-brand-50/70 dark:bg-brand-900/35',
   );
@@ -561,7 +586,7 @@ function DayHeader({
       data-day-key={column.key}
       className={cn(
         shellClass,
-        'min-h-[3.75rem] touch-manipulation transition-colors select-none',
+        'touch-manipulation transition-colors select-none',
         'hover:bg-stone-100/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500',
         'dark:hover:bg-stone-700/50',
         selected && 'hover:bg-brand-50 dark:hover:bg-brand-900/45',
