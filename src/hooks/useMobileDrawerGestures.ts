@@ -61,7 +61,7 @@ function drawerNavWantsVerticalScroll(element: Element, dy: number): boolean {
  * - swipe right from a left edge strip to open
  * - drag the open panel left past a threshold (or with velocity) to close
  * Edge touchstarts call preventDefault so the browser does not steal them as
- * history back/forward. Desktop (md+) is a no-op.
+ * history back/forward. Desktop shell is a no-op.
  */
 export function useMobileDrawerGestures(
   open: boolean,

@@ -2,9 +2,20 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Portrait phones + landscape phones (short height) keep the mobile shell. */
-@custom-variant mobile-shell (@media (max-width: 767px), ((orientation: landscape) and (max-height: 767px)));
-@custom-variant desktop-shell (@media (min-width: 768px) and (min-height: 768px));
+/*
+ * Phones stay on the mobile shell (portrait, or landscape under 1024px).
+ * Laptops and wide short windows get the pinned desktop sidebar.
+ */
+@custom-variant mobile-shell {
+  @media (max-width: 767px), (max-width: 1023px) and (max-height: 767px) {
+    @slot;
+  }
+}
+@custom-variant desktop-shell {
+  @media (min-width: 1024px), (min-width: 768px) and (min-height: 768px) {
+    @slot;
+  }
+}
 
 @theme {
   --color-brand-50: #fdf4f8;

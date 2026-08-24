@@ -147,8 +147,8 @@ export function Topbar() {
           size="icon"
           className="hidden h-10 w-10 shrink-0 desktop-shell:inline-flex"
           onClick={toggleSidebar}
-          title={sidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}
-          aria-label={sidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}
+          title={sidebarCollapsed ? 'Pin sidebar' : 'Unpin sidebar'}
+          aria-label={sidebarCollapsed ? 'Pin sidebar' : 'Unpin sidebar'}
         >
           {sidebarCollapsed ? <PanelLeft className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
         </Button>

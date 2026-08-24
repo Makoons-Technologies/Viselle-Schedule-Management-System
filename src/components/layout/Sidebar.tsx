@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 
 export function Sidebar() {
   const { user } = useAuth();
-  const { collapsed } = useSidebarCollapse();
+  const { collapsed, toggle } = useSidebarCollapse();
 
   if (!user) return null;
 
@@ -20,7 +20,7 @@ export function Sidebar() {
         collapsed && 'desktop-shell:hidden',
       )}
     >
-      <SidebarBrand subtitle={subtitle} />
+      <SidebarBrand subtitle={subtitle} onUnpin={toggle} />
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3">
         <SidebarNav />
         <div className="mt-auto border-t border-stone-200 pt-4 dark:border-stone-800">
