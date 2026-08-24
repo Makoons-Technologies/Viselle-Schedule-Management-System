@@ -4,15 +4,15 @@ import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { LoadingState } from '@/components/common/LoadingState';
 import { PageHeader } from '@/components/common/PageHeader';
-import { Panel } from '@/components/common/Panel';
 import { FormioRenderer, collectRequiredGaps } from '@/components/forms/FormioRenderer';
+import { FormSubmissionsList } from '@/components/forms/FormSubmissionsList';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
 import { getApiErrorMessage, orgApi } from '@/lib/api';
-import { formatDateTime } from '@/lib/utils';
-import type { FormioComponent, FormioSchema } from '@/types/api';
+import { liveFormSchema } from '@/lib/forms';
+import type { FormioSchema } from '@/types/api';
 
 export function FormFillPage() {
   const orgId = useOrgId();
@@ -46,12 +46,14 @@ export function FormFillPage() {
       toast.success('Saved');
       setValues({});
       void queryClient.invalidateQueries({ queryKey: ['form-submissions', orgId, formId] });
+      void queryClient.invalidateQueries({ queryKey: ['form', orgId, formId] });
+      void queryClient.invalidateQueries({ queryKey: ['forms', orgId] });
     },
     onError: (error) => toast.error(getApiErrorMessage(error, 'Could not save this form')),
   });
 
   const schema = useMemo<FormioSchema>(
-    () => formQuery.data?.form.schema ?? { display: 'form', components: [] },
+    () => (formQuery.data?.form ? liveFormSchema(formQuery.data.form) : { display: 'form', components: [] }),
     [formQuery.data],
   );
   const customers = customersQuery.data?.customers ?? [];
@@ -80,9 +82,16 @@ export function FormFillPage() {
   return (
     <div className="mx-auto max-w-xl space-y-6">
       <PageHeader title={form.name} description={form.description || 'Fill this out with the client.'} />
-      <Link to={`/orgs/${orgId}/forms`} className="text-sm text-brand-700 hover:underline">
-        ← All forms
-      </Link>
+      <div className="flex flex-wrap gap-3 text-sm">
+        <Link to={`/orgs/${orgId}/forms`} className="text-brand-700 hover:underline">
+          ← All forms
+        </Link>
+        {isOwner ? (
+          <Link to={`/orgs/${orgId}/forms/${form.id}/submissions`} className="text-brand-700 hover:underline">
+            View all answers
+          </Link>
+        ) : null}
+      </div>
       {!canSubmit ? (
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
           This form is not published yet, so answers cannot be saved.
@@ -121,49 +130,13 @@ export function FormFillPage() {
       {isOwner ? (
         <div className="space-y-3">
           <h2 className="text-sm font-medium text-stone-500">Recent answers</h2>
-          {(submissionsQuery.data?.submissions ?? []).length === 0 ? (
-            <p className="text-sm text-stone-500">Nothing saved yet.</p>
-          ) : (
-            (submissionsQuery.data?.submissions ?? []).slice(0, 8).map((submission) => (
-              <Panel key={submission.id} className="p-4">
-                <p className="text-sm font-medium">{customerName(submission.customerId)}</p>
-                <p className="text-xs text-stone-500">{formatDateTime(submission.createdAt)}</p>
-                <dl className="mt-2 space-y-1 text-sm">
-                  {Object.entries(submission.data ?? {}).map(([key, answer]) => (
-                    <div key={key} className="flex gap-2">
-                      <dt className="shrink-0 text-stone-500">{labelFor(schema, key)}:</dt>
-                      <dd className="min-w-0 break-words">{formatAnswer(answer)}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </Panel>
-            ))
-          )}
+          <FormSubmissionsList
+            form={form}
+            submissions={(submissionsQuery.data?.submissions ?? []).slice(0, 8)}
+            customerName={customerName}
+          />
         </div>
       ) : null}
     </div>
   );
-}
-
-function labelFor(schema: FormioSchema, key: string): string {
-  let found = key;
-  walk(schema.components ?? [], (component) => {
-    if (component.key === key && component.label) found = component.label;
-  });
-  return found;
-}
-
-function walk(components: FormioComponent[], visit: (component: FormioComponent) => void) {
-  for (const component of components) {
-    visit(component);
-    if (component.components?.length) walk(component.components, visit);
-    if (component.columns) for (const column of component.columns) walk(column.components ?? [], visit);
-    if (component.rows) for (const row of component.rows) for (const cell of row) walk(cell.components ?? [], visit);
-  }
-}
-
-function formatAnswer(answer: unknown): string {
-  if (typeof answer === 'boolean') return answer ? 'Yes' : 'No';
-  if (answer == null || answer === '') return '—';
-  return String(answer);
 }

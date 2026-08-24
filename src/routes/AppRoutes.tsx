@@ -52,10 +52,13 @@ import { WaitlistPage } from '@/pages/org/WaitlistPage';
 import { FormsPage } from '@/pages/org/FormsPage';
 import { FormBuilderPage } from '@/pages/org/FormBuilderPage';
 import { FormFillPage } from '@/pages/org/FormFillPage';
+import { FormSubmissionsPage } from '@/pages/org/FormSubmissionsPage';
+import { PublicFormPage } from '@/pages/public/PublicFormPage';
 import { GiftCardsPage } from '@/pages/org/GiftCardsPage';
 import { RecurringPage } from '@/pages/org/RecurringPage';
 import { StaffAdminPermissionsPage } from '@/pages/staff/StaffAdminPermissionsPage';
 import { StaffAvailabilityPage } from '@/pages/staff/StaffAvailabilityPage';
+import { StaffSettingsHubPage } from '@/pages/staff/StaffSettingsHubPage';
 import { TrialSettingsGuard } from '@/routes/TrialSettingsGuard';
 import { PlanRequiredGuard } from '@/routes/PlanRequiredGuard';
 import { CanceledOrgGuard } from '@/routes/CanceledOrgGuard';
@@ -106,6 +109,7 @@ export const appRoutes = [
   { path: '/get-started/success', element: <GetStartedSuccessPage /> },
   { path: '/website', element: <Navigate to="/#websites" replace /> },
   { path: '/book/:slug', element: <PublicBookingPage /> },
+  { path: '/f/:shareToken', element: <PublicFormPage /> },
   { path: '/book/:slug/manage/:token', element: <ManageBookingPage /> },
   { path: '/login', element: <LoginPage /> },
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
@@ -176,6 +180,7 @@ export const appRoutes = [
                           { path: 'forms', element: <FormsPage /> },
                           { path: 'forms/:formId', element: <FormBuilderPage /> },
                           { path: 'forms/:formId/fill', element: <FormFillPage /> },
+                          { path: 'forms/:formId/submissions', element: <FormSubmissionsPage /> },
                           { path: 'gift-cards', element: <GiftCardsPage /> },
                           {
                             element: <ProtectedRoute roles={['platform_owner', 'org_owner']} />,
@@ -231,6 +236,7 @@ export const appRoutes = [
               {
                 element: <CanceledOrgGuard />,
                 children: [
+                  { path: '/staff/settings', element: <StaffSettingsHubPage /> },
                   { path: '/staff/availability', element: <StaffAvailabilityPage /> },
                   {
                     element: <TrialSettingsGuard />,

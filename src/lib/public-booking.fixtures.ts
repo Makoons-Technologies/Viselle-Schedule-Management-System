@@ -41,6 +41,9 @@ function assertPublicBookingAuthFixtures(): void {
   if (!shouldOmitAuthHeader('/public/organizations/grokbot-isolation-studio?preview=1')) {
     throw new Error('public catalog with a query string must still omit the JWT');
   }
+  if (!shouldOmitAuthHeader('/public/forms/isolation-share-token')) {
+    throw new Error('public form links must not send a session JWT');
+  }
 
   if (
     publicBookingLockReason({ errorCode: 'FORBIDDEN' }) !== 'unavailable' ||

@@ -2,7 +2,6 @@ import {
   Building2,
   Calendar,
   CalendarDays,
-  Clock,
   LayoutDashboard,
   Settings,
   Sparkles,
@@ -115,11 +114,11 @@ export function MobileBottomNav() {
         match: (p, base) => p.startsWith(`${base}/appointments`),
       },
       {
-        key: 'availability',
-        label: 'Hours',
-        to: '/staff/availability',
-        icon: Clock,
-        match: (p) => p.startsWith('/staff/availability'),
+        key: 'settings',
+        label: 'Settings',
+        to: '/staff/settings',
+        icon: Settings,
+        match: (p) => p.startsWith('/staff/settings') || p.startsWith('/staff/availability') || p.startsWith(`${orgBase}/settings`),
       },
     ];
 

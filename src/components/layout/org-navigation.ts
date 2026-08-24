@@ -130,10 +130,6 @@ export function getOrgNavigation(
     main.push({ label: 'Recurring', to: `${orgBase}/recurring`, icon: Repeat });
   }
 
-  if (options.showAdminSettings) {
-    main.push({ label: 'Hours', to: `${orgBase}/availability`, icon: Clock });
-  }
-
   const settings: OrgNavLink[] = options.showAdminSettings
     ? [{ label: 'Settings', to: `${orgBase}/settings`, icon: Settings }]
     : [];
@@ -146,6 +142,7 @@ export function isOrgSettingsPath(pathname: string, orgBase: string): boolean {
   if (pathname === `${orgBase}/settings` || pathname.startsWith(`${orgBase}/settings/`)) return true;
   return (
     pathname.startsWith(`${orgBase}/staff`) ||
-    pathname.startsWith(`${orgBase}/website`)
+    pathname.startsWith(`${orgBase}/website`) ||
+    pathname.startsWith(`${orgBase}/availability`)
   );
 }
