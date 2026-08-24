@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { addDays, format, parseISO, startOfDay } from 'date-fns';
 import { ListChecks, Plus, SlidersHorizontal, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -20,6 +20,7 @@ import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { AppointmentDetailSheet } from '@/components/appointments/AppointmentDetailSheet';
 import { BatchCheckoutSheet, type BatchCheckoutItem } from '@/components/appointments/BatchCheckoutSheet';
 import { CreateAppointmentDialog } from '@/components/appointments/CreateAppointmentDialog';
+import { RecurringEditScopeDialog } from '@/components/appointments/RecurringEditScopeDialog';
 import { StaffScheduleFilter } from '@/components/calendar/StaffScheduleFilter';
 import { WeekAppointmentTimeGrid } from '@/components/calendar/WeekAppointmentTimeGrid';
 import { appointmentDayKey, appointmentStartMinutes } from '@/components/calendar/week-time-grid';
@@ -42,6 +43,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+
+type PendingScheduleChange = {
+  appointment: Appointment;
+  startTime: string;
+  endTime: string;
+};
 
 function sortDayKeys(keys: string[]): string[] {
   return [...keys].sort();
@@ -66,6 +73,7 @@ export function CalendarPage() {
   const queryClient = useQueryClient();
   /** Matches Tailwind `md` — same breakpoint as mobile bottom nav. */
   const isMobile = useMediaQuery('(max-width: 767px)');
+  const isCoarsePointer = useMediaQuery('(pointer: coarse)');
   const { myAppointmentsOnly, setMyAppointmentsOnly } = useMyAppointmentsOnly();
   const [weekStart, setWeekStart] = useState(() => startOfDay(new Date()));
   const [selectedAppointment, setSelectedAppointment] = useState<{
@@ -86,9 +94,19 @@ export function CalendarPage() {
   const [focusSlot, setFocusSlot] = useState<{ dayKey: string; minutes: number; nonce: number } | null>(
     null,
   );
+  const [pendingScheduleChange, setPendingScheduleChange] = useState<PendingScheduleChange | null>(
+    null,
+  );
   const [searchParams, setSearchParams] = useSearchParams();
   const daySelectionAnchorRef = useRef<string | null>(null);
   const focusRequest = useMemo(() => parseCalendarAppointmentSearch(searchParams), [searchParams]);
+
+  const interactionEnabled =
+    !isMobile &&
+    !isCoarsePointer &&
+    !selectMode &&
+    !trialExpired &&
+    permissions.canCreateAppointments;
 
   const weekEnd = addDays(weekStart, 6);
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
@@ -167,6 +185,56 @@ export function CalendarPage() {
       ),
     [recurringData],
   );
+
+  const rescheduleMutation = useMutation({
+    mutationFn: (params: {
+      appointment: Appointment;
+      startTime: string;
+      endTime: string;
+      scope?: 'single' | 'future';
+    }) => {
+      const { appointment, startTime, endTime, scope } = params;
+      const isRecurringScope = scope != null;
+      return orgApi.rescheduleAppointment(orgId, appointment.id, {
+        accountId: appointment.accountId,
+        startTime,
+        endTime,
+        timezone: appointment.timezone,
+        ...(isRecurringScope
+          ? {
+              scope,
+              occurrenceDate: appointment.startTime.slice(0, 10),
+            }
+          : {}),
+      });
+    },
+    onSuccess: () => {
+      toast.success('Appointment rescheduled');
+      setPendingScheduleChange(null);
+      queryClient.invalidateQueries({ queryKey: ['appointments', orgId] });
+      queryClient.invalidateQueries({ queryKey: ['recurring', orgId] });
+    },
+    onError: (err: Error) => toast.error(err.message || 'Could not reschedule appointment'),
+  });
+
+  const needsRecurringScopePrompt = (appointment: Appointment) =>
+    !!appointment.recurringAppointmentRuleId &&
+    activeRecurringRuleIds.has(appointment.recurringAppointmentRuleId);
+
+  const handleAppointmentScheduleChange = (change: PendingScheduleChange) => {
+    if (change.appointment.visitStatus === 'cancelled') return;
+    if (
+      change.appointment.visitStatus !== 'scheduled' &&
+      change.appointment.visitStatus !== 'arrived'
+    ) {
+      return;
+    }
+    if (needsRecurringScopePrompt(change.appointment)) {
+      setPendingScheduleChange(change);
+      return;
+    }
+    rescheduleMutation.mutate(change);
+  };
 
   const customersById = useMemo(
     () => Object.fromEntries((customersData?.customers ?? []).map((customer) => [customer.id, customer])),
@@ -558,6 +626,8 @@ export function CalendarPage() {
         onDayHeaderRangeSelect={handleDayHeaderRangeSelect}
         onDayHeaderActivate={(dayKey) => applyDayZoom([dayKey])}
         focusSlot={focusSlot}
+        interactionEnabled={interactionEnabled}
+        onAppointmentScheduleChange={handleAppointmentScheduleChange}
         onEmptySlotClick={
           permissions.canCreateAppointments && !selectMode
             ? ({ dayKey, minutes }) => {
@@ -571,7 +641,7 @@ export function CalendarPage() {
               }
             : undefined
         }
-        renderAppointment={(appt, stack, heightRem) => {
+        renderAppointment={(appt, stack, heightRem, interaction) => {
           const customer = customersById[appt.customerId];
           const customerName = customer
             ? `${customer.firstName} ${customer.lastName}`.trim()
@@ -608,6 +678,8 @@ export function CalendarPage() {
               selectMode={selectMode}
               selected={!!batchSelection[appt.id]}
               selectable={checkoutEligible}
+              draggableInteraction={!!interaction?.draggable}
+              onResizePointerDown={interaction?.onResizePointerDown}
               onClick={() =>
                 selectMode
                   ? toggleBatchSelection({
@@ -688,6 +760,19 @@ export function CalendarPage() {
               : undefined
         }
         onCreated={handleAppointmentsCreated}
+      />
+      <RecurringEditScopeDialog
+        open={!!pendingScheduleChange}
+        onOpenChange={(open) => {
+          if (!open && !rescheduleMutation.isPending) {
+            setPendingScheduleChange(null);
+          }
+        }}
+        loading={rescheduleMutation.isPending}
+        onSelectScope={(scope) => {
+          if (!pendingScheduleChange) return;
+          rescheduleMutation.mutate({ ...pendingScheduleChange, scope });
+        }}
       />
     </div>
   );
