@@ -146,6 +146,19 @@ Hold 3–4 seconds.
 
 Only hard cuts. No warp, no rewind.
 
+## Generated cut (Kling MCP)
+
+Kling is connected via `~/.cursor/mcp.json` → `https://kling.ai/mcp`.
+
+**Final 9:16 cut:** `renders/viselle-commercial-9x16.mp4` (33.5s, 1080×1920)
+
+Source clips in `renders/`:
+- `A-without-viselle.mp4` — 15s chaos build
+- `B-freeze.mp4` — 4s split / collage
+- `C-with-viselle.mp4` — 15s focused + sidewalk booking
+
+Still need in CapCut: the Black male narrator VO, music leveling, and a cleaner 3-way freeze if the collage feels off.
+
 ## If you want me to press generate
 
 Paste a Kling / Kie / fal.ai API key into the environment and I can submit these clips from here.
