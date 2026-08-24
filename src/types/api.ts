@@ -295,6 +295,7 @@ export interface PlatformStats {
 }
 
 export type RevenueGranularity = 'day' | 'week' | 'month';
+export type RevenueScope = 'org' | 'mine';
 
 export interface RevenuePoint {
   /** Bucket start date (YYYY-MM-DD). For "week" this is the Monday of that week. */
@@ -495,6 +496,9 @@ export interface CheckoutPreview {
   lines: Array<CheckoutLineInput & { description: string; unitPriceCents: number; lineTotalCents: number }>;
   subtotalCents: number;
   tipCents: number;
+  giftCardAppliedCents?: number;
+  giftCardCode?: string | null;
+  giftCardRemainingCents?: number | null;
   totalCents: number;
 }
 

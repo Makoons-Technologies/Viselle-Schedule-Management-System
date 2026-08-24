@@ -15,12 +15,17 @@ import { formatCompactCurrency, formatCurrency } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LoadingState } from '@/components/common/LoadingState';
-import type { RevenueGranularity, RevenuePoint } from '@/types/api';
+import type { RevenueGranularity, RevenuePoint, RevenueScope } from '@/types/api';
 
 const GRANULARITY_OPTIONS: { value: RevenueGranularity; label: string }[] = [
   { value: 'day', label: 'Daily' },
   { value: 'week', label: 'Weekly' },
   { value: 'month', label: 'Monthly' },
+];
+
+const SCOPE_OPTIONS: { value: RevenueScope; label: string }[] = [
+  { value: 'org', label: 'Org' },
+  { value: 'mine', label: 'Mine' },
 ];
 
 function periodLabel(period: string, granularity: RevenueGranularity): string {
@@ -56,14 +61,15 @@ function RevenueTooltip({
 
 export function RevenueChart({ orgId }: { orgId: string }) {
   const [granularity, setGranularity] = useState<RevenueGranularity>('day');
+  const [scope, setScope] = useState<RevenueScope>('org');
   const { resolvedColorMode } = useTheme();
   const isDark = resolvedColorMode === 'dark';
   const gridColor = isDark ? '#44403c' : '#e7e5e4';
   const tickColor = isDark ? '#a8a29e' : '#78716c';
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['reports', 'revenue', orgId, granularity],
-    queryFn: () => orgApi.getRevenueReport(orgId, { granularity }),
+    queryKey: ['reports', 'revenue', orgId, granularity, scope],
+    queryFn: () => orgApi.getRevenueReport(orgId, { granularity, scope }),
     enabled: !!orgId,
   });
 
@@ -74,7 +80,9 @@ export function RevenueChart({ orgId }: { orgId: string }) {
     <Card className="@container min-w-0">
       <CardHeader className="flex flex-col gap-4 @min-[32rem]:flex-row @min-[32rem]:items-start @min-[32rem]:justify-between">
         <div className="min-w-0">
-          <CardTitle className="text-base">Revenue Over Time</CardTitle>
+          <CardTitle className="text-base">
+            {scope === 'mine' ? 'My Revenue Over Time' : 'Org Revenue Over Time'}
+          </CardTitle>
           <CardDescription>
             Paid sales revenue (approximate profit; excludes any product or supply costs)
             {data && (
@@ -84,15 +92,26 @@ export function RevenueChart({ orgId }: { orgId: string }) {
             )}
           </CardDescription>
         </div>
-        <Tabs className="shrink-0" value={granularity} onValueChange={(value) => setGranularity(value as RevenueGranularity)}>
-          <TabsList>
-            {GRANULARITY_OPTIONS.map((option) => (
-              <TabsTrigger key={option.value} value={option.value}>
-                {option.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <Tabs value={scope} onValueChange={(value) => setScope(value as RevenueScope)}>
+            <TabsList>
+              {SCOPE_OPTIONS.map((option) => (
+                <TabsTrigger key={option.value} value={option.value}>
+                  {option.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+          <Tabs value={granularity} onValueChange={(value) => setGranularity(value as RevenueGranularity)}>
+            <TabsList>
+              {GRANULARITY_OPTIONS.map((option) => (
+                <TabsTrigger key={option.value} value={option.value}>
+                  {option.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -103,7 +122,9 @@ export function RevenueChart({ orgId }: { orgId: string }) {
           </div>
         ) : !hasRevenue ? (
           <div className="flex h-64 items-center justify-center text-sm text-stone-500 dark:text-stone-400">
-            No paid sales yet for this period.
+            {scope === 'mine'
+              ? 'No paid sales attributed to you in this period.'
+              : 'No paid sales yet for this period.'}
           </div>
         ) : (
           <div className="h-64 w-full">

@@ -1,8 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { addDays, format, parseISO, startOfDay } from 'date-fns';
 import { ListChecks, Plus, SlidersHorizontal, X, ZoomIn, ZoomOut } from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { Appointment } from '@/types/api';
+import { parseCalendarAppointmentSearch } from '@/lib/calendar-appointment-href';
 import { toast } from 'sonner';
 import { orgApi } from '@/lib/api';
 import { APPOINTMENT_CALENDAR_LIP_CLASS, APPOINTMENT_CALENDAR_LIP_LABEL } from '@/lib/appointment-status';
@@ -84,7 +86,9 @@ export function CalendarPage() {
   const [focusSlot, setFocusSlot] = useState<{ dayKey: string; minutes: number; nonce: number } | null>(
     null,
   );
+  const [searchParams, setSearchParams] = useSearchParams();
   const daySelectionAnchorRef = useRef<string | null>(null);
+  const focusRequest = useMemo(() => parseCalendarAppointmentSearch(searchParams), [searchParams]);
 
   const weekEnd = addDays(weekStart, 6);
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
@@ -333,6 +337,58 @@ export function CalendarPage() {
       : isMobile
         ? `${format(weekStart, 'MMM d')}–${format(weekEnd, 'MMM d')}`
         : `${format(weekStart, 'MMM d')} – ${format(weekEnd, 'MMM d, yyyy')}`;
+
+  useEffect(() => {
+    if (!focusRequest) return;
+
+    const startTime =
+      focusRequest.startTime ??
+      data?.appointments.find((appointment) => appointment.id === focusRequest.id)?.startTime;
+    if (!startTime) return;
+
+    const dayKey = appointmentDayKey(startTime);
+    if (!dayKeys.includes(dayKey)) {
+      setWeekStart(startOfDay(localDateFromDayKey(dayKey)));
+      return;
+    }
+
+    if (isLoading) return;
+
+    const raw = data?.appointments.find((appointment) => appointment.id === focusRequest.id);
+    if (raw) {
+      setSelectedStaffIds((prev) => revealStaffAfterCreate(prev, raw.accountId));
+      if (
+        shouldDisableMyAppointmentsOnly({
+          myAppointmentsOnly,
+          myAccountId,
+          createdAccountId: raw.accountId,
+        })
+      ) {
+        setMyAppointmentsOnly(false);
+      }
+    }
+    if (shouldClearDayZoom(zoomedDayKeys, dayKey)) {
+      setZoomedDayKeys(null);
+    }
+
+    setFocusSlot({
+      dayKey,
+      minutes: appointmentStartMinutes(startTime),
+      nonce: Date.now(),
+    });
+    setSelectedAppointment({ id: focusRequest.id, startTime });
+    setSearchParams({}, { replace: true });
+  }, [
+    data?.appointments,
+    dayKeys,
+    focusRequest,
+    isLoading,
+    myAccountId,
+    myAppointmentsOnly,
+    setMyAppointmentsOnly,
+    setSearchParams,
+    zoomedDayKeys,
+  ]);
 
   if (isLoading) return <LoadingState />;
 

@@ -1,8 +1,10 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Calendar, Scissors, UserCircle, Users } from 'lucide-react';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { CollapsibleBox, ResponsiveTable, ResponsiveTabs, columnsClass } from '@/components/builder/ResponsiveLayout';
+import { calendarAppointmentHref } from '@/lib/calendar-appointment-href';
+import { CollapsibleBox, ResponsiveTable, ResponsiveTabs } from '@/components/builder/ResponsiveLayout';
 import { FormioRenderer, collectRequiredGaps } from '@/components/forms/FormioRenderer';
 import { DashboardBookingLink } from '@/components/dashboard/DashboardBookingLink';
 import { DashboardTrialStatus } from '@/components/dashboard/DashboardTrialStatus';
@@ -12,8 +14,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getApiErrorMessage, orgApi } from '@/lib/api';
 import { liveFormSchema } from '@/lib/forms';
-import { formatCurrency } from '@/lib/utils';
-import type { Appointment, HomepageBlock, Service } from '@/types/api';
+import { cn, formatCurrency } from '@/lib/utils';
+import type { Appointment, HomepageBlock, HomepageColumn, Service } from '@/types/api';
 
 export const DEFAULT_HOMEPAGE_BLOCKS: HomepageBlock[] = [
   { id: 'welcome', type: 'welcome', visible: true, title: 'Welcome back', body: 'Here is how the salon looks today.' },
@@ -25,6 +27,16 @@ export const DEFAULT_HOMEPAGE_BLOCKS: HomepageBlock[] = [
   { id: 'upcoming', type: 'upcoming', visible: true },
   { id: 'revenue', type: 'revenue', visible: true },
 ];
+
+/** Stat tiles can sit two-across on a phone. Everything else stays full width. */
+function isCompactHomepageBlock(block: HomepageBlock): boolean {
+  return block.type === 'stats';
+}
+
+function homepageColumnIsCompact(column: HomepageColumn): boolean {
+  const kids = (column.components ?? []).filter((child) => child.visible !== false);
+  return kids.length > 0 && kids.every(isCompactHomepageBlock);
+}
 
 type HomepageContext = {
   orgId: string;
@@ -67,10 +79,24 @@ function BlockView({ block, ctx }: { block: HomepageBlock; ctx: HomepageContext 
 
   if (block.type === 'columns') {
     const columns = block.columns?.length ? block.columns : [{ components: block.components ?? [] }];
+    const count = Math.min(Math.max(columns.length, 1), 4);
     return (
-      <div className={columnsClass(columns.length)}>
+      <div
+        className={cn(
+          'grid min-w-0 grid-cols-1 gap-4',
+          count >= 2 && '@min-[20rem]:grid-cols-2',
+          count === 3 && '@min-[56rem]:grid-cols-3',
+          count >= 4 && '@min-[56rem]:grid-cols-4',
+        )}
+      >
         {columns.map((column, index) => (
-          <div key={index} className="min-w-0 space-y-4">
+          <div
+            key={index}
+            className={cn(
+              'min-w-0 space-y-4',
+              !homepageColumnIsCompact(column) && 'col-span-full @min-[56rem]:col-span-1',
+            )}
+          >
             {(column.components ?? []).map((child) => (
               <BlockView key={child.id} block={child} ctx={ctx} />
             ))}
@@ -162,7 +188,7 @@ function Widget({ block, ctx }: { block: HomepageBlock; ctx: HomepageContext }) 
       { label: 'Customers', value: ctx.stats.customers, icon: UserCircle },
     ];
     return (
-      <div className="grid grid-cols-1 gap-4 @min-[36rem]:grid-cols-2 @min-[56rem]:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 @min-[56rem]:grid-cols-4">
         {items.map((item) => (
           <Card key={item.label} className="min-w-0">
             <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
@@ -218,7 +244,7 @@ function Widget({ block, ctx }: { block: HomepageBlock; ctx: HomepageContext }) 
   if (block.type === 'upcoming') {
     const next = ctx.upcomingAppointments.slice(0, 5);
     return (
-      <Card>
+      <Card className="w-full min-w-0">
         <CardHeader>
           <CardTitle className="text-base">{block.title || 'Coming up'}</CardTitle>
         </CardHeader>
@@ -227,17 +253,19 @@ function Widget({ block, ctx }: { block: HomepageBlock; ctx: HomepageContext }) 
             <p className="text-stone-500">No upcoming appointments.</p>
           ) : (
             next.map((appointment) => (
-              <div key={appointment.id} className="flex justify-between gap-3">
-                <span className="truncate text-stone-800 dark:text-stone-200">
-                  {new Date(appointment.startTime).toLocaleString([], {
-                    weekday: 'short',
-                    month: 'short',
-                    day: 'numeric',
-                    hour: 'numeric',
-                    minute: '2-digit',
-                  })}
-                </span>
-              </div>
+              <Link
+                key={`${appointment.id}-${appointment.startTime}`}
+                to={calendarAppointmentHref(ctx.orgId, appointment)}
+                className="block truncate text-stone-800 underline-offset-2 hover:text-brand-700 hover:underline dark:text-stone-200 dark:hover:text-brand-300"
+              >
+                {new Date(appointment.startTime).toLocaleString([], {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                })}
+              </Link>
             ))
           )}
         </CardContent>

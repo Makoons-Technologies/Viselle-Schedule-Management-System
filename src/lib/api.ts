@@ -654,7 +654,10 @@ export const orgApi = {
   getCustomer: (orgId: string, customerId: string) =>
     apiClient.get<{ customer: Customer }>(`/organizations/${orgId}/customers/${customerId}`).then((r) => r.data),
 
-  getRevenueReport: (orgId: string, params?: { granularity?: RevenueGranularity; from?: string; to?: string }) =>
+  getRevenueReport: (
+    orgId: string,
+    params?: { granularity?: RevenueGranularity; from?: string; to?: string; scope?: 'org' | 'mine' },
+  ) =>
     apiClient.get<RevenueReport>(`/organizations/${orgId}/reports/revenue`, { params }).then((r) => r.data),
   updateCustomer: (
     orgId: string,
@@ -769,18 +772,26 @@ export const orgApi = {
   deleteProduct: (orgId: string, productId: string) =>
     apiClient.delete<{ product: Product }>(`/organizations/${orgId}/products/${productId}`).then((r) => r.data),
 
-  previewCheckout: (orgId: string, appointmentId: string, data: { lines: CheckoutLineInput[]; tipCents: number }) =>
+  previewCheckout: (
+    orgId: string,
+    appointmentId: string,
+    data: { lines: CheckoutLineInput[]; tipCents: number; giftCardCode?: string },
+  ) =>
     apiClient
       .post<CheckoutPreview>(`/organizations/${orgId}/appointments/${appointmentId}/checkout/preview`, data)
       .then((r) => r.data),
-  checkoutCash: (orgId: string, appointmentId: string, data: { lines: CheckoutLineInput[]; tipCents: number }) =>
+  checkoutCash: (
+    orgId: string,
+    appointmentId: string,
+    data: { lines: CheckoutLineInput[]; tipCents: number; giftCardCode?: string },
+  ) =>
     apiClient
       .post(`/organizations/${orgId}/appointments/${appointmentId}/checkout/cash`, data)
       .then((r) => r.data),
   checkoutCard: (
     orgId: string,
     appointmentId: string,
-    data: { lines: CheckoutLineInput[]; tipCents: number; mode?: 'terminal' | 'online' },
+    data: { lines: CheckoutLineInput[]; tipCents: number; giftCardCode?: string; mode?: 'terminal' | 'online' },
   ) =>
     apiClient
       .post<{
@@ -907,8 +918,10 @@ export const orgApi = {
     apiClient.get<{ giftCards: GiftCard[] }>(`/organizations/${orgId}/gift-cards`).then((r) => r.data),
   createGiftCard: (
     orgId: string,
-    data: { amountCents: number; creditCents?: number; customerId?: string; notes?: string },
+    data: { amountCents: number; creditCents?: number; code?: string },
   ) => apiClient.post<{ giftCard: GiftCard }>(`/organizations/${orgId}/gift-cards`, data).then((r) => r.data),
+  lookupGiftCard: (orgId: string, data: { code: string }) =>
+    apiClient.post<{ giftCard: GiftCard }>(`/organizations/${orgId}/gift-cards/lookup`, data).then((r) => r.data),
   redeemGiftCard: (orgId: string, data: { code: string; amountCents: number }) =>
     apiClient.post<{ giftCard: GiftCard }>(`/organizations/${orgId}/gift-cards/redeem`, data).then((r) => r.data),
   voidGiftCard: (orgId: string, giftCardId: string) =>
