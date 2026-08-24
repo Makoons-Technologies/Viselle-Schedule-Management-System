@@ -232,9 +232,26 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
+/** True when the browser aborted the request (Cancel on a blocking dialog). */
+export function isRequestAborted(err: unknown): boolean {
+  if (axios.isCancel(err)) return true;
+  if (typeof err === 'object' && err && 'code' in err && (err as { code?: string }).code === 'ERR_CANCELED') {
+    return true;
+  }
+  if (err instanceof Error) {
+    if (err.name === 'CanceledError' || err.name === 'AbortError') return true;
+    const message = err.message.toLowerCase();
+    if (message === 'canceled' || message === 'cancelled') return true;
+  }
+  return false;
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError<ApiErrorBody>) => {
+    if (isRequestAborted(error)) {
+      return Promise.reject(error);
+    }
     const data = error.response?.data;
     if (data?.error) {
       return Promise.reject(
@@ -784,9 +801,14 @@ export const orgApi = {
     orgId: string,
     appointmentId: string,
     data: { lines: CheckoutLineInput[]; tipCents: number; giftCardCode?: string },
+    signal?: AbortSignal,
   ) =>
     apiClient
-      .post<CheckoutPreview>(`/organizations/${orgId}/appointments/${appointmentId}/checkout/preview`, data)
+      .post<CheckoutPreview>(
+        `/organizations/${orgId}/appointments/${appointmentId}/checkout/preview`,
+        data,
+        { signal },
+      )
       .then((r) => r.data),
   checkoutCash: (
     orgId: string,
@@ -858,7 +880,11 @@ export const orgApi = {
       printerConfigured?: boolean;
       stripeReaderId?: string;
     },
-  ) => apiClient.post<DeliverReceiptResult>(`/organizations/${orgId}/receipts`, data).then((r) => r.data),
+    signal?: AbortSignal,
+  ) =>
+    apiClient
+      .post<DeliverReceiptResult>(`/organizations/${orgId}/receipts`, data, { signal })
+      .then((r) => r.data),
 
   sendInvoice: (
     orgId: string,
@@ -869,7 +895,11 @@ export const orgApi = {
       channel: 'email' | 'sms';
       destination?: string;
     },
-  ) => apiClient.post<SendInvoiceResult>(`/organizations/${orgId}/invoices`, data).then((r) => r.data),
+    signal?: AbortSignal,
+  ) =>
+    apiClient
+      .post<SendInvoiceResult>(`/organizations/${orgId}/invoices`, data, { signal })
+      .then((r) => r.data),
 
   getPublicInvoice: (token: string) =>
     apiClient.get<PublicInvoiceView>(`/public/invoices/${token}`).then((r) => r.data),
@@ -891,8 +921,12 @@ export const orgApi = {
 
   getStripeConnectStatus: (orgId: string) =>
     apiClient.get<StripeConnectStatus>(`/organizations/${orgId}/stripe-connect/status`).then((r) => r.data),
-  startStripeConnectOnboarding: (orgId: string) =>
-    apiClient.post<{ url: string; accountId: string }>(`/organizations/${orgId}/stripe-connect/onboard`).then((r) => r.data),
+  startStripeConnectOnboarding: (orgId: string, signal?: AbortSignal) =>
+    apiClient
+      .post<{ url: string; accountId: string }>(`/organizations/${orgId}/stripe-connect/onboard`, undefined, {
+        signal,
+      })
+      .then((r) => r.data),
   syncStripeConnectStatus: (orgId: string) =>
     apiClient.post<{ chargesEnabled: boolean; onboardingComplete: boolean }>(`/organizations/${orgId}/stripe-connect/sync`).then((r) => r.data),
   getTerminalConnectionToken: (orgId: string) =>
@@ -921,7 +955,11 @@ export const orgApi = {
       status?: OrgFormStatus;
       visibility?: OrgFormVisibility;
     },
-  ) => apiClient.patch<{ form: OrgForm }>(`/organizations/${orgId}/forms/${formId}`, data).then((r) => r.data),
+    signal?: AbortSignal,
+  ) =>
+    apiClient
+      .patch<{ form: OrgForm }>(`/organizations/${orgId}/forms/${formId}`, data, { signal })
+      .then((r) => r.data),
   duplicateForm: (orgId: string, formId: string) =>
     apiClient.post<{ form: OrgForm }>(`/organizations/${orgId}/forms/${formId}/duplicate`).then((r) => r.data),
   listFormVersions: (orgId: string, formId: string) =>
@@ -984,8 +1022,10 @@ export const orgApi = {
     orgId: string,
     data: { amountCents: number; creditCents?: number; code?: string },
   ) => apiClient.post<{ giftCard: GiftCard }>(`/organizations/${orgId}/gift-cards`, data).then((r) => r.data),
-  lookupGiftCard: (orgId: string, data: { code: string }) =>
-    apiClient.post<{ giftCard: GiftCard }>(`/organizations/${orgId}/gift-cards/lookup`, data).then((r) => r.data),
+  lookupGiftCard: (orgId: string, data: { code: string }, signal?: AbortSignal) =>
+    apiClient
+      .post<{ giftCard: GiftCard }>(`/organizations/${orgId}/gift-cards/lookup`, data, { signal })
+      .then((r) => r.data),
   redeemGiftCard: (orgId: string, data: { code: string; amountCents: number }) =>
     apiClient.post<{ giftCard: GiftCard }>(`/organizations/${orgId}/gift-cards/redeem`, data).then((r) => r.data),
   voidGiftCard: (orgId: string, giftCardId: string) =>
@@ -1061,10 +1101,12 @@ export const orgApi = {
     apiClient
       .patch<StaffPayoutSettings>(`/organizations/${orgId}/staff-payouts/settings`, data)
       .then((r) => r.data),
-  startStaffPayoutOnboarding: (orgId: string, accountId: string) =>
+  startStaffPayoutOnboarding: (orgId: string, accountId: string, signal?: AbortSignal) =>
     apiClient
       .post<{ url: string; accountId: string }>(
         `/organizations/${orgId}/staff-payouts/recipients/${accountId}/onboard`,
+        undefined,
+        { signal },
       )
       .then((r) => r.data),
   syncStaffPayoutRecipient: (orgId: string, accountId: string) =>

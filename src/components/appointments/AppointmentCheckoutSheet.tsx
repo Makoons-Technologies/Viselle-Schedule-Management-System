@@ -2,7 +2,8 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { Banknote, ChevronLeft, CreditCard, Gift, Loader2, Minus, PackagePlus, Plus } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { getApiErrorMessage, orgApi } from '@/lib/api';
+import { getApiErrorMessage, isRequestAborted, orgApi } from '@/lib/api';
+import { BlockingProgressDialog, useBlockingProgress } from '@/components/common/BlockingProgressDialog';
 import { formatCreditCount } from '@/lib/credits';
 import { useCardCheckout } from '@/hooks/useCardCheckout';
 import { useStaffPermissions } from '@/hooks/useStaffPermissions';
@@ -99,6 +100,7 @@ export function AppointmentCheckoutSheet({
   const customTipInputRef = useRef<HTMLInputElement>(null);
   const giftCardInputRef = useRef<HTMLInputElement>(null);
   const pendingSaleIdRef = useRef<string | null>(null);
+  const giftCardProgress = useBlockingProgress();
 
   const service = appointmentInfo?.service;
   const appointment = appointmentInfo?.appointment;
@@ -205,13 +207,33 @@ export function AppointmentCheckoutSheet({
 
   const applyGiftCardMutation = useMutation({
     mutationFn: async (code: string) => {
-      const { giftCard } = await orgApi.lookupGiftCard(orgId, { code });
-      const preview = await orgApi.previewCheckout(orgId, appointment!.id, {
-        lines,
-        tipCents,
-        giftCardCode: giftCard.code,
+      const controller = new AbortController();
+      giftCardProgress.start({
+        title: 'Gift card',
+        message: 'Looking up gift card…',
+        progress: { current: 1, total: 2 },
+        onCancel: () => controller.abort(),
       });
-      return { giftCard, preview };
+      try {
+        const { giftCard } = await orgApi.lookupGiftCard(orgId, { code }, controller.signal);
+        giftCardProgress.update({
+          message: 'Applying gift card…',
+          progress: { current: 2, total: 2 },
+        });
+        const preview = await orgApi.previewCheckout(
+          orgId,
+          appointment!.id,
+          {
+            lines,
+            tipCents,
+            giftCardCode: giftCard.code,
+          },
+          controller.signal,
+        );
+        return { giftCard, preview };
+      } finally {
+        giftCardProgress.stop();
+      }
     },
     onSuccess: ({ giftCard, preview }) => {
       if (!preview.giftCardAppliedCents) {
@@ -221,7 +243,10 @@ export function AppointmentCheckoutSheet({
       setAppliedGiftCardCode(giftCard.code);
       setGiftCardCodeInput(giftCard.code);
     },
-    onError: (err: unknown) => toast.error(getApiErrorMessage(err, 'That gift card could not be used')),
+    onError: (err: unknown) => {
+      if (isRequestAborted(err)) return;
+      toast.error(getApiErrorMessage(err, 'That gift card could not be used'));
+    },
   });
 
   const setProductQuantity = useCallback((productId: string, quantity: number) => {
@@ -803,6 +828,28 @@ export function AppointmentCheckoutSheet({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BlockingProgressDialog
+        open={cashMutation.isPending}
+        title="Checkout"
+        message={coveredByGiftCard ? 'Completing sale with gift card…' : 'Recording cash payment…'}
+      />
+      <BlockingProgressDialog
+        open={card.manualPreparing || card.phase === 'starting' || card.phase === 'confirming'}
+        title="Card payment"
+        message={
+          card.manualPreparing
+            ? 'Preparing secure card form…'
+            : (card.status ??
+              (card.phase === 'confirming' ? 'Recording card payment…' : 'Starting card payment…'))
+        }
+      />
+      <BlockingProgressDialog
+        open={rebookMutation.isPending}
+        title="Next visit"
+        message="Booking their next visit…"
+      />
+      <BlockingProgressDialog {...giftCardProgress.dialogProps} />
 
       <ReceiptChoiceDialog
         orgId={orgId}

@@ -2,7 +2,8 @@ import { useMutation } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { getApiErrorMessage, orgApi } from '@/lib/api';
+import { getApiErrorMessage, isRequestAborted, orgApi } from '@/lib/api';
+import { BlockingProgressDialog, useBlockingProgress } from '@/components/common/BlockingProgressDialog';
 import type { InvoiceStatus } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import {
@@ -36,6 +37,7 @@ export function SendInvoiceDialog({
 }: SendInvoiceDialogProps) {
   const [channel, setChannel] = useState<'email' | 'sms'>('email');
   const [destination, setDestination] = useState('');
+  const progress = useBlockingProgress();
 
   useEffect(() => {
     if (!open) return;
@@ -44,14 +46,41 @@ export function SendInvoiceDialog({
   }, [open, customerEmail, customerPhone]);
 
   const send = useMutation({
-    mutationFn: () =>
-      orgApi.sendInvoice(orgId, {
-        appointmentId,
-        status,
-        channel,
-        destination: destination.trim(),
-      }),
+    mutationFn: async () => {
+      const controller = new AbortController();
+      const sending =
+        status === 'paid'
+          ? channel === 'sms'
+            ? 'Texting the receipt…'
+            : 'Sending receipt…'
+          : channel === 'sms'
+            ? 'Texting the invoice…'
+            : 'Sending invoice…';
+      progress.start({
+        title: status === 'paid' ? 'Send receipt' : 'Send invoice',
+        message: sending,
+        onCancel: () => controller.abort(),
+      });
+      try {
+        const result = await orgApi.sendInvoice(
+          orgId,
+          {
+            appointmentId,
+            status,
+            channel,
+            destination: destination.trim(),
+          },
+          controller.signal,
+        );
+        progress.update({ onCancel: undefined });
+        return result;
+      } catch (err) {
+        progress.stop();
+        throw err;
+      }
+    },
     onSuccess: (result) => {
+      progress.stop();
       if (result.smsPaused) {
         toast.error(result.smsPausedMessage ?? 'Text messages are paused');
         return;
@@ -59,12 +88,16 @@ export function SendInvoiceDialog({
       toast.success(status === 'paid' ? 'Receipt sent' : 'Invoice sent');
       onOpenChange(false);
     },
-    onError: (err: unknown) => toast.error(getApiErrorMessage(err, 'Could not send')),
+    onError: (err: unknown) => {
+      if (isRequestAborted(err)) return;
+      toast.error(getApiErrorMessage(err, 'Could not send'));
+    },
   });
 
   const title = status === 'paid' ? 'Send receipt' : 'Send invoice';
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
@@ -106,5 +139,7 @@ export function SendInvoiceDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    <BlockingProgressDialog {...progress.dialogProps} />
+    </>
   );
 }

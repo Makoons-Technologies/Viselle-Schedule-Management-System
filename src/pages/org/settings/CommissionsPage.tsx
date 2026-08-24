@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Percent } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { BlockingProgressDialog } from '@/components/common/BlockingProgressDialog';
 import { EmptyState } from '@/components/common/EmptyState';
 import { LoadingState } from '@/components/common/LoadingState';
 import { Panel, sectionMutedClass } from '@/components/common/Panel';
@@ -152,6 +153,12 @@ export function CommissionsPage() {
           ) : null}
         </Panel>
       ) : null}
+
+      <BlockingProgressDialog
+        open={sendMutation.isPending}
+        title="Staff payouts"
+        message="Sending payouts…"
+      />
 
       {!rangeValid ? null : reportQuery.isLoading ? (
         <LoadingState message="Adding up this period…" />

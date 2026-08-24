@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { KeyedCardForm } from '@/components/appointments/KeyedCardForm';
+import { BlockingProgressDialog } from '@/components/common/BlockingProgressDialog';
 import { LoadingState } from '@/components/common/LoadingState';
 import { getApiErrorMessage, orgApi } from '@/lib/api';
 import { createKeyedPaymentSession, type KeyedPaymentSession } from '@/lib/stripe-keyed';
@@ -88,6 +89,11 @@ export function PublicInvoicePage() {
           {startPay.isPending ? 'Preparing…' : 'Pay now'}
         </button>
       )}
+      <BlockingProgressDialog
+        open={startPay.isPending}
+        title="Invoice"
+        message="Preparing secure card form…"
+      />
 
       {!isPaid && !view.canPayOnline && (
         <p className="text-sm text-stone-500">Pay this balance at your next visit.</p>

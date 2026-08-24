@@ -2,7 +2,8 @@ import { useMutation } from '@tanstack/react-query';
 import { Loader2, Mail, MessageSquare, Printer, ReceiptText } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { getApiErrorMessage, orgApi } from '@/lib/api';
+import { getApiErrorMessage, isRequestAborted, orgApi } from '@/lib/api';
+import { BlockingProgressDialog, useBlockingProgress } from '@/components/common/BlockingProgressDialog';
 import { printReceiptCopies } from '@/lib/print-receipt';
 import { getLastReceiptChannel, rememberReceiptChannel } from '@/lib/receipt-preference';
 import { cn } from '@/lib/utils';
@@ -48,6 +49,7 @@ export function ReceiptChoiceDialog({
   const [channel, setChannel] = useState<ReceiptChannel | null>(last);
   const [destination, setDestination] = useState('');
   const finishedRef = useRef(false);
+  const progress = useBlockingProgress();
 
   useEffect(() => {
     if (!open) return;
@@ -62,12 +64,46 @@ export function ReceiptChoiceDialog({
     mutationFn: async () => {
       if (!channel) throw new Error('Choose how to send the receipt');
       const needsDest = channel === 'email' || channel === 'sms';
-      return orgApi.deliverReceipt(orgId, {
-        saleIds,
-        customerChannel: channel,
-        ...(needsDest && destination.trim() ? { destination: destination.trim() } : {}),
-        printerConfigured: usedTerminalReader,
+      const controller = new AbortController();
+      const sendingMessage =
+        channel === 'print'
+          ? 'Preparing receipt…'
+          : channel === 'email'
+            ? 'Sending receipt…'
+            : channel === 'sms'
+              ? 'Texting the receipt…'
+              : 'Saving receipt preference…';
+      progress.start({
+        title: 'Receipt',
+        message: sendingMessage,
+        progress: channel === 'print' ? { current: 1, total: 2 } : null,
+        onCancel: () => controller.abort(),
       });
+      try {
+        const result = await orgApi.deliverReceipt(
+          orgId,
+          {
+            saleIds,
+            customerChannel: channel,
+            ...(needsDest && destination.trim() ? { destination: destination.trim() } : {}),
+            printerConfigured: usedTerminalReader,
+          },
+          controller.signal,
+        );
+        if (channel === 'print') {
+          progress.update({
+            message: 'Opening print dialog…',
+            progress: { current: 2, total: 2 },
+            onCancel: undefined,
+          });
+        } else {
+          progress.update({ onCancel: undefined });
+        }
+        return result;
+      } catch (err) {
+        progress.stop();
+        throw err;
+      }
     },
     onSuccess: (result) => {
       if (!channel) return;
@@ -81,14 +117,19 @@ export function ReceiptChoiceDialog({
       } else if (channel === 'sms') {
         toast.success(result.smsPaused ? (result.smsPausedMessage ?? 'Text is paused') : 'Receipt texted');
       }
+      progress.stop();
       onFinished();
     },
-    onError: (err: unknown) => toast.error(getApiErrorMessage(err, 'Could not send the receipt')),
+    onError: (err: unknown) => {
+      if (isRequestAborted(err)) return;
+      toast.error(getApiErrorMessage(err, 'Could not send the receipt'));
+    },
   });
 
   const needsDestination = channel === 'email' || channel === 'sms';
 
   return (
+    <>
     <Dialog
       open={open}
       onOpenChange={(next) => {
@@ -169,6 +210,8 @@ export function ReceiptChoiceDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    <BlockingProgressDialog {...progress.dialogProps} />
+    </>
   );
 }
 

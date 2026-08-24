@@ -3,6 +3,7 @@ import { History, Settings } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { BlockingProgressDialog, useBlockingProgress } from '@/components/common/BlockingProgressDialog';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { DesktopOnlyGate } from '@/components/common/DesktopOnlyGate';
 import { LoadingState } from '@/components/common/LoadingState';
@@ -18,7 +19,7 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
-import { getApiErrorMessage, orgApi } from '@/lib/api';
+import { getApiErrorMessage, isRequestAborted, orgApi } from '@/lib/api';
 import { formVersionLabel } from '@/lib/forms';
 import type { FormioSchema } from '@/types/api';
 
@@ -42,6 +43,7 @@ export function FormBuilderPage() {
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
+  const saveProgress = useBlockingProgress();
 
   const formQuery = useQuery({
     queryKey: ['form', orgId, formId],
@@ -63,25 +65,68 @@ export function FormBuilderPage() {
   }, [form]);
 
   const save = useMutation({
-    mutationFn: () => orgApi.updateForm(orgId, formId!, { name: name.trim() || form?.name, schema }),
+    mutationFn: async () => {
+      const controller = new AbortController();
+      saveProgress.start({
+        title: 'Form',
+        message: 'Saving form…',
+        onCancel: () => controller.abort(),
+      });
+      try {
+        return await orgApi.updateForm(
+          orgId,
+          formId!,
+          { name: name.trim() || form?.name, schema },
+          controller.signal,
+        );
+      } catch (error) {
+        saveProgress.stop();
+        throw error;
+      }
+    },
     onSuccess: () => {
+      saveProgress.stop();
       toast.success(form?.status === 'published' ? 'Staging saved — live form is unchanged' : 'Form saved');
       void queryClient.invalidateQueries({ queryKey: ['forms', orgId] });
       void queryClient.invalidateQueries({ queryKey: ['form', orgId, formId] });
     },
-    onError: (error) => toast.error(getApiErrorMessage(error, 'Could not save form')),
+    onError: (error) => {
+      if (isRequestAborted(error)) return;
+      toast.error(getApiErrorMessage(error, 'Could not save form'));
+    },
   });
 
   const publish = useMutation({
-    mutationFn: () =>
-      orgApi.updateForm(orgId, formId!, { name: name.trim() || form?.name, schema, status: 'published' }),
+    mutationFn: async () => {
+      const controller = new AbortController();
+      saveProgress.start({
+        title: 'Form',
+        message: 'Publishing form…',
+        onCancel: () => controller.abort(),
+      });
+      try {
+        return await orgApi.updateForm(
+          orgId,
+          formId!,
+          { name: name.trim() || form?.name, schema, status: 'published' },
+          controller.signal,
+        );
+      } catch (error) {
+        saveProgress.stop();
+        throw error;
+      }
+    },
     onSuccess: () => {
+      saveProgress.stop();
       toast.success('Published — your team and public link use this version');
       void queryClient.invalidateQueries({ queryKey: ['forms', orgId] });
       void queryClient.invalidateQueries({ queryKey: ['form', orgId, formId] });
       void queryClient.invalidateQueries({ queryKey: ['form-versions', orgId, formId] });
     },
-    onError: (error) => toast.error(getApiErrorMessage(error, 'Could not publish')),
+    onError: (error) => {
+      if (isRequestAborted(error)) return;
+      toast.error(getApiErrorMessage(error, 'Could not publish'));
+    },
   });
 
   if (formQuery.isLoading) return <LoadingState />;
@@ -234,6 +279,7 @@ export function FormBuilderPage() {
           goBack();
         }}
       />
+      <BlockingProgressDialog {...saveProgress.dialogProps} />
     </div>
   );
 }

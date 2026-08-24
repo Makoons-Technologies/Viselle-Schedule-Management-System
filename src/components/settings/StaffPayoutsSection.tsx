@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { orgApi } from '@/lib/api';
+import { isRequestAborted, orgApi } from '@/lib/api';
+import { BlockingProgressDialog, useBlockingProgress } from '@/components/common/BlockingProgressDialog';
 import { redirectToStripeUrl } from '@/lib/safe-redirect';
 import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { cn } from '@/lib/utils';
@@ -34,6 +35,7 @@ export function StaffPayoutsSection({ orgId, salonStripeReady }: StaffPayoutsSec
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const syncedRef = useRef(false);
+  const onboardProgress = useBlockingProgress();
 
   const { data } = useQuery({
     queryKey: ['staff-payouts', orgId],
@@ -52,13 +54,32 @@ export function StaffPayoutsSection({ orgId, salonStripeReady }: StaffPayoutsSec
   });
 
   const onboardMutation = useMutation({
-    mutationFn: (accountId: string) => orgApi.startStaffPayoutOnboarding(orgId, accountId),
+    mutationFn: async (accountId: string) => {
+      const controller = new AbortController();
+      onboardProgress.start({
+        title: 'Staff bank',
+        message: 'Starting bank setup…',
+        onCancel: () => controller.abort(),
+      });
+      try {
+        const result = await orgApi.startStaffPayoutOnboarding(orgId, accountId, controller.signal);
+        onboardProgress.update({ message: 'Opening Stripe…', onCancel: undefined });
+        return result;
+      } catch (err) {
+        onboardProgress.stop();
+        throw err;
+      }
+    },
     onSuccess: (result) => {
       if (!redirectToStripeUrl(result.url)) {
+        onboardProgress.stop();
         toast.error('Received an unexpected onboarding URL');
       }
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => {
+      if (isRequestAborted(err)) return;
+      toast.error(err.message);
+    },
   });
 
   const syncMutation = useMutation({
@@ -215,6 +236,7 @@ export function StaffPayoutsSection({ orgId, salonStripeReady }: StaffPayoutsSec
           </div>
         </div>
       ) : null}
+      <BlockingProgressDialog {...onboardProgress.dialogProps} />
     </Panel>
   );
 }

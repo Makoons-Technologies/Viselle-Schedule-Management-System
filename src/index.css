@@ -35,6 +35,16 @@
   --color-bc-navy: #0f172a;
   --color-bc-violet: #4c1d95;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --animate-blocking-progress: blocking-progress-indeterminate 1.4s ease-in-out infinite;
+}
+
+@keyframes blocking-progress-indeterminate {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(340%);
+  }
 }
 
 /* Page atmosphere shared by landing, auth chrome, and /business-card */

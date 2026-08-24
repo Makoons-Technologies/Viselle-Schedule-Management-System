@@ -2,6 +2,7 @@ import { CreditCard, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { KeyedPaymentSession } from '@/lib/stripe-keyed';
 import { cn, formatCurrency } from '@/lib/utils';
+import { BlockingProgressDialog } from '@/components/common/BlockingProgressDialog';
 import { sectionMutedClass } from '@/components/common/Panel';
 import { Button } from '@/components/ui/button';
 
@@ -53,6 +54,11 @@ export function KeyedCardForm({ session, totalCents, onSuccess }: KeyedCardFormP
         {confirming ? <Loader2 className="h-5 w-5 animate-spin" /> : <CreditCard className="h-5 w-5" />}
         Charge {formatCurrency(totalCents)}
       </Button>
+      <BlockingProgressDialog
+        open={confirming}
+        title="Card payment"
+        message="Charging the card…"
+      />
     </section>
   );
 }

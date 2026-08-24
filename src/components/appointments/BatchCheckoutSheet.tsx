@@ -11,6 +11,7 @@ import { CheckoutProductPickerDialog } from '@/components/appointments/CheckoutP
 import { ReceiptChoiceDialog } from '@/components/receipts/ReceiptChoiceDialog';
 import { KeyedCardForm } from '@/components/appointments/KeyedCardForm';
 import { isCardCheckoutReady } from '@/lib/stripe-connect-hint';
+import { BlockingProgressDialog } from '@/components/common/BlockingProgressDialog';
 import { sectionHeadingClass, sectionMutedClass } from '@/components/common/Panel';
 import { Button } from '@/components/ui/button';
 import {
@@ -581,6 +582,22 @@ export function BatchCheckoutSheet({ orgId, items, open, onOpenChange, onSuccess
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BlockingProgressDialog
+        open={cashMutation.isPending}
+        title="Checkout"
+        message="Recording cash payment…"
+      />
+      <BlockingProgressDialog
+        open={card.manualPreparing || card.phase === 'starting' || card.phase === 'confirming'}
+        title="Card payment"
+        message={
+          card.manualPreparing
+            ? 'Preparing secure card form…'
+            : (card.status ??
+              (card.phase === 'confirming' ? 'Recording card payment…' : 'Starting card payment…'))
+        }
+      />
 
       <ReceiptChoiceDialog
         orgId={orgId}
