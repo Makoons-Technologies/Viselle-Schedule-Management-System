@@ -33,6 +33,3 @@ prod.env
 
 # Local Vercel link (do not commit)
 .vercel
-
-# Generated Kling stills (large binaries; keep local)
-docs/ads/kling-commercial/*.png
