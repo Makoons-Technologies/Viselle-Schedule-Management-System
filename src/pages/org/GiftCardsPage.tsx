@@ -24,6 +24,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { getApiErrorMessage, orgApi } from '@/lib/api';
+import { CENTS_PER_CREDIT, creditValueHint, formatCredits } from '@/lib/credits';
 import { cn, formatCurrency } from '@/lib/utils';
 import type { Customer, GiftCard, GiftCardStatus } from '@/types/api';
 
@@ -70,6 +71,7 @@ export function GiftCardsPage() {
   const [createdCard, setCreatedCard] = useState<GiftCard | null>(null);
 
   const [sellAmount, setSellAmount] = useState('');
+  const [sellCredits, setSellCredits] = useState('');
   const [sellCustomerId, setSellCustomerId] = useState(NONE);
   const [sellNotes, setSellNotes] = useState('');
 
@@ -101,8 +103,13 @@ export function GiftCardsPage() {
       if (!Number.isFinite(amountCents) || amountCents < 100) {
         throw new Error('Enter at least $1.00');
       }
+      const creditCents = sellCredits.trim() ? centsFromDollars(sellCredits) : amountCents;
+      if (!Number.isFinite(creditCents) || creditCents < CENTS_PER_CREDIT) {
+        throw new Error('Credits must be at least 1');
+      }
       return orgApi.createGiftCard(orgId, {
         amountCents,
+        creditCents,
         customerId: sellCustomerId === NONE ? undefined : sellCustomerId,
         notes: sellNotes.trim() || undefined,
       });
@@ -110,6 +117,7 @@ export function GiftCardsPage() {
     onSuccess: ({ giftCard }) => {
       setCreatedCard(giftCard);
       setSellAmount('');
+      setSellCredits('');
       setSellCustomerId(NONE);
       setSellNotes('');
       setSellOpen(false);
@@ -137,7 +145,7 @@ export function GiftCardsPage() {
       setCreatedCard(null);
       toast.success(
         giftCard.remainingCents > 0
-          ? `Took ${formatCurrency(takenCents)}. ${formatCurrency(giftCard.remainingCents)} left.`
+          ? `Used ${formatCredits(takenCents)}. ${formatCredits(giftCard.remainingCents)} left.`
           : 'Card is used up',
       );
       void queryClient.invalidateQueries({ queryKey: ['gift-cards', orgId] });
@@ -161,7 +169,7 @@ export function GiftCardsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Gift cards"
-        description="Sell a card at the desk, redeem it later. No second processor."
+        description="Same credits as packages: 1 credit = $1. Sell a card at the desk, redeem it later."
         actions={
           <>
             <TrialLockedControl locked={trialLocked}>
@@ -191,7 +199,10 @@ export function GiftCardsPage() {
             </Button>
           </div>
           <p className="mt-2 text-sm text-stone-700 dark:text-stone-300">
-            {formatCurrency(createdCard.remainingCents)} on the card
+            {formatCredits(createdCard.remainingCents)} on the card
+            {createdCard.priceCents != null && createdCard.priceCents !== createdCard.originalCents
+              ? ` · paid ${formatCurrency(createdCard.priceCents)}`
+              : ''}
             {createdCard.customerId ? ` · ${customerLabel(customersById[createdCard.customerId])}` : ''}
           </p>
         </Panel>
@@ -201,7 +212,7 @@ export function GiftCardsPage() {
         <EmptyState
           icon={Gift}
           title="No gift cards yet"
-          description="Sell one at the desk and hand over the code. Guests can redeem it on a later visit."
+          description="Sell one at the desk and hand over the code. 1 credit = $1 toward a visit."
           action={
             <TrialLockedControl locked={trialLocked}>
               <Button disabled={trialLocked} onClick={() => setSellOpen(true)}>
@@ -228,7 +239,7 @@ export function GiftCardsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Code</TableHead>
-                  <TableHead>Balance</TableHead>
+                  <TableHead>Credits</TableHead>
                   <TableHead>Guest</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead />
@@ -239,7 +250,7 @@ export function GiftCardsPage() {
                   <TableRow key={card.id}>
                     <TableCell className="font-mono font-medium tracking-wide">{card.code}</TableCell>
                     <TableCell>
-                      {formatCurrency(card.remainingCents)} / {formatCurrency(card.originalCents)}
+                      {formatCredits(card.remainingCents)} / {formatCredits(card.originalCents)}
                     </TableCell>
                     <TableCell className="text-stone-500">{customerLabel(customersById[card.customerId ?? ''])}</TableCell>
                     <TableCell>
@@ -267,11 +278,20 @@ export function GiftCardsPage() {
         </Panel>
       )}
 
-      <Dialog open={sellOpen} onOpenChange={setSellOpen}>
+      <Dialog
+        open={sellOpen}
+        onOpenChange={(open) => {
+          setSellOpen(open);
+          if (!open) setSellCredits('');
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Sell a gift card</DialogTitle>
-            <DialogDescription>Collect payment at the desk, then hand over the code we generate.</DialogDescription>
+            <DialogDescription>
+              Collect payment at the desk. Leave credits blank to match the price, or add a bonus (pay $50, get 75
+              credits).
+            </DialogDescription>
           </DialogHeader>
           <form
             className="space-y-4"
@@ -280,20 +300,41 @@ export function GiftCardsPage() {
               createMutation.mutate();
             }}
           >
-            <div className="space-y-1.5">
-              <Label htmlFor="gift-amount">Amount ($)</Label>
-              <Input
-                id="gift-amount"
-                type="number"
-                min={1}
-                step={0.01}
-                inputMode="decimal"
-                placeholder="100"
-                value={sellAmount}
-                onChange={(event) => setSellAmount(event.target.value)}
-                required
-              />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="gift-amount">Price ($)</Label>
+                <Input
+                  id="gift-amount"
+                  type="number"
+                  min={1}
+                  step={0.01}
+                  inputMode="decimal"
+                  placeholder="50"
+                  value={sellAmount}
+                  onChange={(event) => setSellAmount(event.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="gift-credits">Credits on the card</Label>
+                <Input
+                  id="gift-credits"
+                  type="number"
+                  min={1}
+                  step={1}
+                  inputMode="numeric"
+                  placeholder={sellAmount || '50'}
+                  value={sellCredits}
+                  onChange={(event) => setSellCredits(event.target.value)}
+                />
+              </div>
             </div>
+            <p className="text-sm text-stone-500 dark:text-stone-400">
+              {creditValueHint(
+                centsFromDollars(sellCredits.trim() || sellAmount || '0'),
+                centsFromDollars(sellAmount || '0'),
+              )}
+            </p>
             <div className="space-y-1.5">
               <Label>Customer (optional)</Label>
               <Select value={sellCustomerId} onValueChange={setSellCustomerId}>
@@ -337,7 +378,7 @@ export function GiftCardsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Redeem a gift card</DialogTitle>
-            <DialogDescription>Take the amount they are using today off the remaining balance.</DialogDescription>
+            <DialogDescription>1 credit = $1. Take the service price off the remaining credits.</DialogDescription>
           </DialogHeader>
           <form
             className="space-y-4"
@@ -361,7 +402,7 @@ export function GiftCardsPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="redeem-amount">Amount ($)</Label>
+              <Label htmlFor="redeem-amount">Credits to use</Label>
               <Input
                 id="redeem-amount"
                 type="number"
@@ -393,7 +434,7 @@ export function GiftCardsPage() {
             <DialogTitle>Void this gift card?</DialogTitle>
             <DialogDescription>
               {voidTarget
-                ? `${voidTarget.code} will no longer work. Remaining ${formatCurrency(voidTarget.remainingCents)} will be lost.`
+                ? `${voidTarget.code} will no longer work. Remaining ${formatCredits(voidTarget.remainingCents)} will be lost.`
                 : ''}
             </DialogDescription>
           </DialogHeader>
@@ -434,7 +475,7 @@ function GiftCardCard({
         <div className="min-w-0">
           <p className="font-mono text-lg font-semibold tracking-wide">{card.code}</p>
           <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">
-            {formatCurrency(card.remainingCents)} left of {formatCurrency(card.originalCents)}
+            {formatCredits(card.remainingCents)} left of {formatCredits(card.originalCents)}
           </p>
           <p className="mt-1 text-sm text-stone-500">{customerName}</p>
           {card.notes && <p className="mt-1 text-xs text-stone-500">{card.notes}</p>}

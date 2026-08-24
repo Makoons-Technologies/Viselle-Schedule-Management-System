@@ -855,6 +855,7 @@ export interface HomepageBlock {
 }
 
 export type OrgFormStatus = 'draft' | 'published' | 'archived';
+export type OrgFormVisibility = 'public' | 'private';
 
 export interface FormioColumn {
   width?: number;
@@ -916,9 +917,34 @@ export interface OrgForm {
   name: string;
   description?: string | null;
   schema: FormioSchema;
+  publishedSchema?: FormioSchema | null;
   status: OrgFormStatus;
+  visibility?: OrgFormVisibility;
+  shareToken?: string | null;
+  currentVersion?: number;
+  publishedAt?: string | null;
+  hasUnpublishedChanges?: boolean;
+  submissionCount?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface OrgFormVersion {
+  id: string;
+  organizationId: string;
+  formId: string;
+  versionNumber: number;
+  name: string;
+  schema: FormioSchema;
+  createdByUserId?: string | null;
+  createdAt: string;
+}
+
+export interface PublicOrgForm {
+  name: string;
+  description?: string | null;
+  schema: FormioSchema;
+  organizationName?: string | null;
 }
 
 export interface OrgFormSubmission {
@@ -929,6 +955,7 @@ export interface OrgFormSubmission {
   appointmentId?: string | null;
   data: Record<string, unknown>;
   submittedByUserId?: string | null;
+  formVersion?: number | null;
   createdAt: string;
 }
 
@@ -955,6 +982,8 @@ export interface GiftCard {
   code: string;
   originalCents: number;
   remainingCents: number;
+  /** What the guest paid. May be less than originalCents when the card includes bonus credits. */
+  priceCents?: number;
   customerId?: string | null;
   status: GiftCardStatus;
   notes?: string | null;
@@ -967,7 +996,10 @@ export interface ServicePackage {
   organizationId: string;
   name: string;
   serviceId?: string | null;
-  visitCount: number;
+  /** Redeemable value. 1 credit = $1 = 100 cents. */
+  creditCents: number;
+  /** Legacy visit count; kept in sync as whole credits. */
+  visitCount?: number;
   priceCents: number;
   isActive: boolean;
   createdAt: string;
@@ -981,7 +1013,8 @@ export interface CustomerPackage {
   organizationId: string;
   packageId: string;
   customerId: string;
-  remainingVisits: number;
+  remainingCreditCents: number;
+  remainingVisits?: number;
   status: CustomerPackageStatus;
   createdAt: string;
   updatedAt: string;

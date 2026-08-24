@@ -23,6 +23,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { getApiErrorMessage, orgApi } from '@/lib/api';
+import { CENTS_PER_CREDIT, creditValueHint, formatCredits, packageCreditCents, remainingPackageCreditCents } from '@/lib/credits';
 import { cn, formatCurrency } from '@/lib/utils';
 import type { Customer, CustomerPackage, Service, ServicePackage } from '@/types/api';
 
@@ -45,10 +46,12 @@ export function PackagesPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [sellTarget, setSellTarget] = useState<ServicePackage | null>(null);
   const [sellCustomerId, setSellCustomerId] = useState('');
+  const [useTarget, setUseTarget] = useState<CustomerPackage | null>(null);
+  const [useAmount, setUseAmount] = useState('');
   const [name, setName] = useState('');
   const [serviceId, setServiceId] = useState(NONE);
-  const [visitCount, setVisitCount] = useState('6');
-  const [price, setPrice] = useState('');
+  const [credits, setCredits] = useState('100');
+  const [price, setPrice] = useState('50');
 
   const packagesQuery = useQuery({
     queryKey: ['packages', orgId],
@@ -92,21 +95,25 @@ export function PackagesPage() {
   const resetCreate = () => {
     setName('');
     setServiceId(NONE);
-    setVisitCount('6');
-    setPrice('');
+    setCredits('100');
+    setPrice('50');
   };
+
+  const createHint = creditValueHint(centsFromDollars(credits), centsFromDollars(price));
 
   const createMutation = useMutation({
     mutationFn: () => {
-      const visits = Number(visitCount);
+      const creditCents = centsFromDollars(credits);
       const priceCents = centsFromDollars(price);
       if (!name.trim()) throw new Error('Give this pack a name');
-      if (!Number.isInteger(visits) || visits < 1) throw new Error('Enter how many visits are in the pack');
+      if (!Number.isInteger(creditCents) || creditCents < CENTS_PER_CREDIT) {
+        throw new Error('Enter at least 1 credit');
+      }
       if (!Number.isFinite(priceCents) || priceCents < 0) throw new Error('Enter a price');
       return orgApi.createPackage(orgId, {
         name: name.trim(),
         serviceId: serviceId === NONE ? undefined : serviceId,
-        visitCount: visits,
+        creditCents,
         priceCents,
       });
     },
@@ -143,18 +150,31 @@ export function PackagesPage() {
     onError: (error) => toast.error(getApiErrorMessage(error, 'Could not sell this pack')),
   });
 
-  const useVisitMutation = useMutation({
-    mutationFn: (customerPackageId: string) => orgApi.usePackageVisit(orgId, customerPackageId),
+  const useCreditsMutation = useMutation({
+    mutationFn: () => {
+      if (!useTarget) throw new Error('Pick a pack');
+      const amountCents = centsFromDollars(useAmount);
+      if (!Number.isFinite(amountCents) || amountCents < 1) throw new Error('Enter how many credits to use');
+      return orgApi.usePackageCredits(orgId, useTarget.id, { amountCents });
+    },
     onSuccess: ({ customerPackage }) => {
-      toast.success(
-        customerPackage.remainingVisits > 0
-          ? `${customerPackage.remainingVisits} visit${customerPackage.remainingVisits === 1 ? '' : 's'} left`
-          : 'Last visit used — pack is finished',
-      );
+      const left = remainingPackageCreditCents(customerPackage);
+      toast.success(left > 0 ? `${formatCredits(left)} left` : 'Last credits used — pack is finished');
+      setUseTarget(null);
+      setUseAmount('');
       void queryClient.invalidateQueries({ queryKey: ['customer-packages', orgId] });
     },
-    onError: (error) => toast.error(getApiErrorMessage(error, 'Could not use a visit')),
+    onError: (error) => toast.error(getApiErrorMessage(error, 'Could not use credits')),
   });
+
+  const openUseCredits = (sold: CustomerPackage) => {
+    const pack = packagesById[sold.packageId];
+    const service = pack?.serviceId ? servicesById[pack.serviceId] : undefined;
+    const remaining = remainingPackageCreditCents(sold);
+    const suggested = service?.priceCents && service.priceCents <= remaining ? service.priceCents : remaining;
+    setUseAmount((suggested / CENTS_PER_CREDIT).toString());
+    setUseTarget(sold);
+  };
 
   if (packagesQuery.isLoading || soldQuery.isLoading) return <LoadingState />;
 
@@ -163,7 +183,7 @@ export function PackagesPage() {
   return (
     <div className="space-y-8">
       <p className={cn('-mt-2', sectionMutedClass)}>
-        Prepaid visit packs. Sell 6 facials now, burn a visit each time they come in.
+        Credit packs. 1 credit = $1 toward a visit — sell 100 credits for $50, then burn what the service costs.
       </p>
 
       <section className="space-y-4">
@@ -186,7 +206,7 @@ export function PackagesPage() {
           <EmptyState
             icon={Ticket}
             title="No packages yet"
-            description="Create a pack like “6 facials” and sell it at the desk."
+            description="Create a pack like “100 credits for $50” and sell it at the desk."
             action={
               <TrialLockedControl locked={trialLocked}>
                 <Button disabled={trialLocked} onClick={() => setCreateOpen(true)}>
@@ -219,7 +239,7 @@ export function PackagesPage() {
                   <TableRow>
                     <TableHead>Package</TableHead>
                     <TableHead>Service</TableHead>
-                    <TableHead>Visits</TableHead>
+                    <TableHead>Credits</TableHead>
                     <TableHead>Price</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead />
@@ -232,7 +252,7 @@ export function PackagesPage() {
                       <TableCell className="text-stone-500">
                         {pack.serviceId ? (servicesById[pack.serviceId]?.name ?? 'Service') : 'Any service'}
                       </TableCell>
-                      <TableCell>{pack.visitCount}</TableCell>
+                      <TableCell>{formatCredits(packageCreditCents(pack))}</TableCell>
                       <TableCell>{formatCurrency(pack.priceCents)}</TableCell>
                       <TableCell>
                         <Badge variant={pack.isActive ? 'success' : 'secondary'}>
@@ -287,7 +307,7 @@ export function PackagesPage() {
             description={
               activePackages.length === 0
                 ? 'Create a package first, then sell it to a guest.'
-                : 'Sell a pack to a guest, then tap Use a visit when they come in.'
+                : 'Sell a pack to a guest, then use credits when they come in.'
             }
           />
         ) : (
@@ -300,8 +320,8 @@ export function PackagesPage() {
                   packName={packagesById[sold.packageId]?.name ?? 'Package'}
                   customerName={personName(customersById[sold.customerId])}
                   trialLocked={trialLocked}
-                  using={useVisitMutation.isPending}
-                  onUse={() => useVisitMutation.mutate(sold.id)}
+                  using={useCreditsMutation.isPending}
+                  onUse={() => openUseCredits(sold)}
                 />
               ))}
             </div>
@@ -311,7 +331,7 @@ export function PackagesPage() {
                   <TableRow>
                     <TableHead>Guest</TableHead>
                     <TableHead>Package</TableHead>
-                    <TableHead>Visits left</TableHead>
+                    <TableHead>Credits left</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead />
                   </TableRow>
@@ -321,21 +341,21 @@ export function PackagesPage() {
                     <TableRow key={sold.id}>
                       <TableCell className="font-medium">{personName(customersById[sold.customerId])}</TableCell>
                       <TableCell>{packagesById[sold.packageId]?.name ?? 'Package'}</TableCell>
-                      <TableCell>{sold.remainingVisits}</TableCell>
+                      <TableCell>{formatCredits(remainingPackageCreditCents(sold))}</TableCell>
                       <TableCell>
                         <Badge variant={sold.status === 'active' ? 'success' : 'secondary'}>
                           {sold.status === 'used' ? 'Used up' : sold.status === 'void' ? 'Voided' : 'Active'}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        {sold.status === 'active' && sold.remainingVisits > 0 && (
+                        {sold.status === 'active' && remainingPackageCreditCents(sold) > 0 && (
                           <TrialLockedControl locked={trialLocked}>
                             <Button
                               size="sm"
-                              disabled={trialLocked || useVisitMutation.isPending}
-                              onClick={() => useVisitMutation.mutate(sold.id)}
+                              disabled={trialLocked || useCreditsMutation.isPending}
+                              onClick={() => openUseCredits(sold)}
                             >
-                              Use a visit
+                              Use credits
                             </Button>
                           </TrialLockedControl>
                         )}
@@ -359,7 +379,9 @@ export function PackagesPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>New package</DialogTitle>
-            <DialogDescription>Guests pay once, then you burn a visit each time they come in.</DialogDescription>
+            <DialogDescription>
+              Guests pay once and get credits. 1 credit = $1 toward a visit.
+            </DialogDescription>
           </DialogHeader>
           <form
             className="space-y-4"
@@ -374,7 +396,7 @@ export function PackagesPage() {
                 id="package-name"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="6 facials"
+                placeholder="100 credits"
                 required
               />
             </div>
@@ -398,15 +420,15 @@ export function PackagesPage() {
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="package-visits">Visits in the pack</Label>
+                <Label htmlFor="package-credits">Credits in the pack</Label>
                 <Input
-                  id="package-visits"
+                  id="package-credits"
                   type="number"
                   min={1}
                   step={1}
                   inputMode="numeric"
-                  value={visitCount}
-                  onChange={(event) => setVisitCount(event.target.value)}
+                  value={credits}
+                  onChange={(event) => setCredits(event.target.value)}
                   required
                 />
               </div>
@@ -424,6 +446,7 @@ export function PackagesPage() {
                 />
               </div>
             </div>
+            <p className="text-sm text-stone-500 dark:text-stone-400">{createHint}</p>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
                 Cancel
@@ -452,7 +475,7 @@ export function PackagesPage() {
             <DialogTitle>Sell {sellTarget?.name ?? 'this pack'}</DialogTitle>
             <DialogDescription>
               {sellTarget
-                ? `${sellTarget.visitCount} visits for ${formatCurrency(sellTarget.priceCents)}. Collect payment at the desk.`
+                ? `${formatCredits(packageCreditCents(sellTarget))} for ${formatCurrency(sellTarget.priceCents)}. Collect payment at the desk.`
                 : ''}
             </DialogDescription>
           </DialogHeader>
@@ -491,6 +514,58 @@ export function PackagesPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <Dialog
+        open={!!useTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setUseTarget(null);
+            setUseAmount('');
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Use credits</DialogTitle>
+            <DialogDescription>
+              {useTarget
+                ? `${formatCredits(remainingPackageCreditCents(useTarget))} left. 1 credit = $1 — enter the service price.`
+                : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              useCreditsMutation.mutate();
+            }}
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="use-credits">Credits to use</Label>
+              <Input
+                id="use-credits"
+                type="number"
+                min={0.01}
+                step={0.01}
+                inputMode="decimal"
+                value={useAmount}
+                onChange={(event) => setUseAmount(event.target.value)}
+                required
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setUseTarget(null)}>
+                Cancel
+              </Button>
+              <TrialLockedControl locked={trialLocked}>
+                <Button type="submit" disabled={trialLocked || useCreditsMutation.isPending}>
+                  {useCreditsMutation.isPending ? 'Using…' : 'Use credits'}
+                </Button>
+              </TrialLockedControl>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -516,7 +591,7 @@ function PackageCard({
         <div className="min-w-0">
           <p className="font-medium">{pack.name}</p>
           <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">
-            {pack.visitCount} visits · {formatCurrency(pack.priceCents)}
+            {formatCredits(packageCreditCents(pack))} · {formatCurrency(pack.priceCents)}
           </p>
           <p className="mt-1 text-sm text-stone-500">{service?.name ?? 'Any service'}</p>
         </div>
@@ -562,24 +637,23 @@ function SoldPackCard({
   using: boolean;
   onUse: () => void;
 }) {
+  const remaining = remainingPackageCreditCents(sold);
   return (
     <div className="space-y-3 border-b border-stone-100 p-4 last:border-b-0 dark:border-stone-800">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="font-medium">{customerName}</p>
           <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">{packName}</p>
-          <p className="mt-1 text-sm text-stone-500">
-            {sold.remainingVisits} visit{sold.remainingVisits === 1 ? '' : 's'} left
-          </p>
+          <p className="mt-1 text-sm text-stone-500">{formatCredits(remaining)} left</p>
         </div>
         <Badge variant={sold.status === 'active' ? 'success' : 'secondary'} className="shrink-0">
           {sold.status === 'used' ? 'Used up' : sold.status === 'void' ? 'Voided' : 'Active'}
         </Badge>
       </div>
-      {sold.status === 'active' && sold.remainingVisits > 0 && (
+      {sold.status === 'active' && remaining > 0 && (
         <TrialLockedControl locked={trialLocked}>
           <Button className="w-full" disabled={trialLocked || using} onClick={onUse}>
-            Use a visit
+            Use credits
           </Button>
         </TrialLockedControl>
       )}

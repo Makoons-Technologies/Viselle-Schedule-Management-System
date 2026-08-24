@@ -68,6 +68,9 @@ import type {
   HomepageBlock,
   OrgForm,
   OrgFormStatus,
+  OrgFormVisibility,
+  OrgFormVersion,
+  PublicOrgForm,
   FormioSchema,
   OrgFormSubmission,
   WaitlistEntry,
@@ -852,8 +855,22 @@ export const orgApi = {
   updateForm: (
     orgId: string,
     formId: string,
-    data: { name?: string; description?: string | null; schema?: FormioSchema; status?: OrgFormStatus },
+    data: {
+      name?: string;
+      description?: string | null;
+      schema?: FormioSchema;
+      status?: OrgFormStatus;
+      visibility?: OrgFormVisibility;
+    },
   ) => apiClient.patch<{ form: OrgForm }>(`/organizations/${orgId}/forms/${formId}`, data).then((r) => r.data),
+  duplicateForm: (orgId: string, formId: string) =>
+    apiClient.post<{ form: OrgForm }>(`/organizations/${orgId}/forms/${formId}/duplicate`).then((r) => r.data),
+  listFormVersions: (orgId: string, formId: string) =>
+    apiClient.get<{ versions: OrgFormVersion[] }>(`/organizations/${orgId}/forms/${formId}/versions`).then((r) => r.data),
+  restoreFormVersion: (orgId: string, formId: string, versionNumber: number) =>
+    apiClient
+      .post<{ form: OrgForm }>(`/organizations/${orgId}/forms/${formId}/versions/${versionNumber}/restore`)
+      .then((r) => r.data),
   deleteForm: (orgId: string, formId: string) =>
     apiClient.delete(`/organizations/${orgId}/forms/${formId}`).then((r) => r.data),
   listFormSubmissions: (orgId: string, formId?: string) =>
@@ -870,6 +887,12 @@ export const orgApi = {
     apiClient
       .post<{ submission: OrgFormSubmission }>(`/organizations/${orgId}/forms/${formId}/submissions`, data)
       .then((r) => r.data),
+  getPublicForm: (shareToken: string) =>
+    apiClient.get<{ form: PublicOrgForm }>(`/public/forms/${shareToken}`).then((r) => r.data),
+  submitPublicForm: (shareToken: string, data: { data: Record<string, unknown> }) =>
+    apiClient
+      .post<{ submission: OrgFormSubmission }>(`/public/forms/${shareToken}/submissions`, data)
+      .then((r) => r.data),
 
   listWaitlist: (orgId: string) =>
     apiClient.get<{ entries: WaitlistEntry[] }>(`/organizations/${orgId}/waitlist`).then((r) => r.data),
@@ -882,8 +905,10 @@ export const orgApi = {
 
   listGiftCards: (orgId: string) =>
     apiClient.get<{ giftCards: GiftCard[] }>(`/organizations/${orgId}/gift-cards`).then((r) => r.data),
-  createGiftCard: (orgId: string, data: { amountCents: number; customerId?: string; notes?: string }) =>
-    apiClient.post<{ giftCard: GiftCard }>(`/organizations/${orgId}/gift-cards`, data).then((r) => r.data),
+  createGiftCard: (
+    orgId: string,
+    data: { amountCents: number; creditCents?: number; customerId?: string; notes?: string },
+  ) => apiClient.post<{ giftCard: GiftCard }>(`/organizations/${orgId}/gift-cards`, data).then((r) => r.data),
   redeemGiftCard: (orgId: string, data: { code: string; amountCents: number }) =>
     apiClient.post<{ giftCard: GiftCard }>(`/organizations/${orgId}/gift-cards/redeem`, data).then((r) => r.data),
   voidGiftCard: (orgId: string, giftCardId: string) =>
@@ -893,7 +918,7 @@ export const orgApi = {
     apiClient.get<{ packages: ServicePackage[] }>(`/organizations/${orgId}/packages`).then((r) => r.data),
   createPackage: (
     orgId: string,
-    data: { name: string; serviceId?: string; visitCount: number; priceCents: number },
+    data: { name: string; serviceId?: string; creditCents: number; priceCents: number },
   ) => apiClient.post<{ package: ServicePackage }>(`/organizations/${orgId}/packages`, data).then((r) => r.data),
   updatePackage: (orgId: string, packageId: string, data: Partial<ServicePackage>) =>
     apiClient.patch<{ package: ServicePackage }>(`/organizations/${orgId}/packages/${packageId}`, data).then((r) => r.data),
@@ -905,10 +930,18 @@ export const orgApi = {
     apiClient
       .post<{ customerPackage: CustomerPackage }>(`/organizations/${orgId}/customer-packages`, data)
       .then((r) => r.data),
-  usePackageVisit: (orgId: string, customerPackageId: string) =>
+  usePackageCredits: (orgId: string, customerPackageId: string, data: { amountCents: number }) =>
     apiClient
       .post<{ customerPackage: CustomerPackage }>(
-        `/organizations/${orgId}/customer-packages/${customerPackageId}/use-visit`,
+        `/organizations/${orgId}/customer-packages/${customerPackageId}/use-credits`,
+        data,
+      )
+      .then((r) => r.data),
+  usePackageVisit: (orgId: string, customerPackageId: string, data?: { amountCents: number }) =>
+    apiClient
+      .post<{ customerPackage: CustomerPackage }>(
+        `/organizations/${orgId}/customer-packages/${customerPackageId}/use-credits`,
+        data ?? { amountCents: 100 },
       )
       .then((r) => r.data),
 
