@@ -24,8 +24,8 @@ const GRANULARITY_OPTIONS: { value: RevenueGranularity; label: string }[] = [
 ];
 
 const SCOPE_OPTIONS: { value: RevenueScope; label: string }[] = [
-  { value: 'org', label: 'Org' },
-  { value: 'mine', label: 'Mine' },
+  { value: 'mine', label: 'My revenue' },
+  { value: 'org', label: 'Org revenue' },
 ];
 
 function periodLabel(period: string, granularity: RevenueGranularity): string {
@@ -61,7 +61,7 @@ function RevenueTooltip({
 
 export function RevenueChart({ orgId }: { orgId: string }) {
   const [granularity, setGranularity] = useState<RevenueGranularity>('day');
-  const [scope, setScope] = useState<RevenueScope>('org');
+  const [scope, setScope] = useState<RevenueScope>('mine');
   const { resolvedColorMode } = useTheme();
   const isDark = resolvedColorMode === 'dark';
   const gridColor = isDark ? '#44403c' : '#e7e5e4';
@@ -78,7 +78,7 @@ export function RevenueChart({ orgId }: { orgId: string }) {
 
   return (
     <Card className="@container min-w-0">
-      <CardHeader className="flex flex-col gap-4 @min-[32rem]:flex-row @min-[32rem]:items-start @min-[32rem]:justify-between">
+      <CardHeader className="gap-4">
         <div className="min-w-0">
           <CardTitle className="text-base">
             {scope === 'mine' ? 'My Revenue Over Time' : 'Org Revenue Over Time'}
@@ -92,20 +92,36 @@ export function RevenueChart({ orgId }: { orgId: string }) {
             )}
           </CardDescription>
         </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <Tabs value={scope} onValueChange={(value) => setScope(value as RevenueScope)}>
-            <TabsList>
-              {SCOPE_OPTIONS.map((option) => (
-                <TabsTrigger key={option.value} value={option.value}>
+        <div className="flex flex-col gap-2 @min-[28rem]:flex-row @min-[28rem]:flex-wrap @min-[28rem]:items-center">
+          <div
+            className="inline-flex h-10 w-full min-w-0 items-center gap-1 rounded-lg bg-stone-100 p-1 dark:bg-stone-800 @min-[28rem]:w-auto"
+            role="tablist"
+            aria-label="Revenue scope"
+          >
+            {SCOPE_OPTIONS.map((option) => {
+              const selected = scope === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="tab"
+                  aria-selected={selected}
+                  className={
+                    selected
+                      ? 'flex-1 rounded-md bg-white px-3 py-1.5 text-sm font-medium text-brand-700 shadow-sm dark:bg-stone-950 dark:text-brand-300 @min-[28rem]:flex-none'
+                      : 'flex-1 rounded-md px-3 py-1.5 text-sm font-medium text-stone-600 dark:text-stone-300 @min-[28rem]:flex-none'
+                  }
+                  onClick={() => setScope(option.value)}
+                >
                   {option.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-          <Tabs value={granularity} onValueChange={(value) => setGranularity(value as RevenueGranularity)}>
-            <TabsList>
+                </button>
+              );
+            })}
+          </div>
+          <Tabs className="w-full @min-[28rem]:w-auto" value={granularity} onValueChange={(value) => setGranularity(value as RevenueGranularity)}>
+            <TabsList className="h-10 w-full dark:bg-stone-800 @min-[28rem]:w-auto">
               {GRANULARITY_OPTIONS.map((option) => (
-                <TabsTrigger key={option.value} value={option.value}>
+                <TabsTrigger key={option.value} className="flex-1 dark:data-[state=active]:bg-stone-950 dark:data-[state=active]:text-brand-300 @min-[28rem]:flex-none" value={option.value}>
                   {option.label}
                 </TabsTrigger>
               ))}
