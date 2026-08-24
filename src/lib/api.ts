@@ -82,6 +82,9 @@ import type {
   CustomerMembership,
   CustomerMembershipStatus,
   CommissionReport,
+  StaffPayoutPreview,
+  StaffPayoutPreviewRow,
+  StaffPayoutSettings,
 } from '@/types/api';
 
 const TOKEN_KEY = 'viselle_auth_token';
@@ -1003,6 +1006,39 @@ export const orgApi = {
 
   getCommissions: (orgId: string, params: { from: string; to: string }) =>
     apiClient.get<CommissionReport>(`/organizations/${orgId}/commissions`, { params }).then((r) => r.data),
+
+  getStaffPayoutSettings: (orgId: string) =>
+    apiClient.get<StaffPayoutSettings>(`/organizations/${orgId}/staff-payouts/settings`).then((r) => r.data),
+  updateStaffPayoutSettings: (
+    orgId: string,
+    data: Partial<Pick<StaffPayoutSettings, 'mode' | 'schedule' | 'includeCommission' | 'includeTips'>>,
+  ) =>
+    apiClient
+      .patch<StaffPayoutSettings>(`/organizations/${orgId}/staff-payouts/settings`, data)
+      .then((r) => r.data),
+  startStaffPayoutOnboarding: (orgId: string, accountId: string) =>
+    apiClient
+      .post<{ url: string; accountId: string }>(
+        `/organizations/${orgId}/staff-payouts/recipients/${accountId}/onboard`,
+      )
+      .then((r) => r.data),
+  syncStaffPayoutRecipient: (orgId: string, accountId: string) =>
+    apiClient
+      .post<{ onboardingComplete: boolean; payoutsReady: boolean }>(
+        `/organizations/${orgId}/staff-payouts/recipients/${accountId}/sync`,
+      )
+      .then((r) => r.data),
+  previewStaffPayouts: (orgId: string, params: { from: string; to: string }) =>
+    apiClient
+      .get<StaffPayoutPreview>(`/organizations/${orgId}/staff-payouts/preview`, { params })
+      .then((r) => r.data),
+  sendStaffPayouts: (orgId: string, data: { from: string; to: string }) =>
+    apiClient
+      .post<{ from: string; to: string; rows: StaffPayoutPreviewRow[] }>(
+        `/organizations/${orgId}/staff-payouts/send`,
+        data,
+      )
+      .then((r) => r.data),
 };
 
 export const appointmentApi = {

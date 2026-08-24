@@ -1,10 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { getApiErrorMessage, isUnreachableRequestError, orgApi } from '@/lib/api';
+import { redirectToStripeUrl } from '@/lib/safe-redirect';
 import { withoutReactFormReset } from '@/lib/form-submit';
 import { findReconciledStaffAccount } from '@/lib/staff-create';
 import type { Account } from '@/types/api';
@@ -45,6 +46,12 @@ export function CreateStaffDialog({
   existingAccountIds = [],
 }: CreateStaffDialogProps) {
   const queryClient = useQueryClient();
+  const payoutSettingsQuery = useQuery({
+    queryKey: ['staff-payouts', orgId],
+    queryFn: () => orgApi.getStaffPayoutSettings(orgId),
+    enabled: !!orgId && open,
+  });
+  const showBankSetup = payoutSettingsQuery.data?.mode === 'salon_stripe';
   const isEditing = !!account;
   const isOrgOwner = account?.role === 'org_owner';
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -80,6 +87,26 @@ export function CreateStaffDialog({
     }
     reset({ role: 'staff', isBookable: true, commissionPercent: 0, status: 'active', firstName: '', lastName: '', email: '', phone: '' });
   }, [open, account, reset]);
+
+  const onboardBankMutation = useMutation({
+    mutationFn: async () => {
+      if (!account) throw new Error('Save this staff member first.');
+      if (account.stripeRecipientPayoutsReady) {
+        return orgApi.syncStaffPayoutRecipient(orgId, account.id);
+      }
+      return orgApi.startStaffPayoutOnboarding(orgId, account.id);
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['accounts', orgId] });
+      queryClient.invalidateQueries({ queryKey: ['staff-payouts', orgId] });
+      if ('url' in result && result.url) {
+        if (!redirectToStripeUrl(result.url)) toast.error('Received an unexpected onboarding URL');
+        return;
+      }
+      toast.success('Bank status updated');
+    },
+    onError: (err: Error) => toast.error(getApiErrorMessage(err, 'Could not start bank setup.')),
+  });
 
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
@@ -234,6 +261,25 @@ export function CreateStaffDialog({
             <Input type="number" min={0} max={100} step={0.5} {...register('commissionPercent', { valueAsNumber: true })} />
             <p className="mt-1 text-xs text-stone-500">Share of service sales this person earns. Tips still go 100% to them.</p>
           </div>
+          {isEditing && showBankSetup ? (
+            <div className="rounded-lg border border-stone-200 p-3 dark:border-stone-700">
+              <p className="text-sm font-medium">Payout bank</p>
+              <p className="mt-1 text-xs text-stone-500">
+                {account.stripeRecipientPayoutsReady
+                  ? 'Bank is ready for salon Stripe transfers.'
+                  : 'Needed only if you pay this person from salon Stripe. Not payroll.'}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-2"
+                disabled={onboardBankMutation.isPending}
+                onClick={() => onboardBankMutation.mutate()}
+              >
+                {account.stripeRecipientPayoutsReady ? 'Refresh bank status' : 'Add bank'}
+              </Button>
+            </div>
+          ) : null}
           {!isEditing && (
             <p className="text-sm text-stone-500 dark:text-stone-400">
               An email invite will be sent so they can set their own password and sign in.

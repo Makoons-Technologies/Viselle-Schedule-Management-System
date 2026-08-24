@@ -368,6 +368,9 @@ export interface Account {
   status: AccountStatus;
   isBookable: boolean;
   commissionPercent?: number;
+  stripeRecipientAccountId?: string | null;
+  stripeRecipientOnboardingComplete?: boolean;
+  stripeRecipientPayoutsReady?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -1062,4 +1065,70 @@ export interface CommissionReport {
   from: string;
   to: string;
   rows: CommissionRow[];
+}
+
+export type StaffPayoutMode = 'track_only' | 'salon_stripe';
+export type StaffPayoutSchedule = 'manual' | 'weekly' | 'biweekly' | 'monthly';
+export type StaffPayoutStatus = 'pending' | 'succeeded' | 'failed' | 'skipped';
+
+export interface StaffPayoutRecipient {
+  accountId: string;
+  name: string;
+  email: string;
+  onboardingComplete: boolean;
+  payoutsReady: boolean;
+}
+
+export interface StaffPayoutSettings {
+  mode: StaffPayoutMode;
+  schedule: StaffPayoutSchedule;
+  includeCommission: boolean;
+  includeTips: boolean;
+  lastAutoPeriodFrom: string | null;
+  lastAutoPeriodTo: string | null;
+  lastAutoRunAt: string | null;
+  salonStripeReady: boolean;
+  recipients: StaffPayoutRecipient[];
+}
+
+export interface StaffPayoutLedgerRow {
+  id: string;
+  organizationId: string;
+  staffAccountId: string;
+  periodFrom: string;
+  periodTo: string;
+  commissionCents: number;
+  tipCents: number;
+  totalCents: number;
+  stripeTransferId?: string | null;
+  status: StaffPayoutStatus;
+  error?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StaffPayoutPreviewRow {
+  accountId: string;
+  name: string;
+  salesCents: number;
+  tipCents: number;
+  commissionOnSubtotalCents: number;
+  commissionCents: number;
+  totalCents: number;
+  payoutsReady: boolean;
+  alreadyPaid: boolean;
+  skipReason: 'zero' | 'not_ready' | 'already_paid' | null;
+  status?: StaffPayoutStatus | 'zero';
+  payoutId?: string;
+  error?: string | null;
+}
+
+export interface StaffPayoutPreview {
+  from: string;
+  to: string;
+  mode: StaffPayoutMode;
+  includeCommission: boolean;
+  includeTips: boolean;
+  rows: StaffPayoutPreviewRow[];
+  recentPayouts: StaffPayoutLedgerRow[];
 }

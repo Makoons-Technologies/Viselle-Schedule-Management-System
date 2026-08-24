@@ -9,6 +9,7 @@ import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { cn } from '@/lib/utils';
 import { redirectToStripeUrl } from '@/lib/safe-redirect';
 import { FirstVisitProtectionSection } from '@/components/settings/FirstVisitProtectionSection';
+import { StaffPayoutsSection } from '@/components/settings/StaffPayoutsSection';
 import { Panel, sectionMutedClass } from '@/components/common/Panel';
 import { LoadingState } from '@/components/common/LoadingState';
 import { TrialLockedControl } from '@/components/common/TrialLockedControl';
@@ -175,6 +176,8 @@ export function PaymentsSettingsPage() {
         stripeReady={Boolean(ready)}
         firstVisitPayment={data?.firstVisitPayment}
       />
+
+      <StaffPayoutsSection orgId={orgId} salonStripeReady={Boolean(ready)} />
     </div>
   );
 }
