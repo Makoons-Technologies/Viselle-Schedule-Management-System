@@ -13,11 +13,12 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ChevronDown, GripVertical, Search, Trash2 } from 'lucide-react';
+import { ChevronDown, GripVertical, Search, Settings, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { FormioRenderer } from '@/components/forms/FormioRenderer';
 import { GROUP_LABEL, allKeys, cloneComponent, isLayoutType, paletteFor, paletteLabel, type PaletteGroup, type PaletteItem } from '@/components/builder/palette';
 import { componentAt, insertAt, moveTo, removeAt, resolveDropTarget, updateAt } from '@/components/builder/schemaTree';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -139,7 +140,7 @@ export function FormioBuilder({
       onDragEnd={onDragEnd}
       onDragCancel={clearDrag}
     >
-      <div className="grid min-w-0 gap-4 xl:grid-cols-[220px_minmax(0,1fr)_280px]">
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[220px_minmax(0,1fr)]">
         <aside className="max-h-[70vh] space-y-3 overflow-y-auto rounded-2xl border border-stone-200 p-3 dark:border-stone-800">
           <p className="text-sm font-medium">Drag onto the canvas</p>
           <div className="relative">
@@ -209,6 +210,7 @@ export function FormioBuilder({
           forms={forms}
           services={services}
           mode={mode}
+          onClose={() => setSelectedPath(null)}
           onChange={(patch) => selectedPath && setComponents(updateAt(components, selectedPath, patch))}
         />
       </div>
@@ -415,6 +417,9 @@ function SortableItem({
           <GripVertical className="h-4 w-4" />
         </button>
         <button type="button" className="flex-1 truncate text-left text-sm" onClick={onSelect}>{label}</button>
+        <button type="button" className="text-stone-400 hover:text-stone-700 dark:hover:text-stone-200" onClick={onSelect} aria-label="Edit settings">
+          <Settings className="h-4 w-4" />
+        </button>
         <button type="button" className="text-stone-400 hover:text-red-600" onClick={onRemove} aria-label="Delete">
           <Trash2 className="h-4 w-4" />
         </button>
@@ -428,6 +433,7 @@ function Inspector({
   selected,
   selectedPath,
   onChange,
+  onClose,
   forms,
   services,
   mode,
@@ -435,82 +441,91 @@ function Inspector({
   selected: FormioComponent | null;
   selectedPath: string | null;
   onChange: (patch: Partial<FormioComponent>) => void;
+  onClose: () => void;
   forms: OrgForm[];
   services: Service[];
   mode: 'form' | 'homepage';
 }) {
-  if (!selected || !selectedPath) {
-    return <aside className="rounded-2xl border border-stone-200 p-4 text-sm text-stone-500 dark:border-stone-800">Select a component to edit its settings.</aside>;
-  }
+  if (!selected || !selectedPath) return null;
   const optionsText = (selected.values ?? []).map((option) => option.label).join('\n');
+  const title = paletteLabel(selected.type);
   return (
-    <aside className="max-h-[70vh] space-y-3 overflow-y-auto rounded-2xl border border-stone-200 p-4 dark:border-stone-800">
-      <p className="font-medium">{paletteLabel(selected.type)}</p>
-      <div>
-        <Label>Label</Label>
-        <Input value={selected.label ?? selected.title ?? ''} onChange={(event) => onChange({ label: event.target.value, title: event.target.value })} />
-      </div>
-      <div>
-        <Label>Key</Label>
-        <Input value={selected.key ?? ''} onChange={(event) => onChange({ key: event.target.value })} />
-      </div>
-      {mode !== 'homepage' && selected.input !== false && selected.type !== 'content' && selected.type !== 'htmlelement' ? (
-        <>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>
+            {mode === 'homepage' ? 'These settings change how this card looks on the dashboard.' : 'These settings change how this field looks and what it collects.'}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
           <div>
-            <Label>Placeholder</Label>
-            <Input value={selected.placeholder ?? ''} onChange={(event) => onChange({ placeholder: event.target.value })} />
+            <Label>Label</Label>
+            <Input value={selected.label ?? selected.title ?? ''} onChange={(event) => onChange({ label: event.target.value, title: event.target.value })} />
           </div>
-          <label className="flex items-center gap-2 text-sm">
-            <Switch checked={Boolean(selected.validate?.required)} onCheckedChange={(required) => onChange({ validate: { ...selected.validate, required } })} />
-            Required
-          </label>
-        </>
-      ) : null}
-      {mode === 'homepage' ? (
-        <label className="flex items-center gap-2 text-sm">
-          <Switch checked={selected.hidden !== true} onCheckedChange={(visible) => onChange({ hidden: !visible })} />
-          Visible on dashboard
-        </label>
-      ) : null}
-      {selected.type === 'content' || selected.type === 'htmlelement' || selected.type === 'custom' || selected.type === 'welcome' || selected.type === 'announcement' || selected.type === 'bookingCta' ? (
-        <div>
-          <Label>Text</Label>
-          <Textarea value={selected.content ?? ''} onChange={(event) => onChange({ content: event.target.value })} />
-        </div>
-      ) : null}
-      {['select', 'radio', 'selectboxes', 'survey'].includes(selected.type) ? (
-        <div>
-          <Label>Choices (one per line)</Label>
-          <Textarea value={optionsText} onChange={(event) => onChange({ values: event.target.value.split('\n').map((line) => line.trim()).filter(Boolean).map((line) => ({ label: line, value: line.toLowerCase().replace(/\s+/g, '_') })) })} />
-        </div>
-      ) : null}
-      {selected.type === 'form' || selected.type === 'resource' ? (
-        <div>
-          <Label>Form</Label>
-          <select className="h-10 w-full rounded-lg border border-stone-300 bg-white px-3 text-sm dark:border-stone-700 dark:bg-stone-950" value={selected.form ?? ''} onChange={(event) => onChange({ form: event.target.value })}>
-            <option value="">Choose a published form</option>
-            {forms.filter((form) => form.status === 'published').map((form) => (
-              <option key={form.id} value={form.id}>{form.name}</option>
-            ))}
-          </select>
-        </div>
-      ) : null}
-      {selected.type === 'featuredServices' ? (
-        <div className="space-y-2">
-          <Label>Services</Label>
-          {services.map((service) => {
-            const selectedIds = selected.serviceIds ?? [];
-            const checked = selectedIds.includes(service.id);
-            return (
-              <label key={service.id} className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={checked} onChange={() => onChange({ serviceIds: checked ? selectedIds.filter((id) => id !== service.id) : [...selectedIds, service.id] })} />
-                {service.name}
+          <div>
+            <Label>Key</Label>
+            <Input value={selected.key ?? ''} onChange={(event) => onChange({ key: event.target.value })} />
+          </div>
+          {mode !== 'homepage' && selected.input !== false && selected.type !== 'content' && selected.type !== 'htmlelement' ? (
+            <>
+              <div>
+                <Label>Placeholder</Label>
+                <Input value={selected.placeholder ?? ''} onChange={(event) => onChange({ placeholder: event.target.value })} />
+              </div>
+              <label className="flex items-center gap-2 text-sm">
+                <Switch checked={Boolean(selected.validate?.required)} onCheckedChange={(required) => onChange({ validate: { ...selected.validate, required } })} />
+                Required
               </label>
-            );
-          })}
+            </>
+          ) : null}
+          {mode === 'homepage' ? (
+            <label className="flex items-center gap-2 text-sm">
+              <Switch checked={selected.hidden !== true} onCheckedChange={(visible) => onChange({ hidden: !visible })} />
+              Visible on dashboard
+            </label>
+          ) : null}
+          {selected.type === 'content' || selected.type === 'htmlelement' || selected.type === 'custom' || selected.type === 'welcome' || selected.type === 'announcement' || selected.type === 'bookingCta' ? (
+            <div>
+              <Label>Text</Label>
+              <Textarea value={selected.content ?? ''} onChange={(event) => onChange({ content: event.target.value })} />
+            </div>
+          ) : null}
+          {['select', 'radio', 'selectboxes', 'survey'].includes(selected.type) ? (
+            <div>
+              <Label>Choices (one per line)</Label>
+              <Textarea value={optionsText} onChange={(event) => onChange({ values: event.target.value.split('\n').map((line) => line.trim()).filter(Boolean).map((line) => ({ label: line, value: line.toLowerCase().replace(/\s+/g, '_') })) })} />
+            </div>
+          ) : null}
+          {selected.type === 'form' || selected.type === 'resource' ? (
+            <div>
+              <Label>Form</Label>
+              <select className="h-10 w-full rounded-lg border border-stone-300 bg-white px-3 text-sm dark:border-stone-700 dark:bg-stone-950" value={selected.form ?? ''} onChange={(event) => onChange({ form: event.target.value })}>
+                <option value="">Choose a published form</option>
+                {forms.filter((form) => form.status === 'published').map((form) => (
+                  <option key={form.id} value={form.id}>{form.name}</option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+          {selected.type === 'featuredServices' ? (
+            <div className="space-y-2">
+              <Label>Services</Label>
+              {services.map((service) => {
+                const selectedIds = selected.serviceIds ?? [];
+                const checked = selectedIds.includes(service.id);
+                return (
+                  <label key={service.id} className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={checked} onChange={() => onChange({ serviceIds: checked ? selectedIds.filter((id) => id !== service.id) : [...selectedIds, service.id] })} />
+                    {service.name}
+                  </label>
+                );
+              })}
+            </div>
+          ) : null}
         </div>
-      ) : null}
-    </aside>
+      </DialogContent>
+    </Dialog>
   );
 }
 

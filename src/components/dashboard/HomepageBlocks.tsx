@@ -1,7 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Calendar, Scissors, UserCircle, Users } from 'lucide-react';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { CollapsibleBox, ResponsiveTable, ResponsiveTabs, columnsClass } from '@/components/builder/ResponsiveLayout';
 import { FormioRenderer, collectRequiredGaps } from '@/components/forms/FormioRenderer';
@@ -21,7 +20,7 @@ export const DEFAULT_HOMEPAGE_BLOCKS: HomepageBlock[] = [
   { id: 'announcement', type: 'announcement', visible: false, title: '', body: '' },
   { id: 'stats', type: 'stats', visible: true },
   { id: 'setup', type: 'setup', visible: true },
-  { id: 'bookingCta', type: 'bookingCta', visible: true, title: 'Booking link', body: 'Share this with clients so they can book online.' },
+  { id: 'bookingCta', type: 'bookingCta', visible: false, title: 'Booking link', body: 'Share this with clients so they can book online.' },
   { id: 'featuredServices', type: 'featuredServices', visible: false, serviceIds: [] },
   { id: 'upcoming', type: 'upcoming', visible: true },
   { id: 'revenue', type: 'revenue', visible: true },
@@ -39,7 +38,6 @@ export function HomepageBlocks({
   orgId,
   blocks,
   showSetup,
-  canEdit,
   stats,
   services,
   upcomingAppointments,
@@ -47,7 +45,6 @@ export function HomepageBlocks({
   orgId: string;
   blocks: HomepageBlock[];
   showSetup: boolean;
-  canEdit: boolean;
   stats: { upcoming: number; staff: number; services: number; customers: number };
   services: Service[];
   upcomingAppointments: Appointment[];
@@ -57,17 +54,6 @@ export function HomepageBlocks({
 
   return (
     <div className="@container min-w-0 space-y-6">
-      {canEdit ? (
-        <div className="flex justify-end">
-          <Link
-            to={`/orgs/${orgId}/settings/homepage`}
-            className="text-sm font-medium text-brand-700 hover:underline dark:text-brand-300"
-          >
-            Edit homepage
-          </Link>
-        </div>
-      ) : null}
-
       {visible.map((block) => (
         <BlockView key={block.id} block={block} ctx={ctx} />
       ))}

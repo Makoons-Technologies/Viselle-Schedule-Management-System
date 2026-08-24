@@ -1,7 +1,6 @@
 import {
   ArrowLeft,
   LayoutDashboard,
-  PanelLeftClose,
   Settings,
   UserCircle,
 } from 'lucide-react';
@@ -212,29 +211,14 @@ function NavSectionWithGroups({
 
 
 
-export function SidebarBrand({ subtitle, onUnpin }: { subtitle?: string; onUnpin?: () => void }) {
+export function SidebarBrand({ subtitle }: { subtitle?: string }) {
   return (
     <div className="border-b border-stone-200 px-4 py-5 dark:border-stone-800">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2.5">
-            <ViselleLogo size={32} />
-            <span className="text-lg font-semibold text-brand-700 dark:text-brand-300">Viselle</span>
-          </div>
-          {subtitle && <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">{subtitle}</p>}
-        </div>
-        {onUnpin ? (
-          <button
-            type="button"
-            onClick={onUnpin}
-            title="Unpin sidebar"
-            aria-label="Unpin sidebar"
-            className="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-700 dark:hover:bg-stone-800 dark:hover:text-stone-200"
-          >
-            <PanelLeftClose className="h-4 w-4" />
-          </button>
-        ) : null}
+      <div className="flex items-center gap-2.5">
+        <ViselleLogo size={32} />
+        <span className="text-lg font-semibold text-brand-700 dark:text-brand-300">Viselle</span>
       </div>
+      {subtitle && <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">{subtitle}</p>}
       <SidebarTrialStatus />
     </div>
   );

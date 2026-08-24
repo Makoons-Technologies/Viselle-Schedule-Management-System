@@ -79,7 +79,7 @@ export function HomepageEditorPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <p className="text-sm text-stone-600 dark:text-stone-400">
-          Drag cards and layout blocks onto the canvas. The live preview on the right is sized like a phone, so columns stack the same way they will on the dashboard.
+          Drag cards and layout blocks onto the canvas. Click a card or its settings icon to edit it. The live preview on the right is sized like a phone, so columns stack the same way they will on the dashboard.
         </p>
         <TrialLockedControl locked={locked}>
           <Button type="button" className="w-full sm:w-auto" disabled={locked || save.isPending} onClick={() => save.mutate()}>
@@ -107,7 +107,6 @@ export function HomepageEditorPage() {
                 orgId={orgId}
                 blocks={blocks}
                 showSetup={user?.role === 'org_owner'}
-                canEdit={false}
                 stats={{
                   upcoming: upcoming.length,
                   staff: staffQuery.data?.accounts.length ?? 0,
