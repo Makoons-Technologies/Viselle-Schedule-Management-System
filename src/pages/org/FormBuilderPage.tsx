@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { History, Settings } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { DesktopOnlyGate } from '@/components/common/DesktopOnlyGate';
 import { LoadingState } from '@/components/common/LoadingState';
 import { TrialLockedControl } from '@/components/common/TrialLockedControl';
@@ -23,10 +24,15 @@ import type { FormioSchema } from '@/types/api';
 
 const EMPTY: FormioSchema = { display: 'form', components: [] };
 
+function schemasMatch(left: FormioSchema, right: FormioSchema) {
+  return JSON.stringify(left ?? EMPTY) === JSON.stringify(right ?? EMPTY);
+}
+
 export function FormBuilderPage() {
   const orgId = useOrgId();
   const { formId } = useParams<{ formId: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const locked = useOrgWriteLocked();
   const queryClient = useQueryClient();
   const canEdit = user?.role === 'org_owner' || user?.role === 'platform_owner';
@@ -34,6 +40,8 @@ export function FormBuilderPage() {
   const [schema, setSchema] = useState<FormioSchema>(EMPTY);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [versionsOpen, setVersionsOpen] = useState(false);
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
 
   const formQuery = useQuery({
     queryKey: ['form', orgId, formId],
@@ -107,12 +115,26 @@ export function FormBuilderPage() {
   }
 
   const version = formVersionLabel(form);
+  const dirty = useMemo(
+    () => name.trim() !== form.name || !schemasMatch(schema, form.schema ?? EMPTY),
+    [form.name, form.schema, name, schema],
+  );
+  const formsListPath = `/orgs/${orgId}/forms`;
+
+  const goBack = () => navigate(formsListPath);
+  const handleBack = () => {
+    if (dirty) {
+      setLeaveOpen(true);
+      return;
+    }
+    goBack();
+  };
 
   return (
     <div className="space-y-4">
       <SettingsBackHeader
         title={form.name}
-        backTo={`/orgs/${orgId}/forms`}
+        onBack={handleBack}
         actions={
           <div className="hidden items-center gap-2 md:flex">
             <Button size="sm" variant="outline" asChild>
@@ -128,14 +150,16 @@ export function FormBuilderPage() {
               <Settings className="h-4 w-4" />
               <span className="sr-only">Form settings</span>
             </Button>
+            {dirty ? (
+              <TrialLockedControl locked={locked}>
+                <Button variant="outline" disabled={locked || save.isPending} onClick={() => save.mutate()}>
+                  {save.isPending ? 'Saving…' : 'Save'}
+                </Button>
+              </TrialLockedControl>
+            ) : null}
             <TrialLockedControl locked={locked}>
-              <Button variant="outline" disabled={locked || save.isPending} onClick={() => save.mutate()}>
-                {save.isPending ? 'Saving…' : 'Save'}
-              </Button>
-            </TrialLockedControl>
-            <TrialLockedControl locked={locked}>
-              <Button disabled={locked || publish.isPending} onClick={() => publish.mutate()}>
-                {form.status === 'published' ? 'Save & keep published' : 'Publish'}
+              <Button disabled={locked || publish.isPending} onClick={() => setPublishOpen(true)}>
+                {publish.isPending ? 'Publishing…' : 'Save and publish'}
               </Button>
             </TrialLockedControl>
           </div>
@@ -180,6 +204,35 @@ export function FormBuilderPage() {
         formId={form.id}
         locked={locked}
         currentVersion={form.currentVersion}
+      />
+      <ConfirmDialog
+        open={publishOpen}
+        onOpenChange={setPublishOpen}
+        title="Save and publish?"
+        description={
+          form.status === 'published'
+            ? 'This replaces the live form your team and clients use. Continue?'
+            : 'This publishes the form so your team can fill it out. Continue?'
+        }
+        confirmLabel="Save and publish"
+        loading={publish.isPending}
+        onConfirm={() => {
+          publish.mutate(undefined, {
+            onSuccess: () => setPublishOpen(false),
+          });
+        }}
+      />
+      <ConfirmDialog
+        open={leaveOpen}
+        onOpenChange={setLeaveOpen}
+        title="Leave without saving?"
+        description="You have unsaved changes. If you go back now, those edits will be lost."
+        confirmLabel="Leave"
+        destructive
+        onConfirm={() => {
+          setLeaveOpen(false);
+          goBack();
+        }}
       />
     </div>
   );
