@@ -7,6 +7,7 @@ import { cn, formatLongDate, formatTime } from '@/lib/utils';
 import { MakeRecurringDialog } from '@/components/appointments/MakeRecurringDialog';
 import { EditRecurringDialog } from '@/components/appointments/EditRecurringDialog';
 import { AppointmentCheckoutSheet } from '@/components/appointments/AppointmentCheckoutSheet';
+import { SendInvoiceDialog } from '@/components/receipts/SendInvoiceDialog';
 import { EditAppointmentDialog } from '@/components/appointments/EditAppointmentDialog';
 import { NoteHistoryList } from '@/components/appointments/CustomerServiceNoteHistory';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
@@ -81,6 +82,7 @@ export function AppointmentDetailSheet({
   const [deleteSeriesOpen, setDeleteSeriesOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [missedConfirmOpen, setMissedConfirmOpen] = useState(false);
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
 
   useEffect(() => {
     if (!trialExpired) return;
@@ -91,6 +93,7 @@ export function AppointmentDetailSheet({
     setDeleteSeriesOpen(false);
     setCheckoutOpen(false);
     setMissedConfirmOpen(false);
+    setInvoiceOpen(false);
   }, [trialExpired]);
 
   const occurrenceDateFromProps = occurrenceStartTime?.slice(0, 10);
@@ -446,6 +449,16 @@ export function AppointmentDetailSheet({
                         </Button>
                       )}
 
+                      {permissions.canManageVisitPayment && (
+                          <Button
+                            variant="outline"
+                            className={pillOutline}
+                            onClick={() => setInvoiceOpen(true)}
+                          >
+                            {data.appointment.paymentStatus === 'paid' ? 'Send receipt' : 'Send invoice'}
+                          </Button>
+                        )}
+
                       <Button
                         variant="outline"
                         className={pillOutline}
@@ -512,6 +525,15 @@ export function AppointmentDetailSheet({
                 queryClient.invalidateQueries({ queryKey: ['appointments', orgId] });
                 queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId, 'info'] });
               }}
+            />
+            <SendInvoiceDialog
+              orgId={orgId}
+              appointmentId={data.appointment.id}
+              open={invoiceOpen}
+              status={data.appointment.paymentStatus === 'paid' ? 'paid' : 'unpaid'}
+              customerEmail={data.customer?.email}
+              customerPhone={data.customer?.phone}
+              onOpenChange={setInvoiceOpen}
             />
             <EditAppointmentDialog
               orgId={orgId}

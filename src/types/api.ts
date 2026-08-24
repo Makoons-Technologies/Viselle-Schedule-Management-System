@@ -1132,3 +1132,75 @@ export interface StaffPayoutPreview {
   rows: StaffPayoutPreviewRow[];
   recentPayouts: StaffPayoutLedgerRow[];
 }
+
+export type InvoiceStatus = 'unpaid' | 'paid';
+export type ReceiptChannel = 'print' | 'sms' | 'email' | 'none';
+export type MerchantPrintStatus = 'printed' | 'skipped' | 'failed';
+
+export interface InvoiceLineSnapshot {
+  description: string;
+  quantity: number;
+  unitPriceCents: number;
+  lineTotalCents: number;
+}
+
+export interface Invoice {
+  id: string;
+  organizationId: string;
+  customerId?: string | null;
+  appointmentId?: string | null;
+  saleId?: string | null;
+  status: InvoiceStatus;
+  amountCents: number;
+  currency: string;
+  publicToken: string;
+  lineItems: InvoiceLineSnapshot[];
+  sentAt?: string | null;
+  sentChannel?: 'email' | 'sms' | null;
+  paidAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReceiptSnapshot {
+  organizationName: string;
+  customerName: string;
+  lineItems: InvoiceLineSnapshot[];
+  subtotalCents: number;
+  tipCents: number;
+  totalCents: number;
+  paidAt: string;
+  paymentMethod: string;
+}
+
+export interface DeliverReceiptResult {
+  receipt: ReceiptSnapshot;
+  merchantPrint: { status: MerchantPrintStatus; attempted: boolean };
+  invoice: Invoice | null;
+  publicUrl: string | null;
+  smsPaused: boolean;
+  smsPausedMessage: string | null;
+}
+
+export interface SendInvoiceResult {
+  invoice: Invoice;
+  publicUrl: string;
+  smsPaused: boolean;
+  smsPausedMessage: string | null;
+  customerPrefill: { email: string | null; phone: string | null };
+}
+
+export interface PublicInvoiceView {
+  invoice: {
+    id: string;
+    status: InvoiceStatus;
+    amountCents: number;
+    currency: string;
+    lineItems: InvoiceLineSnapshot[];
+    paidAt?: string | null;
+  };
+  organizationName: string;
+  customerName: string;
+  canPayOnline: boolean;
+  publishableKey: string | null;
+}

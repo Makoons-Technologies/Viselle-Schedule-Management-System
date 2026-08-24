@@ -54,6 +54,7 @@ import { FormBuilderPage } from '@/pages/org/FormBuilderPage';
 import { FormFillPage } from '@/pages/org/FormFillPage';
 import { FormSubmissionsPage } from '@/pages/org/FormSubmissionsPage';
 import { PublicFormPage } from '@/pages/public/PublicFormPage';
+import { PublicInvoicePage } from '@/pages/public/PublicInvoicePage';
 import { GiftCardsPage } from '@/pages/org/GiftCardsPage';
 import { RecurringPage } from '@/pages/org/RecurringPage';
 import { StaffAdminPermissionsPage } from '@/pages/staff/StaffAdminPermissionsPage';
@@ -110,6 +111,7 @@ export const appRoutes = [
   { path: '/website', element: <Navigate to="/#websites" replace /> },
   { path: '/book/:slug', element: <PublicBookingPage /> },
   { path: '/f/:shareToken', element: <PublicFormPage /> },
+  { path: '/invoice/:token', element: <PublicInvoicePage /> },
   { path: '/book/:slug/manage/:token', element: <ManageBookingPage /> },
   { path: '/login', element: <LoginPage /> },
   { path: '/forgot-password', element: <ForgotPasswordPage /> },

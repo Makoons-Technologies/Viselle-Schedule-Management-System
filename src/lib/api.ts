@@ -85,6 +85,11 @@ import type {
   StaffPayoutPreview,
   StaffPayoutPreviewRow,
   StaffPayoutSettings,
+  DeliverReceiptResult,
+  SendInvoiceResult,
+  PublicInvoiceView,
+  ReceiptChannel,
+  InvoiceStatus,
 } from '@/types/api';
 
 const TOKEN_KEY = 'viselle_auth_token';
@@ -789,7 +794,7 @@ export const orgApi = {
     data: { lines: CheckoutLineInput[]; tipCents: number; giftCardCode?: string },
   ) =>
     apiClient
-      .post(`/organizations/${orgId}/appointments/${appointmentId}/checkout/cash`, data)
+      .post<{ sale: { id: string } }>(`/organizations/${orgId}/appointments/${appointmentId}/checkout/cash`, data)
       .then((r) => r.data),
   checkoutCard: (
     orgId: string,
@@ -807,7 +812,7 @@ export const orgApi = {
       .then((r) => r.data),
   confirmCheckoutCard: (orgId: string, appointmentId: string, paymentIntentId: string) =>
     apiClient
-      .post<{ confirmed: true }>(
+      .post<{ confirmed: true; saleIds?: string[] }>(
         `/organizations/${orgId}/appointments/${appointmentId}/checkout/card/confirm`,
         { paymentIntentId },
       )
@@ -839,7 +844,47 @@ export const orgApi = {
       .then((r) => r.data),
   confirmBatchCheckoutCard: (orgId: string, paymentIntentId: string) =>
     apiClient
-      .post<{ confirmed: true }>(`/organizations/${orgId}/checkout/batch/card/confirm`, {
+      .post<{ confirmed: true; saleIds?: string[] }>(`/organizations/${orgId}/checkout/batch/card/confirm`, {
+        paymentIntentId,
+      })
+      .then((r) => r.data),
+
+  deliverReceipt: (
+    orgId: string,
+    data: {
+      saleIds: string[];
+      customerChannel: ReceiptChannel;
+      destination?: string;
+      printerConfigured?: boolean;
+      stripeReaderId?: string;
+    },
+  ) => apiClient.post<DeliverReceiptResult>(`/organizations/${orgId}/receipts`, data).then((r) => r.data),
+
+  sendInvoice: (
+    orgId: string,
+    data: {
+      appointmentId?: string;
+      saleId?: string;
+      status: InvoiceStatus;
+      channel: 'email' | 'sms';
+      destination?: string;
+    },
+  ) => apiClient.post<SendInvoiceResult>(`/organizations/${orgId}/invoices`, data).then((r) => r.data),
+
+  getPublicInvoice: (token: string) =>
+    apiClient.get<PublicInvoiceView>(`/public/invoices/${token}`).then((r) => r.data),
+  startPublicInvoicePay: (token: string) =>
+    apiClient
+      .post<{
+        paymentIntentId: string;
+        clientSecret: string;
+        stripeAccountId: string;
+        publishableKey: string | null;
+      }>(`/public/invoices/${token}/pay`)
+      .then((r) => r.data),
+  confirmPublicInvoicePay: (token: string, paymentIntentId: string) =>
+    apiClient
+      .post<{ invoice: { id: string; status: InvoiceStatus } }>(`/public/invoices/${token}/confirm`, {
         paymentIntentId,
       })
       .then((r) => r.data),

@@ -8,6 +8,7 @@ import { cn, formatCurrency } from '@/lib/utils';
 import type { BatchCheckoutAppointmentInput, CheckoutLineInput } from '@/types/api';
 import { CardUnavailableHint } from '@/components/appointments/CardUnavailableHint';
 import { CheckoutProductPickerDialog } from '@/components/appointments/CheckoutProductPickerDialog';
+import { ReceiptChoiceDialog } from '@/components/receipts/ReceiptChoiceDialog';
 import { KeyedCardForm } from '@/components/appointments/KeyedCardForm';
 import { isCardCheckoutReady } from '@/lib/stripe-connect-hint';
 import { sectionHeadingClass, sectionMutedClass } from '@/components/common/Panel';
@@ -51,7 +52,11 @@ export function BatchCheckoutSheet({ orgId, items, open, onOpenChange, onSuccess
   const [customTipDollars, setCustomTipDollars] = useState('');
   const [productPickerFor, setProductPickerFor] = useState<string | null>(null);
   const [cashConfirmOpen, setCashConfirmOpen] = useState(false);
+  const [receiptOpen, setReceiptOpen] = useState(false);
+  const [receiptSaleIds, setReceiptSaleIds] = useState<string[]>([]);
+  const [usedTerminalReader, setUsedTerminalReader] = useState(false);
   const customTipInputRef = useRef<HTMLInputElement>(null);
+  const pendingSaleIdsRef = useRef<string[]>([]);
 
   useEffect(() => {
     if (open) {
@@ -62,6 +67,10 @@ export function BatchCheckoutSheet({ orgId, items, open, onOpenChange, onSuccess
       setCustomTipDollars('');
       setProductPickerFor(null);
       setCashConfirmOpen(false);
+      setReceiptOpen(false);
+      setReceiptSaleIds([]);
+      setUsedTerminalReader(false);
+      pendingSaleIdsRef.current = [];
     }
   }, [open, items]);
 
@@ -120,11 +129,12 @@ export function BatchCheckoutSheet({ orgId, items, open, onOpenChange, onSuccess
 
   const cashMutation = useMutation({
     mutationFn: () => orgApi.batchCheckoutCash(orgId, { appointments: batchAppointments, tipCents: 0 }),
-    onSuccess: () => {
+    onSuccess: (result) => {
       toast.success('Cash payment recorded');
       setCashConfirmOpen(false);
-      onSuccess();
-      onOpenChange(false);
+      setUsedTerminalReader(false);
+      setReceiptSaleIds(result.saleIds ?? []);
+      setReceiptOpen(true);
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -164,19 +174,31 @@ export function BatchCheckoutSheet({ orgId, items, open, onOpenChange, onSuccess
 
   const completeCardPayment = useCallback(() => {
     toast.success('Card payment successful');
-    onSuccess();
-    onOpenChange(false);
-  }, [onSuccess, onOpenChange]);
+    setReceiptSaleIds(pendingSaleIdsRef.current);
+    setReceiptOpen(true);
+  }, []);
 
-  const startTerminalCheckout = useCallback(
-    () => orgApi.batchCheckoutCard(orgId, { appointments: batchAppointments, tipCents, mode: 'terminal' }),
-    [orgId, batchAppointments, tipCents],
-  );
+  const startTerminalCheckout = useCallback(async () => {
+    const result = await orgApi.batchCheckoutCard(orgId, {
+      appointments: batchAppointments,
+      tipCents,
+      mode: 'terminal',
+    });
+    pendingSaleIdsRef.current = result.saleIds ?? [];
+    setUsedTerminalReader(true);
+    return result;
+  }, [orgId, batchAppointments, tipCents]);
 
-  const startOnlineCheckout = useCallback(
-    () => orgApi.batchCheckoutCard(orgId, { appointments: batchAppointments, tipCents, mode: 'online' }),
-    [orgId, batchAppointments, tipCents],
-  );
+  const startOnlineCheckout = useCallback(async () => {
+    const result = await orgApi.batchCheckoutCard(orgId, {
+      appointments: batchAppointments,
+      tipCents,
+      mode: 'online',
+    });
+    pendingSaleIdsRef.current = result.saleIds ?? [];
+    setUsedTerminalReader(false);
+    return result;
+  }, [orgId, batchAppointments, tipCents]);
 
   const confirmPaymentIntent = useCallback(
     (paymentIntentId: string) => orgApi.confirmBatchCheckoutCard(orgId, paymentIntentId),
@@ -559,6 +581,18 @@ export function BatchCheckoutSheet({ orgId, items, open, onOpenChange, onSuccess
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ReceiptChoiceDialog
+        orgId={orgId}
+        open={receiptOpen}
+        saleIds={receiptSaleIds}
+        usedTerminalReader={usedTerminalReader}
+        onFinished={() => {
+          setReceiptOpen(false);
+          onSuccess();
+          onOpenChange(false);
+        }}
+      />
     </Sheet>
   );
 }

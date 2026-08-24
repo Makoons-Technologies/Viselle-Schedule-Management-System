@@ -10,6 +10,7 @@ import { cn, formatCurrency } from '@/lib/utils';
 import type { AppointmentInfo, CheckoutLineInput } from '@/types/api';
 import { CardUnavailableHint } from '@/components/appointments/CardUnavailableHint';
 import { CheckoutProductPickerDialog } from '@/components/appointments/CheckoutProductPickerDialog';
+import { ReceiptChoiceDialog } from '@/components/receipts/ReceiptChoiceDialog';
 import { KeyedCardForm } from '@/components/appointments/KeyedCardForm';
 import { isCardCheckoutReady } from '@/lib/stripe-connect-hint';
 import { sectionHeadingClass, sectionMutedClass } from '@/components/common/Panel';
@@ -92,8 +93,12 @@ export function AppointmentCheckoutSheet({
   const [rebookOpen, setRebookOpen] = useState(false);
   const [rebookDate, setRebookDate] = useState('');
   const [rebookTime, setRebookTime] = useState('10:00');
+  const [receiptOpen, setReceiptOpen] = useState(false);
+  const [receiptSaleIds, setReceiptSaleIds] = useState<string[]>([]);
+  const [usedTerminalReader, setUsedTerminalReader] = useState(false);
   const customTipInputRef = useRef<HTMLInputElement>(null);
   const giftCardInputRef = useRef<HTMLInputElement>(null);
+  const pendingSaleIdRef = useRef<string | null>(null);
 
   const service = appointmentInfo?.service;
   const appointment = appointmentInfo?.appointment;
@@ -116,6 +121,10 @@ export function AppointmentCheckoutSheet({
       setGiftCardCodeInput('');
       setAppliedGiftCardCode(undefined);
       setRebookOpen(false);
+      setReceiptOpen(false);
+      setReceiptSaleIds([]);
+      setUsedTerminalReader(false);
+      pendingSaleIdRef.current = null;
     }
   }, [open, service, appointment?.id, appointment?.serviceId]);
 
@@ -184,10 +193,12 @@ export function AppointmentCheckoutSheet({
         tipCents: 0,
         ...(appliedGiftCardCode ? { giftCardCode: appliedGiftCardCode } : {}),
       }),
-    onSuccess: () => {
+    onSuccess: (result) => {
       toast.success(coveredByGiftCard ? 'Sale completed with gift card' : 'Cash payment recorded');
       setCashConfirmOpen(false);
-      finishPaid();
+      setUsedTerminalReader(false);
+      setReceiptSaleIds(result.sale?.id ? [result.sale.id] : []);
+      setReceiptOpen(true);
     },
     onError: (err: unknown) => toast.error(getApiErrorMessage(err, 'Could not complete checkout')),
   });
@@ -237,8 +248,9 @@ export function AppointmentCheckoutSheet({
 
   const completeCardPayment = useCallback(() => {
     toast.success('Card payment successful');
-    finishPaid();
-  }, [finishPaid]);
+    setReceiptSaleIds(pendingSaleIdRef.current ? [pendingSaleIdRef.current] : []);
+    setReceiptOpen(true);
+  }, []);
 
   const rebookMutation = useMutation({
     mutationFn: () =>
@@ -259,15 +271,19 @@ export function AppointmentCheckoutSheet({
 
   const appointmentId = appointment?.id;
 
-  const startTerminalCheckout = useCallback(
-    () => orgApi.checkoutCard(orgId, appointmentId!, { ...checkoutPayload, mode: 'terminal' }),
-    [orgId, appointmentId, checkoutPayload],
-  );
+  const startTerminalCheckout = useCallback(async () => {
+    const result = await orgApi.checkoutCard(orgId, appointmentId!, { ...checkoutPayload, mode: 'terminal' });
+    pendingSaleIdRef.current = result.saleId;
+    setUsedTerminalReader(true);
+    return result;
+  }, [orgId, appointmentId, checkoutPayload]);
 
-  const startOnlineCheckout = useCallback(
-    () => orgApi.checkoutCard(orgId, appointmentId!, { ...checkoutPayload, mode: 'online' }),
-    [orgId, appointmentId, checkoutPayload],
-  );
+  const startOnlineCheckout = useCallback(async () => {
+    const result = await orgApi.checkoutCard(orgId, appointmentId!, { ...checkoutPayload, mode: 'online' });
+    pendingSaleIdRef.current = result.saleId;
+    setUsedTerminalReader(false);
+    return result;
+  }, [orgId, appointmentId, checkoutPayload]);
 
   const confirmPaymentIntent = useCallback(
     (paymentIntentId: string) =>
@@ -787,6 +803,19 @@ export function AppointmentCheckoutSheet({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ReceiptChoiceDialog
+        orgId={orgId}
+        open={receiptOpen}
+        saleIds={receiptSaleIds}
+        customerEmail={appointmentInfo?.customer?.email}
+        customerPhone={appointmentInfo?.customer?.phone}
+        usedTerminalReader={usedTerminalReader}
+        onFinished={() => {
+          setReceiptOpen(false);
+          finishPaid();
+        }}
+      />
 
       <Dialog
         open={rebookOpen}
