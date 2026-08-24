@@ -898,6 +898,22 @@ export const orgApi = {
     apiClient
       .post<{ submission: OrgFormSubmission }>(`/organizations/${orgId}/forms/${formId}/submissions`, data)
       .then((r) => r.data),
+  getFormSubmission: (orgId: string, formId: string, submissionId: string) =>
+    apiClient
+      .get<{ submission: OrgFormSubmission }>(`/organizations/${orgId}/forms/${formId}/submissions/${submissionId}`)
+      .then((r) => r.data),
+  updateFormSubmission: (
+    orgId: string,
+    formId: string,
+    submissionId: string,
+    data: { data?: Record<string, unknown>; customerId?: string | null },
+  ) =>
+    apiClient
+      .patch<{ submission: OrgFormSubmission }>(
+        `/organizations/${orgId}/forms/${formId}/submissions/${submissionId}`,
+        data,
+      )
+      .then((r) => r.data),
   getPublicForm: (shareToken: string) =>
     apiClient.get<{ form: PublicOrgForm }>(`/public/forms/${shareToken}`).then((r) => r.data),
   submitPublicForm: (shareToken: string, data: { data: Record<string, unknown> }) =>

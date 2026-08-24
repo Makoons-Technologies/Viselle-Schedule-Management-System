@@ -85,8 +85,10 @@ export function FormSubmissionsPage() {
         <LoadingState />
       ) : (
         <FormSubmissionsList
+          orgId={orgId}
           form={form}
           submissions={submissionsQuery.data?.submissions ?? []}
+          customers={customers}
           customerName={customerName}
         />
       )}

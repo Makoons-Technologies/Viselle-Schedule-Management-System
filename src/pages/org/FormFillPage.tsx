@@ -131,8 +131,10 @@ export function FormFillPage() {
         <div className="space-y-3">
           <h2 className="text-sm font-medium text-stone-500">Recent answers</h2>
           <FormSubmissionsList
+            orgId={orgId}
             form={form}
             submissions={(submissionsQuery.data?.submissions ?? []).slice(0, 8)}
+            customers={customers}
             customerName={customerName}
           />
         </div>

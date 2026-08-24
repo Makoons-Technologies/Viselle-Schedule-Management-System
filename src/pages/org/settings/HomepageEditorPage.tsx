@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { PreviewFrame, PreviewModeToggle, type PreviewMode } from '@/components/builder/PreviewFrame';
 import { blocksToSchema, schemaToBlocks } from '@/components/builder/schemaTree';
 import { DesktopOnlyGate } from '@/components/common/DesktopOnlyGate';
 import { DEFAULT_HOMEPAGE_BLOCKS, HomepageBlocks } from '@/components/dashboard/HomepageBlocks';
@@ -19,6 +20,7 @@ export function HomepageEditorPage() {
   const queryClient = useQueryClient();
   const locked = useOrgWriteLocked();
   const [schema, setSchema] = useState<FormioSchema>(() => blocksToSchema(DEFAULT_HOMEPAGE_BLOCKS));
+  const [previewMode, setPreviewMode] = useState<PreviewMode>('mobile');
 
   const layoutQuery = useQuery({
     queryKey: ['homepage-layout', orgId],
@@ -79,7 +81,7 @@ export function HomepageEditorPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <p className="text-sm text-stone-600 dark:text-stone-400">
-          Drag cards and layout blocks onto the canvas. Click a card or its settings icon to edit it. The live preview on the right is sized like a phone, so columns stack the same way they will on the dashboard.
+          Drag cards and layout blocks onto the canvas. Click a card or its settings icon to edit it. Switch the preview between full and mobile to see how columns behave.
         </p>
         <TrialLockedControl locked={locked}>
           <Button type="button" className="w-full sm:w-auto" disabled={locked || save.isPending} onClick={() => save.mutate()}>
@@ -91,7 +93,13 @@ export function HomepageEditorPage() {
         title="Homepage editor needs a bigger screen"
         description="Drag-and-drop layout is easier with a mouse and a wide canvas. The dashboard itself still works on phones."
       >
-        <div className="grid min-w-0 items-start gap-6 2xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <div
+          className={
+            previewMode === 'mobile'
+              ? 'grid min-w-0 items-start gap-6 2xl:grid-cols-[minmax(0,1fr)_22rem]'
+              : 'grid min-w-0 items-start gap-6'
+          }
+        >
           <FormioBuilder
             schema={schema}
             onChange={setSchema}
@@ -101,8 +109,13 @@ export function HomepageEditorPage() {
             services={servicesQuery.data?.services ?? []}
           />
           <div className="min-w-0 overflow-hidden rounded-2xl border border-dashed border-stone-300 p-4 dark:border-stone-700">
-            <p className="mb-4 text-sm font-medium text-stone-500">Phone preview</p>
-            <div className="mx-auto w-full max-w-sm overflow-hidden">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-medium text-stone-500">
+                {previewMode === 'mobile' ? 'Mobile preview' : 'Full preview'}
+              </p>
+              <PreviewModeToggle value={previewMode} onChange={setPreviewMode} />
+            </div>
+            <PreviewFrame mode={previewMode}>
               <HomepageBlocks
                 orgId={orgId}
                 blocks={blocks}
@@ -116,7 +129,7 @@ export function HomepageEditorPage() {
                 services={servicesQuery.data?.services ?? []}
                 upcomingAppointments={upcoming}
               />
-            </div>
+            </PreviewFrame>
           </div>
         </div>
       </DesktopOnlyGate>

@@ -1,5 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Copy, FileText, Search, Settings } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import {
+  ClipboardPen,
+  Copy,
+  CopyPlus,
+  FileText,
+  Inbox,
+  Pencil,
+  Search,
+  Settings,
+  Trash2,
+  Upload,
+  EyeOff,
+} from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -33,6 +46,69 @@ type VisibilityFilter = 'all' | 'public' | 'private';
 
 async function copyText(value: string) {
   await navigator.clipboard.writeText(value);
+}
+
+function FormIconButton({
+  label,
+  icon: Icon,
+  badge,
+  variant = 'outline',
+  disabled,
+  onClick,
+  to,
+}: {
+  label: string;
+  icon: LucideIcon;
+  badge?: number;
+  variant?: 'default' | 'outline' | 'ghost';
+  disabled?: boolean;
+  onClick?: () => void;
+  to?: string;
+}) {
+  const button = (
+    <Button
+      type={to ? undefined : 'button'}
+      size="icon"
+      variant={variant}
+      className="relative h-8 w-8"
+      disabled={disabled}
+      title={label}
+      aria-label={label}
+      onClick={onClick}
+      asChild={Boolean(to)}
+    >
+      {to ? (
+        <Link to={to}>
+          <Icon className="h-4 w-4" />
+          {badge != null ? (
+            <span className="absolute -right-1.5 -top-1.5 min-w-4 rounded-full bg-stone-800 px-1 text-[10px] leading-4 text-white dark:bg-stone-200 dark:text-stone-900">
+              {badge}
+            </span>
+          ) : null}
+          <span className="sr-only">{label}</span>
+        </Link>
+      ) : (
+        <>
+          <Icon className="h-4 w-4" />
+          {badge != null ? (
+            <span className="absolute -right-1.5 -top-1.5 min-w-4 rounded-full bg-stone-800 px-1 text-[10px] leading-4 text-white dark:bg-stone-200 dark:text-stone-900">
+              {badge}
+            </span>
+          ) : null}
+          <span className="sr-only">{label}</span>
+        </>
+      )}
+    </Button>
+  );
+
+  return (
+    <span className="group relative inline-flex">
+      {button}
+      <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-md bg-stone-900 px-2 py-1 text-xs text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 dark:bg-stone-100 dark:text-stone-900">
+        {label}
+      </span>
+    </span>
+  );
 }
 
 export function FormsPage() {
@@ -202,83 +278,84 @@ export function FormsPage() {
                         <Badge variant="outline">{formIsPublic(form) ? 'Public' : 'Private'}</Badge>
                       </div>
                     </div>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       {form.status === 'published' ? (
-                        <Button size="sm" asChild>
-                          <Link to={`/orgs/${orgId}/forms/${form.id}/fill`}>Fill out</Link>
-                        </Button>
+                        <FormIconButton
+                          label="Fill out"
+                          icon={ClipboardPen}
+                          variant="default"
+                          to={`/orgs/${orgId}/forms/${form.id}/fill`}
+                        />
                       ) : null}
                       {canEdit ? (
-                        <Button size="sm" variant="outline" asChild>
-                          <Link to={`/orgs/${orgId}/forms/${form.id}`}>Edit</Link>
-                        </Button>
+                        <FormIconButton label="Edit" icon={Pencil} to={`/orgs/${orgId}/forms/${form.id}`} />
                       ) : null}
                       {canEdit ? (
-                        <Button size="sm" variant="outline" asChild>
-                          <Link to={`/orgs/${orgId}/forms/${form.id}/submissions`}>
-                            Answers{typeof form.submissionCount === 'number' ? ` (${form.submissionCount})` : ''}
-                          </Link>
-                        </Button>
+                        <FormIconButton
+                          label={
+                            typeof form.submissionCount === 'number'
+                              ? `Answers (${form.submissionCount})`
+                              : 'Answers'
+                          }
+                          icon={Inbox}
+                          badge={form.submissionCount}
+                          to={`/orgs/${orgId}/forms/${form.id}/submissions`}
+                        />
                       ) : null}
                       {canEdit && form.status !== 'published' ? (
                         <TrialLockedControl locked={locked}>
-                          <Button
-                            size="sm"
+                          <FormIconButton
+                            label="Publish"
+                            icon={Upload}
+                            variant="default"
                             disabled={locked || updateStatus.isPending}
                             onClick={() => updateStatus.mutate({ id: form.id, status: 'published' })}
-                          >
-                            Publish
-                          </Button>
+                          />
                         </TrialLockedControl>
                       ) : null}
                       {canEdit && form.status === 'published' ? (
                         <TrialLockedControl locked={locked}>
-                          <Button
-                            size="sm"
+                          <FormIconButton
+                            label="Unpublish"
+                            icon={EyeOff}
                             variant="ghost"
                             disabled={locked || updateStatus.isPending}
                             onClick={() => updateStatus.mutate({ id: form.id, status: 'draft' })}
-                          >
-                            Unpublish
-                          </Button>
+                          />
                         </TrialLockedControl>
                       ) : null}
                       {canEdit ? (
                         <TrialLockedControl locked={locked}>
-                          <Button
-                            size="sm"
-                            variant="outline"
+                          <FormIconButton
+                            label="Duplicate"
+                            icon={CopyPlus}
                             disabled={locked || duplicate.isPending}
                             onClick={() => duplicate.mutate(form.id)}
-                          >
-                            Duplicate
-                          </Button>
+                          />
                         </TrialLockedControl>
                       ) : null}
-                      <Button
-                        size="sm"
-                        variant="outline"
+                      <FormIconButton
+                        label={canCopyPublic ? 'Copy public link' : 'Copy private link'}
+                        icon={Copy}
                         onClick={() => {
                           const url = canCopyPublic ? publicUrl : formPrivateUrl(orgId, form.id);
                           copyText(url)
                             .then(() => toast.success(canCopyPublic ? 'Public link copied' : 'Private link copied'))
                             .catch(() => toast.error('Could not copy link'));
                         }}
-                      >
-                        <Copy className="h-3.5 w-3.5" />
-                        Copy link
-                      </Button>
+                      />
                       {canEdit ? (
-                        <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setSettingsForm(form)}>
-                          <Settings className="h-4 w-4" />
-                          <span className="sr-only">Form settings</span>
-                        </Button>
+                        <FormIconButton label="Settings" icon={Settings} onClick={() => setSettingsForm(form)} />
                       ) : null}
                       {canEdit ? (
                         <TrialLockedControl locked={locked}>
-                          <Button size="sm" variant="ghost" disabled={locked} onClick={() => setDeleteTarget(form)}>
-                            Delete
-                          </Button>
+                          <FormIconButton
+                            label="Delete"
+                            icon={Trash2}
+                            variant="ghost"
+                            disabled={locked}
+                            onClick={() => setDeleteTarget(form)}
+                          />
                         </TrialLockedControl>
                       ) : null}
                     </div>

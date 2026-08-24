@@ -15,6 +15,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import { ChevronDown, GripVertical, Search, Settings, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { PreviewFrame, PreviewModeToggle, type PreviewMode } from '@/components/builder/PreviewFrame';
 import { FormioRenderer } from '@/components/forms/FormioRenderer';
 import { GROUP_LABEL, allKeys, cloneComponent, isLayoutType, paletteFor, paletteLabel, type PaletteGroup, type PaletteItem } from '@/components/builder/palette';
 import { componentAt, insertAt, moveTo, removeAt, resolveDropTarget, updateAt } from '@/components/builder/schemaTree';
@@ -70,6 +71,7 @@ export function FormioBuilder({
   const components = schema.components ?? [];
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [preview, setPreview] = useState<Record<string, unknown>>({});
+  const [previewMode, setPreviewMode] = useState<PreviewMode>('mobile');
   const [paletteQuery, setPaletteQuery] = useState('');
   const [openGroups, setOpenGroups] = useState<Set<PaletteGroup>>(
     () => new Set(mode === 'homepage' ? ['homepage', 'layout'] : ['basic', 'layout']),
@@ -197,10 +199,15 @@ export function FormioBuilder({
           />
           {mode === 'form' ? (
             <div className="rounded-2xl border border-dashed border-stone-300 p-4 dark:border-stone-700">
-              <p className="mb-3 text-sm font-medium text-stone-500">Phone preview</p>
-              <div className="mx-auto w-full max-w-sm rounded-3xl border border-stone-200 p-4 dark:border-stone-800">
-                <FormioRenderer schema={schema} value={preview} onChange={setPreview} orgId={orgId} />
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-medium text-stone-500">
+                  {previewMode === 'mobile' ? 'Mobile preview' : 'Full preview'}
+                </p>
+                <PreviewModeToggle value={previewMode} onChange={setPreviewMode} />
               </div>
+              <PreviewFrame mode={previewMode}>
+                <FormioRenderer schema={schema} value={preview} onChange={setPreview} orgId={orgId} />
+              </PreviewFrame>
             </div>
           ) : null}
         </div>
