@@ -12,9 +12,17 @@ export function customerDisplayName(customer: Pick<Customer, 'firstName' | 'last
   return `${customer.firstName} ${customer.lastName}`.trim();
 }
 
+export function sortCustomersByName(customers: Customer[]): Customer[] {
+  return customers.slice().sort((a, b) => {
+    const last = a.lastName.localeCompare(b.lastName);
+    return last !== 0 ? last : a.firstName.localeCompare(b.firstName);
+  });
+}
+
 export function filterCustomersForAutocomplete(
   customers: Customer[],
   query: string,
+  limit = 8,
 ): Customer[] {
   const trimmed = query.trim();
   if (!trimmed) return [];
@@ -22,18 +30,18 @@ export function filterCustomersForAutocomplete(
   const lower = trimmed.toLowerCase();
   const phoneDigits = normalizePhone(trimmed);
 
-  return customers
-    .filter((customer) => {
-      const name = customerDisplayName(customer).toLowerCase();
-      const email = customer.email?.toLowerCase() ?? '';
-      const phone = customer.phone ? normalizePhone(customer.phone) : '';
+  const matches = customers.filter((customer) => {
+    const name = customerDisplayName(customer).toLowerCase();
+    const email = customer.email?.toLowerCase() ?? '';
+    const phone = customer.phone ? normalizePhone(customer.phone) : '';
 
-      if (name.includes(lower)) return true;
-      if (email.includes(lower)) return true;
-      if (phoneDigits.length >= 3 && phone.includes(phoneDigits)) return true;
-      return false;
-    })
-    .slice(0, 8);
+    if (name.includes(lower)) return true;
+    if (email.includes(lower)) return true;
+    if (phoneDigits.length >= 3 && phone.includes(phoneDigits)) return true;
+    return false;
+  });
+
+  return Number.isFinite(limit) ? matches.slice(0, limit) : matches;
 }
 
 export function findCustomerByEmail(customers: Customer[], email: string): Customer | undefined {
