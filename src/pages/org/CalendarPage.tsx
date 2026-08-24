@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { addDays, format, parseISO, startOfDay } from 'date-fns';
 import { ListChecks, Plus, SlidersHorizontal, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -23,6 +23,7 @@ import { CreateAppointmentDialog } from '@/components/appointments/CreateAppoint
 import { StaffScheduleFilter } from '@/components/calendar/StaffScheduleFilter';
 import { WeekAppointmentTimeGrid } from '@/components/calendar/WeekAppointmentTimeGrid';
 import { appointmentDayKey, appointmentStartMinutes } from '@/components/calendar/week-time-grid';
+import { isCalendarSlotInHours } from '@/lib/availability';
 import {
   localDateFromDayKey,
   revealStaffAfterCreate,
@@ -157,6 +158,25 @@ export function CalendarPage() {
     if (user?.accountId) return user.accountId;
     return memberships.find((membership) => membership.organizationId === orgId)?.accountId ?? null;
   }, [user?.accountId, memberships, orgId]);
+
+  const hourAccountIds = useMemo(() => {
+    if (isMobile) {
+      if (myAppointmentsOnly && myAccountId) return [myAccountId];
+      return staffAccounts.map((account) => account.id);
+    }
+    return resolvedStaffIds;
+  }, [isMobile, myAccountId, myAppointmentsOnly, resolvedStaffIds, staffAccounts]);
+
+  const availabilityQueries = useQueries({
+    queries: hourAccountIds.map((accountId) => ({
+      queryKey: ['availability-rules', orgId, accountId] as const,
+      queryFn: () => orgApi.listAvailabilityRules(orgId, accountId),
+      enabled: Boolean(orgId && accountId),
+    })),
+  });
+  const hoursPending = availabilityQueries.some((query) => query.isPending);
+  const hoursRules = availabilityQueries.flatMap((query) => query.data?.availabilityRules ?? []);
+  const constrainToHours = !hoursPending && hoursRules.some((rule) => rule.isActive);
 
   const activeRecurringRuleIds = useMemo(
     () =>
@@ -517,6 +537,15 @@ export function CalendarPage() {
                   {APPOINTMENT_CALENDAR_LIP_LABEL[state]}
                 </div>
               ))}
+            {constrainToHours ? (
+              <div className="flex items-center gap-2 px-2 py-1.5 text-sm text-stone-700 dark:text-stone-200">
+                <span
+                  className="h-4 w-6 rounded-sm bg-stone-200/80 ring-1 ring-stone-300/80 dark:bg-stone-800/75 dark:ring-stone-600"
+                  aria-hidden
+                />
+                Outside hours
+              </div>
+            ) : null}
           </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -558,6 +587,11 @@ export function CalendarPage() {
         onDayHeaderRangeSelect={handleDayHeaderRangeSelect}
         onDayHeaderActivate={(dayKey) => applyDayZoom([dayKey])}
         focusSlot={focusSlot}
+        isSlotInHours={
+          constrainToHours
+            ? (dayKey, minutes) => isCalendarSlotInHours(hoursRules, dayKey, minutes)
+            : undefined
+        }
         onEmptySlotClick={
           permissions.canCreateAppointments && !selectMode
             ? ({ dayKey, minutes }) => {
