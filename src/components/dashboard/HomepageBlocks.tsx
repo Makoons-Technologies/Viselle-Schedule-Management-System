@@ -12,6 +12,7 @@ import { OrgSetupChecklist } from '@/components/onboarding/OrgSetupChecklist';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getApiErrorMessage, orgApi } from '@/lib/api';
+import { liveFormSchema } from '@/lib/forms';
 import { formatCurrency } from '@/lib/utils';
 import type { Appointment, HomepageBlock, Service } from '@/types/api';
 
@@ -55,7 +56,7 @@ export function HomepageBlocks({
   const visible = blocks.filter((block) => block.visible !== false);
 
   return (
-    <div className="min-w-0 space-y-6">
+    <div className="@container min-w-0 space-y-6">
       {canEdit ? (
         <div className="flex justify-end">
           <Link
@@ -175,11 +176,11 @@ function Widget({ block, ctx }: { block: HomepageBlock; ctx: HomepageContext }) 
       { label: 'Customers', value: ctx.stats.customers, icon: UserCircle },
     ];
     return (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 @min-[36rem]:grid-cols-2 @min-[56rem]:grid-cols-4">
         {items.map((item) => (
-          <Card key={item.label}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-stone-500 dark:text-stone-400">{item.label}</CardTitle>
+          <Card key={item.label} className="min-w-0">
+            <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
+              <CardTitle className="text-sm font-medium leading-snug text-stone-500 dark:text-stone-400">{item.label}</CardTitle>
               <item.icon className="h-4 w-4 text-brand-600 dark:text-brand-400" />
             </CardHeader>
             <CardContent>
@@ -290,15 +291,16 @@ function HomepageForm({ orgId, formId }: { orgId: string; formId?: string }) {
   if (!formId) return <p className="text-sm text-stone-500">Choose a published form to show here.</p>;
   if (query.isLoading) return <p className="text-sm text-stone-500">Loading form…</p>;
   const form = query.data?.form;
-  if (!form?.schema) return <p className="text-sm text-stone-500">Form not found.</p>;
+  if (!form) return <p className="text-sm text-stone-500">Form not found.</p>;
   if (form.status !== 'published') {
     return <p className="text-sm text-stone-500">Publish this form before collecting answers on the dashboard.</p>;
   }
 
-  const missing = collectRequiredGaps(form.schema, values);
+  const schema = liveFormSchema(form);
+  const missing = collectRequiredGaps(schema, values);
   return (
     <div className="min-w-0 space-y-4">
-      <FormioRenderer schema={form.schema} value={values} onChange={setValues} orgId={orgId} />
+      <FormioRenderer schema={schema} value={values} onChange={setValues} orgId={orgId} />
       <Button
         className="h-11 w-full sm:w-auto"
         disabled={submit.isPending}

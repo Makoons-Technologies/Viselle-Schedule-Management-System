@@ -25,7 +25,7 @@ export function FormioRenderer({
 }) {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   return (
-    <div className="space-y-4">
+    <div className="@container space-y-4">
       {(schema.components ?? []).map((component, index) => (
         <FormioField
           key={component.key || `${component.type}-${index}`}

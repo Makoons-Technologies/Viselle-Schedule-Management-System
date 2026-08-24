@@ -43,10 +43,11 @@ export function SettingsDetailLayout() {
   }
 
   const hideBack = isPlanPage && needsBilling;
-  const wide = isPlanPage || location.pathname.endsWith('/homepage');
+  const isHomepage = location.pathname.endsWith('/homepage');
+  const wide = isPlanPage || isHomepage;
 
   return (
-    <div className={wide ? 'mx-auto max-w-6xl' : 'mx-auto max-w-3xl'}>
+    <div className={isHomepage ? 'w-full max-w-none' : wide ? 'mx-auto max-w-6xl' : 'mx-auto max-w-3xl'}>
       {!hideBack && (
         <SettingsBackHeader title={getSettingsTitle(location.pathname)} backTo={`/orgs/${orgId}/settings`} />
       )}

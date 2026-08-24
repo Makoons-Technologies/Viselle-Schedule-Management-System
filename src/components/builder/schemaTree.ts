@@ -1,3 +1,4 @@
+import { isLayoutType } from '@/components/builder/palette';
 import type { FormioComponent, FormioSchema, HomepageBlock } from '@/types/api';
 
 export type DropTarget =
@@ -164,6 +165,110 @@ export function reorder(components: FormioComponent[], path: string, from: numbe
   const list = readList(components, path);
   if (!list) return components;
   return writeList(components, path, moveInList(list, from, to));
+}
+
+function lastIndex(path: string): number | null {
+  const segments = parseSegments(path);
+  const last = segments[segments.length - 1];
+  return last?.kind === 'index' ? last.index : null;
+}
+
+function targetParentPath(target: DropTarget): string {
+  if (target.kind === 'root') return '';
+  if (target.kind === 'components') return target.parentPath;
+  if (target.kind === 'column') return `${target.parentPath}.c${target.columnIndex}`;
+  return `${target.parentPath}.r${target.rowIndex}c${target.cellIndex}`;
+}
+
+function segmentsEqual(left: Segment[], right: Segment[]) {
+  if (left.length !== right.length) return false;
+  return left.every((segment, index) => JSON.stringify(segment) === JSON.stringify(right[index]));
+}
+
+function shiftPathAfterRemove(path: string, fromPath: string): string {
+  const fromSegs = parseSegments(fromPath);
+  const pathSegs = parseSegments(path);
+  const fromLast = fromSegs[fromSegs.length - 1];
+  if (fromLast?.kind !== 'index' || pathSegs.length <= fromSegs.length - 1) return path;
+  const fromParent = fromSegs.slice(0, -1);
+  if (!segmentsEqual(pathSegs.slice(0, fromParent.length), fromParent)) return path;
+  const next = pathSegs[fromParent.length];
+  if (next?.kind === 'index' && next.index > fromLast.index) next.index -= 1;
+  return serialize(pathSegs);
+}
+
+function adjustTargetAfterRemoval(target: DropTarget, fromPath: string): DropTarget {
+  const fromIndex = lastIndex(fromPath);
+  const fromParent = parentPath(fromPath);
+  if (target.kind === 'root') {
+    if (fromParent === '' && fromIndex !== null && target.index > fromIndex) {
+      return { ...target, index: target.index - 1 };
+    }
+    return target;
+  }
+  const shiftedParent = shiftPathAfterRemove(target.parentPath, fromPath);
+  const sameList = fromParent === targetParentPath({ ...target, parentPath: target.parentPath });
+  const nextIndex =
+    sameList && fromIndex !== null && target.index > fromIndex ? target.index - 1 : target.index;
+  if (target.kind === 'components') return { ...target, parentPath: shiftedParent, index: nextIndex };
+  if (target.kind === 'column') {
+    return { ...target, parentPath: shiftedParent, index: sameList ? nextIndex : target.index };
+  }
+  return { ...target, parentPath: shiftedParent, index: sameList ? nextIndex : target.index };
+}
+
+function isTargetInsidePath(target: DropTarget, fromPath: string) {
+  if (!fromPath) return false;
+  const dest = targetParentPath(target);
+  return dest === fromPath || dest.startsWith(`${fromPath}.`);
+}
+
+export function moveTo(components: FormioComponent[], fromPath: string, target: DropTarget): FormioComponent[] {
+  const found = walkItem(components, fromPath);
+  if (!found || isTargetInsidePath(target, fromPath)) return components;
+  const item = structuredClone(found.node);
+  const without = removeAt(components, fromPath);
+  return insertAt(without, adjustTargetAfterRemoval(target, fromPath), item);
+}
+
+export function retargetIntoLayout(components: FormioComponent[], target: DropTarget): DropTarget {
+  const path = layoutPathForTarget(target);
+  if (!path) return target;
+  const component = componentAt(components, path);
+  if (!component || !isLayoutType(component.type)) return target;
+  if (component.columns?.length) {
+    return { kind: 'column', parentPath: path, columnIndex: 0, index: 999 };
+  }
+  if (component.rows?.length) {
+    return { kind: 'cell', parentPath: path, rowIndex: 0, cellIndex: 0, index: 999 };
+  }
+  if (component.type === 'tabs' && component.components?.length) {
+    return { kind: 'components', parentPath: `${path}.0`, index: 999 };
+  }
+  return { kind: 'components', parentPath: path, index: 999 };
+}
+
+export function resolveDropTarget(
+  components: FormioComponent[],
+  overId: string | null | undefined,
+  activeId: string,
+): DropTarget | null {
+  if (!overId || overId === activeId) return null;
+  const raw = parseDrop(overId);
+  if (!raw) return null;
+  return retargetIntoLayout(components, raw);
+}
+
+export function layoutPathForTarget(target: DropTarget): string | null {
+  if (target.index >= 999) return null;
+  if (target.kind === 'root') return String(target.index);
+  if (target.kind === 'components') {
+    return target.parentPath ? `${target.parentPath}.${target.index}` : String(target.index);
+  }
+  if (target.kind === 'column') {
+    return `${target.parentPath}.c${target.columnIndex}.${target.index}`;
+  }
+  return `${target.parentPath}.r${target.rowIndex}c${target.cellIndex}.${target.index}`;
 }
 
 export function parseDrop(overId: string): DropTarget | null {

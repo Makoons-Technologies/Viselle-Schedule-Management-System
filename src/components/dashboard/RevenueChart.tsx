@@ -71,9 +71,9 @@ export function RevenueChart({ orgId }: { orgId: string }) {
   const hasRevenue = series.some((point) => point.revenueCents > 0);
 
   return (
-    <Card>
-      <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
+    <Card className="@container min-w-0">
+      <CardHeader className="flex flex-col gap-4 @min-[32rem]:flex-row @min-[32rem]:items-start @min-[32rem]:justify-between">
+        <div className="min-w-0">
           <CardTitle className="text-base">Revenue Over Time</CardTitle>
           <CardDescription>
             Paid sales revenue (approximate profit; excludes any product or supply costs)
@@ -84,7 +84,7 @@ export function RevenueChart({ orgId }: { orgId: string }) {
             )}
           </CardDescription>
         </div>
-        <Tabs value={granularity} onValueChange={(value) => setGranularity(value as RevenueGranularity)}>
+        <Tabs className="shrink-0" value={granularity} onValueChange={(value) => setGranularity(value as RevenueGranularity)}>
           <TabsList>
             {GRANULARITY_OPTIONS.map((option) => (
               <TabsTrigger key={option.value} value={option.value}>

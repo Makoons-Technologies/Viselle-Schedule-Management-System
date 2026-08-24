@@ -5,9 +5,9 @@ export function columnsClass(count: number) {
   const n = Math.min(Math.max(count, 1), 4);
   return cn(
     'grid min-w-0 grid-cols-1 gap-4',
-    n === 2 && 'sm:grid-cols-2',
-    n === 3 && 'md:grid-cols-3',
-    n >= 4 && 'sm:grid-cols-2 xl:grid-cols-4',
+    n === 2 && '@min-[28rem]:grid-cols-2',
+    n === 3 && '@min-[36rem]:grid-cols-3',
+    n >= 4 && '@min-[28rem]:grid-cols-2 @min-[56rem]:grid-cols-4',
   );
 }
 
@@ -21,7 +21,7 @@ export function ResponsiveTabs({
   const [open, setOpen] = useState(0);
   return (
     <div className="min-w-0">
-      <div className="-mx-1 mb-3 flex gap-2 overflow-x-auto px-1 pb-1 md:hidden">
+      <div className="-mx-1 mb-3 flex gap-2 overflow-x-auto px-1 pb-1 @min-[28rem]:hidden">
         {tabs.map((tab, index) => (
           <button
             key={tab.key || index}
@@ -36,7 +36,7 @@ export function ResponsiveTabs({
           </button>
         ))}
       </div>
-      <div className="mb-3 hidden border-b border-stone-200 md:flex dark:border-stone-800">
+      <div className="mb-3 hidden border-b border-stone-200 @min-[28rem]:flex dark:border-stone-800">
         {tabs.map((tab, index) => (
           <button
             key={tab.key || index}
@@ -65,7 +65,7 @@ export function ResponsiveTable({
 }) {
   return (
     <>
-      <div className="space-y-3 md:hidden">
+      <div className="space-y-3 @min-[28rem]:hidden">
         {rows.flatMap((row, rowIndex) =>
           row.map((_, cellIndex) => (
             <div key={`${rowIndex}-${cellIndex}`} className="min-w-0 space-y-3 rounded-xl border border-stone-200 p-3 dark:border-stone-800">
@@ -74,7 +74,7 @@ export function ResponsiveTable({
           )),
         )}
       </div>
-      <div className="hidden max-w-full overflow-x-auto md:block">
+      <div className="hidden max-w-full overflow-x-auto @min-[28rem]:block">
         <table className="w-full min-w-[32rem] border-collapse">
           <tbody>
             {rows.map((row, rowIndex) => (

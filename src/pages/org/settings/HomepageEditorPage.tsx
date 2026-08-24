@@ -91,7 +91,7 @@ export function HomepageEditorPage() {
         title="Homepage editor needs a bigger screen"
         description="Drag-and-drop layout is easier with a mouse and a wide canvas. The dashboard itself still works on phones."
       >
-        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="grid min-w-0 items-start gap-6 2xl:grid-cols-[minmax(0,1fr)_22rem]">
           <FormioBuilder
             schema={schema}
             onChange={setSchema}
@@ -100,9 +100,9 @@ export function HomepageEditorPage() {
             forms={formsQuery.data?.forms ?? []}
             services={servicesQuery.data?.services ?? []}
           />
-          <div className="min-w-0 rounded-2xl border border-dashed border-stone-300 p-4 dark:border-stone-700">
+          <div className="min-w-0 overflow-hidden rounded-2xl border border-dashed border-stone-300 p-4 dark:border-stone-700">
             <p className="mb-4 text-sm font-medium text-stone-500">Phone preview</p>
-            <div className="mx-auto w-full max-w-sm">
+            <div className="mx-auto w-full max-w-sm overflow-hidden">
               <HomepageBlocks
                 orgId={orgId}
                 blocks={blocks}
