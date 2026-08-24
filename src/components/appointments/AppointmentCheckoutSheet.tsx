@@ -1,8 +1,9 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Banknote, ChevronLeft, CreditCard, Loader2, Minus, PackagePlus, Plus } from 'lucide-react';
+import { Banknote, ChevronLeft, CreditCard, Gift, Loader2, Minus, PackagePlus, Plus } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { orgApi } from '@/lib/api';
+import { getApiErrorMessage, orgApi } from '@/lib/api';
+import { formatCreditCount } from '@/lib/credits';
 import { useCardCheckout } from '@/hooks/useCardCheckout';
 import { useStaffPermissions } from '@/hooks/useStaffPermissions';
 import { cn, formatCurrency } from '@/lib/utils';
@@ -86,10 +87,13 @@ export function AppointmentCheckoutSheet({
   const [customTipDollars, setCustomTipDollars] = useState('');
   const [productPickerOpen, setProductPickerOpen] = useState(false);
   const [cashConfirmOpen, setCashConfirmOpen] = useState(false);
+  const [giftCardCodeInput, setGiftCardCodeInput] = useState('');
+  const [appliedGiftCardCode, setAppliedGiftCardCode] = useState<string | undefined>();
   const [rebookOpen, setRebookOpen] = useState(false);
   const [rebookDate, setRebookDate] = useState('');
   const [rebookTime, setRebookTime] = useState('10:00');
   const customTipInputRef = useRef<HTMLInputElement>(null);
+  const giftCardInputRef = useRef<HTMLInputElement>(null);
 
   const service = appointmentInfo?.service;
   const appointment = appointmentInfo?.appointment;
@@ -109,6 +113,8 @@ export function AppointmentCheckoutSheet({
       setCustomTipDollars('');
       setProductPickerOpen(false);
       setCashConfirmOpen(false);
+      setGiftCardCodeInput('');
+      setAppliedGiftCardCode(undefined);
       setRebookOpen(false);
     }
   }, [open, service, appointment?.id, appointment?.serviceId]);
@@ -126,14 +132,30 @@ export function AppointmentCheckoutSheet({
   });
 
   const previewQuery = useQuery({
-    queryKey: ['checkout-preview', orgId, appointment?.id, lines],
+    queryKey: ['checkout-preview', orgId, appointment?.id, lines, tipCents, appliedGiftCardCode],
     queryFn: () =>
-      orgApi.previewCheckout(orgId, appointment!.id, { lines, tipCents: 0 }),
+      orgApi.previewCheckout(orgId, appointment!.id, {
+        lines,
+        tipCents,
+        ...(appliedGiftCardCode ? { giftCardCode: appliedGiftCardCode } : {}),
+      }),
     enabled: open && !!appointment && lines.length > 0,
   });
 
+  const checkoutPayload = useMemo(
+    () => ({
+      lines,
+      tipCents,
+      ...(appliedGiftCardCode ? { giftCardCode: appliedGiftCardCode } : {}),
+    }),
+    [lines, tipCents, appliedGiftCardCode],
+  );
+
   const subtotalCents = previewQuery.data?.subtotalCents ?? 0;
-  const totalCents = subtotalCents + tipCents;
+  const giftCardAppliedCents = previewQuery.data?.giftCardAppliedCents ?? 0;
+  const dueCents = previewQuery.data?.totalCents ?? subtotalCents + tipCents;
+  const totalCents = dueCents;
+  const coveredByGiftCard = giftCardAppliedCents > 0 && dueCents < 1;
 
   useEffect(() => {
     if (typeof tipSelection === 'number' && subtotalCents > 0) {
@@ -156,13 +178,39 @@ export function AppointmentCheckoutSheet({
   }, []);
 
   const cashMutation = useMutation({
-    mutationFn: () => orgApi.checkoutCash(orgId, appointment!.id, { lines, tipCents: 0 }),
+    mutationFn: () =>
+      orgApi.checkoutCash(orgId, appointment!.id, {
+        lines,
+        tipCents: 0,
+        ...(appliedGiftCardCode ? { giftCardCode: appliedGiftCardCode } : {}),
+      }),
     onSuccess: () => {
-      toast.success('Cash payment recorded');
+      toast.success(coveredByGiftCard ? 'Sale completed with gift card' : 'Cash payment recorded');
       setCashConfirmOpen(false);
       finishPaid();
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: unknown) => toast.error(getApiErrorMessage(err, 'Could not complete checkout')),
+  });
+
+  const applyGiftCardMutation = useMutation({
+    mutationFn: async (code: string) => {
+      const { giftCard } = await orgApi.lookupGiftCard(orgId, { code });
+      const preview = await orgApi.previewCheckout(orgId, appointment!.id, {
+        lines,
+        tipCents,
+        giftCardCode: giftCard.code,
+      });
+      return { giftCard, preview };
+    },
+    onSuccess: ({ giftCard, preview }) => {
+      if (!preview.giftCardAppliedCents) {
+        toast.error('This gift card has no remaining credits');
+        return;
+      }
+      setAppliedGiftCardCode(giftCard.code);
+      setGiftCardCodeInput(giftCard.code);
+    },
+    onError: (err: unknown) => toast.error(getApiErrorMessage(err, 'That gift card could not be used')),
   });
 
   const setProductQuantity = useCallback((productId: string, quantity: number) => {
@@ -212,13 +260,13 @@ export function AppointmentCheckoutSheet({
   const appointmentId = appointment?.id;
 
   const startTerminalCheckout = useCallback(
-    () => orgApi.checkoutCard(orgId, appointmentId!, { lines, tipCents, mode: 'terminal' }),
-    [orgId, appointmentId, lines, tipCents],
+    () => orgApi.checkoutCard(orgId, appointmentId!, { ...checkoutPayload, mode: 'terminal' }),
+    [orgId, appointmentId, checkoutPayload],
   );
 
   const startOnlineCheckout = useCallback(
-    () => orgApi.checkoutCard(orgId, appointmentId!, { lines, tipCents, mode: 'online' }),
-    [orgId, appointmentId, lines, tipCents],
+    () => orgApi.checkoutCard(orgId, appointmentId!, { ...checkoutPayload, mode: 'online' }),
+    [orgId, appointmentId, checkoutPayload],
   );
 
   const confirmPaymentIntent = useCallback(
@@ -405,6 +453,76 @@ export function AppointmentCheckoutSheet({
                   )}
                 </section>
                 )}
+
+                <section className="space-y-3">
+                  <h4 className={cn(sectionHeadingClass)}>Gift card</h4>
+                  {appliedGiftCardCode ? (
+                    <div className="rounded-lg border border-stone-200 bg-white px-3 py-2.5 text-sm dark:border-stone-700 dark:bg-stone-800">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-mono font-medium tracking-wide">{appliedGiftCardCode}</p>
+                          <p className={cn('mt-0.5 text-xs', sectionMutedClass)}>
+                            {previewQuery.data?.giftCardRemainingCents != null
+                              ? `${formatCreditCount(previewQuery.data.giftCardRemainingCents)} left after this sale`
+                              : 'Applied to this sale'}
+                          </p>
+                        </div>
+                        <span className="shrink-0 font-semibold tabular-nums">
+                          −{formatCurrency(giftCardAppliedCents)}
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="mt-1 px-0 text-stone-500"
+                        onClick={() => {
+                          setAppliedGiftCardCode(undefined);
+                          setGiftCardCodeInput('');
+                          giftCardInputRef.current?.focus();
+                        }}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ) : (
+                    <form
+                      className="flex flex-col gap-2 sm:flex-row"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        const code = giftCardCodeInput.trim();
+                        if (code.replace(/[^A-Za-z0-9]/g, '').length < 4) {
+                          toast.error('Enter the gift card code');
+                          return;
+                        }
+                        applyGiftCardMutation.mutate(code);
+                      }}
+                    >
+                      <Input
+                        ref={giftCardInputRef}
+                        value={giftCardCodeInput}
+                        onChange={(event) => setGiftCardCodeInput(event.target.value.toUpperCase())}
+                        autoCapitalize="characters"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        placeholder="Enter code"
+                        className="font-mono tracking-wide sm:flex-1"
+                      />
+                      <Button
+                        type="submit"
+                        variant="outline"
+                        disabled={applyGiftCardMutation.isPending || !giftCardCodeInput.trim()}
+                      >
+                        {applyGiftCardMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Gift className="h-4 w-4" />
+                        )}
+                        Apply
+                      </Button>
+                    </form>
+                  )}
+                </section>
               </div>
             )}
 
@@ -423,8 +541,16 @@ export function AppointmentCheckoutSheet({
                       {formatCurrency(tipCents)}
                     </span>
                   </div>
+                  {giftCardAppliedCents > 0 && (
+                    <div className={cn('mt-2 flex justify-between', sectionMutedClass)}>
+                      <span>Gift card {appliedGiftCardCode}</span>
+                      <span className="tabular-nums text-stone-900 dark:text-stone-100">
+                        −{formatCurrency(giftCardAppliedCents)}
+                      </span>
+                    </div>
+                  )}
                   <div className="mt-3 flex justify-between border-t border-stone-200 pt-3 text-lg font-semibold dark:border-stone-700">
-                    <span>Total</span>
+                    <span>{giftCardAppliedCents > 0 ? 'Due' : 'Total'}</span>
                     <span className="tabular-nums">{formatCurrency(totalCents)}</span>
                   </div>
                 </section>
@@ -545,20 +671,31 @@ export function AppointmentCheckoutSheet({
             <footer className="shrink-0 border-t border-stone-200 bg-white px-6 py-4 dark:border-stone-800 dark:bg-stone-900">
               <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
                 {previewQuery.data && (
-                  <p className="text-sm font-medium tabular-nums text-stone-900 dark:text-stone-100">
-                    Subtotal {formatCurrency(previewQuery.data.subtotalCents)}
-                  </p>
+                  <div className="text-sm tabular-nums text-stone-900 dark:text-stone-100">
+                    <p className={cn(giftCardAppliedCents > 0 && sectionMutedClass)}>
+                      Subtotal {formatCurrency(previewQuery.data.subtotalCents)}
+                    </p>
+                    {giftCardAppliedCents > 0 && (
+                      <>
+                        <p className={sectionMutedClass}>
+                          Gift card −{formatCurrency(giftCardAppliedCents)}
+                        </p>
+                        <p className="font-medium">Due {formatCurrency(dueCents)}</p>
+                      </>
+                    )}
+                  </div>
                 )}
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <Button
                     type="button"
-                    variant="outline"
+                    variant={coveredByGiftCard ? 'default' : 'outline'}
                     onClick={() => setCashConfirmOpen(true)}
                     disabled={!previewQuery.data || previewQuery.isLoading || cashMutation.isPending}
                   >
-                    <Banknote className="h-4 w-4" />
-                    Pay with cash
+                    {coveredByGiftCard ? <Gift className="h-4 w-4" /> : <Banknote className="h-4 w-4" />}
+                    {coveredByGiftCard ? 'Complete with gift card' : 'Pay with cash'}
                   </Button>
+                  {!coveredByGiftCard && (
                   <div className="flex flex-col gap-1.5">
                     {!cardReady && (
                       <CardUnavailableHint
@@ -576,6 +713,7 @@ export function AppointmentCheckoutSheet({
                       {cardReady ? 'Pay with card' : 'Card unavailable'}
                     </Button>
                   </div>
+                  )}
                 </div>
               </div>
             </footer>
@@ -603,13 +741,24 @@ export function AppointmentCheckoutSheet({
       <Dialog open={cashConfirmOpen} onOpenChange={setCashConfirmOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirm cash payment</DialogTitle>
+            <DialogTitle>{coveredByGiftCard ? 'Complete with gift card' : 'Confirm cash payment'}</DialogTitle>
             <DialogDescription>
-              Mark this sale as paid in cash for{' '}
-              <span className="font-semibold text-stone-900 dark:text-stone-100">
-                {formatCurrency(subtotalCents)}
-              </span>
-              ?
+              {coveredByGiftCard ? (
+                <>
+                  Apply gift card{' '}
+                  <span className="font-semibold text-stone-900 dark:text-stone-100">{appliedGiftCardCode}</span>
+                  {' '}and mark this sale paid. Nothing is due.
+                </>
+              ) : (
+                <>
+                  Mark this sale as paid
+                  {giftCardAppliedCents > 0 ? ' in cash after the gift card' : ' in cash'} for{' '}
+                  <span className="font-semibold text-stone-900 dark:text-stone-100">
+                    {formatCurrency(dueCents)}
+                  </span>
+                  ?
+                </>
+              )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -628,10 +777,12 @@ export function AppointmentCheckoutSheet({
             >
               {cashMutation.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
+              ) : coveredByGiftCard ? (
+                <Gift className="h-4 w-4" />
               ) : (
                 <Banknote className="h-4 w-4" />
               )}
-              Confirm paid
+              {coveredByGiftCard ? 'Complete sale' : 'Confirm paid'}
             </Button>
           </DialogFooter>
         </DialogContent>

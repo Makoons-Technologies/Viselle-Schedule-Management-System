@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Copy, Gift } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/common/EmptyState';
 import { LoadingState } from '@/components/common/LoadingState';
@@ -19,24 +19,16 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { getApiErrorMessage, orgApi } from '@/lib/api';
-import { CENTS_PER_CREDIT, creditValueHint, formatCredits } from '@/lib/credits';
+import { CENTS_PER_CREDIT, creditValueHint, formatCreditBalance, formatCredits } from '@/lib/credits';
 import { cn, formatCurrency } from '@/lib/utils';
-import type { Customer, GiftCard, GiftCardStatus } from '@/types/api';
-
-const NONE = 'none';
+import type { GiftCard, GiftCardStatus } from '@/types/api';
 
 function centsFromDollars(dollars: string): number {
   return Math.round(Number(dollars) * 100);
-}
-
-function customerLabel(customer: Customer | undefined): string {
-  if (!customer) return 'Not assigned';
-  return `${customer.firstName} ${customer.lastName}`.trim();
 }
 
 function statusLabel(status: GiftCardStatus): string {
@@ -65,37 +57,22 @@ export function GiftCardsPage() {
   const trialLocked = useOrgWriteLocked();
   const queryClient = useQueryClient();
 
-  const [sellOpen, setSellOpen] = useState(false);
-  const [redeemOpen, setRedeemOpen] = useState(false);
+  const [activateOpen, setActivateOpen] = useState(false);
   const [voidTarget, setVoidTarget] = useState<GiftCard | null>(null);
   const [createdCard, setCreatedCard] = useState<GiftCard | null>(null);
 
   const [sellAmount, setSellAmount] = useState('');
   const [sellCredits, setSellCredits] = useState('');
-  const [sellCustomerId, setSellCustomerId] = useState(NONE);
-  const [sellNotes, setSellNotes] = useState('');
-
-  const [redeemCode, setRedeemCode] = useState('');
-  const [redeemAmount, setRedeemAmount] = useState('');
+  const [codeMode, setCodeMode] = useState<'auto' | 'printed'>('auto');
+  const [printedCode, setPrintedCode] = useState('');
 
   const cardsQuery = useQuery({
     queryKey: ['gift-cards', orgId],
     queryFn: () => orgApi.listGiftCards(orgId),
     enabled: !!orgId,
   });
-  const customersQuery = useQuery({
-    queryKey: ['customers', orgId],
-    queryFn: () => orgApi.listCustomers(orgId),
-    enabled: !!orgId,
-  });
-
-  const customersById = useMemo(
-    () => Object.fromEntries((customersQuery.data?.customers ?? []).map((customer) => [customer.id, customer])),
-    [customersQuery.data?.customers],
-  );
 
   const giftCards = cardsQuery.data?.giftCards ?? [];
-  const customers = customersQuery.data?.customers ?? [];
 
   const createMutation = useMutation({
     mutationFn: () => {
@@ -107,50 +84,27 @@ export function GiftCardsPage() {
       if (!Number.isFinite(creditCents) || creditCents < CENTS_PER_CREDIT) {
         throw new Error('Credits must be at least 1');
       }
+      const code = codeMode === 'printed' ? printedCode.trim() : undefined;
+      if (codeMode === 'printed' && code && code.replace(/[^A-Za-z0-9]/g, '').length < 4) {
+        throw new Error('Enter the printed code, at least 4 letters or numbers');
+      }
       return orgApi.createGiftCard(orgId, {
         amountCents,
         creditCents,
-        customerId: sellCustomerId === NONE ? undefined : sellCustomerId,
-        notes: sellNotes.trim() || undefined,
+        code,
       });
     },
     onSuccess: ({ giftCard }) => {
       setCreatedCard(giftCard);
       setSellAmount('');
       setSellCredits('');
-      setSellCustomerId(NONE);
-      setSellNotes('');
-      setSellOpen(false);
-      toast.success('Gift card ready to hand over');
+      setPrintedCode('');
+      setCodeMode('auto');
+      setActivateOpen(false);
+      toast.success('Card is ready to hand over');
       void queryClient.invalidateQueries({ queryKey: ['gift-cards', orgId] });
     },
-    onError: (error) => toast.error(getApiErrorMessage(error, 'Could not sell this gift card')),
-  });
-
-  const redeemMutation = useMutation({
-    mutationFn: () => {
-      const amountCents = centsFromDollars(redeemAmount);
-      if (!Number.isFinite(amountCents) || amountCents < 1) {
-        throw new Error('Enter an amount to take off the card');
-      }
-      const code = redeemCode.trim();
-      if (code.length < 4) throw new Error('Enter the gift card code');
-      return orgApi.redeemGiftCard(orgId, { code, amountCents });
-    },
-    onSuccess: ({ giftCard }) => {
-      const takenCents = centsFromDollars(redeemAmount);
-      setRedeemCode('');
-      setRedeemAmount('');
-      setRedeemOpen(false);
-      setCreatedCard(null);
-      toast.success(
-        giftCard.remainingCents > 0
-          ? `Used ${formatCredits(takenCents)}. ${formatCredits(giftCard.remainingCents)} left.`
-          : 'Card is used up',
-      );
-      void queryClient.invalidateQueries({ queryKey: ['gift-cards', orgId] });
-    },
-    onError: (error) => toast.error(getApiErrorMessage(error, 'Could not redeem this gift card')),
+    onError: (error) => toast.error(getApiErrorMessage(error, 'Could not activate this card')),
   });
 
   const voidMutation = useMutation({
@@ -169,26 +123,19 @@ export function GiftCardsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Gift cards"
-        description="Same credits as packages: 1 credit = $1. Sell a card at the desk, redeem it later."
+        description="Activate a card at the desk. Anyone with the code can use it at checkout."
         actions={
-          <>
-            <TrialLockedControl locked={trialLocked}>
-              <Button variant="outline" disabled={trialLocked} onClick={() => setRedeemOpen(true)}>
-                Redeem
-              </Button>
-            </TrialLockedControl>
-            <TrialLockedControl locked={trialLocked}>
-              <Button disabled={trialLocked} onClick={() => setSellOpen(true)}>
-                Sell a card
-              </Button>
-            </TrialLockedControl>
-          </>
+          <TrialLockedControl locked={trialLocked}>
+            <Button disabled={trialLocked} onClick={() => setActivateOpen(true)}>
+              Activate a card
+            </Button>
+          </TrialLockedControl>
         }
       />
 
       {createdCard && (
         <Panel className="border-brand-200 bg-brand-50 p-4 sm:p-5 dark:border-brand-900 dark:bg-brand-950/40">
-          <p className={cn('text-sm', sectionMutedClass)}>Give this code to the guest. They will need it to redeem.</p>
+          <p className={cn('text-sm', sectionMutedClass)}>Give this code to the guest. They will need it at checkout.</p>
           <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="font-mono text-2xl font-semibold tracking-[0.2em] text-stone-900 sm:text-3xl dark:text-stone-50">
               {createdCard.code}
@@ -199,11 +146,10 @@ export function GiftCardsPage() {
             </Button>
           </div>
           <p className="mt-2 text-sm text-stone-700 dark:text-stone-300">
-            {formatCredits(createdCard.remainingCents)} on the card
+            {formatCreditBalance(createdCard.remainingCents, createdCard.originalCents)}
             {createdCard.priceCents != null && createdCard.priceCents !== createdCard.originalCents
               ? ` · paid ${formatCurrency(createdCard.priceCents)}`
               : ''}
-            {createdCard.customerId ? ` · ${customerLabel(customersById[createdCard.customerId])}` : ''}
           </p>
         </Panel>
       )}
@@ -212,11 +158,11 @@ export function GiftCardsPage() {
         <EmptyState
           icon={Gift}
           title="No gift cards yet"
-          description="Sell one at the desk and hand over the code. 1 credit = $1 toward a visit."
+          description="Activate one at the desk and hand over the code. Redeem it later on checkout."
           action={
             <TrialLockedControl locked={trialLocked}>
-              <Button disabled={trialLocked} onClick={() => setSellOpen(true)}>
-                Sell a card
+              <Button disabled={trialLocked} onClick={() => setActivateOpen(true)}>
+                Activate a card
               </Button>
             </TrialLockedControl>
           }
@@ -228,7 +174,6 @@ export function GiftCardsPage() {
               <GiftCardCard
                 key={card.id}
                 card={card}
-                customerName={customerLabel(customersById[card.customerId ?? ''])}
                 trialLocked={trialLocked}
                 onVoid={() => setVoidTarget(card)}
               />
@@ -240,7 +185,6 @@ export function GiftCardsPage() {
                 <TableRow>
                   <TableHead>Code</TableHead>
                   <TableHead>Credits</TableHead>
-                  <TableHead>Guest</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead />
                 </TableRow>
@@ -249,10 +193,7 @@ export function GiftCardsPage() {
                 {giftCards.map((card) => (
                   <TableRow key={card.id}>
                     <TableCell className="font-mono font-medium tracking-wide">{card.code}</TableCell>
-                    <TableCell>
-                      {formatCredits(card.remainingCents)} / {formatCredits(card.originalCents)}
-                    </TableCell>
-                    <TableCell className="text-stone-500">{customerLabel(customersById[card.customerId ?? ''])}</TableCell>
+                    <TableCell>{formatCreditBalance(card.remainingCents, card.originalCents)}</TableCell>
                     <TableCell>
                       <Badge variant={statusVariant(card.status)}>{statusLabel(card.status)}</Badge>
                     </TableCell>
@@ -279,18 +220,22 @@ export function GiftCardsPage() {
       )}
 
       <Dialog
-        open={sellOpen}
+        open={activateOpen}
         onOpenChange={(open) => {
-          setSellOpen(open);
-          if (!open) setSellCredits('');
+          setActivateOpen(open);
+          if (!open) {
+            setSellCredits('');
+            setPrintedCode('');
+            setCodeMode('auto');
+          }
         }}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Sell a gift card</DialogTitle>
+            <DialogTitle>Activate a card</DialogTitle>
             <DialogDescription>
               Collect payment at the desk. Leave credits blank to match the price, or add a bonus (pay $50, get 75
-              credits).
+              credits). Anyone with the code can use it at checkout.
             </DialogDescription>
           </DialogHeader>
           <form
@@ -335,92 +280,48 @@ export function GiftCardsPage() {
                 centsFromDollars(sellAmount || '0'),
               )}
             </p>
-            <div className="space-y-1.5">
-              <Label>Customer (optional)</Label>
-              <Select value={sellCustomerId} onValueChange={setSellCustomerId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Not assigned" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NONE}>Not assigned</SelectItem>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id}>
-                      {customer.firstName} {customer.lastName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="gift-notes">Notes (optional)</Label>
-              <Input
-                id="gift-notes"
-                value={sellNotes}
-                onChange={(event) => setSellNotes(event.target.value)}
-                placeholder="Birthday, from mom…"
-              />
+            <div className="space-y-2">
+              <Label>Code</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant={codeMode === 'auto' ? 'default' : 'outline'}
+                  onClick={() => setCodeMode('auto')}
+                >
+                  Auto generate
+                </Button>
+                <Button
+                  type="button"
+                  variant={codeMode === 'printed' ? 'default' : 'outline'}
+                  onClick={() => setCodeMode('printed')}
+                >
+                  Use printed code
+                </Button>
+              </div>
+              {codeMode === 'printed' ? (
+                <Input
+                  value={printedCode}
+                  onChange={(event) => setPrintedCode(event.target.value.toUpperCase())}
+                  autoCapitalize="characters"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  placeholder="HBWZNHLC"
+                  className="font-mono tracking-wide"
+                  required
+                />
+              ) : (
+                <p className={cn('text-sm', sectionMutedClass)}>
+                  Viselle will create an 8-character code when you activate the card.
+                </p>
+              )}
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setSellOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setActivateOpen(false)}>
                 Cancel
               </Button>
               <TrialLockedControl locked={trialLocked}>
                 <Button type="submit" disabled={trialLocked || createMutation.isPending}>
-                  {createMutation.isPending ? 'Selling…' : 'Sell card'}
-                </Button>
-              </TrialLockedControl>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={redeemOpen} onOpenChange={setRedeemOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Redeem a gift card</DialogTitle>
-            <DialogDescription>1 credit = $1. Take the service price off the remaining credits.</DialogDescription>
-          </DialogHeader>
-          <form
-            className="space-y-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              redeemMutation.mutate();
-            }}
-          >
-            <div className="space-y-1.5">
-              <Label htmlFor="redeem-code">Code</Label>
-              <Input
-                id="redeem-code"
-                value={redeemCode}
-                onChange={(event) => setRedeemCode(event.target.value.toUpperCase())}
-                autoCapitalize="characters"
-                autoCorrect="off"
-                spellCheck={false}
-                placeholder="ABCD2345"
-                className="font-mono tracking-wide"
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="redeem-amount">Credits to use</Label>
-              <Input
-                id="redeem-amount"
-                type="number"
-                min={0.01}
-                step={0.01}
-                inputMode="decimal"
-                value={redeemAmount}
-                onChange={(event) => setRedeemAmount(event.target.value)}
-                required
-              />
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setRedeemOpen(false)}>
-                Cancel
-              </Button>
-              <TrialLockedControl locked={trialLocked}>
-                <Button type="submit" disabled={trialLocked || redeemMutation.isPending}>
-                  {redeemMutation.isPending ? 'Redeeming…' : 'Redeem'}
+                  {createMutation.isPending ? 'Activating…' : 'Activate card'}
                 </Button>
               </TrialLockedControl>
             </DialogFooter>
@@ -460,12 +361,10 @@ export function GiftCardsPage() {
 
 function GiftCardCard({
   card,
-  customerName,
   trialLocked,
   onVoid,
 }: {
   card: GiftCard;
-  customerName: string;
   trialLocked: boolean;
   onVoid: () => void;
 }) {
@@ -475,9 +374,8 @@ function GiftCardCard({
         <div className="min-w-0">
           <p className="font-mono text-lg font-semibold tracking-wide">{card.code}</p>
           <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">
-            {formatCredits(card.remainingCents)} left of {formatCredits(card.originalCents)}
+            {formatCreditBalance(card.remainingCents, card.originalCents)}
           </p>
-          <p className="mt-1 text-sm text-stone-500">{customerName}</p>
           {card.notes && <p className="mt-1 text-xs text-stone-500">{card.notes}</p>}
         </div>
         <Badge variant={statusVariant(card.status)} className="shrink-0">

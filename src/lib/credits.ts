@@ -7,10 +7,19 @@ export function creditsFromCents(cents: number): number {
   return cents / CENTS_PER_CREDIT;
 }
 
-export function formatCredits(cents: number): string {
+export function formatCreditCount(cents: number): string {
   const credits = creditsFromCents(cents);
-  const amount = Number.isInteger(credits) ? String(credits) : credits.toFixed(2).replace(/\.?0+$/, '');
+  return Number.isInteger(credits) ? String(credits) : credits.toFixed(2).replace(/\.?0+$/, '');
+}
+
+export function formatCredits(cents: number): string {
+  const amount = formatCreditCount(cents);
+  const credits = creditsFromCents(cents);
   return `${amount} credit${credits === 1 ? '' : 's'}`;
+}
+
+export function formatCreditBalance(remainingCents: number, originalCents: number): string {
+  return `${formatCreditCount(remainingCents)}/${formatCreditCount(originalCents)}`;
 }
 
 export function creditValueHint(creditCents: number, priceCents: number): string {
