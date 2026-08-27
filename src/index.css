@@ -72,6 +72,18 @@
 @utility pb-safe-or-3 {
   padding-bottom: max(0.75rem, var(--safe-area-bottom));
 }
+@utility pt-safe-add-4 {
+  padding-top: calc(1rem + var(--safe-area-top));
+}
+@utility pt-safe-add-6 {
+  padding-top: calc(1.5rem + var(--safe-area-top));
+}
+@utility pb-safe-add-4 {
+  padding-bottom: calc(1rem + var(--safe-area-bottom));
+}
+@utility pb-safe-add-6 {
+  padding-bottom: calc(1.5rem + var(--safe-area-bottom));
+}
 @utility p-safe-or-4 {
   padding-top: max(1rem, var(--safe-area-top));
   padding-right: max(1rem, var(--safe-area-right));
