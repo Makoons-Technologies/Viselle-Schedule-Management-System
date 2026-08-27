@@ -2,7 +2,11 @@
 # Cloud Agent start phase — per-boot reconciliation of the runtime services the
 # Viselle dev stack needs: the Docker daemon and the local Supabase stack.
 # Idempotent: safe to run repeatedly. Dev servers themselves run as terminals.
-set -euo pipefail
+#
+# NOTE: intentionally NOT using `set -e`. `supabase start` can return a
+# transient non-zero while containers are still coming up; we handle readiness
+# explicitly below rather than aborting mid-way (which would skip .env + seed).
+set -uo pipefail
 
 BACKEND_DIR="/agent/repos/Beauty-Backend-API"
 export DOCKER_HOST="unix:///var/run/docker.sock"
@@ -34,16 +38,32 @@ if [ ! -d "$BACKEND_DIR" ]; then
   exit 0
 fi
 
-# 3) Bring up the local Supabase stack (idempotent — fast no-op if already running).
+# 3) Bring up the local Supabase stack. May exit non-zero while still starting;
+#    we wait for readiness below instead of trusting the exit code.
 echo "==> supabase start"
-(cd "$BACKEND_DIR" && npx --yes supabase start) || {
-  echo "supabase start failed"; exit 1;
-}
+(cd "$BACKEND_DIR" && npx --yes supabase start) || echo "supabase start returned non-zero (likely still starting or already up); continuing"
+
+# 3b) Wait until the Supabase Data API (kong -> rest) actually answers before we
+#     read credentials, write .env, or seed. This is what prevents the "running
+#     but broken backend" race the previous version could hit.
+echo "==> waiting for Supabase Data API to be ready"
+supa_ready=0
+for i in $(seq 1 90); do
+  code="$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:54321/rest/v1/ 2>/dev/null || echo 000)"
+  if [ "$code" != "000" ]; then supa_ready=1; break; fi
+  sleep 2
+done
+if [ "$supa_ready" != "1" ]; then
+  echo "Supabase Data API did not become ready in time"; exit 1
+fi
 
 # 4) Write the backend .env from the running stack's connection details.
 echo "==> writing $BACKEND_DIR/.env"
 SUPA_URL="$(cd "$BACKEND_DIR" && npx --yes supabase status -o env 2>/dev/null | sed -n 's/^API_URL="\(.*\)"$/\1/p')"
 SUPA_KEY="$(cd "$BACKEND_DIR" && npx --yes supabase status -o env 2>/dev/null | sed -n 's/^SERVICE_ROLE_KEY="\(.*\)"$/\1/p')"
+if [ -z "$SUPA_URL" ] || [ -z "$SUPA_KEY" ]; then
+  echo "Failed to read Supabase URL/key from 'supabase status'"; exit 1
+fi
 cat > "$BACKEND_DIR/.env" <<EOF
 PORT=3001
 APP_URL=http://localhost:3001
