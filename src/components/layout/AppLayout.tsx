@@ -26,9 +26,7 @@ function AppLayoutContent() {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden overscroll-none bg-stone-50 dark:bg-stone-900">
-      {/* Dark band under translucent iOS status bar so icons stay readable */}
-      <div className="shrink-0 bg-[#0f172a] pt-safe" aria-hidden />
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden pt-safe">
         <ImpersonationBanner />
         <OrgTrialBanner />
         <AddToHomeScreenBanner />
