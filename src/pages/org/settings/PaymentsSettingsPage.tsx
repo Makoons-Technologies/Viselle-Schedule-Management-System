@@ -121,7 +121,8 @@ export function PaymentsSettingsPage() {
           <div>
             <h3 className="font-semibold">Stripe Connect</h3>
             <p className={cn('mt-1', sectionMutedClass)}>
-              Connect your salon&apos;s Stripe account to accept in-person card payments. Funds go directly to your bank.
+              Connect your salon&apos;s Stripe account to accept in-person card payments and online invoice
+              pay links (Apple Pay and card entry). Funds go directly to your bank.
             </p>
           </div>
           <Badge variant={ready ? 'success' : pendingActivation ? 'secondary' : 'secondary'}>
