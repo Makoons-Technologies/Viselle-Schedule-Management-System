@@ -43,27 +43,32 @@ fi
 echo "==> supabase start"
 (cd "$BACKEND_DIR" && npx --yes supabase start) || echo "supabase start returned non-zero (likely still starting or already up); continuing"
 
-# 3b) Wait until the Supabase Data API (kong -> rest) actually answers before we
-#     read credentials, write .env, or seed. This is what prevents the "running
-#     but broken backend" race the previous version could hit.
-echo "==> waiting for Supabase Data API to be ready"
-supa_ready=0
-for i in $(seq 1 90); do
-  code="$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:54321/rest/v1/ 2>/dev/null || echo 000)"
-  if [ "$code" != "000" ]; then supa_ready=1; break; fi
+# 3b) Wait until Supabase is genuinely ready. Gating on the raw REST port is not
+#     enough: Kong answers while the DB is still `starting`, so `supabase status`
+#     returns empty credentials. Poll until status yields the URL + service key
+#     AND an authenticated query against a migrated table succeeds. Only then is
+#     it safe to write .env and seed (prevents the "running but broken" race).
+echo "==> waiting for Supabase to be ready (credentials + authenticated query)"
+SUPA_URL=""; SUPA_KEY=""; supa_ready=0
+for i in $(seq 1 120); do
+  env_out="$(cd "$BACKEND_DIR" && npx --yes supabase status -o env 2>/dev/null)"
+  SUPA_URL="$(printf '%s\n' "$env_out" | sed -n 's/^API_URL="\(.*\)"$/\1/p')"
+  SUPA_KEY="$(printf '%s\n' "$env_out" | sed -n 's/^SERVICE_ROLE_KEY="\(.*\)"$/\1/p')"
+  if [ -n "$SUPA_URL" ] && [ -n "$SUPA_KEY" ]; then
+    code="$(curl -s -o /dev/null -w '%{http_code}' \
+      -H "apikey: $SUPA_KEY" -H "Authorization: Bearer $SUPA_KEY" \
+      "$SUPA_URL/rest/v1/organizations?select=id&limit=1" 2>/dev/null || echo 000)"
+    if [ "$code" = "200" ]; then supa_ready=1; break; fi
+  fi
   sleep 2
 done
 if [ "$supa_ready" != "1" ]; then
-  echo "Supabase Data API did not become ready in time"; exit 1
+  echo "Supabase did not become fully ready in time (url='${SUPA_URL:-}' keyPresent=$([ -n "${SUPA_KEY:-}" ] && echo yes || echo no))"
+  exit 1
 fi
 
 # 4) Write the backend .env from the running stack's connection details.
 echo "==> writing $BACKEND_DIR/.env"
-SUPA_URL="$(cd "$BACKEND_DIR" && npx --yes supabase status -o env 2>/dev/null | sed -n 's/^API_URL="\(.*\)"$/\1/p')"
-SUPA_KEY="$(cd "$BACKEND_DIR" && npx --yes supabase status -o env 2>/dev/null | sed -n 's/^SERVICE_ROLE_KEY="\(.*\)"$/\1/p')"
-if [ -z "$SUPA_URL" ] || [ -z "$SUPA_KEY" ]; then
-  echo "Failed to read Supabase URL/key from 'supabase status'"; exit 1
-fi
 cat > "$BACKEND_DIR/.env" <<EOF
 PORT=3001
 APP_URL=http://localhost:3001
