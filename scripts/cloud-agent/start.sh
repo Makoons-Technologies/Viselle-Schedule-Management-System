@@ -16,7 +16,10 @@ sudo sysctl -w net.bridge.bridge-nf-call-ip6tables=0 >/dev/null 2>&1 || true
 # 2) Start the Docker daemon if it is not already serving.
 if ! docker info >/dev/null 2>&1; then
   echo "==> starting dockerd"
-  sudo bash -c 'nohup dockerd --storage-driver=fuse-overlayfs >/tmp/dockerd.log 2>&1 &'
+  # Remove any stale (possibly root-owned) log from a previous boot/snapshot so
+  # the redirect below cannot fail with a permission error.
+  sudo rm -f /var/log/dockerd.log
+  sudo bash -c 'nohup dockerd --storage-driver=fuse-overlayfs >/var/log/dockerd.log 2>&1 &'
   for i in $(seq 1 30); do
     if sudo docker info >/dev/null 2>&1; then break; fi
     sleep 1
@@ -24,7 +27,7 @@ if ! docker info >/dev/null 2>&1; then
 fi
 # Allow the ubuntu user (and the Supabase CLI) to reach the daemon socket.
 sudo chmod 666 /var/run/docker.sock 2>/dev/null || true
-docker info >/dev/null 2>&1 && echo "==> docker is ready" || { echo "docker failed to start"; cat /tmp/dockerd.log; exit 1; }
+docker info >/dev/null 2>&1 && echo "==> docker is ready" || { echo "docker failed to start"; sudo cat /var/log/dockerd.log 2>/dev/null; exit 1; }
 
 if [ ! -d "$BACKEND_DIR" ]; then
   echo "==> backend repo not present; skipping Supabase/seed (frontend-only mode)"

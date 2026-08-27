@@ -9,6 +9,22 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FRONTEND_DIR="/agent/repos/Viselle-Schedule-Management-System"
 BACKEND_DIR="/agent/repos/Beauty-Backend-API"
+SERENITY_DIR="/agent/repos/Viselle-Serenity-Demo-Site"
+
+# 0) Ensure node_modules exist. On a prebuilt-environment boot the managed repos
+#    are re-checked-out, which drops build-time node_modules, so (re)install here.
+#    npm ci is fast because the npm cache is part of the snapshot.
+ensure_deps() {
+  local dir="$1"
+  if [ -d "$dir" ] && [ -f "$dir/package-lock.json" ] \
+     && [ ! -x "$dir/node_modules/.bin/tsx" ] && [ ! -x "$dir/node_modules/.bin/vite" ]; then
+    echo "==> installing dependencies in $dir"
+    (cd "$dir" && npm ci --no-audit --no-fund)
+  fi
+}
+ensure_deps "$FRONTEND_DIR"
+ensure_deps "$BACKEND_DIR"
+ensure_deps "$SERENITY_DIR"
 
 # 1) Infrastructure: Docker + Supabase + seed (idempotent).
 bash "$SCRIPT_DIR/start.sh"
