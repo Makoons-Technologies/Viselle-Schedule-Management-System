@@ -6,6 +6,7 @@ import { getApiErrorMessage, isRequestAborted, orgApi } from '@/lib/api';
 import { BlockingProgressDialog, useBlockingProgress } from '@/components/common/BlockingProgressDialog';
 import { formatCreditCount } from '@/lib/credits';
 import { useCardCheckout } from '@/hooks/useCardCheckout';
+import { useProtectSheetFromNestedOverlays } from '@/hooks/useProtectSheetFromNestedOverlays';
 import { useStaffPermissions } from '@/hooks/useStaffPermissions';
 import { cn, formatCurrency } from '@/lib/utils';
 import type { AppointmentInfo, CheckoutLineInput } from '@/types/api';
@@ -387,19 +388,14 @@ export function AppointmentCheckoutSheet({
     card.phase === 'confirming' ||
     rebookMutation.isPending;
 
-  const handleSheetOpenChange = useCallback(
-    (next: boolean) => {
-      if (!next && nestedOverlayOpen) return;
-      onOpenChange(next);
-    },
-    [nestedOverlayOpen, onOpenChange],
-  );
+  const {
+    handleSheetOpenChange: protectSheetOpenChange,
+    preventSheetDismissWhileNested,
+  } = useProtectSheetFromNestedOverlays(nestedOverlayOpen);
 
-  const preventSheetDismissWhileNested = useCallback(
-    (event: { preventDefault: () => void }) => {
-      if (nestedOverlayOpen) event.preventDefault();
-    },
-    [nestedOverlayOpen],
+  const handleSheetOpenChange = useCallback(
+    (next: boolean) => protectSheetOpenChange(next, onOpenChange),
+    [protectSheetOpenChange, onOpenChange],
   );
 
   const renderLineItem = (
