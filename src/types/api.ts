@@ -520,6 +520,9 @@ export interface BatchCheckoutPreview {
   }>;
   subtotalCents: number;
   tipCents: number;
+  giftCardAppliedCents?: number;
+  giftCardCode?: string | null;
+  giftCardRemainingCents?: number | null;
   totalCents: number;
 }
 
@@ -981,7 +984,7 @@ export interface WaitlistEntry {
   updatedAt: string;
 }
 
-export type GiftCardStatus = 'active' | 'redeemed' | 'void';
+export type GiftCardStatus = 'inactive' | 'active' | 'redeemed' | 'void';
 
 export interface GiftCard {
   id: string;
