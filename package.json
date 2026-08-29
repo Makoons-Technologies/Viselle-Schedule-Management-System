@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "dev:mobile": "vite --mode mobile --host",
-    "build": "tsc -b && vite build",
+    "build": "node scripts/fetch-industry-stats.mjs && tsc -b && vite build",
+    "fetch-industry-stats": "node scripts/fetch-industry-stats.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "cut-release": "node scripts/cut-release.mjs",

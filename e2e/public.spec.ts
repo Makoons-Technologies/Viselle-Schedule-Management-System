@@ -7,6 +7,13 @@ test.describe('public marketing', () => {
       page.getByRole('heading', { name: /Scheduling that lets you focus on your clients/i }),
     ).toBeVisible();
     await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: /The shops Viselle is built for/i }),
+    ).toBeVisible();
+    await expect(page.getByRole('link', { name: 'bls.gov/cew' })).toHaveAttribute(
+      'href',
+      'https://www.bls.gov/cew/',
+    );
   });
 
   test('login page loads', async ({ page }) => {

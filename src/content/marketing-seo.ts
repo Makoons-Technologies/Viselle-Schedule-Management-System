@@ -1,3 +1,8 @@
+import {
+  buildIndustryFaqPage,
+  industryStats,
+  softwareApplicationIndustryProperties,
+} from '@/lib/industry-stats';
 import { absoluteUrl, SITE_NAME, SITE_ORIGIN } from '@/lib/seo';
 
 export interface MarketingSeoConfig {
@@ -37,6 +42,12 @@ const softwareJsonLd = {
     priceCurrency: 'USD',
     availability: 'https://schema.org/InStock',
   },
+  ...softwareApplicationIndustryProperties(industryStats),
+};
+
+const industryFaqJsonLd = {
+  '@context': 'https://schema.org',
+  ...buildIndustryFaqPage(industryStats),
 };
 
 export const marketingSeo = {
@@ -46,7 +57,7 @@ export const marketingSeo = {
       'Viselle helps beauty and wellness businesses manage appointments, staff schedules, and client reminders — with an online booking page clients can use anytime.',
     path: '/',
     image: defaultOgImage,
-    jsonLd: [organizationJsonLd, softwareJsonLd],
+    jsonLd: [organizationJsonLd, softwareJsonLd, industryFaqJsonLd],
   },
   pricing: {
     title: 'Plans & pricing',

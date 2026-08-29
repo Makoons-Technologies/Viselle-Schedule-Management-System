@@ -4,6 +4,7 @@ import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { ViselleLogo } from '@/components/common/ViselleLogo';
 import { MarketingFooter, MarketingHeader } from '@/components/marketing/MarketingLayout';
+import { IndustryStatsSection } from '@/components/marketing/IndustryStatsSection';
 import { PricingSection } from '@/components/marketing/PricingSection';
 import { WebsiteOptionsSection } from '@/components/marketing/WebsiteOptionsSection';
 import { PageSeo } from '@/components/seo/PageSeo';
@@ -160,6 +161,7 @@ export function LandingPage() {
         </div>
       </section>
 
+      <IndustryStatsSection />
       <WebsiteOptionsSection />
       <PricingSection />
       <MarketingFooter />
