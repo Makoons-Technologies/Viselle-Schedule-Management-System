@@ -272,7 +272,7 @@ export interface OrgPlanFeatures {
   subscriptionTier: SubscriptionTier | null;
   tierName: string;
   smsRemindersEnabled: boolean;
-  /** False while the platform sending number is under A2P / carrier review. */
+  /** False while production sending is paused. Staging UI treats texts as available. */
   smsSendingEnabled?: boolean;
   emailRemindersEnabled: boolean;
   recurringAppointmentsEnabled: boolean;

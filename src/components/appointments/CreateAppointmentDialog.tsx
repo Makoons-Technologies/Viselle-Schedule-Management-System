@@ -31,7 +31,7 @@ import { helperTextClass } from '@/components/common/Panel';
 import { useRecurringDaySchedule } from '@/hooks/useRecurringDaySchedule';
 import { useOrgPlan } from '@/hooks/useOrgPlan';
 import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
-import { isSmsSendingEnabled, SMS_UNDER_REVIEW_OPT_IN_NOTE } from '@/lib/sms';
+import { isSmsSendingEnabled, isStagingApp, SMS_UNDER_REVIEW_OPT_IN_NOTE } from '@/lib/sms';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -494,7 +494,7 @@ export function CreateAppointmentDialog({
   };
 
   const showSmsOptIn = Boolean(
-    plan?.smsRemindersEnabled &&
+    (isStagingApp() || plan?.smsRemindersEnabled) &&
       org?.smsRemindersOptIn &&
       phone.trim().length > 0 &&
       !(

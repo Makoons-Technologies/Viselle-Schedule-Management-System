@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { ApiError, isUnreachableRequestError, orgApi, ownerApi } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
+import { isSmsSendingEnabled } from '@/lib/sms';
 import type { OrgPlanFeatures } from '@/types/api';
 
 function shouldRetryPlanFetch(failureCount: number, error: unknown): boolean {
@@ -39,7 +40,7 @@ export function useOrgPlan(orgId: string | undefined) {
                 ? 'Business'
                 : 'Custom',
         smsRemindersEnabled: data.settings.smsRemindersEnabled,
-        smsSendingEnabled: data.smsSendingEnabled === true,
+        smsSendingEnabled: isSmsSendingEnabled({ smsSendingEnabled: data.smsSendingEnabled === true }),
         emailRemindersEnabled: data.settings.emailRemindersEnabled,
         recurringAppointmentsEnabled: data.settings.recurringAppointmentsEnabled,
         maxStaffAccounts: data.settings.maxStaffAccounts,
@@ -51,7 +52,10 @@ export function useOrgPlan(orgId: string | undefined) {
   });
 
   const query = isPlatformOwner ? ownerSettingsQuery : orgPlanQuery;
-  const plan = isPlatformOwner ? ownerSettingsQuery.data?.plan : orgPlanQuery.data?.plan;
+  const rawPlan = isPlatformOwner ? ownerSettingsQuery.data?.plan : orgPlanQuery.data?.plan;
+  const plan = rawPlan
+    ? { ...rawPlan, smsSendingEnabled: isSmsSendingEnabled(rawPlan) }
+    : rawPlan;
 
   return {
     plan,
