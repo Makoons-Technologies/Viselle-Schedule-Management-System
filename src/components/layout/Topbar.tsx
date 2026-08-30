@@ -130,7 +130,7 @@ export function Topbar() {
 
   return (
     <>
-    <header className="app-shell-topbar flex h-14 shrink-0 items-center justify-between gap-2 border-b border-stone-200 px-safe-or-3 sm:h-16 sm:px-6">
+    <header className="app-shell-topbar flex h-14 shrink-0 items-center justify-between gap-2 border-b border-stone-200 px-safe-or-3 sm:h-16 sm:px-safe-or-6">
       <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
         <Button
           variant="ghost"

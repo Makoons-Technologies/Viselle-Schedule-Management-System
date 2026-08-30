@@ -91,6 +91,10 @@
   padding-left: max(0.75rem, var(--safe-area-left));
   padding-right: max(0.75rem, var(--safe-area-right));
 }
+@utility px-safe-or-6 {
+  padding-left: max(1.5rem, var(--safe-area-left));
+  padding-right: max(1.5rem, var(--safe-area-right));
+}
 @utility pb-safe-or-2 {
   padding-bottom: max(0.5rem, var(--safe-area-bottom));
 }
