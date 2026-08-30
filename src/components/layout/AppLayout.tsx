@@ -26,10 +26,17 @@ function AppLayoutContent() {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden overscroll-none bg-stone-50 dark:bg-stone-900">
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden pt-safe">
-        <ImpersonationBanner />
-        <OrgTrialBanner />
-        <AddToHomeScreenBanner />
+      {/*
+        Opaque top slab owns safe-area padding. Do not put pt-safe on an
+        overflow-hidden ancestor — WebKit clips that padded region into a
+        top-left frosted smudge over the title (BEA-78).
+      */}
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="app-shell-chrome shrink-0 pt-safe">
+          <ImpersonationBanner />
+          <OrgTrialBanner />
+          <AddToHomeScreenBanner />
+        </div>
         <div className="flex min-h-0 flex-1 overflow-hidden">
           <Sidebar />
           <MobileSidebar />
