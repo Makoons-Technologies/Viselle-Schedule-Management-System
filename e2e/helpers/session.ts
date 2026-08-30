@@ -66,6 +66,15 @@ export async function mockPlatformDashboardApis(page: Page) {
           activeOrganizations: 0,
           trialOrganizations: 0,
           inactiveOrganizations: 0,
+          billingActiveOrganizations: 0,
+          devOrganizations: 0,
+          estimatedMrrCents: 0,
+          organizationsByTier: {
+            starter: 0,
+            professional: 0,
+            business: 0,
+            custom: 0,
+          },
         },
       }),
     });
@@ -74,7 +83,15 @@ export async function mockPlatformDashboardApis(page: Page) {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ points: [] }),
+      body: JSON.stringify({
+        metric: 'mrr',
+        granularity: 'week',
+        from: '2026-01-01',
+        to: '2026-08-30',
+        series: [],
+        currentMrrCents: 0,
+        totalNewOrganizationsCount: 0,
+      }),
     });
   });
 }

@@ -41,7 +41,9 @@ test.describe('BEA-79 logged-in homepage flash', () => {
 
     await expect(page.getByTestId('session-check-shell')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Get started' })).toHaveCount(0);
-    await expect(page).toHaveURL(/\/orgs\/org-e2e-1\/dashboard/, { timeout: 15_000 });
+    await expect(page).toHaveURL(/\/orgs\/org-e2e-1\//, { timeout: 15_000 });
+    await expect(page.getByRole('link', { name: 'Get started' })).toHaveCount(0);
+    await expect(page.getByText(/For salons, spas/i)).toHaveCount(0);
   });
 
   test('logged-out visitors still get the real landing page', async ({ page }) => {
