@@ -30,7 +30,8 @@ export function useAppShellViewport() {
       themeMeta.setAttribute('content', dark ? '#1c1917' : '#ffffff');
     };
     syncThemeColor();
-    // Opaque status bar in the app shell avoids iOS frosted blur over mismatched header layers.
+    // Opaque status bar — must also be the index.html default; iOS often ignores
+    // runtime changes after a PWA launch with black-translucent.
     statusBarMeta?.setAttribute('content', 'black');
 
     let keyboardWasOpen = false;

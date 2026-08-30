@@ -26,15 +26,22 @@ function AppLayoutContent() {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden overscroll-none bg-stone-50 dark:bg-stone-900">
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden pt-safe">
-        <ImpersonationBanner />
-        <OrgTrialBanner />
-        <AddToHomeScreenBanner />
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        {/*
+          One opaque top chrome (safe-area + banners + topbar). Avoids the empty
+          pt-safe gap that iOS frosts when status-bar-style is translucent, and
+          keeps header text on a solid surface.
+        */}
+        <div className="shrink-0 bg-white pt-safe dark:bg-[#1c1917] [backdrop-filter:none] [-webkit-backdrop-filter:none]">
+          <ImpersonationBanner />
+          <OrgTrialBanner />
+          <AddToHomeScreenBanner />
+          <Topbar />
+        </div>
         <div className="flex min-h-0 flex-1 overflow-hidden">
           <Sidebar />
           <MobileSidebar />
           <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-            <Topbar />
             <main
               className={cn(
                 'min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]',
