@@ -29,7 +29,7 @@ interface BottomNavItem {
 }
 
 const bottomNavClassName =
-  'shrink-0 border-t border-stone-200 bg-white px-safe-or-2 pb-safe-or-2 pt-1 dark:border-stone-800 dark:bg-stone-900 desktop-shell:hidden';
+  'app-shell-bottomnav shrink-0 border-t border-stone-200 px-safe-or-2 pb-safe-or-2 pt-1 dark:border-stone-800 desktop-shell:hidden';
 
 function BottomNavLink({ item, active }: { item: BottomNavItem; active: boolean }) {
   const { isActive: tourActive, currentTarget } = useOrgOwnerTour();
