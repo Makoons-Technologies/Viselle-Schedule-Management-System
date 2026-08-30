@@ -1,3 +1,4 @@
+import { ChevronDown } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import {
   BLS_QCEW_HOME,
@@ -9,6 +10,7 @@ import {
   shopCountQuote,
   sourceCitation,
 } from '@/lib/industry-stats';
+import { cn } from '@/lib/utils';
 
 const SPLIT = [
   { key: 'beauty', label: 'Beauty salons', slice: industryStats.beautySalons },
@@ -69,6 +71,7 @@ export function IndustryStatsSection() {
   const fredLine = formatFredJobs(industryStats);
   const sectionRef = useRef<HTMLElement>(null);
   const [visible, setVisible] = useState(false);
+  const [sourcesOpen, setSourcesOpen] = useState(false);
 
   useEffect(() => {
     const node = sectionRef.current;
@@ -124,17 +127,35 @@ export function IndustryStatsSection() {
           </p>
           <p>{greeneCountyLine(industryStats)}</p>
           {fredLine ? <p className="text-sm text-white/60">{fredLine}</p> : null}
-          <p className="text-sm text-white/55">
-            {sourceCitation(industryStats)}{' '}
-            <a
-              href={BLS_QCEW_HOME}
-              className="text-[#fdeb83] underline-offset-2 hover:underline"
-              target="_blank"
-              rel="noopener noreferrer"
+
+          <div className="pt-1">
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium tracking-wide text-white/60 transition-colors hover:text-white/90"
+              aria-expanded={sourcesOpen}
+              aria-controls="industry-stats-sources"
+              onClick={() => setSourcesOpen((open) => !open)}
             >
-              bls.gov/cew
-            </a>
-          </p>
+              Sources
+              <ChevronDown
+                className={cn('h-4 w-4 transition-transform duration-200', sourcesOpen && 'rotate-180')}
+                aria-hidden
+              />
+            </button>
+            {sourcesOpen ? (
+              <p id="industry-stats-sources" className="mt-2 text-sm text-white/55">
+                {sourceCitation(industryStats)}{' '}
+                <a
+                  href={BLS_QCEW_HOME}
+                  className="text-[#fdeb83] underline-offset-2 hover:underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  bls.gov/cew
+                </a>
+              </p>
+            ) : null}
+          </div>
         </div>
       </div>
     </section>
