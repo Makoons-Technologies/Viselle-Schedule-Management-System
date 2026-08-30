@@ -130,100 +130,110 @@ export function Topbar() {
 
   return (
     <>
-    <header className="app-shell-topbar flex h-[calc(3.5rem+var(--app-shell-topbar-pad-top,0px))] shrink-0 items-center justify-between gap-2 border-b border-stone-200 px-safe-or-3 pt-[var(--app-shell-topbar-pad-top,0px)] sm:h-[calc(4rem+var(--app-shell-topbar-pad-top,0px))] sm:px-safe-or-6">
-      <div className="flex min-w-0 flex-1 items-center gap-2 overflow-visible sm:gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-10 w-10 shrink-0 desktop-shell:hidden"
-          onClick={() => setMobileNavOpen(true)}
-          title="Open menu"
-          aria-label="Open menu"
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="hidden h-10 w-10 shrink-0 desktop-shell:inline-flex"
-          onClick={toggleSidebar}
-          title={sidebarCollapsed ? 'Pin sidebar' : 'Unpin sidebar'}
-          aria-label={sidebarCollapsed ? 'Pin sidebar' : 'Unpin sidebar'}
-        >
-          {sidebarCollapsed ? <PanelLeft className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
-        </Button>
-
-        {showOrgSwitcher ? (
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            <Select value={user?.organizationId ?? undefined} onValueChange={handleOrgChange}>
-              <SelectTrigger className="h-10 w-full min-w-0 max-w-[11rem] text-xs sm:max-w-xs sm:text-sm md:max-w-sm">
-                <SelectValue placeholder="Select workplace" />
-              </SelectTrigger>
-              <SelectContent>
-                {memberships.map((membership) => (
-                  <SelectItem key={membership.organizationId} value={membership.organizationId}>
-                    {membership.organizationName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        ) : (
-          <div className="min-w-0 overflow-visible">
-            <p className="app-shell-title text-sm font-semibold text-stone-900 dark:text-stone-100">
-              {businessName ?? 'Viselle'}
-            </p>
-            {selectedOrgFromContext && (
-              <p className="app-shell-title text-xs text-stone-500 dark:text-stone-400">
-                /{selectedOrgFromContext.slug}
-              </p>
-            )}
-            {!selectedOrgFromContext && (
-              <p className="app-shell-title text-xs capitalize text-stone-500 dark:text-stone-400 desktop-shell:hidden">
-                {user?.role?.replace('_', ' ')}
-              </p>
-            )}
-          </div>
-        )}
-      </div>
-
-      <div className="app-shell-topbar-actions relative z-[1] flex shrink-0 items-center gap-1 sm:gap-3">
-        <Button
-          variant="ghost"
-          size="icon"
-          className={cn('h-10 w-10', onHelpPage && 'bg-stone-100 text-brand-700 dark:bg-stone-800 dark:text-brand-300')}
-          onClick={() => navigate('/support')}
-          title="Help & support"
-          aria-label="Help & support"
-        >
-          <LifeBuoy className="h-4 w-4" />
-        </Button>
-        {showSettingsButton ? (
+    <header className="app-shell-topbar shrink-0 border-b border-stone-200 pt-[var(--app-shell-topbar-pad-top,0px)]">
+      {/*
+        Notch padding is on the header; this row is a whole-pixel 56/64px flex
+        box. Centering the title in calc(3.5rem + safe-area) put glyphs on a
+        fractional Y and WebKit smeared only the text (BEA-78).
+      */}
+      <div className="flex h-14 items-center justify-between gap-2 px-safe-or-3 sm:h-16 sm:px-safe-or-6">
+        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-visible sm:gap-4">
           <Button
             variant="ghost"
             size="icon"
-            className={cn('h-10 w-10', onSettingsPage && 'bg-stone-100 text-brand-700 dark:bg-stone-800 dark:text-brand-300')}
-            onClick={() => navigate(orgSettingsPath!)}
-            title={user?.role === 'platform_owner' ? 'Organization admin' : 'Settings'}
-            aria-label={user?.role === 'platform_owner' ? 'Organization admin' : 'Settings'}
+            className="h-10 w-10 shrink-0 desktop-shell:hidden"
+            onClick={() => setMobileNavOpen(true)}
+            title="Open menu"
+            aria-label="Open menu"
           >
-            <Settings className="h-4 w-4" />
+            <Menu className="h-5 w-5" />
           </Button>
-        ) : null}
-        <div className="hidden text-right desktop-shell:block">
-          <p className="max-w-[12rem] truncate text-sm font-medium text-stone-900 dark:text-stone-100 lg:max-w-none">{user?.email}</p>
-          <p className="text-xs capitalize text-stone-500 dark:text-stone-400">{user?.role?.replace('_', ' ')}</p>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="hidden h-10 w-10 shrink-0 desktop-shell:inline-flex"
+            onClick={toggleSidebar}
+            title={sidebarCollapsed ? 'Pin sidebar' : 'Unpin sidebar'}
+            aria-label={sidebarCollapsed ? 'Pin sidebar' : 'Unpin sidebar'}
+          >
+            {sidebarCollapsed ? <PanelLeft className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
+          </Button>
+
+          {showOrgSwitcher ? (
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <Select value={user?.organizationId ?? undefined} onValueChange={handleOrgChange}>
+                <SelectTrigger className="h-10 w-full min-w-0 max-w-[11rem] text-xs sm:max-w-xs sm:text-sm md:max-w-sm">
+                  <SelectValue placeholder="Select workplace" />
+                </SelectTrigger>
+                <SelectContent>
+                  {memberships.map((membership) => (
+                    <SelectItem key={membership.organizationId} value={membership.organizationId}>
+                      {membership.organizationName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <div className="min-w-0 overflow-visible">
+              <p
+                data-testid="app-shell-title"
+                className="app-shell-title text-base font-semibold leading-5 text-stone-900 dark:text-stone-100"
+              >
+                {businessName ?? 'Viselle'}
+              </p>
+              {selectedOrgFromContext && (
+                <p className="app-shell-title text-xs leading-4 text-stone-500 dark:text-stone-400">
+                  /{selectedOrgFromContext.slug}
+                </p>
+              )}
+              {!selectedOrgFromContext && (
+                <p className="app-shell-title text-xs capitalize leading-4 text-stone-500 dark:text-stone-400 desktop-shell:hidden">
+                  {user?.role?.replace('_', ' ')}
+                </p>
+              )}
+            </div>
+          )}
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-10 w-10"
-          onClick={() => setLogoutOpen(true)}
-          title="Log out"
-          aria-label="Log out"
-        >
-          <LogOut className="h-4 w-4" />
-        </Button>
+
+        <div className="app-shell-topbar-actions relative z-[1] flex shrink-0 items-center gap-1 sm:gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn('h-10 w-10', onHelpPage && 'bg-stone-100 text-brand-700 dark:bg-stone-800 dark:text-brand-300')}
+            onClick={() => navigate('/support')}
+            title="Help & support"
+            aria-label="Help & support"
+          >
+            <LifeBuoy className="h-4 w-4" />
+          </Button>
+          {showSettingsButton ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn('h-10 w-10', onSettingsPage && 'bg-stone-100 text-brand-700 dark:bg-stone-800 dark:text-brand-300')}
+              onClick={() => navigate(orgSettingsPath!)}
+              title={user?.role === 'platform_owner' ? 'Organization admin' : 'Settings'}
+              aria-label={user?.role === 'platform_owner' ? 'Organization admin' : 'Settings'}
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+          ) : null}
+          <div className="hidden text-right desktop-shell:block">
+            <p className="max-w-[12rem] truncate text-sm font-medium text-stone-900 dark:text-stone-100 lg:max-w-none">{user?.email}</p>
+            <p className="text-xs capitalize text-stone-500 dark:text-stone-400">{user?.role?.replace('_', ' ')}</p>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10"
+            onClick={() => setLogoutOpen(true)}
+            title="Log out"
+            aria-label="Log out"
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </header>
     <ConfirmDialog
