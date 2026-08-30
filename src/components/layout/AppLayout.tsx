@@ -27,9 +27,11 @@ function AppLayoutContent() {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden overscroll-none bg-stone-50 dark:bg-stone-900">
       {/*
-        Opaque top slab owns safe-area padding. Do not put pt-safe on an
-        overflow-hidden ancestor — WebKit clips that padded region into a
-        top-left frosted smudge over the title (BEA-78).
+        Banners (when present) live in a solid slab with pt-safe. When they
+        are absent the slab is display:none and Topbar owns the notch padding
+        on the same element as the title — an empty sibling above the title
+        still frosted "Viselle Platform" on real iPhones (BEA-78).
+        Do not wrap Topbar in overflow-hidden; WebKit clips that into a smear.
       */}
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="app-shell-chrome shrink-0 pt-safe">
@@ -37,10 +39,10 @@ function AppLayoutContent() {
           <OrgTrialBanner />
           <AddToHomeScreenBanner />
         </div>
-        <div className="flex min-h-0 flex-1 overflow-hidden">
+        <div className="flex min-h-0 flex-1">
           <Sidebar />
           <MobileSidebar />
-          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             <Topbar />
             <main
               className={cn(

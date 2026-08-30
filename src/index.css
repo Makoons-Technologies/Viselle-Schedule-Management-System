@@ -65,6 +65,7 @@
   --safe-area-right: env(safe-area-inset-right, 0px);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-left: env(safe-area-inset-left, 0px);
+  --app-shell-topbar-pad-top: 0px;
 }
 
 @utility pt-safe {
@@ -170,22 +171,58 @@
   }
 
   /*
-   * App-shell top/bottom chrome must be a solid slab. iOS frosts empty
-   * padded gaps and leftover backdrop-filter into a top-left smudge
-   * over the header title (BEA-78).
+   * App-shell chrome must be one opaque slab. iOS Safari frosts:
+   *   - leftover backdrop-filter
+   *   - isolation:isolate stacking contexts (icons stay sharp; title smudges)
+   *   - overflow:hidden text boxes (the title cluster between the icons)
+   *   - an empty pt-safe sibling sitting above the title (PR 38 leftover)
+   * BEA-78: "Viselle Platform" / role subtitle must stay as crisp as the page.
    */
   html.app-shell .app-shell-chrome,
   html.app-shell .app-shell-topbar,
   html.app-shell .app-shell-bottomnav {
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-    isolation: isolate;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    filter: none;
+    isolation: auto;
+    transform: none;
+    overflow: visible;
     background-color: #ffffff;
   }
 
   html.dark.app-shell .app-shell-chrome,
   html.dark.app-shell .app-shell-topbar,
   html.dark.app-shell .app-shell-bottomnav {
+    background-color: #1c1917;
+  }
+
+  /* No empty padded band above the title — hide chrome when banners are absent. */
+  html.app-shell .app-shell-chrome:not(:has(*)) {
+    display: none;
+  }
+
+  /* Same header box owns notch padding so the title is not under a second layer. */
+  html.app-shell .app-shell-chrome:not(:has(*)) ~ * {
+    --app-shell-topbar-pad-top: var(--safe-area-top);
+  }
+
+  html.app-shell .app-shell-title {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: nowrap;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    filter: none;
+    isolation: auto;
+    transform: none;
+    -webkit-transform: none;
+  }
+
+  html.app-shell .app-shell-topbar-actions {
+    background-color: #ffffff;
+  }
+
+  html.dark.app-shell .app-shell-topbar-actions {
     background-color: #1c1917;
   }
 
