@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import {
   BLS_QCEW_HOME,
   formatCount,
@@ -15,11 +16,81 @@ const SPLIT = [
   { key: 'barber', label: 'Barber shops', slice: industryStats.barberShops },
 ] as const;
 
+const COUNT_UP_MS = 1200;
+
+function easeOutCubic(t: number): number {
+  return 1 - (1 - t) ** 3;
+}
+
+function useCountUp(target: number, active: boolean): number {
+  const [value, setValue] = useState(0);
+  const reducedMotion = useRef(
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  );
+
+  useEffect(() => {
+    if (!active) {
+      setValue(0);
+      return;
+    }
+    if (reducedMotion.current || target <= 0) {
+      setValue(target);
+      return;
+    }
+
+    let frame = 0;
+    const started = performance.now();
+
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - started) / COUNT_UP_MS);
+      setValue(Math.round(target * easeOutCubic(progress)));
+      if (progress < 1) {
+        frame = requestAnimationFrame(tick);
+      }
+    };
+
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [active, target]);
+
+  return value;
+}
+
+function StatCount({ value, active }: { value: number; active: boolean }) {
+  const display = useCountUp(value, active);
+  return (
+    <p className="text-3xl font-bold tabular-nums tracking-tight text-[#fdeb83] sm:text-4xl">
+      {formatCount(display)}
+    </p>
+  );
+}
+
 export function IndustryStatsSection() {
   const fredLine = formatFredJobs(industryStats);
+  const sectionRef = useRef<HTMLElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const node = sectionRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.35 },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <section
+      ref={sectionRef}
       id="industry"
       aria-labelledby="industry-stats-heading"
       className="py-16 sm:py-24"
@@ -39,11 +110,9 @@ export function IndustryStatsSection() {
           {SPLIT.map(({ key, label, slice }) => (
             <div
               key={key}
-              className="rounded-xl border border-white/10 bg-white/5 px-5 py-6 text-center backdrop-blur-[2px]"
+              className="rounded-xl border border-white/10 bg-white/5 px-5 py-6 text-center"
             >
-              <p className="text-3xl font-bold tabular-nums tracking-tight text-[#fdeb83] sm:text-4xl">
-                {formatCount(slice.establishments)}
-              </p>
+              <StatCount value={slice.establishments} active={visible} />
               <p className="mt-2 font-semibold text-white">{label}</p>
             </div>
           ))}

@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Copy, Gift } from 'lucide-react';
-import { useState } from 'react';
+import { Copy, Gift, Plus } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/common/EmptyState';
+import { ListToolbar, matchesSearch } from '@/components/common/ListToolbar';
 import { LoadingState } from '@/components/common/LoadingState';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Panel, sectionMutedClass } from '@/components/common/Panel';
@@ -19,7 +20,9 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
 import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { getApiErrorMessage, orgApi } from '@/lib/api';
@@ -32,15 +35,30 @@ function centsFromDollars(dollars: string): number {
 }
 
 function statusLabel(status: GiftCardStatus): string {
+  if (status === 'inactive') return 'Needs funds';
   if (status === 'redeemed') return 'Used up';
   if (status === 'void') return 'Voided';
   return 'Ready';
 }
 
-function statusVariant(status: GiftCardStatus): 'success' | 'secondary' | 'destructive' {
+function statusVariant(status: GiftCardStatus): 'success' | 'secondary' | 'destructive' | 'outline' {
   if (status === 'active') return 'success';
   if (status === 'void') return 'destructive';
+  if (status === 'inactive') return 'outline';
   return 'secondary';
+}
+
+function parseCodeList(raw: string): string[] {
+  const seen = new Set<string>();
+  const codes: string[] = [];
+  for (const part of raw.split(/[\s,;]+/)) {
+    const code = part.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (code.length < 4) continue;
+    if (seen.has(code)) continue;
+    seen.add(code);
+    codes.push(code);
+  }
+  return codes;
 }
 
 async function copyCode(code: string) {
@@ -52,19 +70,29 @@ async function copyCode(code: string) {
   }
 }
 
+type StatusFilter = 'all' | GiftCardStatus;
+
 export function GiftCardsPage() {
   const orgId = useOrgId();
   const trialLocked = useOrgWriteLocked();
   const queryClient = useQueryClient();
 
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [activateOpen, setActivateOpen] = useState(false);
+  const [fundOpen, setFundOpen] = useState(false);
+  const [listActivateOpen, setListActivateOpen] = useState(false);
   const [voidTarget, setVoidTarget] = useState<GiftCard | null>(null);
+  const [fundTarget, setFundTarget] = useState<GiftCard | null>(null);
   const [createdCard, setCreatedCard] = useState<GiftCard | null>(null);
 
   const [sellAmount, setSellAmount] = useState('');
   const [sellCredits, setSellCredits] = useState('');
   const [codeMode, setCodeMode] = useState<'auto' | 'printed'>('auto');
   const [printedCode, setPrintedCode] = useState('');
+  const [bulkCodes, setBulkCodes] = useState('');
+  const [fundAmount, setFundAmount] = useState('');
+  const [fundCredits, setFundCredits] = useState('');
 
   const cardsQuery = useQuery({
     queryKey: ['gift-cards', orgId],
@@ -73,6 +101,15 @@ export function GiftCardsPage() {
   });
 
   const giftCards = cardsQuery.data?.giftCards ?? [];
+
+  const filtered = useMemo(
+    () =>
+      giftCards.filter((card) => {
+        if (statusFilter !== 'all' && card.status !== statusFilter) return false;
+        return matchesSearch(search, card.code);
+      }),
+    [giftCards, search, statusFilter],
+  );
 
   const createMutation = useMutation({
     mutationFn: () => {
@@ -107,6 +144,64 @@ export function GiftCardsPage() {
     onError: (error) => toast.error(getApiErrorMessage(error, 'Could not activate this card')),
   });
 
+  const activateListMutation = useMutation({
+    mutationFn: () => {
+      const codes = parseCodeList(bulkCodes);
+      if (codes.length === 0) {
+        throw new Error('Enter at least one code (4+ letters or numbers)');
+      }
+      if (codes.length > 100) {
+        throw new Error('Activate up to 100 codes at a time');
+      }
+      return orgApi.activateGiftCards(orgId, { codes });
+    },
+    onSuccess: ({ giftCards: created, errors }) => {
+      setBulkCodes('');
+      setListActivateOpen(false);
+      if (created.length > 0) {
+        toast.success(
+          created.length === 1
+            ? '1 card activated — add funds when you sell it'
+            : `${created.length} cards activated — add funds when you sell them`,
+        );
+      }
+      if (errors.length > 0) {
+        toast.error(
+          errors.length === 1
+            ? `${errors[0].code}: ${errors[0].message}`
+            : `${errors.length} codes could not be activated`,
+        );
+      }
+      void queryClient.invalidateQueries({ queryKey: ['gift-cards', orgId] });
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, 'Could not activate those cards')),
+  });
+
+  const addFundsMutation = useMutation({
+    mutationFn: () => {
+      if (!fundTarget) throw new Error('Pick a card first');
+      const amountCents = centsFromDollars(fundAmount);
+      if (!Number.isFinite(amountCents) || amountCents < 100) {
+        throw new Error('Enter at least $1.00');
+      }
+      const creditCents = fundCredits.trim() ? centsFromDollars(fundCredits) : amountCents;
+      if (!Number.isFinite(creditCents) || creditCents < CENTS_PER_CREDIT) {
+        throw new Error('Credits must be at least 1');
+      }
+      return orgApi.addFundsToGiftCard(orgId, fundTarget.id, { amountCents, creditCents });
+    },
+    onSuccess: ({ giftCard }) => {
+      setCreatedCard(giftCard);
+      setFundTarget(null);
+      setFundOpen(false);
+      setFundAmount('');
+      setFundCredits('');
+      toast.success('Funds added — card is ready to use');
+      void queryClient.invalidateQueries({ queryKey: ['gift-cards', orgId] });
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, 'Could not add funds')),
+  });
+
   const voidMutation = useMutation({
     mutationFn: (giftCardId: string) => orgApi.voidGiftCard(orgId, giftCardId),
     onSuccess: () => {
@@ -117,19 +212,36 @@ export function GiftCardsPage() {
     onError: (error) => toast.error(getApiErrorMessage(error, 'Could not void this gift card')),
   });
 
+  const openAddFunds = (card: GiftCard) => {
+    setFundTarget(card);
+    setFundAmount('');
+    setFundCredits('');
+    setFundOpen(true);
+  };
+
   if (cardsQuery.isLoading) return <LoadingState />;
+
+  const bulkPreviewCount = parseCodeList(bulkCodes).length;
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Gift cards"
-        description="Activate a card at the desk. Anyone with the code can use it at checkout."
+        description="Activate printed codes, add funds when you sell them, and redeem at checkout."
         actions={
-          <TrialLockedControl locked={trialLocked}>
-            <Button disabled={trialLocked} onClick={() => setActivateOpen(true)}>
-              Activate a card
-            </Button>
-          </TrialLockedControl>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <TrialLockedControl locked={trialLocked}>
+              <Button variant="outline" disabled={trialLocked} onClick={() => setListActivateOpen(true)}>
+                Activate a list
+              </Button>
+            </TrialLockedControl>
+            <TrialLockedControl locked={trialLocked}>
+              <Button disabled={trialLocked} onClick={() => setActivateOpen(true)}>
+                <Plus className="h-4 w-4" />
+                Activate & fund
+              </Button>
+            </TrialLockedControl>
+          </div>
         }
       />
 
@@ -158,65 +270,113 @@ export function GiftCardsPage() {
         <EmptyState
           icon={Gift}
           title="No gift cards yet"
-          description="Activate one at the desk and hand over the code. Redeem it later on checkout."
+          description="Activate a printed list of codes, then add funds when you sell each card."
           action={
-            <TrialLockedControl locked={trialLocked}>
-              <Button disabled={trialLocked} onClick={() => setActivateOpen(true)}>
-                Activate a card
-              </Button>
-            </TrialLockedControl>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <TrialLockedControl locked={trialLocked}>
+                <Button variant="outline" disabled={trialLocked} onClick={() => setListActivateOpen(true)}>
+                  Activate a list
+                </Button>
+              </TrialLockedControl>
+              <TrialLockedControl locked={trialLocked}>
+                <Button disabled={trialLocked} onClick={() => setActivateOpen(true)}>
+                  Activate & fund
+                </Button>
+              </TrialLockedControl>
+            </div>
           }
         />
       ) : (
-        <Panel className="overflow-hidden">
-          <div className="desktop-shell:hidden">
-            {giftCards.map((card) => (
-              <GiftCardCard
-                key={card.id}
-                card={card}
-                trialLocked={trialLocked}
-                onVoid={() => setVoidTarget(card)}
-              />
-            ))}
-          </div>
-          <div className="hidden desktop-shell:block">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Credits</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {giftCards.map((card) => (
-                  <TableRow key={card.id}>
-                    <TableCell className="font-mono font-medium tracking-wide">{card.code}</TableCell>
-                    <TableCell>{formatCreditBalance(card.remainingCents, card.originalCents)}</TableCell>
-                    <TableCell>
-                      <Badge variant={statusVariant(card.status)}>{statusLabel(card.status)}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {card.status === 'active' && (
-                        <TrialLockedControl locked={trialLocked}>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={trialLocked}
-                            onClick={() => setVoidTarget(card)}
-                          >
-                            Void
-                          </Button>
-                        </TrialLockedControl>
-                      )}
-                    </TableCell>
-                  </TableRow>
+        <>
+          <ListToolbar
+            search={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="Search by code…"
+            filters={
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All cards</SelectItem>
+                  <SelectItem value="inactive">Needs funds</SelectItem>
+                  <SelectItem value="active">Ready</SelectItem>
+                  <SelectItem value="redeemed">Used up</SelectItem>
+                  <SelectItem value="void">Voided</SelectItem>
+                </SelectContent>
+              </Select>
+            }
+          />
+
+          {filtered.length === 0 ? (
+            <EmptyState icon={Gift} title="No gift cards match" description="Try a different code or status filter." />
+          ) : (
+            <Panel className="overflow-hidden">
+              <div className="desktop-shell:hidden">
+                {filtered.map((card) => (
+                  <GiftCardCard
+                    key={card.id}
+                    card={card}
+                    trialLocked={trialLocked}
+                    onAddFunds={() => openAddFunds(card)}
+                    onVoid={() => setVoidTarget(card)}
+                  />
                 ))}
-              </TableBody>
-            </Table>
-          </div>
-        </Panel>
+              </div>
+              <div className="hidden desktop-shell:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Code</TableHead>
+                      <TableHead>Credits</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((card) => (
+                      <TableRow key={card.id}>
+                        <TableCell className="font-mono font-medium tracking-wide">{card.code}</TableCell>
+                        <TableCell>{formatCreditBalance(card.remainingCents, card.originalCents)}</TableCell>
+                        <TableCell>
+                          <Badge variant={statusVariant(card.status)}>{statusLabel(card.status)}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            {(card.status === 'inactive' || card.status === 'active') && (
+                              <TrialLockedControl locked={trialLocked}>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={trialLocked}
+                                  onClick={() => openAddFunds(card)}
+                                >
+                                  Add funds
+                                </Button>
+                              </TrialLockedControl>
+                            )}
+                            {(card.status === 'inactive' || card.status === 'active') && (
+                              <TrialLockedControl locked={trialLocked}>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={trialLocked}
+                                  onClick={() => setVoidTarget(card)}
+                                >
+                                  Void
+                                </Button>
+                              </TrialLockedControl>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </Panel>
+          )}
+        </>
       )}
 
       <Dialog
@@ -232,10 +392,10 @@ export function GiftCardsPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Activate a card</DialogTitle>
+            <DialogTitle>Activate & fund a card</DialogTitle>
             <DialogDescription>
-              Collect payment at the desk. Leave credits blank to match the price, or add a bonus (pay $50, get 75
-              credits). Anyone with the code can use it at checkout.
+              Collect payment at the desk and hand over a funded code. Or activate a blank list first, then add funds
+              when each card sells.
             </DialogDescription>
           </DialogHeader>
           <form
@@ -329,6 +489,136 @@ export function GiftCardsPage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog
+        open={listActivateOpen}
+        onOpenChange={(open) => {
+          setListActivateOpen(open);
+          if (!open) setBulkCodes('');
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Activate a list of cards</DialogTitle>
+            <DialogDescription>
+              Paste printed codes (one per line). Cards start with no balance — add funds when you sell each one.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              activateListMutation.mutate();
+            }}
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="bulk-codes">Codes</Label>
+              <Textarea
+                id="bulk-codes"
+                value={bulkCodes}
+                onChange={(event) => setBulkCodes(event.target.value.toUpperCase())}
+                placeholder={'HBWZNHLC\nKQ9MPL2R\n…'}
+                className="min-h-40 font-mono tracking-wide"
+                autoCapitalize="characters"
+                autoCorrect="off"
+                spellCheck={false}
+                required
+              />
+              <p className={cn('text-sm', sectionMutedClass)}>
+                {bulkPreviewCount === 0
+                  ? 'Enter codes with at least 4 letters or numbers.'
+                  : `${bulkPreviewCount} unique code${bulkPreviewCount === 1 ? '' : 's'} ready`}
+              </p>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setListActivateOpen(false)}>
+                Cancel
+              </Button>
+              <TrialLockedControl locked={trialLocked}>
+                <Button type="submit" disabled={trialLocked || activateListMutation.isPending || bulkPreviewCount === 0}>
+                  {activateListMutation.isPending ? 'Activating…' : `Activate ${bulkPreviewCount || ''}`.trim()}
+                </Button>
+              </TrialLockedControl>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={fundOpen}
+        onOpenChange={(open) => {
+          setFundOpen(open);
+          if (!open) {
+            setFundTarget(null);
+            setFundAmount('');
+            setFundCredits('');
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add funds</DialogTitle>
+            <DialogDescription>
+              {fundTarget
+                ? `Load credits onto ${fundTarget.code}. Guests can spend them at checkout.`
+                : 'Load credits onto a gift card.'}
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              addFundsMutation.mutate();
+            }}
+          >
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="fund-amount">Price ($)</Label>
+                <Input
+                  id="fund-amount"
+                  type="number"
+                  min={1}
+                  step={0.01}
+                  inputMode="decimal"
+                  placeholder="50"
+                  value={fundAmount}
+                  onChange={(event) => setFundAmount(event.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="fund-credits">Credits to add</Label>
+                <Input
+                  id="fund-credits"
+                  type="number"
+                  min={1}
+                  step={1}
+                  inputMode="numeric"
+                  placeholder={fundAmount || '50'}
+                  value={fundCredits}
+                  onChange={(event) => setFundCredits(event.target.value)}
+                />
+              </div>
+            </div>
+            <p className="text-sm text-stone-500 dark:text-stone-400">
+              {creditValueHint(
+                centsFromDollars(fundCredits.trim() || fundAmount || '0'),
+                centsFromDollars(fundAmount || '0'),
+              )}
+            </p>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setFundOpen(false)}>
+                Cancel
+              </Button>
+              <TrialLockedControl locked={trialLocked}>
+                <Button type="submit" disabled={trialLocked || addFundsMutation.isPending || !fundTarget}>
+                  {addFundsMutation.isPending ? 'Adding…' : 'Add funds'}
+                </Button>
+              </TrialLockedControl>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={!!voidTarget} onOpenChange={(open) => !open && setVoidTarget(null)}>
         <DialogContent>
           <DialogHeader>
@@ -362,10 +652,12 @@ export function GiftCardsPage() {
 function GiftCardCard({
   card,
   trialLocked,
+  onAddFunds,
   onVoid,
 }: {
   card: GiftCard;
   trialLocked: boolean;
+  onAddFunds: () => void;
   onVoid: () => void;
 }) {
   return (
@@ -382,12 +674,19 @@ function GiftCardCard({
           {statusLabel(card.status)}
         </Badge>
       </div>
-      {card.status === 'active' && (
-        <TrialLockedControl locked={trialLocked}>
-          <Button variant="outline" size="sm" className="w-full" disabled={trialLocked} onClick={onVoid}>
-            Void
-          </Button>
-        </TrialLockedControl>
+      {(card.status === 'inactive' || card.status === 'active') && (
+        <div className="flex gap-2">
+          <TrialLockedControl locked={trialLocked}>
+            <Button variant="outline" size="sm" className="flex-1" disabled={trialLocked} onClick={onAddFunds}>
+              Add funds
+            </Button>
+          </TrialLockedControl>
+          <TrialLockedControl locked={trialLocked}>
+            <Button variant="outline" size="sm" className="flex-1" disabled={trialLocked} onClick={onVoid}>
+              Void
+            </Button>
+          </TrialLockedControl>
+        </div>
       )}
     </div>
   );
