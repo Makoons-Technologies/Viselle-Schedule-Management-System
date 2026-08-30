@@ -149,6 +149,8 @@
     max-height: var(--app-height, 100dvh);
     overflow: hidden;
     overscroll-behavior: none;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   /* iOS standalone: 100dvh/innerHeight lie on cold start (WebKit #254868). After the
@@ -171,21 +173,18 @@
   }
 
   /*
-   * App-shell chrome must be one opaque slab. iOS Safari frosts:
-   *   - leftover backdrop-filter
-   *   - isolation:isolate stacking contexts (icons stay sharp; title smudges)
-   *   - overflow:hidden text boxes (the title cluster between the icons)
-   *   - an empty pt-safe sibling sitting above the title (PR 38 leftover)
-   * BEA-78: "Viselle Platform" / role subtitle must stay as crisp as the page.
+   * App-shell chrome: opaque slab, no glass.
+   * Do not set filter/transform/isolation even to "none" — WebKit treats those
+   * properties as a compositing layer and rasterizes in-flow glyphs at 1x
+   * (icons stay vector-sharp; "Viselle Platform" looks like a scaled bitmap).
+   * PRs 38–40 already removed backdrop-filter / isolate / truncate. BEA-78
+   * remaining issue is title text paint, not a frost overlay.
    */
   html.app-shell .app-shell-chrome,
   html.app-shell .app-shell-topbar,
   html.app-shell .app-shell-bottomnav {
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
-    filter: none;
-    isolation: auto;
-    transform: none;
     overflow: visible;
     background-color: #ffffff;
   }
@@ -201,21 +200,29 @@
     display: none;
   }
 
-  /* Same header box owns notch padding so the title is not under a second layer. */
+  /* Notch padding lives on the header; the title row below it is a fixed 56/64px box. */
   html.app-shell .app-shell-chrome:not(:has(*)) ~ * {
     --app-shell-topbar-pad-top: var(--safe-area-top);
   }
 
+  /*
+   * Title must paint like the page heading, not like chrome.
+   * Body uses Inter + antialiased (grayscale AA). On iOS that combo at 14px/600
+   * inside a flex+calc header snapshots as a smear; SF Pro at 16px with the
+   * default smoother matches the hamburger's crisp edges.
+   */
   html.app-shell .app-shell-title {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+      system-ui, sans-serif;
+    -webkit-font-smoothing: auto;
+    -moz-osx-font-smoothing: auto;
+    text-rendering: geometricPrecision;
+    font-synthesis: none;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
     overflow: visible;
     text-overflow: clip;
     white-space: nowrap;
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-    filter: none;
-    isolation: auto;
-    transform: none;
-    -webkit-transform: none;
   }
 
   html.app-shell .app-shell-topbar-actions {

@@ -11,9 +11,22 @@ import { PageSeo } from '@/components/seo/PageSeo';
 import { Button } from '@/components/ui/button';
 import { marketingSeo } from '@/content/marketing-seo';
 import { useAutoMotionPermission } from '@/hooks/useFoilTilt';
+import { signedInHomePath } from '@/lib/auth-redirect';
 import { MARKETING_SHELL_CLASS } from '@/lib/marketing-theme';
 import { fetchLiveHomepageTrial, getStartedPath } from '@/lib/signup';
 import type { TrialCampaign } from '@/types/api';
+
+/** Solid shell while a stored session is restored. Never the marketing hero (BEA-79). */
+function SessionCheckShell() {
+  return (
+    <div
+      className="min-h-dvh bg-stone-50 dark:bg-stone-900"
+      data-testid="session-check-shell"
+      aria-busy="true"
+      aria-label="Loading your workspace"
+    />
+  );
+}
 
 const INDUSTRY_FEATURES = [
   {
@@ -43,14 +56,14 @@ const INDUSTRY_FEATURES = [
 ];
 
 export function LandingPage() {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, user, token } = useAuth();
   const [homepageTrial, setHomepageTrial] = useState<TrialCampaign | null>(null);
   const [hash, setHash] = useState(() =>
     typeof window !== 'undefined' ? window.location.hash : '',
   );
 
   // Pre-request motion on homepage so /business-card tilt is ready after first tap.
-  useAutoMotionPermission(true);
+  useAutoMotionPermission(!token);
 
   useEffect(() => {
     const onHashChange = () => setHash(window.location.hash);
@@ -65,15 +78,20 @@ export function LandingPage() {
   }, [hash]);
 
   useEffect(() => {
+    if (token) return;
     fetchLiveHomepageTrial()
       .then((campaign) => setHomepageTrial(campaign))
       .catch(() => setHomepageTrial(null));
-  }, []);
+  }, [token]);
 
-  if (!isLoading && isAuthenticated && user) {
-    if (user.role === 'platform_owner') return <Navigate to="/platform/dashboard" replace />;
-    if (user.role === 'org_owner') return <Navigate to={`/orgs/${user.organizationId}/dashboard`} replace />;
-    return <Navigate to={`/orgs/${user.organizationId}/calendar`} replace />;
+  // Token in storage means a session is likely. Do not paint Get started / Sign in
+  // / the salon hero while /auth/me is in flight (BEA-79).
+  if (token && !user) {
+    return <SessionCheckShell />;
+  }
+
+  if (isAuthenticated && user) {
+    return <Navigate to={signedInHomePath(user)} replace />;
   }
 
   const seo =

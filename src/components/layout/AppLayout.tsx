@@ -28,10 +28,9 @@ function AppLayoutContent() {
     <div className="flex h-full min-h-0 flex-col overflow-hidden overscroll-none bg-stone-50 dark:bg-stone-900">
       {/*
         Banners (when present) live in a solid slab with pt-safe. When they
-        are absent the slab is display:none and Topbar owns the notch padding
-        on the same element as the title — an empty sibling above the title
-        still frosted "Viselle Platform" on real iPhones (BEA-78).
-        Do not wrap Topbar in overflow-hidden; WebKit clips that into a smear.
+        are absent the slab is display:none and Topbar owns the notch padding.
+        Title paint is a separate WebKit issue (system font / no compositor
+        props on .app-shell-title) — see index.css BEA-78.
       */}
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="app-shell-chrome shrink-0 pt-safe">
