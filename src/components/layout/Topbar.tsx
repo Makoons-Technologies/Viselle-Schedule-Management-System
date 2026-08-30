@@ -130,8 +130,8 @@ export function Topbar() {
 
   return (
     <>
-    <header className="app-shell-topbar flex h-14 shrink-0 items-center justify-between gap-2 border-b border-stone-200 px-safe-or-3 sm:h-16 sm:px-safe-or-6">
-      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
+    <header className="app-shell-topbar flex h-[calc(3.5rem+var(--app-shell-topbar-pad-top,0px))] shrink-0 items-center justify-between gap-2 border-b border-stone-200 px-safe-or-3 pt-[var(--app-shell-topbar-pad-top,0px)] sm:h-[calc(4rem+var(--app-shell-topbar-pad-top,0px))] sm:px-safe-or-6">
+      <div className="flex min-w-0 flex-1 items-center gap-2 overflow-visible sm:gap-4">
         <Button
           variant="ghost"
           size="icon"
@@ -169,17 +169,17 @@ export function Topbar() {
             </Select>
           </div>
         ) : (
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-stone-900 dark:text-stone-100">
+          <div className="min-w-0 overflow-visible">
+            <p className="app-shell-title text-sm font-semibold text-stone-900 dark:text-stone-100">
               {businessName ?? 'Viselle'}
             </p>
             {selectedOrgFromContext && (
-              <p className="truncate text-xs text-stone-500 dark:text-stone-400">
+              <p className="app-shell-title text-xs text-stone-500 dark:text-stone-400">
                 /{selectedOrgFromContext.slug}
               </p>
             )}
             {!selectedOrgFromContext && (
-              <p className="truncate text-xs capitalize text-stone-500 dark:text-stone-400 desktop-shell:hidden">
+              <p className="app-shell-title text-xs capitalize text-stone-500 dark:text-stone-400 desktop-shell:hidden">
                 {user?.role?.replace('_', ' ')}
               </p>
             )}
@@ -187,7 +187,7 @@ export function Topbar() {
         )}
       </div>
 
-      <div className="flex shrink-0 items-center gap-1 sm:gap-3">
+      <div className="app-shell-topbar-actions relative z-[1] flex shrink-0 items-center gap-1 sm:gap-3">
         <Button
           variant="ghost"
           size="icon"
