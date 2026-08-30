@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PasswordInput } from '@/components/ui/password-input';
 import { MARKETING_SHELL_CLASS } from '@/lib/marketing-theme';
+import { confirmPasswordAfterPasswordChange } from '@/lib/password-autofill';
 import { cn } from '@/lib/utils';
 import { contactPath } from '@/lib/contact';
 import { redirectToStripeUrl } from '@/lib/safe-redirect';
@@ -1080,7 +1081,18 @@ export function GetStartedPage() {
                       name="password"
                       ref={passwordRef}
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={(e) => {
+                        const nextPassword = e.target.value;
+                        const confirmDomValue = confirmPasswordRef.current?.value ?? '';
+                        const nextConfirm = confirmPasswordAfterPasswordChange({
+                          nextPassword,
+                          previousPassword: password,
+                          confirmState: confirmPassword,
+                          confirmDomValue,
+                        });
+                        setPassword(nextPassword);
+                        if (nextConfirm != null) setConfirmPassword(nextConfirm);
+                      }}
                       onBlur={() => markAccountTouched('password')}
                       autoComplete="new-password"
                       aria-invalid={Boolean(visibleAccountErrors.password)}
