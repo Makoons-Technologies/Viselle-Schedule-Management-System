@@ -201,11 +201,11 @@ export function PlanSettingsPage() {
             </li>
             <li>Email reminders: {plan.emailRemindersEnabled ? 'Included' : 'Not included'}</li>
             <li>
-              Text (SMS) reminders:{' '}
+              Client texts:{' '}
               {plan.smsRemindersEnabled
                 ? isSmsSendingEnabled(plan)
-                  ? 'Included'
-                  : 'Included — sending paused during carrier review'
+                  ? 'Included — appointment updates'
+                  : 'Included'
                 : 'Not included'}
             </li>
             <li>

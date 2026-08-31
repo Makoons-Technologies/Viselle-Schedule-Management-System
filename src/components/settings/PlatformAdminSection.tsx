@@ -132,7 +132,7 @@ export function PlatformAdminSection({ orgId }: PlatformAdminSectionProps) {
           </div>
 
           {[
-            { key: 'smsRemindersEnabled' as const, label: 'SMS Reminders' },
+            { key: 'smsRemindersEnabled' as const, label: 'Client texts' },
             { key: 'emailRemindersEnabled' as const, label: 'Email Reminders' },
             { key: 'recurringAppointmentsEnabled' as const, label: 'Recurring Appointments' },
           ].map(({ key, label }) => (

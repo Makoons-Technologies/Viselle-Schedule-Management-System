@@ -1,4 +1,5 @@
-import type { Stripe, StripeElements } from '@stripe/stripe-js';
+import type { Stripe, StripeElements, StripePaymentElementOptions } from '@stripe/stripe-js';
+import { getStripeElementsAppearance } from '@/lib/stripe-appearance';
 
 function intentIdFromClientSecret(clientSecret: string): string {
   const [id] = clientSecret.split('_secret_');
@@ -41,8 +42,18 @@ export async function createFirstVisitCardSession(params: {
     throw new Error('Stripe failed to load');
   }
 
-  const elements: StripeElements = stripe.elements({ clientSecret: params.clientSecret });
-  const paymentElement = elements.create('payment');
+  const elements: StripeElements = stripe.elements({
+    clientSecret: params.clientSecret,
+    appearance: getStripeElementsAppearance(),
+  });
+  const paymentOptions: StripePaymentElementOptions = {
+    layout: 'tabs',
+    wallets: {
+      applePay: 'auto',
+      googlePay: 'auto',
+    },
+  };
+  const paymentElement = elements.create('payment', paymentOptions);
   let destroyed = false;
   const fallbackIntentId = intentIdFromClientSecret(params.clientSecret);
 

@@ -1,13 +1,31 @@
 import { useQuery } from '@tanstack/react-query';
-import { orgApi } from '@/lib/api';
-import { useOrgId } from '@/hooks/useOrgId';
+import { DoorOpen } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { WalkInDialog } from '@/components/appointments/WalkInDialog';
 import { LoadingState } from '@/components/common/LoadingState';
+import { TrialLockedControl } from '@/components/common/TrialLockedControl';
 import { DEFAULT_HOMEPAGE_BLOCKS, HomepageBlocks } from '@/components/dashboard/HomepageBlocks';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
+import { useOrgId } from '@/hooks/useOrgId';
+import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
+import { useStaffPermissions } from '@/hooks/useStaffPermissions';
+import { calendarAppointmentHref } from '@/lib/calendar-appointment-href';
+import { orgApi } from '@/lib/api';
 
 export function OrgDashboard() {
   const orgId = useOrgId();
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { user, memberships } = useAuth();
+  const { permissions } = useStaffPermissions(orgId);
+  const trialExpired = useOrgWriteLocked();
+  const [walkInOpen, setWalkInOpen] = useState(false);
+
+  const myAccountId = useMemo(() => {
+    if (user?.accountId) return user.accountId;
+    return memberships.find((membership) => membership.organizationId === orgId)?.accountId ?? null;
+  }, [user?.accountId, memberships, orgId]);
 
   const { data: appointments, isLoading: loadingAppts } = useQuery({
     queryKey: ['appointments', orgId],
@@ -46,6 +64,22 @@ export function OrgDashboard() {
   );
   return (
     <div>
+      {orgId && permissions.canCreateAppointments ? (
+        <div className="mb-6 flex flex-col gap-3 rounded-xl border border-stone-200 bg-white p-4 shadow-sm dark:border-stone-800 dark:bg-stone-900 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-medium text-stone-900 dark:text-stone-50">Guest just walked in?</p>
+            <p className="text-sm text-stone-600 dark:text-stone-400">
+              Book them for right now — service, staff, and customer.
+            </p>
+          </div>
+          <TrialLockedControl locked={trialExpired}>
+            <Button disabled={trialExpired} onClick={() => setWalkInOpen(true)}>
+              <DoorOpen className="h-4 w-4" />
+              Take a walk-in
+            </Button>
+          </TrialLockedControl>
+        </div>
+      ) : null}
       {orgId ? (
         <HomepageBlocks
           orgId={orgId}
@@ -59,6 +93,22 @@ export function OrgDashboard() {
           }}
           services={services?.services ?? []}
           upcomingAppointments={upcoming}
+        />
+      ) : null}
+      {orgId ? (
+        <WalkInDialog
+          orgId={orgId}
+          open={walkInOpen}
+          onOpenChange={setWalkInOpen}
+          defaultAccountId={myAccountId}
+          onCreated={(created) => {
+            const appointment = created[0];
+            if (!appointment) return;
+            const href = calendarAppointmentHref(orgId, appointment);
+            setWalkInOpen(false);
+            // Close the dialog before routing so the focus trap cannot cancel navigation.
+            window.setTimeout(() => navigate(href), 0);
+          }}
         />
       ) : null}
     </div>

@@ -1,3 +1,8 @@
+import {
+  buildIndustryFaqPage,
+  industryStats,
+  softwareApplicationIndustryProperties,
+} from '@/lib/industry-stats';
 import { absoluteUrl, SITE_NAME, SITE_ORIGIN } from '@/lib/seo';
 
 export interface MarketingSeoConfig {
@@ -37,6 +42,12 @@ const softwareJsonLd = {
     priceCurrency: 'USD',
     availability: 'https://schema.org/InStock',
   },
+  ...softwareApplicationIndustryProperties(industryStats),
+};
+
+const industryFaqJsonLd = {
+  '@context': 'https://schema.org',
+  ...buildIndustryFaqPage(industryStats),
 };
 
 export const marketingSeo = {
@@ -46,7 +57,7 @@ export const marketingSeo = {
       'Viselle helps beauty and wellness businesses manage appointments, staff schedules, and client reminders — with an online booking page clients can use anytime.',
     path: '/',
     image: defaultOgImage,
-    jsonLd: [organizationJsonLd, softwareJsonLd],
+    jsonLd: [organizationJsonLd, softwareJsonLd, industryFaqJsonLd],
   },
   pricing: {
     title: 'Plans & pricing',
@@ -81,6 +92,13 @@ export const marketingSeo = {
     description:
       'Terms for using Viselle scheduling software, public booking pages, and appointment reminder texts, including SMS opt-in, HELP, and STOP.',
     path: '/terms',
+    image: defaultOgImage,
+  },
+  requestDemo: {
+    title: 'Request a demo',
+    description:
+      'Book a 30-minute Viselle demo. Pick a time that works and we will walk you through scheduling, booking pages, and reminders for your salon or spa.',
+    path: '/request-demo',
     image: defaultOgImage,
   },
   getStarted: {

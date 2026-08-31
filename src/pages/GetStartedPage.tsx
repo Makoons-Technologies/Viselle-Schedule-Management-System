@@ -22,11 +22,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PasswordInput } from '@/components/ui/password-input';
 import { MARKETING_SHELL_CLASS } from '@/lib/marketing-theme';
+import { confirmPasswordAfterPasswordChange } from '@/lib/password-autofill';
 import { cn } from '@/lib/utils';
 import { contactPath } from '@/lib/contact';
 import { redirectToStripeUrl } from '@/lib/safe-redirect';
 import {
   calculateSignupCart,
+  checkEmailAvailable,
   checkSlugAvailable,
   createSignupCheckout,
   fetchLiveHomepageTrial,
@@ -413,6 +415,7 @@ export function GetStartedPage() {
 
   const [ownerName, setOwnerName] = useState('');
   const [ownerEmail, setOwnerEmail] = useState('');
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'error'>('idle');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [accountTouched, setAccountTouched] = useState({
@@ -614,6 +617,77 @@ export function GetStartedPage() {
     };
   }, [slug]);
 
+  useEffect(() => {
+    if (!isValidEmail(ownerEmail)) {
+      setEmailStatus('idle');
+      return;
+    }
+
+    let cancelled = false;
+    let retryTimer: number | undefined;
+    setEmailStatus('checking');
+    const timer = window.setTimeout(() => {
+      checkEmailAvailable(ownerEmail.trim())
+        .then((available) => {
+          if (!cancelled) setEmailStatus(available ? 'available' : 'taken');
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setEmailStatus('error');
+          retryTimer = window.setTimeout(() => {
+            if (cancelled) return;
+            setEmailStatus('checking');
+            checkEmailAvailable(ownerEmail.trim())
+              .then((available) => {
+                if (!cancelled) setEmailStatus(available ? 'available' : 'taken');
+              })
+              .catch(() => {
+                if (!cancelled) setEmailStatus('error');
+              });
+          }, 1500);
+        });
+    }, 400);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      if (retryTimer !== undefined) window.clearTimeout(retryTimer);
+    };
+  }, [ownerEmail]);
+
+  // Autofill can fill the DOM without a React change event. Pull those values
+  // into state so Continue enables only after the form is actually complete.
+  useEffect(() => {
+    if (currentStep !== 'account') return;
+
+    const pull = () => {
+      const nextName = ownerNameRef.current?.value ?? '';
+      const nextEmail = ownerEmailRef.current?.value ?? '';
+      const nextPassword = passwordRef.current?.value ?? '';
+      const nextConfirm = confirmPasswordRef.current?.value ?? '';
+      setOwnerName((prev) => (prev === nextName ? prev : nextName));
+      setOwnerEmail((prev) => (prev === nextEmail ? prev : nextEmail));
+      setPassword((prev) => (prev === nextPassword ? prev : nextPassword));
+      setConfirmPassword((prev) => (prev === nextConfirm ? prev : nextConfirm));
+    };
+
+    pull();
+    const timer = window.setInterval(pull, 400);
+    const inputs = [ownerNameRef.current, ownerEmailRef.current, passwordRef.current, confirmPasswordRef.current];
+    inputs.forEach((el) => {
+      el?.addEventListener('input', pull);
+      el?.addEventListener('change', pull);
+    });
+
+    return () => {
+      window.clearInterval(timer);
+      inputs.forEach((el) => {
+        el?.removeEventListener('input', pull);
+        el?.removeEventListener('change', pull);
+      });
+    };
+  }, [currentStep]);
+
   const refreshCart = useCallback(async () => {
     const seq = ++cartPreviewSeq.current;
     const local = calculateSignupCart({
@@ -709,8 +783,7 @@ export function GetStartedPage() {
       case 'business':
         return businessName.trim().length > 0 && slug.length >= 2 && slugStatus === 'available';
       case 'account':
-        // Autofill can fill the DOM without a React change event — validate on Continue instead.
-        return true;
+        return Object.keys(accountErrors).length === 0 && emailStatus === 'available';
       case 'plan':
         return Boolean(tier) && Boolean(catalog);
       case 'website':
@@ -725,10 +798,12 @@ export function GetStartedPage() {
         return false;
     }
   }, [
+    accountErrors,
     businessName,
     catalog,
     currentStep,
     displayCart,
+    emailStatus,
     isFreeTrialCheckout,
     loadingCart,
     slug,
@@ -795,26 +870,46 @@ export function GetStartedPage() {
     }
   }
 
-  function syncAccountFieldsFromDom() {
-    const next = {
+  function readAccountFieldsFromDom() {
+    return {
       ownerName: ownerNameRef.current?.value ?? ownerName,
       ownerEmail: ownerEmailRef.current?.value ?? ownerEmail,
       password: passwordRef.current?.value ?? password,
       confirmPassword: confirmPasswordRef.current?.value ?? confirmPassword,
     };
-    setOwnerName(next.ownerName);
-    setOwnerEmail(next.ownerEmail);
-    setPassword(next.password);
-    setConfirmPassword(next.confirmPassword);
+  }
+
+  function applyAccountFields(next: {
+    ownerName: string;
+    ownerEmail: string;
+    password: string;
+    confirmPassword: string;
+  }) {
+    setOwnerName((prev) => (prev === next.ownerName ? prev : next.ownerName));
+    setOwnerEmail((prev) => (prev === next.ownerEmail ? prev : next.ownerEmail));
+    setPassword((prev) => (prev === next.password ? prev : next.password));
+    setConfirmPassword((prev) => (prev === next.confirmPassword ? prev : next.confirmPassword));
     return next;
   }
 
-  function goNext() {
+  function syncAccountFieldsFromDom() {
+    return applyAccountFields(readAccountFieldsFromDom());
+  }
+
+  async function goNext() {
     setError(null);
     if (currentStep === 'account') {
       const next = syncAccountFieldsFromDom();
       if (Object.keys(getAccountFieldErrors(next)).length > 0) {
         setAccountShowAllErrors(true);
+        return;
+      }
+      try {
+        const available = await checkEmailAvailable(next.ownerEmail.trim());
+        setEmailStatus(available ? 'available' : 'taken');
+        if (!available) return;
+      } catch {
+        setEmailStatus('error');
         return;
       }
     }
@@ -1067,10 +1162,33 @@ export function GetStartedPage() {
                         markAccountTouched('ownerEmail');
                       }}
                       autoComplete="email"
-                      aria-invalid={Boolean(visibleAccountErrors.ownerEmail)}
+                      aria-invalid={Boolean(visibleAccountErrors.ownerEmail) || emailStatus === 'taken'}
                     />
                     {visibleAccountErrors.ownerEmail && (
                       <p className="text-xs text-red-600 dark:text-red-400">{visibleAccountErrors.ownerEmail}</p>
+                    )}
+                    {!visibleAccountErrors.ownerEmail && isValidEmail(ownerEmail) && emailStatus !== 'idle' && (
+                      <p
+                        className={cn(
+                          'text-xs',
+                          emailStatus === 'available' && 'text-emerald-600 dark:text-emerald-400',
+                          (emailStatus === 'taken' || emailStatus === 'error') &&
+                            'text-red-600 dark:text-red-400',
+                          emailStatus === 'checking' && 'text-stone-500 dark:text-stone-400',
+                        )}
+                      >
+                        {emailStatus === 'checking' && 'Checking availability…'}
+                        {emailStatus === 'available' && 'This email is available'}
+                        {emailStatus === 'taken' && (
+                          <>
+                            An account with this email already exists.{' '}
+                            <Link to="/login" className="font-medium underline">
+                              Log in
+                            </Link>
+                          </>
+                        )}
+                        {emailStatus === 'error' && 'Could not check this email — wait a moment or try again'}
+                      </p>
                     )}
                   </div>
                   <div className="space-y-2">
@@ -1080,7 +1198,18 @@ export function GetStartedPage() {
                       name="password"
                       ref={passwordRef}
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={(e) => {
+                        const nextPassword = e.target.value;
+                        const confirmDomValue = confirmPasswordRef.current?.value ?? '';
+                        const nextConfirm = confirmPasswordAfterPasswordChange({
+                          nextPassword,
+                          previousPassword: password,
+                          confirmState: confirmPassword,
+                          confirmDomValue,
+                        });
+                        setPassword(nextPassword);
+                        if (nextConfirm != null) setConfirmPassword(nextConfirm);
+                      }}
                       onBlur={() => markAccountTouched('password')}
                       autoComplete="new-password"
                       aria-invalid={Boolean(visibleAccountErrors.password)}
@@ -1301,7 +1430,7 @@ export function GetStartedPage() {
                     )}
                   </Button>
                 ) : (
-                  <Button type="button" onClick={goNext} disabled={!canContinue}>
+                  <Button type="button" onClick={() => void goNext()} disabled={!canContinue}>
                     Continue
                     <ChevronRight className="ml-1 h-4 w-4" />
                   </Button>

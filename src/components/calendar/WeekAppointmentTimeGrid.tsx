@@ -16,7 +16,6 @@ import {
   formatMinutesLabel,
   groupAppointmentsByDay,
   layoutDayAppointments,
-  minutesFromGridOffset,
   minutesToOffsetRem,
   nextAppointmentOnDay,
   firstAppointmentAfterDay,
@@ -118,6 +117,8 @@ interface WeekAppointmentTimeGridProps {
   onDayHeaderActivate?: (dayKey: string) => void;
   /** Click an empty time slot to create an appointment (date = day key yyyy-MM-dd). */
   onEmptySlotClick?: (slot: { dayKey: string; minutes: number }) => void;
+  /** When set, slots outside staff hours are muted and not bookable. */
+  isSlotInHours?: (dayKey: string, minutes: number) => boolean;
   /** After creating, scroll this civil-time slot into view. */
   focusSlot?: { dayKey: string; minutes: number; nonce: number } | null;
   /** Sticks above the day headers while the calendar scrolls. */
@@ -138,6 +139,7 @@ export function WeekAppointmentTimeGrid({
   onDayHeaderRangeSelect,
   onDayHeaderActivate,
   onEmptySlotClick,
+  isSlotInHours,
   focusSlot = null,
   toolbar,
   interactionEnabled = false,
@@ -760,6 +762,7 @@ export function WeekAppointmentTimeGrid({
                 suppressClickRef={suppressClickRef}
                 onAppointmentPointerDown={handleAppointmentPointerDown}
                 onResizePointerDown={handleResizePointerDown}
+                isSlotInHours={isSlotInHours}
               />
             );
           })}
@@ -804,6 +807,7 @@ function DayColumn({
   suppressClickRef,
   onAppointmentPointerDown,
   onResizePointerDown,
+  isSlotInHours,
 }: {
   column: WeekCalendarColumn;
   gridHeightRem: number;
@@ -838,6 +842,7 @@ function DayColumn({
     dayKey: string,
     event: ReactPointerEvent<HTMLElement>,
   ) => void;
+  isSlotInHours?: (dayKey: string, minutes: number) => boolean;
 }) {
   return (
     <div
@@ -845,36 +850,40 @@ function DayColumn({
       className={cn(
         'relative min-w-0 flex-1 border-r border-stone-100 last:border-r-0 dark:border-stone-800',
         column.isToday && 'bg-brand-50/25 dark:bg-brand-900/20',
-        onEmptySlotClick && 'cursor-pointer',
       )}
       style={{ height: `${gridHeightRem}rem` }}
-      onClick={
-        onEmptySlotClick
-          ? (event) => {
-              if ((event.target as HTMLElement).closest('[data-appointment-block]')) return;
-              const rect = event.currentTarget.getBoundingClientRect();
-              const rem =
-                Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-              onEmptySlotClick({
-                dayKey: column.key,
-                minutes: minutesFromGridOffset(
-                  event.clientY - rect.top,
-                  rem,
-                  gridStartMinutes,
-                  timeSlots.length,
-                ),
-              });
-            }
-          : undefined
-      }
     >
-      {timeSlots.map((slotMinutes) => (
-        <div
-          key={`${column.key}-line-${slotMinutes}`}
-          className="pointer-events-none absolute inset-x-0 border-t border-stone-100 dark:border-stone-800"
-          style={{ top: `${minutesToOffsetRem(slotMinutes, gridStartMinutes)}rem` }}
-        />
-      ))}
+      {timeSlots.map((slotMinutes) => {
+        const inHours = !isSlotInHours || isSlotInHours(column.key, slotMinutes);
+        const canBook = Boolean(onEmptySlotClick && inHours);
+        return (
+          <div
+            key={`${column.key}-slot-${slotMinutes}`}
+            data-hours-slot={inHours ? 'in' : 'out'}
+            role={canBook ? 'button' : undefined}
+            title={inHours ? undefined : 'Outside working hours'}
+            aria-label={
+              canBook ? `Add appointment at ${formatMinutesLabel(slotMinutes)}` : undefined
+            }
+            className={cn(
+              'absolute inset-x-0 border-t border-stone-100 dark:border-stone-800',
+              !inHours && 'bg-stone-200/80 dark:bg-stone-800/75',
+              canBook &&
+                'cursor-pointer hover:bg-brand-50/70 dark:hover:bg-brand-900/35',
+              onEmptySlotClick && !inHours && 'cursor-not-allowed',
+            )}
+            style={{
+              top: `${minutesToOffsetRem(slotMinutes, gridStartMinutes)}rem`,
+              height: `${SLOT_HEIGHT_REM}rem`,
+            }}
+            onClick={
+              canBook
+                ? () => onEmptySlotClick?.({ dayKey: column.key, minutes: slotMinutes })
+                : undefined
+            }
+          />
+        );
+      })}
 
       {positioned.map(({ appointment, topRem, heightRem, stackKey, stackIndex, stackSize }) => {
         const frontIndex = stackKey ? (stackFrontByKey[stackKey] ?? 0) : 0;

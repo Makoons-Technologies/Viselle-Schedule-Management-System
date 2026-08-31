@@ -26,16 +26,22 @@ function AppLayoutContent() {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden overscroll-none bg-stone-50 dark:bg-stone-900">
-      {/* Dark band under translucent iOS status bar so icons stay readable */}
-      <div className="shrink-0 bg-[#0f172a] pt-safe" aria-hidden />
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <ImpersonationBanner />
-        <OrgTrialBanner />
-        <AddToHomeScreenBanner />
-        <div className="flex min-h-0 flex-1 overflow-hidden">
+      {/*
+        Banners (when present) live in a solid slab with pt-safe. When they
+        are absent the slab is display:none and Topbar owns the notch padding.
+        Title paint is a separate WebKit issue (system font / no compositor
+        props on .app-shell-title) — see index.css BEA-78.
+      */}
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="app-shell-chrome shrink-0 pt-safe">
+          <ImpersonationBanner />
+          <OrgTrialBanner />
+          <AddToHomeScreenBanner />
+        </div>
+        <div className="flex min-h-0 flex-1">
           <Sidebar />
           <MobileSidebar />
-          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             <Topbar />
             <main
               className={cn(

@@ -65,6 +65,7 @@
   --safe-area-right: env(safe-area-inset-right, 0px);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-left: env(safe-area-inset-left, 0px);
+  --app-shell-topbar-pad-top: 0px;
 }
 
 @utility pt-safe {
@@ -87,11 +88,31 @@
   padding-left: max(0.5rem, var(--safe-area-left));
   padding-right: max(0.5rem, var(--safe-area-right));
 }
+@utility px-safe-or-3 {
+  padding-left: max(0.75rem, var(--safe-area-left));
+  padding-right: max(0.75rem, var(--safe-area-right));
+}
+@utility px-safe-or-6 {
+  padding-left: max(1.5rem, var(--safe-area-left));
+  padding-right: max(1.5rem, var(--safe-area-right));
+}
 @utility pb-safe-or-2 {
   padding-bottom: max(0.5rem, var(--safe-area-bottom));
 }
 @utility pb-safe-or-3 {
   padding-bottom: max(0.75rem, var(--safe-area-bottom));
+}
+@utility pt-safe-add-4 {
+  padding-top: calc(1rem + var(--safe-area-top));
+}
+@utility pt-safe-add-6 {
+  padding-top: calc(1.5rem + var(--safe-area-top));
+}
+@utility pb-safe-add-4 {
+  padding-bottom: calc(1rem + var(--safe-area-bottom));
+}
+@utility pb-safe-add-6 {
+  padding-bottom: calc(1.5rem + var(--safe-area-bottom));
 }
 @utility p-safe-or-4 {
   padding-top: max(1rem, var(--safe-area-top));
@@ -128,6 +149,8 @@
     max-height: var(--app-height, 100dvh);
     overflow: hidden;
     overscroll-behavior: none;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   /* iOS standalone: 100dvh/innerHeight lie on cold start (WebKit #254868). After the
@@ -146,6 +169,67 @@
   }
 
   html.dark.app-shell body {
+    background-color: #1c1917;
+  }
+
+  /*
+   * App-shell chrome: opaque slab, no glass.
+   * Do not set filter/transform/isolation even to "none" — WebKit treats those
+   * properties as a compositing layer and rasterizes in-flow glyphs at 1x
+   * (icons stay vector-sharp; "Viselle Platform" looks like a scaled bitmap).
+   * PRs 38–40 already removed backdrop-filter / isolate / truncate. BEA-78
+   * remaining issue is title text paint, not a frost overlay.
+   */
+  html.app-shell .app-shell-chrome,
+  html.app-shell .app-shell-topbar,
+  html.app-shell .app-shell-bottomnav {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    overflow: visible;
+    background-color: #ffffff;
+  }
+
+  html.dark.app-shell .app-shell-chrome,
+  html.dark.app-shell .app-shell-topbar,
+  html.dark.app-shell .app-shell-bottomnav {
+    background-color: #1c1917;
+  }
+
+  /* No empty padded band above the title — hide chrome when banners are absent. */
+  html.app-shell .app-shell-chrome:not(:has(*)) {
+    display: none;
+  }
+
+  /* Notch padding lives on the header; the title row below it is a fixed 56/64px box. */
+  html.app-shell .app-shell-chrome:not(:has(*)) ~ * {
+    --app-shell-topbar-pad-top: var(--safe-area-top);
+  }
+
+  /*
+   * Title must paint like the page heading, not like chrome.
+   * Body uses Inter + antialiased (grayscale AA). On iOS that combo at 14px/600
+   * inside a flex+calc header snapshots as a smear; SF Pro at 16px with the
+   * default smoother matches the hamburger's crisp edges.
+   */
+  html.app-shell .app-shell-title {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+      system-ui, sans-serif;
+    -webkit-font-smoothing: auto;
+    -moz-osx-font-smoothing: auto;
+    text-rendering: geometricPrecision;
+    font-synthesis: none;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: nowrap;
+  }
+
+  html.app-shell .app-shell-topbar-actions {
+    background-color: #ffffff;
+  }
+
+  html.dark.app-shell .app-shell-topbar-actions {
     background-color: #1c1917;
   }
 

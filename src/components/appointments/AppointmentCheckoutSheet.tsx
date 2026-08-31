@@ -6,6 +6,7 @@ import { getApiErrorMessage, isRequestAborted, orgApi } from '@/lib/api';
 import { BlockingProgressDialog, useBlockingProgress } from '@/components/common/BlockingProgressDialog';
 import { formatCreditCount } from '@/lib/credits';
 import { useCardCheckout } from '@/hooks/useCardCheckout';
+import { useProtectSheetFromNestedOverlays } from '@/hooks/useProtectSheetFromNestedOverlays';
 import { useStaffPermissions } from '@/hooks/useStaffPermissions';
 import { cn, formatCurrency } from '@/lib/utils';
 import type { AppointmentInfo, CheckoutLineInput } from '@/types/api';
@@ -373,6 +374,30 @@ export function AppointmentCheckoutSheet({
     }
   };
 
+  // Nested Radix dialogs (product picker, cash confirm, etc.) dismiss the parent
+  // Sheet unless we ignore those close events and keep overlays outside Sheet.
+  const nestedOverlayOpen =
+    productPickerOpen ||
+    cashConfirmOpen ||
+    receiptOpen ||
+    rebookOpen ||
+    cashMutation.isPending ||
+    giftCardProgress.dialogProps.open ||
+    card.manualPreparing ||
+    card.phase === 'starting' ||
+    card.phase === 'confirming' ||
+    rebookMutation.isPending;
+
+  const {
+    handleSheetOpenChange: protectSheetOpenChange,
+    preventSheetDismissWhileNested,
+  } = useProtectSheetFromNestedOverlays(nestedOverlayOpen);
+
+  const handleSheetOpenChange = useCallback(
+    (next: boolean) => protectSheetOpenChange(next, onOpenChange),
+    [protectSheetOpenChange, onOpenChange],
+  );
+
   const renderLineItem = (
     line: (typeof previewLines)[number],
     options: { editable: boolean },
@@ -434,16 +459,20 @@ export function AppointmentCheckoutSheet({
   );
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <>
+    <Sheet open={open} onOpenChange={handleSheetOpenChange}>
       <SheetContent
         className={cn(
           '!inset-0 !h-[100dvh] !w-full !max-w-none border-0 p-0',
           'data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom',
           'sm:!max-w-none',
         )}
+        onPointerDownOutside={preventSheetDismissWhileNested}
+        onInteractOutside={preventSheetDismissWhileNested}
+        onFocusOutside={preventSheetDismissWhileNested}
       >
         <div className="flex h-[100dvh] flex-col text-stone-900 dark:text-stone-100">
-          <SheetHeader className="shrink-0 border-b border-stone-200 px-6 py-4 pr-14 dark:border-stone-800">
+          <SheetHeader className="shrink-0 border-b border-stone-200 px-6 pb-4 pr-14 pt-[max(1rem,var(--safe-area-top))] dark:border-stone-800">
             <SheetTitle className="text-xl">Checkout</SheetTitle>
             <SheetDescription>{customerName}</SheetDescription>
             <CheckoutStepIndicator step={step} />
@@ -709,7 +738,7 @@ export function AppointmentCheckoutSheet({
           </div>
 
           {step !== 'tip' && (
-            <footer className="shrink-0 border-t border-stone-200 bg-white px-6 py-4 dark:border-stone-800 dark:bg-stone-900">
+            <footer className="sticky bottom-0 z-10 shrink-0 border-t border-stone-200 bg-white px-6 pb-safe-or-3 pt-4 dark:border-stone-800 dark:bg-stone-900">
               <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
                 {previewQuery.data && (
                   <div className="text-sm tabular-nums text-stone-900 dark:text-stone-100">
@@ -761,7 +790,7 @@ export function AppointmentCheckoutSheet({
           )}
 
           {step === 'tip' && (
-            <footer className="shrink-0 border-t border-stone-200 bg-white px-6 py-4 dark:border-stone-800 dark:bg-stone-900">
+            <footer className="sticky bottom-0 z-10 shrink-0 border-t border-stone-200 bg-white px-6 pb-safe-or-3 pt-4 dark:border-stone-800 dark:bg-stone-900">
               <Button type="button" variant="ghost" onClick={goBack} className="w-full sm:w-auto">
                 <ChevronLeft className="h-4 w-4" />
                 Back to order
@@ -770,143 +799,144 @@ export function AppointmentCheckoutSheet({
           )}
         </div>
       </SheetContent>
-
-      <CheckoutProductPickerDialog
-        open={productPickerOpen}
-        onOpenChange={setProductPickerOpen}
-        products={products}
-        quantitiesByProductId={productQuantities}
-        onSetProductQuantity={setProductQuantity}
-      />
-
-      <Dialog open={cashConfirmOpen} onOpenChange={setCashConfirmOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{coveredByGiftCard ? 'Complete with gift card' : 'Confirm cash payment'}</DialogTitle>
-            <DialogDescription>
-              {coveredByGiftCard ? (
-                <>
-                  Apply gift card{' '}
-                  <span className="font-semibold text-stone-900 dark:text-stone-100">{appliedGiftCardCode}</span>
-                  {' '}and mark this sale paid. Nothing is due.
-                </>
-              ) : (
-                <>
-                  Mark this sale as paid
-                  {giftCardAppliedCents > 0 ? ' in cash after the gift card' : ' in cash'} for{' '}
-                  <span className="font-semibold text-stone-900 dark:text-stone-100">
-                    {formatCurrency(dueCents)}
-                  </span>
-                  ?
-                </>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setCashConfirmOpen(false)}
-              disabled={cashMutation.isPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={() => cashMutation.mutate()}
-              disabled={cashMutation.isPending}
-            >
-              {cashMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : coveredByGiftCard ? (
-                <Gift className="h-4 w-4" />
-              ) : (
-                <Banknote className="h-4 w-4" />
-              )}
-              {coveredByGiftCard ? 'Complete sale' : 'Confirm paid'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <BlockingProgressDialog
-        open={cashMutation.isPending}
-        title="Checkout"
-        message={coveredByGiftCard ? 'Completing sale with gift card…' : 'Recording cash payment…'}
-      />
-      <BlockingProgressDialog
-        open={card.manualPreparing || card.phase === 'starting' || card.phase === 'confirming'}
-        title="Card payment"
-        message={
-          card.manualPreparing
-            ? 'Preparing secure card form…'
-            : (card.status ??
-              (card.phase === 'confirming' ? 'Recording card payment…' : 'Starting card payment…'))
-        }
-      />
-      <BlockingProgressDialog
-        open={rebookMutation.isPending}
-        title="Next visit"
-        message="Booking their next visit…"
-      />
-      <BlockingProgressDialog {...giftCardProgress.dialogProps} />
-
-      <ReceiptChoiceDialog
-        orgId={orgId}
-        open={receiptOpen}
-        saleIds={receiptSaleIds}
-        customerEmail={appointmentInfo?.customer?.email}
-        customerPhone={appointmentInfo?.customer?.phone}
-        usedTerminalReader={usedTerminalReader}
-        onFinished={() => {
-          setReceiptOpen(false);
-          finishPaid();
-        }}
-      />
-
-      <Dialog
-        open={rebookOpen}
-        onOpenChange={(next) => {
-          setRebookOpen(next);
-          if (!next) onOpenChange(false);
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Book their next visit?</DialogTitle>
-            <DialogDescription>
-              They are still at the chair. Lock in the same service
-              {appointmentInfo?.customer
-                ? ` for ${appointmentInfo.customer.firstName}`
-                : ''}{' '}
-              before they walk out.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <p className="mb-1 text-sm font-medium">Date</p>
-              <Input type="date" value={rebookDate} onChange={(event) => setRebookDate(event.target.value)} />
-            </div>
-            <div>
-              <p className="mb-1 text-sm font-medium">Time</p>
-              <Input type="time" value={rebookTime} onChange={(event) => setRebookTime(event.target.value)} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => { setRebookOpen(false); onOpenChange(false); }}>
-              Not now
-            </Button>
-            <Button
-              type="button"
-              disabled={!rebookDate || !rebookTime || rebookMutation.isPending}
-              onClick={() => rebookMutation.mutate()}
-            >
-              {rebookMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Book next visit
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </Sheet>
+
+    <CheckoutProductPickerDialog
+      open={productPickerOpen}
+      onOpenChange={setProductPickerOpen}
+      products={products}
+      quantitiesByProductId={productQuantities}
+      onSetProductQuantity={setProductQuantity}
+    />
+
+    <Dialog open={cashConfirmOpen} onOpenChange={setCashConfirmOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{coveredByGiftCard ? 'Complete with gift card' : 'Confirm cash payment'}</DialogTitle>
+          <DialogDescription>
+            {coveredByGiftCard ? (
+              <>
+                Apply gift card{' '}
+                <span className="font-semibold text-stone-900 dark:text-stone-100">{appliedGiftCardCode}</span>
+                {' '}and mark this sale paid. Nothing is due.
+              </>
+            ) : (
+              <>
+                Mark this sale as paid
+                {giftCardAppliedCents > 0 ? ' in cash after the gift card' : ' in cash'} for{' '}
+                <span className="font-semibold text-stone-900 dark:text-stone-100">
+                  {formatCurrency(dueCents)}
+                </span>
+                ?
+              </>
+            )}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setCashConfirmOpen(false)}
+            disabled={cashMutation.isPending}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={() => cashMutation.mutate()}
+            disabled={cashMutation.isPending}
+          >
+            {cashMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : coveredByGiftCard ? (
+              <Gift className="h-4 w-4" />
+            ) : (
+              <Banknote className="h-4 w-4" />
+            )}
+            {coveredByGiftCard ? 'Complete sale' : 'Confirm paid'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <BlockingProgressDialog
+      open={cashMutation.isPending}
+      title="Checkout"
+      message={coveredByGiftCard ? 'Completing sale with gift card…' : 'Recording cash payment…'}
+    />
+    <BlockingProgressDialog
+      open={card.manualPreparing || card.phase === 'starting' || card.phase === 'confirming'}
+      title="Card payment"
+      message={
+        card.manualPreparing
+          ? 'Preparing secure card form…'
+          : (card.status ??
+            (card.phase === 'confirming' ? 'Recording card payment…' : 'Starting card payment…'))
+      }
+    />
+    <BlockingProgressDialog
+      open={rebookMutation.isPending}
+      title="Next visit"
+      message="Booking their next visit…"
+    />
+    <BlockingProgressDialog {...giftCardProgress.dialogProps} />
+
+    <ReceiptChoiceDialog
+      orgId={orgId}
+      open={receiptOpen}
+      saleIds={receiptSaleIds}
+      customerEmail={appointmentInfo?.customer?.email}
+      customerPhone={appointmentInfo?.customer?.phone}
+      usedTerminalReader={usedTerminalReader}
+      onFinished={() => {
+        setReceiptOpen(false);
+        finishPaid();
+      }}
+    />
+
+    <Dialog
+      open={rebookOpen}
+      onOpenChange={(next) => {
+        setRebookOpen(next);
+        if (!next) onOpenChange(false);
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Book their next visit?</DialogTitle>
+          <DialogDescription>
+            They are still at the chair. Lock in the same service
+            {appointmentInfo?.customer
+              ? ` for ${appointmentInfo.customer.firstName}`
+              : ''}{' '}
+            before they walk out.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <p className="mb-1 text-sm font-medium">Date</p>
+            <Input type="date" value={rebookDate} onChange={(event) => setRebookDate(event.target.value)} />
+          </div>
+          <div>
+            <p className="mb-1 text-sm font-medium">Time</p>
+            <Input type="time" value={rebookTime} onChange={(event) => setRebookTime(event.target.value)} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => { setRebookOpen(false); onOpenChange(false); }}>
+            Not now
+          </Button>
+          <Button
+            type="button"
+            disabled={!rebookDate || !rebookTime || rebookMutation.isPending}
+            onClick={() => rebookMutation.mutate()}
+          >
+            {rebookMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Book next visit
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

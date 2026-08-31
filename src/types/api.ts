@@ -272,7 +272,7 @@ export interface OrgPlanFeatures {
   subscriptionTier: SubscriptionTier | null;
   tierName: string;
   smsRemindersEnabled: boolean;
-  /** False while the platform sending number is under A2P / carrier review. */
+  /** False while production sending is paused. Staging UI treats texts as available. */
   smsSendingEnabled?: boolean;
   emailRemindersEnabled: boolean;
   recurringAppointmentsEnabled: boolean;
@@ -520,6 +520,9 @@ export interface BatchCheckoutPreview {
   }>;
   subtotalCents: number;
   tipCents: number;
+  giftCardAppliedCents?: number;
+  giftCardCode?: string | null;
+  giftCardRemainingCents?: number | null;
   totalCents: number;
 }
 
@@ -682,6 +685,8 @@ export interface CreateAppointmentInput {
   timezone: string;
   appointmentNotes?: string;
   smsOptIn?: boolean;
+  /** Guest is here now — skip working-hours rules (overlap still blocks). */
+  walkIn?: boolean;
 }
 
 export interface CreateAccountInput {
@@ -790,6 +795,28 @@ export interface SupportTicketMessage {
   body: string;
   createdAt: string;
   attachments?: SupportTicketAttachment[];
+}
+
+export type DemoBookingStatus = 'scheduled' | 'canceled' | 'completed';
+
+export interface DemoBooking {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  businessName?: string | null;
+  notes?: string | null;
+  startsAt: string;
+  endsAt: string;
+  timezone: string;
+  status: DemoBookingStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DemoSlot {
+  startsAt: string;
+  endsAt: string;
 }
 
 export type CustomWebsiteRequestStatus = 'open' | 'in_progress' | 'done' | 'closed';
@@ -981,7 +1008,7 @@ export interface WaitlistEntry {
   updatedAt: string;
 }
 
-export type GiftCardStatus = 'active' | 'redeemed' | 'void';
+export type GiftCardStatus = 'inactive' | 'active' | 'redeemed' | 'void';
 
 export interface GiftCard {
   id: string;

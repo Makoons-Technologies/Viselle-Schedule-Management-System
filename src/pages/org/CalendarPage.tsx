@@ -1,6 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { addDays, format, parseISO, startOfDay } from 'date-fns';
-import { ListChecks, Plus, SlidersHorizontal, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { DoorOpen, ListChecks, Plus, SlidersHorizontal, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { Appointment } from '@/types/api';
@@ -14,21 +14,24 @@ import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
 import { filterOutCancelled, useHideCancelledAppointments } from '@/hooks/useHideCancelledAppointments';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-import { useMyAppointmentsOnly } from '@/hooks/useMyAppointmentsOnly';
+import { ALL_SCHEDULES, MY_SCHEDULE, useMobileScheduleView } from '@/hooks/useMobileScheduleView';
 import { useStaffPermissions } from '@/hooks/useStaffPermissions';
 import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { AppointmentDetailSheet } from '@/components/appointments/AppointmentDetailSheet';
 import { BatchCheckoutSheet, type BatchCheckoutItem } from '@/components/appointments/BatchCheckoutSheet';
 import { CreateAppointmentDialog } from '@/components/appointments/CreateAppointmentDialog';
 import { RecurringEditScopeDialog } from '@/components/appointments/RecurringEditScopeDialog';
+import { WalkInDialog } from '@/components/appointments/WalkInDialog';
 import { StaffScheduleFilter } from '@/components/calendar/StaffScheduleFilter';
+import { MobileScheduleFilter } from '@/components/calendar/MobileScheduleFilter';
 import { WeekAppointmentTimeGrid } from '@/components/calendar/WeekAppointmentTimeGrid';
 import { appointmentDayKey, appointmentStartMinutes } from '@/components/calendar/week-time-grid';
+import { isCalendarSlotInHours } from '@/lib/availability';
 import {
   localDateFromDayKey,
   revealStaffAfterCreate,
   shouldClearDayZoom,
-  shouldDisableMyAppointmentsOnly,
+  shouldRevealAllAfterCreate,
 } from '@/components/calendar/calendar-create-visibility';
 import { CalendarAppointmentChip } from '@/components/calendar/CalendarAppointmentChip';
 import { WeekCalendarNav } from '@/components/calendar/WeekCalendarNav';
@@ -74,13 +77,14 @@ export function CalendarPage() {
   /** Matches Tailwind `md` — same breakpoint as mobile bottom nav. */
   const isMobile = useMediaQuery('(max-width: 767px)');
   const isCoarsePointer = useMediaQuery('(pointer: coarse)');
-  const { myAppointmentsOnly, setMyAppointmentsOnly } = useMyAppointmentsOnly();
+  const { scheduleView, setScheduleView } = useMobileScheduleView();
   const [weekStart, setWeekStart] = useState(() => startOfDay(new Date()));
   const [selectedAppointment, setSelectedAppointment] = useState<{
     id: string;
     startTime: string;
   } | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [walkInOpen, setWalkInOpen] = useState(false);
   const [createDefaultDate, setCreateDefaultDate] = useState<string | undefined>(undefined);
   const [createDefaultMinutes, setCreateDefaultMinutes] = useState<number | undefined>(undefined);
   /** null = default all staff selected once accounts load (desktop picker). */
@@ -176,6 +180,41 @@ export function CalendarPage() {
     return memberships.find((membership) => membership.organizationId === orgId)?.accountId ?? null;
   }, [user?.accountId, memberships, orgId]);
 
+  /**
+   * Resolve the mobile schedule scope to a single account id to filter by, or
+   * null when showing all appointments. `'me'` with no known account falls back
+   * to showing everyone.
+   */
+  const viewedAccountId = useMemo(() => {
+    if (scheduleView === ALL_SCHEDULES) return null;
+    if (scheduleView === MY_SCHEDULE) return myAccountId;
+    return scheduleView;
+  }, [scheduleView, myAccountId]);
+
+  const otherStaffAccounts = useMemo(
+    () => staffAccounts.filter((account) => account.id !== myAccountId),
+    [staffAccounts, myAccountId],
+  );
+
+  const hourAccountIds = useMemo(() => {
+    if (isMobile) {
+      if (viewedAccountId) return [viewedAccountId];
+      return staffAccounts.map((account) => account.id);
+    }
+    return resolvedStaffIds;
+  }, [isMobile, viewedAccountId, resolvedStaffIds, staffAccounts]);
+
+  const availabilityQueries = useQueries({
+    queries: hourAccountIds.map((accountId) => ({
+      queryKey: ['availability-rules', orgId, accountId] as const,
+      queryFn: () => orgApi.listAvailabilityRules(orgId, accountId),
+      enabled: Boolean(orgId && accountId),
+    })),
+  });
+  const hoursPending = availabilityQueries.some((query) => query.isPending);
+  const hoursRules = availabilityQueries.flatMap((query) => query.data?.availabilityRules ?? []);
+  const constrainToHours = !hoursPending && hoursRules.some((rule) => rule.isActive);
+
   const activeRecurringRuleIds = useMemo(
     () =>
       new Set(
@@ -251,14 +290,16 @@ export function CalendarPage() {
     [accountsData],
   );
 
+  const myAccount = myAccountId ? accountsById[myAccountId] ?? null : null;
+
   const appointments = useMemo(() => {
     const list = data?.appointments ?? [];
     let filtered = list;
     if (isMobile) {
-      // Filter by the logged-in account id directly so own appointments still
+      // Filter by the resolved account id directly so own appointments still
       // render even when that account is missing from the bookable staff list.
-      if (myAppointmentsOnly && myAccountId) {
-        filtered = list.filter((appt) => appt.accountId === myAccountId);
+      if (viewedAccountId) {
+        filtered = list.filter((appt) => appt.accountId === viewedAccountId);
       }
     } else {
       const selected = new Set(resolvedStaffIds);
@@ -269,8 +310,7 @@ export function CalendarPage() {
     data?.appointments,
     hideCancelled,
     isMobile,
-    myAccountId,
-    myAppointmentsOnly,
+    viewedAccountId,
     resolvedStaffIds,
   ]);
 
@@ -314,13 +354,10 @@ export function CalendarPage() {
 
     setSelectedStaffIds((prev) => revealStaffAfterCreate(prev, appointment.accountId));
     if (
-      shouldDisableMyAppointmentsOnly({
-        myAppointmentsOnly,
-        myAccountId,
-        createdAccountId: appointment.accountId,
-      })
+      isMobile &&
+      shouldRevealAllAfterCreate({ viewedAccountId, createdAccountId: appointment.accountId })
     ) {
-      setMyAppointmentsOnly(false);
+      setScheduleView(ALL_SCHEDULES);
     }
 
     const dayKey = appointmentDayKey(appointment.startTime);
@@ -412,7 +449,7 @@ export function CalendarPage() {
     const startTime =
       focusRequest.startTime ??
       data?.appointments.find((appointment) => appointment.id === focusRequest.id)?.startTime;
-    if (!startTime) return;
+    if (!startTime || Number.isNaN(new Date(startTime).getTime())) return;
 
     const dayKey = appointmentDayKey(startTime);
     if (!dayKeys.includes(dayKey)) {
@@ -426,13 +463,10 @@ export function CalendarPage() {
     if (raw) {
       setSelectedStaffIds((prev) => revealStaffAfterCreate(prev, raw.accountId));
       if (
-        shouldDisableMyAppointmentsOnly({
-          myAppointmentsOnly,
-          myAccountId,
-          createdAccountId: raw.accountId,
-        })
+        isMobile &&
+        shouldRevealAllAfterCreate({ viewedAccountId, createdAccountId: raw.accountId })
       ) {
-        setMyAppointmentsOnly(false);
+        setScheduleView(ALL_SCHEDULES);
       }
     }
     if (shouldClearDayZoom(zoomedDayKeys, dayKey)) {
@@ -451,9 +485,9 @@ export function CalendarPage() {
     dayKeys,
     focusRequest,
     isLoading,
-    myAccountId,
-    myAppointmentsOnly,
-    setMyAppointmentsOnly,
+    isMobile,
+    viewedAccountId,
+    setScheduleView,
     setSearchParams,
     zoomedDayKeys,
   ]);
@@ -522,21 +556,45 @@ export function CalendarPage() {
             )
           )}
           {permissions.canCreateAppointments && (
-            <TrialLockedControl locked={trialExpired}>
-              <Button
-                size="sm"
-                className="h-8 px-2"
-                disabled={trialExpired}
-                onClick={() => {
-                  setCreateDefaultDate(undefined);
-                  setCreateDefaultMinutes(undefined);
-                  setCreateOpen(true);
-                }}
-              >
-                <Plus className="h-3.5 w-3.5" />
-                {isMobile ? 'New' : 'New Appointment'}
-              </Button>
-            </TrialLockedControl>
+            <>
+              <TrialLockedControl locked={trialExpired}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-2"
+                  disabled={trialExpired}
+                  onClick={() => setWalkInOpen(true)}
+                  aria-label="Walk-in"
+                  title="Take a walk-in"
+                >
+                  <DoorOpen className="h-3.5 w-3.5" />
+                  Walk-in
+                </Button>
+              </TrialLockedControl>
+              <TrialLockedControl locked={trialExpired}>
+                <Button
+                  size="sm"
+                  className="h-8 px-2"
+                  disabled={trialExpired}
+                  onClick={() => {
+                    setCreateDefaultDate(undefined);
+                    setCreateDefaultMinutes(undefined);
+                    setCreateOpen(true);
+                  }}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  {isMobile ? 'New' : 'New Appointment'}
+                </Button>
+              </TrialLockedControl>
+            </>
+          )}
+          {isMobile && (
+            <MobileScheduleFilter
+              value={scheduleView}
+              onValueChange={setScheduleView}
+              myAccount={myAccount}
+              otherAccounts={otherStaffAccounts}
+            />
           )}
           <div className="hidden desktop-shell:block">
             <StaffScheduleFilter
@@ -560,15 +618,6 @@ export function CalendarPage() {
             >
               Hide cancelled
             </DropdownMenuCheckboxItem>
-            {isMobile && (
-              <DropdownMenuCheckboxItem
-                checked={myAppointmentsOnly}
-                onCheckedChange={(checked) => setMyAppointmentsOnly(checked === true)}
-                onSelect={(event) => event.preventDefault()}
-              >
-                My appointments only
-              </DropdownMenuCheckboxItem>
-            )}
             <DropdownMenuSeparator />
             <DropdownMenuLabel>Status colors</DropdownMenuLabel>
             {(Object.keys(APPOINTMENT_CALENDAR_LIP_CLASS) as Array<keyof typeof APPOINTMENT_CALENDAR_LIP_CLASS>)
@@ -585,6 +634,15 @@ export function CalendarPage() {
                   {APPOINTMENT_CALENDAR_LIP_LABEL[state]}
                 </div>
               ))}
+            {constrainToHours ? (
+              <div className="flex items-center gap-2 px-2 py-1.5 text-sm text-stone-700 dark:text-stone-200">
+                <span
+                  className="h-4 w-6 rounded-sm bg-stone-200/80 ring-1 ring-stone-300/80 dark:bg-stone-800/75 dark:ring-stone-600"
+                  aria-hidden
+                />
+                Outside hours
+              </div>
+            ) : null}
           </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -628,6 +686,11 @@ export function CalendarPage() {
         focusSlot={focusSlot}
         interactionEnabled={interactionEnabled}
         onAppointmentScheduleChange={handleAppointmentScheduleChange}
+        isSlotInHours={
+          constrainToHours
+            ? (dayKey, minutes) => isCalendarSlotInHours(hoursRules, dayKey, minutes)
+            : undefined
+        }
         onEmptySlotClick={
           permissions.canCreateAppointments && !selectMode
             ? ({ dayKey, minutes }) => {
@@ -752,9 +815,7 @@ export function CalendarPage() {
         defaultMinutes={createDefaultMinutes}
         defaultAccountId={
           isMobile
-            ? myAppointmentsOnly && myAccountId
-              ? myAccountId
-              : undefined
+            ? viewedAccountId ?? undefined
             : resolvedStaffIds.length === 1
               ? resolvedStaffIds[0]
               : undefined
@@ -773,6 +834,13 @@ export function CalendarPage() {
           if (!pendingScheduleChange) return;
           rescheduleMutation.mutate({ ...pendingScheduleChange, scope });
         }}
+      />
+      <WalkInDialog
+        orgId={orgId}
+        open={walkInOpen}
+        onOpenChange={setWalkInOpen}
+        defaultAccountId={myAccountId}
+        onCreated={handleAppointmentsCreated}
       />
     </div>
   );

@@ -131,7 +131,7 @@ export function PlatformOrgOverviewPage() {
                         : `Up to ${plan.maxStaffAccounts}`}
                   </li>
                   <li>Email reminders: {plan.emailRemindersEnabled ? 'Yes' : 'No'}</li>
-                  <li>SMS reminders: {plan.smsRemindersEnabled ? 'Yes' : 'No'}</li>
+                  <li>Client texts: {plan.smsRemindersEnabled ? 'Yes' : 'No'}</li>
                   <li>Recurring: {plan.recurringAppointmentsEnabled ? 'Yes' : 'No'}</li>
                 </ul>
               </>

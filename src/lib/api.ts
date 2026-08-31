@@ -37,6 +37,8 @@ import type {
   CustomWebsiteRequest,
   CustomWebsiteRequestNote,
   CustomWebsiteRequestStatus,
+  DemoBooking,
+  DemoBookingStatus,
   RecurringAppointmentRule,
   RecurringFrequency,
   Product,
@@ -496,6 +498,11 @@ export const ownerApi = {
         body,
       })
       .then((r) => r.data),
+
+  listDemoBookings: (params: { from: string; to: string }) =>
+    apiClient.get<{ bookings: DemoBooking[] }>('/owner/demo-bookings', { params }).then((r) => r.data),
+  updateDemoBookingStatus: (id: string, status: DemoBookingStatus) =>
+    apiClient.patch<{ booking: DemoBooking }>(`/owner/demo-bookings/${id}`, { status }).then((r) => r.data),
 };
 
 export const supportApi = {
@@ -850,11 +857,17 @@ export const orgApi = {
         { paymentIntentId },
       )
       .then((r) => r.data),
-  previewBatchCheckout: (orgId: string, data: { appointments: BatchCheckoutAppointmentInput[]; tipCents: number }) =>
+  previewBatchCheckout: (
+    orgId: string,
+    data: { appointments: BatchCheckoutAppointmentInput[]; tipCents: number; giftCardCode?: string },
+  ) =>
     apiClient
       .post<BatchCheckoutPreview>(`/organizations/${orgId}/checkout/batch/preview`, data)
       .then((r) => r.data),
-  batchCheckoutCash: (orgId: string, data: { appointments: BatchCheckoutAppointmentInput[]; tipCents: number }) =>
+  batchCheckoutCash: (
+    orgId: string,
+    data: { appointments: BatchCheckoutAppointmentInput[]; tipCents: number; giftCardCode?: string },
+  ) =>
     apiClient
       .post<{ paymentGroupId: string; saleIds: string[]; totalCents: number }>(
         `/organizations/${orgId}/checkout/batch/cash`,
@@ -863,7 +876,12 @@ export const orgApi = {
       .then((r) => r.data),
   batchCheckoutCard: (
     orgId: string,
-    data: { appointments: BatchCheckoutAppointmentInput[]; tipCents: number; mode?: 'terminal' | 'online' },
+    data: {
+      appointments: BatchCheckoutAppointmentInput[];
+      tipCents: number;
+      giftCardCode?: string;
+      mode?: 'terminal' | 'online';
+    },
   ) =>
     apiClient
       .post<{
@@ -1027,12 +1045,31 @@ export const orgApi = {
   updateWaitlist: (orgId: string, entryId: string, data: { status?: WaitlistStatus; notes?: string | null }) =>
     apiClient.patch<{ entry: WaitlistEntry }>(`/organizations/${orgId}/waitlist/${entryId}`, data).then((r) => r.data),
 
-  listGiftCards: (orgId: string) =>
-    apiClient.get<{ giftCards: GiftCard[] }>(`/organizations/${orgId}/gift-cards`).then((r) => r.data),
+  listGiftCards: (orgId: string, params?: { code?: string }) =>
+    apiClient
+      .get<{ giftCards: GiftCard[] }>(`/organizations/${orgId}/gift-cards`, {
+        params: params?.code ? { code: params.code } : undefined,
+      })
+      .then((r) => r.data),
   createGiftCard: (
     orgId: string,
     data: { amountCents: number; creditCents?: number; code?: string },
   ) => apiClient.post<{ giftCard: GiftCard }>(`/organizations/${orgId}/gift-cards`, data).then((r) => r.data),
+  activateGiftCards: (orgId: string, data: { codes: string[] }) =>
+    apiClient
+      .post<{ giftCards: GiftCard[]; errors: Array<{ code: string; message: string }> }>(
+        `/organizations/${orgId}/gift-cards/activate`,
+        data,
+      )
+      .then((r) => r.data),
+  addFundsToGiftCard: (
+    orgId: string,
+    giftCardId: string,
+    data: { amountCents: number; creditCents?: number },
+  ) =>
+    apiClient
+      .post<{ giftCard: GiftCard }>(`/organizations/${orgId}/gift-cards/${giftCardId}/add-funds`, data)
+      .then((r) => r.data),
   lookupGiftCard: (orgId: string, data: { code: string }, signal?: AbortSignal) =>
     apiClient
       .post<{ giftCard: GiftCard }>(`/organizations/${orgId}/gift-cards/lookup`, data, { signal })

@@ -225,6 +225,13 @@ export async function checkSlugAvailable(slug: string) {
   return data.available;
 }
 
+export async function checkEmailAvailable(email: string) {
+  const { data } = await signupClient.get<{ available: boolean }>('/signup/email/available', {
+    params: { email },
+  });
+  return data.available;
+}
+
 export interface SignupCheckoutResult {
   checkoutUrl?: string;
   sessionId?: string;

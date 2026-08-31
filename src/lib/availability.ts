@@ -58,4 +58,30 @@ export function rulesForDay(rules: AvailabilityRule[], dayOfWeek: number): Avail
     .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
 }
 
+/** Civil `yyyy-MM-dd` in the viewer's local calendar (same keys as the week grid). */
+export function dayOfWeekFromDayKey(dayKey: string): number {
+  const [year, month, day] = dayKey.split('-').map(Number);
+  return new Date(year, month - 1, day).getDay();
+}
+
+export function isSlotWithinHours(
+  slotStartMinutes: number,
+  ranges: Array<{ startTime: string; endTime: string }>,
+): boolean {
+  return ranges.some((range) => {
+    const start = timeToMinutes(range.startTime);
+    const end = timeToMinutes(range.endTime);
+    return slotStartMinutes >= start && slotStartMinutes < end;
+  });
+}
+
+/** True when this 30-minute start falls inside at least one active hours block that day. */
+export function isCalendarSlotInHours(
+  rules: AvailabilityRule[],
+  dayKey: string,
+  slotStartMinutes: number,
+): boolean {
+  return isSlotWithinHours(slotStartMinutes, rulesForDay(rules, dayOfWeekFromDayKey(dayKey)));
+}
+
 export const AVAILABILITY_DAYS = [0, 1, 2, 3, 4, 5, 6] as const;

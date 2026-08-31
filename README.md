@@ -63,6 +63,9 @@ Source markdown for the docs page: `src/content/public-booking-api.md` (keep in 
 | `npm run dev` | Dev server (port 5173) |
 | `npm run build` | Production build |
 | `npm run preview` | Preview production build |
+| `npm run test:e2e` | Playwright smokes (see `e2e/README.md`) |
+| `npm run test:e2e:ui` | Playwright UI mode |
+| `npm run test:e2e:install` | Install Chromium for Playwright |
 
 ## Architecture
 

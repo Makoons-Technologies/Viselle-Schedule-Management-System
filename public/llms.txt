@@ -16,6 +16,8 @@
 
 Beauty and wellness businesses — hair salons, spas, nail studios, estheticians, and similar appointment-based shops.
 
+- There are 121,701 hair, nail, and skin care shops in the US (BLS QCEW, 2025 Q4, NAICS 81211, private payroll establishments). Most have fewer than five people on payroll. https://www.bls.gov/cew/
+
 ## Key URLs
 
 - Home: https://viselle.net/

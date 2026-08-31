@@ -22,12 +22,17 @@ export function useAppShellViewport() {
 
     const themeMeta = document.querySelector('meta[name="theme-color"]');
     const previousTheme = themeMeta?.getAttribute('content');
+    const statusBarMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+    const previousStatusBarStyle = statusBarMeta?.getAttribute('content');
     const syncThemeColor = () => {
       if (!themeMeta) return;
       const dark = document.documentElement.classList.contains('dark');
       themeMeta.setAttribute('content', dark ? '#1c1917' : '#ffffff');
     };
     syncThemeColor();
+    // Opaque status bar. index.html must also default to `black` — iOS reads
+    // this at PWA launch and often ignores runtime changes (BEA-78).
+    statusBarMeta?.setAttribute('content', 'black');
 
     let keyboardWasOpen = false;
     const settleTimers: number[] = [];
@@ -121,6 +126,9 @@ export function useAppShellViewport() {
       document.documentElement.classList.remove('app-shell');
       document.documentElement.style.removeProperty('--app-height');
       if (themeMeta && previousTheme) themeMeta.setAttribute('content', previousTheme);
+      if (statusBarMeta && previousStatusBarStyle) {
+        statusBarMeta.setAttribute('content', previousStatusBarStyle);
+      }
       for (const id of settleTimers) window.clearTimeout(id);
       vv?.removeEventListener('resize', onVisualViewportResize);
       window.removeEventListener('resize', onViewportSettle);

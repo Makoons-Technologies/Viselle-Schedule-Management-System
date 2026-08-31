@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#2a0f1e" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="Viselle" />
     <meta
       name="viewport"
@@ -59,7 +59,46 @@
             "applicationCategory": "BusinessApplication",
             "operatingSystem": "Web",
             "url": "https://viselle.net/",
-            "description": "Appointment scheduling and online booking for beauty and wellness businesses."
+            "description": "Appointment scheduling and online booking for beauty and wellness businesses.",
+            "additionalProperty": [
+              {
+                "@type": "PropertyValue",
+                "name": "US hair, nail, and skin care shops (NAICS 81211)",
+                "value": "120014",
+                "unitText": "establishments",
+                "description": "BLS QCEW 2025 Q1, private ownership. Payroll shops only."
+              }
+            ]
+          },
+          {
+            "@type": "FAQPage",
+            "url": "https://viselle.net/",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "How many hair, nail, and skin care shops are in the US?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "There are 120,014 hair, nail, and skin care shops in the US. Most have fewer than five people on payroll. About 4.6 payroll employees per shop. Source: BLS Quarterly Census of Employment and Wages (QCEW), 2025 Q1, NAICS 81211, private ownership. Payroll shops only; booth renters are undercounted. https://www.bls.gov/cew/"
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "How many beauty salons, nail salons, and barber shops are in the US?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Beauty salons (NAICS 812112): 77,524. Nail salons (NAICS 812113): 34,042. Barber shops (NAICS 812111): 8,448. Source: BLS QCEW, 2025 Q1, private ownership."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "How many hair, nail, and skin care shops are in Greene County, Missouri?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "124 of those shops are in Greene County, Missouri. 75 beauty, 30 nail, 19 barber. Missouri has 1,686 shops. Source: BLS QCEW, 2025 Q1."
+                }
+              }
+            ]
           }
         ]
       }

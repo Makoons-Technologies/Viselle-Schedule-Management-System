@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { getApiErrorMessage } from '@/lib/api';
 import { signedInHomePath } from '@/lib/auth-redirect';
 import { withoutReactFormReset } from '@/lib/form-submit';
+import { confirmPasswordAfterPasswordChange } from '@/lib/password-autofill';
 import { LoadingState } from '@/components/common/LoadingState';
 import { ViselleLogo } from '@/components/common/ViselleLogo';
 import { PageSeo } from '@/components/seo/PageSeo';
@@ -35,9 +36,11 @@ export function SetPasswordPage() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') ?? '';
   const [submitting, setSubmitting] = useState(false);
-  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, setValue, getValues, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
+  const passwordField = register('password');
+  const confirmPasswordField = register('confirmPassword');
 
   if (!token) {
     return (
@@ -91,7 +94,32 @@ export function SetPasswordPage() {
           <form onSubmit={withoutReactFormReset(handleSubmit(onSubmit))} className="space-y-4">
             <div>
               <Label htmlFor="password">Password</Label>
-              <PasswordInput id="password" autoComplete="new-password" {...register('password')} />
+              <PasswordInput
+                id="password"
+                autoComplete="new-password"
+                {...passwordField}
+                onChange={(event) => {
+                  const nextPassword = event.target.value;
+                  const previousPassword = getValues('password') ?? '';
+                  const confirmState = getValues('confirmPassword') ?? '';
+                  const confirmDomValue =
+                    (event.currentTarget.form?.elements.namedItem('confirmPassword') as HTMLInputElement | null)
+                      ?.value ?? '';
+                  void passwordField.onChange(event);
+                  const nextConfirm = confirmPasswordAfterPasswordChange({
+                    nextPassword,
+                    previousPassword,
+                    confirmState,
+                    confirmDomValue,
+                  });
+                  if (nextConfirm != null) {
+                    setValue('confirmPassword', nextConfirm, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    });
+                  }
+                }}
+              />
               {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password.message}</p>}
             </div>
             <div>
@@ -99,7 +127,7 @@ export function SetPasswordPage() {
               <PasswordInput
                 id="confirmPassword"
                 autoComplete="new-password"
-                {...register('confirmPassword')}
+                {...confirmPasswordField}
               />
               {errors.confirmPassword && (
                 <p className="mt-1 text-xs text-red-600">{errors.confirmPassword.message}</p>
