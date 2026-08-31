@@ -26,8 +26,14 @@ export function MarketingHeader() {
             <Link to="/contact" className={navLinkClassName}>
               Contact
             </Link>
+            <Link to="/request-demo" className={cn(navLinkClassName, 'hidden sm:inline')}>
+              Request a demo
+            </Link>
           </div>
           <div className="flex items-center gap-2">
+            <Button asChild size="sm" variant="outline" className="border-white/30 bg-white/5 text-white hover:bg-white/15 hover:text-white sm:hidden">
+              <Link to="/request-demo">Demo</Link>
+            </Button>
             <Button asChild size="sm">
               <Link to="/get-started">Get started</Link>
             </Button>

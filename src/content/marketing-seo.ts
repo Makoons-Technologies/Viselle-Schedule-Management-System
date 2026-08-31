@@ -94,6 +94,13 @@ export const marketingSeo = {
     path: '/terms',
     image: defaultOgImage,
   },
+  requestDemo: {
+    title: 'Request a demo',
+    description:
+      'Book a 30-minute Viselle demo. Pick a time that works and we will walk you through scheduling, booking pages, and reminders for your salon or spa.',
+    path: '/request-demo',
+    image: defaultOgImage,
+  },
   getStarted: {
     title: 'Get started',
     description:

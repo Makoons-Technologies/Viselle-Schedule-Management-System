@@ -795,6 +795,28 @@ export interface SupportTicketMessage {
   attachments?: SupportTicketAttachment[];
 }
 
+export type DemoBookingStatus = 'scheduled' | 'canceled' | 'completed';
+
+export interface DemoBooking {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  businessName?: string | null;
+  notes?: string | null;
+  startsAt: string;
+  endsAt: string;
+  timezone: string;
+  status: DemoBookingStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DemoSlot {
+  startsAt: string;
+  endsAt: string;
+}
+
 export type CustomWebsiteRequestStatus = 'open' | 'in_progress' | 'done' | 'closed';
 export type CustomWebsiteRequestSource = 'signup' | 'backfill' | 'manual';
 

@@ -136,7 +136,7 @@ export function LandingPage() {
               size="lg"
               className="border-white/30 bg-white/5 text-white hover:bg-white/15 hover:text-white"
             >
-              <a href="#pricing">See plans &amp; pricing</a>
+              <Link to="/request-demo">Request a demo</Link>
             </Button>
           </div>
           {homepageTrial && (

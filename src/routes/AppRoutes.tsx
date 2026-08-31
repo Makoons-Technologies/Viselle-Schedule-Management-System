@@ -15,6 +15,7 @@ import { ReleasesPage } from '@/pages/public/ReleasesPage';
 import { BusinessCardPage } from '@/pages/public/BusinessCardPage';
 import { SocialSharePage } from '@/pages/public/SocialSharePage';
 import { GetStartedPage } from '@/pages/GetStartedPage';
+import { RequestDemoPage } from '@/pages/public/RequestDemoPage';
 import { GetStartedSuccessPage } from '@/pages/GetStartedSuccessPage';
 import { PublicBookingPage } from '@/pages/public/PublicBookingPage';
 import { ManageBookingPage } from '@/pages/public/ManageBookingPage';
@@ -71,6 +72,7 @@ import { PlatformTicketDetailPage } from '@/pages/platform/PlatformTicketDetailP
 import { PlatformCustomWebsitesPage } from '@/pages/platform/PlatformCustomWebsitesPage';
 import { PlatformCustomWebsiteDetailPage } from '@/pages/platform/PlatformCustomWebsiteDetailPage';
 import { PlatformNotificationsPage } from '@/pages/platform/PlatformNotificationsPage';
+import { PlatformDemosPage } from '@/pages/platform/PlatformDemosPage';
 import type { UserRole } from '@/types/api';
 
 function StaffOrgRedirect({ to }: { to: 'calendar' | 'appointments' }) {
@@ -107,6 +109,7 @@ export const appRoutes = [
   { path: '/release-notes', element: <Navigate to="/releases" replace /> },
   { path: '/developers', element: <Navigate to="/docs/api" replace /> },
   { path: '/get-started', element: <GetStartedPage /> },
+  { path: '/request-demo', element: <RequestDemoPage /> },
   { path: '/get-started/success', element: <GetStartedSuccessPage /> },
   { path: '/website', element: <Navigate to="/#websites" replace /> },
   { path: '/book/:slug', element: <PublicBookingPage /> },
@@ -129,6 +132,7 @@ export const appRoutes = [
             element: <ProtectedRoute roles={['platform_owner']} />,
             children: [
               { path: '/platform/dashboard', element: <PlatformDashboard /> },
+              { path: '/platform/demos', element: <PlatformDemosPage /> },
               { path: '/platform/organizations', element: <OrganizationsPage /> },
               { path: '/platform/organizations/new', element: <CreateOrganizationPage /> },
               { path: '/platform/trials', element: <TrialsCampaignsPage /> },

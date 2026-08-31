@@ -1,7 +1,9 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Building2, Calendar, DollarSign, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ownerApi } from '@/lib/api';
+import { formatDemoDateTime } from '@/lib/demo';
 import { centsToDollars } from '@/lib/utils';
 import { PageHeader } from '@/components/common/PageHeader';
 import { LoadingState } from '@/components/common/LoadingState';
@@ -20,6 +22,19 @@ export function PlatformDashboard() {
     queryFn: ownerApi.getPlatformStats,
   });
 
+  const demoRange = useMemo(() => {
+    const from = new Date();
+    const to = new Date();
+    to.setDate(to.getDate() + 14);
+    return { from: from.toISOString(), to: to.toISOString() };
+  }, []);
+
+  const { data: demoData } = useQuery({
+    queryKey: ['owner', 'demo-bookings', demoRange.from, demoRange.to],
+    queryFn: () => ownerApi.listDemoBookings(demoRange),
+  });
+  const upcomingDemos = (demoData?.bookings ?? []).filter((booking) => booking.status === 'scheduled').slice(0, 5);
+
   if (orgsLoading || statsLoading) return <LoadingState />;
 
   const orgs = orgData?.organizations ?? [];
@@ -33,9 +48,14 @@ export function PlatformDashboard() {
         title="Platform Dashboard"
         description="Overview of organizations, plans, and revenue on Viselle"
         actions={
-          <Button asChild>
-            <Link to="/platform/organizations/new">New Organization</Link>
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button asChild variant="outline">
+              <Link to="/platform/demos">Demo calendar</Link>
+            </Button>
+            <Button asChild>
+              <Link to="/platform/organizations/new">New Organization</Link>
+            </Button>
+          </div>
         }
       />
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
@@ -142,6 +162,31 @@ export function PlatformDashboard() {
           </CardContent>
         </Card>
       )}
+
+      <Card className="mt-6">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base">Upcoming demos</CardTitle>
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/platform/demos">Open calendar</Link>
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {upcomingDemos.length === 0 ? (
+            <p className="text-sm text-stone-500 dark:text-stone-400">
+              No booked demos in the next two weeks. They appear here after someone uses Request a demo.
+            </p>
+          ) : (
+            <ul className="space-y-3">
+              {upcomingDemos.map((booking) => (
+                <li key={booking.id} className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between">
+                  <span className="font-medium text-stone-900 dark:text-stone-100">{booking.name}</span>
+                  <span className="text-sm text-stone-500 dark:text-stone-400">{formatDemoDateTime(booking.startsAt)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="mt-6">
         <MrrChart />

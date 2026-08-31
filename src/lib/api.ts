@@ -37,6 +37,8 @@ import type {
   CustomWebsiteRequest,
   CustomWebsiteRequestNote,
   CustomWebsiteRequestStatus,
+  DemoBooking,
+  DemoBookingStatus,
   RecurringAppointmentRule,
   RecurringFrequency,
   Product,
@@ -496,6 +498,11 @@ export const ownerApi = {
         body,
       })
       .then((r) => r.data),
+
+  listDemoBookings: (params: { from: string; to: string }) =>
+    apiClient.get<{ bookings: DemoBooking[] }>('/owner/demo-bookings', { params }).then((r) => r.data),
+  updateDemoBookingStatus: (id: string, status: DemoBookingStatus) =>
+    apiClient.patch<{ booking: DemoBooking }>(`/owner/demo-bookings/${id}`, { status }).then((r) => r.data),
 };
 
 export const supportApi = {
