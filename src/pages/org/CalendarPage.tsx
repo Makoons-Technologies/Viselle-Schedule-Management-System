@@ -502,14 +502,14 @@ export function CalendarPage() {
               </Button>
             </TrialLockedControl>
           )}
-          <div className="desktop-shell:hidden">
+          {isMobile && (
             <MobileScheduleFilter
               value={scheduleView}
               onValueChange={setScheduleView}
               myAccount={myAccount}
               otherAccounts={otherStaffAccounts}
             />
-          </div>
+          )}
           <div className="hidden desktop-shell:block">
             <StaffScheduleFilter
               accounts={staffAccounts}
