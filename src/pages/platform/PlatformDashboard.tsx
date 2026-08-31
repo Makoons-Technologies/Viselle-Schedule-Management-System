@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Building2, Calendar, DollarSign, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ownerApi } from '@/lib/api';
-import { formatDemoDateTime } from '@/lib/demo';
+import { demoBookingRange, formatDemoDateTime, upcomingScheduledDemos } from '@/lib/demo';
 import { centsToDollars } from '@/lib/utils';
 import { PageHeader } from '@/components/common/PageHeader';
 import { LoadingState } from '@/components/common/LoadingState';
@@ -22,18 +22,17 @@ export function PlatformDashboard() {
     queryFn: ownerApi.getPlatformStats,
   });
 
-  const demoRange = useMemo(() => {
-    const from = new Date();
-    const to = new Date();
-    to.setDate(to.getDate() + 14);
-    return { from: from.toISOString(), to: to.toISOString() };
-  }, []);
+  const demoRange = useMemo(() => demoBookingRange(), []);
 
   const { data: demoData } = useQuery({
     queryKey: ['owner', 'demo-bookings', demoRange.from, demoRange.to],
     queryFn: () => ownerApi.listDemoBookings(demoRange),
+    refetchOnWindowFocus: true,
   });
-  const upcomingDemos = (demoData?.bookings ?? []).filter((booking) => booking.status === 'scheduled').slice(0, 5);
+  const upcomingDemos = useMemo(
+    () => upcomingScheduledDemos(demoData?.bookings ?? []).slice(0, 5),
+    [demoData?.bookings],
+  );
 
   if (orgsLoading || statsLoading) return <LoadingState />;
 
