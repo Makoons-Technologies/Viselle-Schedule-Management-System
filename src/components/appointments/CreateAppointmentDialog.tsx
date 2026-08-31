@@ -11,11 +11,11 @@ import {
   findExistingCustomerMatch,
   getCustomerFieldChanges,
 } from '@/lib/customers';
-import { cn, formatDateTime, getDayOfWeekFromIso, todayDateOnlyLocal, filterFutureAppointmentSlots } from '@/lib/utils';
+import { formatDateTime, getDayOfWeekFromIso, todayDateOnlyLocal, filterFutureAppointmentSlots } from '@/lib/utils';
 import { TRIAL_LOCKED_MESSAGE } from '@/lib/trial';
-import type { Customer, RecurringFrequency } from '@/types/api';
-import { CustomerAutocompleteFields } from '@/components/appointments/CustomerAutocompleteFields';
-import { SmsOptInCheckbox } from '@/components/booking/SmsOptInCheckbox';
+import type { Appointment, Customer, RecurringFrequency } from '@/types/api';
+import { AppointmentWizardSteps, type AppointmentWizardStep } from '@/components/appointments/AppointmentWizardSteps';
+import { CreateAppointmentCustomerStep } from '@/components/appointments/CreateAppointmentCustomerStep';
 import { CustomerServiceNoteHistory } from '@/components/appointments/CustomerServiceNoteHistory';
 import { RecurringOptionsFields } from '@/components/appointments/RecurringOptionsFields';
 import {
@@ -31,7 +31,7 @@ import { helperTextClass } from '@/components/common/Panel';
 import { useRecurringDaySchedule } from '@/hooks/useRecurringDaySchedule';
 import { useOrgPlan } from '@/hooks/useOrgPlan';
 import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
-import { isSmsSendingEnabled, SMS_UNDER_REVIEW_OPT_IN_NOTE } from '@/lib/sms';
+import { isSmsSendingEnabled, isStagingApp, SMS_UNDER_REVIEW_OPT_IN_NOTE } from '@/lib/sms';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -88,6 +88,21 @@ interface CreateAppointmentDialogProps {
   defaultDate?: string;
   /** Minutes from midnight for empty-slot create; used to pick the closest bookable start. */
   defaultMinutes?: number;
+  /** Prefill staff when the calendar is filtered to a single person. */
+  defaultAccountId?: string;
+  /** Called with created rows so the calendar can show them immediately. */
+  onCreated?: (appointments: Appointment[]) => void;
+}
+
+function createdAppointmentsFromResult(result: unknown): Appointment[] {
+  if (!result || typeof result !== 'object') return [];
+  if ('createdAppointments' in result && Array.isArray(result.createdAppointments)) {
+    return result.createdAppointments as Appointment[];
+  }
+  if ('appointment' in result && result.appointment) {
+    return [result.appointment as Appointment];
+  }
+  return [];
 }
 
 export function CreateAppointmentDialog({
@@ -96,6 +111,8 @@ export function CreateAppointmentDialog({
   onOpenChange,
   defaultDate,
   defaultMinutes,
+  defaultAccountId,
+  onCreated,
 }: CreateAppointmentDialogProps) {
   const queryClient = useQueryClient();
   const { plan } = useOrgPlan(orgId);
@@ -112,10 +129,22 @@ export function CreateAppointmentDialog({
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [mergeConfirm, setMergeConfirm] = useState<MergeConfirmState | null>(null);
   const [smsOptIn, setSmsOptIn] = useState(false);
+  const [step, setStep] = useState<AppointmentWizardStep>(1);
+  const [undoConfirmOpen, setUndoConfirmOpen] = useState(false);
 
-  const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, setValue, watch, reset, trigger, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { date: initialDate },
+    defaultValues: {
+      date: initialDate,
+      accountId: defaultAccountId ?? '',
+      serviceId: '',
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      startTime: '',
+      appointmentNotes: '',
+    },
   });
 
   const accountId = watch('accountId');
@@ -172,6 +201,7 @@ export function CreateAppointmentDialog({
   const org = orgData?.organization;
 
   const customers = customersData?.customers ?? [];
+  const selectedCustomer = customers.find((customer) => customer.id === selectedCustomerId) ?? null;
 
   const { data: slotsData, isLoading: slotsLoading } = useQuery({
     queryKey: ['availability-slots', orgId, accountId, serviceId, date],
@@ -191,9 +221,6 @@ export function CreateAppointmentDialog({
   );
 
   const hasStaffAndService = !!accountId && !!serviceId;
-  const hasClientIdentity = firstName.trim().length > 0 && lastName.trim().length > 0;
-  const showClientFields = hasStaffAndService;
-  const showScheduleFields = hasStaffAndService && hasClientIdentity;
 
   useEffect(() => {
     if (date && date < today) {
@@ -231,10 +258,22 @@ export function CreateAppointmentDialog({
     setSelectedCustomerId(null);
     setMergeConfirm(null);
     setSmsOptIn(false);
+    setStep(1);
+    setUndoConfirmOpen(false);
     resetSchedule([], {});
-    reset({ date: initialDate });
+    reset({
+      date: initialDate,
+      accountId: defaultAccountId ?? '',
+      serviceId: '',
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      startTime: '',
+      appointmentNotes: '',
+    });
     skipSlotClearRef.current = true;
-  }, [open, initialDate, reset, resetSchedule]);
+  }, [open, initialDate, defaultAccountId, reset, resetSchedule]);
 
   useEffect(() => {
     if (open && trialExpired) {
@@ -321,14 +360,30 @@ export function CreateAppointmentDialog({
 
       return { createdAppointments: [created.appointment] };
     },
-    onSuccess: (_result, variables) => {
+    onSuccess: (result, variables) => {
+      const created = createdAppointmentsFromResult(result);
       if (variables.withRecurring) {
         toast.success('Recurring appointment created');
         queryClient.invalidateQueries({ queryKey: ['recurring', orgId] });
       } else {
-        toast.success('Appointment created');
+        toast.success(
+          created[0]?.startTime
+            ? `Appointment created · ${formatDateTime(created[0].startTime)}`
+            : 'Appointment created',
+        );
       }
-      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.setQueriesData<{ appointments: Appointment[] }>(
+        { queryKey: ['appointments'] },
+        (old) => {
+          if (!old?.appointments) return old;
+          const extras = created.filter((row) => !old.appointments.some((existing) => existing.id === row.id));
+          if (extras.length === 0) return old;
+          return { ...old, appointments: [...old.appointments, ...extras] };
+        },
+      );
+      onCreated?.(created);
+      void queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      void queryClient.refetchQueries({ queryKey: ['appointments'] });
       queryClient.invalidateQueries({ queryKey: ['customers', orgId] });
       reset({ date: today });
       setSelectedCustomerId(null);
@@ -396,9 +451,9 @@ export function CreateAppointmentDialog({
   const mergeDescription = (() => {
     if (!mergeConfirm) return '';
     if (mergeConfirm.matchedBy === 'selected') {
-      return `Update ${customerDisplayName(mergeConfirm.customer)}'s saved profile with these changes, then schedule under this customer?`;
+      return `This updates ${customerDisplayName(mergeConfirm.customer)} in the system, then books the appointment under that customer. Are you sure?`;
     }
-    return `This ${mergeConfirm.matchedBy} is already on file for ${customerDisplayName(mergeConfirm.customer)}. Update their profile with these changes and schedule under this customer?`;
+    return `This ${mergeConfirm.matchedBy} is already on file for ${customerDisplayName(mergeConfirm.customer)}. Update their profile in the system with these changes and schedule under this customer? Are you sure?`;
   })();
 
   const recurringValid =
@@ -409,207 +464,259 @@ export function CreateAppointmentDialog({
   const canSubmit = !!startTime && recurringValid;
 
   const handleSelectCustomer = (customer: Customer) => {
-    setValue('firstName', customer.firstName);
-    setValue('lastName', customer.lastName);
-    setValue('email', customer.email ?? '');
+    setValue('firstName', customer.firstName, { shouldValidate: true });
+    setValue('lastName', customer.lastName, { shouldValidate: true });
+    setValue('email', customer.email ?? '', { shouldValidate: true });
     setValue('phone', customer.phone ?? '');
     setSelectedCustomerId(customer.id);
+    setSmsOptIn(false);
   };
+
+  const handleSelectNewCustomer = () => {
+    setValue('firstName', '', { shouldValidate: false });
+    setValue('lastName', '', { shouldValidate: false });
+    setValue('email', '', { shouldValidate: false });
+    setValue('phone', '');
+    setSelectedCustomerId(null);
+    setSmsOptIn(false);
+  };
+
+  const goNext = async () => {
+    if (step === 1) {
+      const ok = await trigger(['accountId', 'serviceId']);
+      if (ok && hasStaffAndService) setStep(2);
+      return;
+    }
+    if (step === 2) {
+      const ok = await trigger(['firstName', 'lastName', 'email']);
+      if (ok) setStep(3);
+    }
+  };
+
+  const showSmsOptIn = Boolean(
+    (isStagingApp() || plan?.smsRemindersEnabled) &&
+      org?.smsRemindersOptIn &&
+      phone.trim().length > 0 &&
+      !(
+        selectedCustomer?.smsOptInAt ||
+        findExistingCustomerMatch(customers, { email, phone })?.customer.smsOptInAt
+      ),
+  );
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>New Appointment</DialogTitle>
           </DialogHeader>
+          <AppointmentWizardSteps step={step} onStepSelect={setStep} />
           <form
-            onSubmit={handleSubmit((data) =>
-              handleCreate({
-                data,
-                recurringDays: selectedDays,
-                recurringDayTimes: dayTimesToApiPayload(dayTimes, selectedDays),
-                withRecurring: makeRecurring,
-              }),
-            )}
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (step < 3) {
+                void goNext();
+                return;
+              }
+              void handleSubmit((data) =>
+                handleCreate({
+                  data,
+                  recurringDays: selectedDays,
+                  recurringDayTimes: dayTimesToApiPayload(dayTimes, selectedDays),
+                  withRecurring: makeRecurring,
+                }),
+              )();
+            }}
             className="space-y-4"
           >
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <Label>Staff member</Label>
-                <Select value={accountId} onValueChange={(v) => setValue('accountId', v)}>
-                  <SelectTrigger><SelectValue placeholder="Select staff" /></SelectTrigger>
-                  <SelectContent>
-                    {accountsData?.accounts.filter((a) => a.isBookable && a.status === 'active').map((a) => (
-                      <SelectItem key={a.id} value={a.id}>{a.firstName} {a.lastName}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.accountId && <p className="text-xs text-red-600 dark:text-red-400">Required</p>}
-              </div>
-              <div>
-                <Label>Service</Label>
-                <Select value={serviceId} onValueChange={(v) => setValue('serviceId', v)}>
-                  <SelectTrigger><SelectValue placeholder="Select service" /></SelectTrigger>
-                  <SelectContent>
-                    {servicesData?.services.filter((s) => s.isActive).map((s) => (
-                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.serviceId && <p className="text-xs text-red-600 dark:text-red-400">Required</p>}
-              </div>
-            </div>
-            {!hasStaffAndService && (
-              <p className={helperTextClass}>Choose staff and a service to continue.</p>
-            )}
-
-            {showClientFields ? (
+            {step === 1 ? (
               <>
-            <CustomerAutocompleteFields
-              customers={customers}
-              firstName={firstName}
-              lastName={lastName}
-              email={email}
-              phone={phone}
-              selectedCustomerId={selectedCustomerId}
-              onFirstNameChange={(value) => setValue('firstName', value, { shouldValidate: true })}
-              onLastNameChange={(value) => setValue('lastName', value, { shouldValidate: true })}
-              onEmailChange={(value) => setValue('email', value, { shouldValidate: true })}
-              onPhoneChange={(value) => setValue('phone', value)}
-              onSelectCustomer={handleSelectCustomer}
-              onClearSelectedCustomer={() => setSelectedCustomerId(null)}
-              errors={{
-                firstName: errors.firstName?.message,
-                lastName: errors.lastName?.message,
-                email: errors.email?.message,
-              }}
-            />
-            {!hasClientIdentity && (
-              <p className={helperTextClass}>Add the client's first and last name to pick a time.</p>
-            )}
-            {Boolean(plan?.smsRemindersEnabled && org?.smsRemindersOptIn) &&
-              phone.trim().length > 0 &&
-              !(
-                (selectedCustomerId && customers.find((c) => c.id === selectedCustomerId)?.smsOptInAt) ||
-                findExistingCustomerMatch(customers, { email, phone })?.customer.smsOptInAt
-              ) && (
-                <div className="rounded-lg border border-stone-200 px-3 py-3 dark:border-stone-700 dark:bg-stone-800/40">
-                  <SmsOptInCheckbox
-                    brandName={org?.name ?? 'this business'}
-                    checked={smsOptIn}
-                    onCheckedChange={setSmsOptIn}
-                    id="staff-sms-opt-in"
-                    textClassName="text-stone-600 dark:text-stone-300"
-                  />
-                  <p className={cn(helperTextClass, 'mt-2')}>
-                    {smsSendingOn
-                      ? 'Optional for staff booking. If they do not opt in, they will not receive appointment texts.'
-                      : SMS_UNDER_REVIEW_OPT_IN_NOTE}
-                  </p>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label>Staff member</Label>
+                    <Select value={accountId || undefined} onValueChange={(v) => setValue('accountId', v, { shouldValidate: true })}>
+                      <SelectTrigger><SelectValue placeholder="Select staff" /></SelectTrigger>
+                      <SelectContent>
+                        {accountsData?.accounts.filter((a) => a.isBookable && a.status === 'active').map((a) => (
+                          <SelectItem key={a.id} value={a.id}>{a.firstName} {a.lastName}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.accountId && <p className="text-xs text-red-600 dark:text-red-400">Required</p>}
+                  </div>
+                  <div>
+                    <Label>Service</Label>
+                    <Select value={serviceId || undefined} onValueChange={(v) => setValue('serviceId', v, { shouldValidate: true })}>
+                      <SelectTrigger><SelectValue placeholder="Select service" /></SelectTrigger>
+                      <SelectContent>
+                        {servicesData?.services.filter((s) => s.isActive).map((s) => (
+                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.serviceId && <p className="text-xs text-red-600 dark:text-red-400">Required</p>}
+                  </div>
                 </div>
-              )}
+                <p className={helperTextClass}>Choose staff and a service to continue.</p>
               </>
             ) : null}
 
-            {showScheduleFields ? (
+            {step === 2 ? (
+              <CreateAppointmentCustomerStep
+                customers={customers}
+                firstName={firstName}
+                lastName={lastName}
+                email={email}
+                phone={phone}
+                selectedCustomerId={selectedCustomerId}
+                onFirstNameChange={(value) => setValue('firstName', value, { shouldValidate: true })}
+                onLastNameChange={(value) => setValue('lastName', value, { shouldValidate: true })}
+                onEmailChange={(value) => setValue('email', value, { shouldValidate: true })}
+                onPhoneChange={(value) => setValue('phone', value)}
+                onSelectCustomer={handleSelectCustomer}
+                onSelectNewCustomer={handleSelectNewCustomer}
+                onRequestUndo={() => setUndoConfirmOpen(true)}
+                errors={{
+                  firstName: errors.firstName?.message,
+                  lastName: errors.lastName?.message,
+                  email: errors.email?.message,
+                }}
+                showSmsOptIn={showSmsOptIn}
+                smsBrandName={org?.name ?? 'this business'}
+                smsOptIn={smsOptIn}
+                onSmsOptInChange={setSmsOptIn}
+                smsHelperText={
+                  smsSendingOn
+                    ? 'Optional for staff booking. If they do not opt in, they will not receive appointment texts.'
+                    : SMS_UNDER_REVIEW_OPT_IN_NOTE
+                }
+              />
+            ) : null}
+
+            {step === 3 ? (
               <>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <Label>Date</Label>
-                <Input type="date" min={today} {...register('date')} />
-                {errors.date && <p className="text-xs text-red-600 dark:text-red-400">Required</p>}
-              </div>
-              <div>
-                <Label>Available time slot</Label>
-                <Select
-                  value={startTime}
-                  onValueChange={(v) => setValue('startTime', v)}
-                  disabled={!accountId || !serviceId || !date || slotsLoading}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={slotsLoading ? 'Loading slots…' : 'Select a time slot'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {slots.map((slot) => (
-                      <SelectItem key={slot.startTime} value={slot.startTime}>
-                        {formatDateTime(slot.startTime)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.startTime && <p className="text-xs text-red-600 dark:text-red-400">Select a time slot</p>}
-                {!slotsLoading && accountId && serviceId && date && slots.length === 0 && (
-                  <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
-                    No open slots on this date. Try another day or add availability rules for this staff member.
-                  </p>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label>Date</Label>
+                    <Input type="date" min={today} {...register('date')} />
+                    {errors.date && <p className="text-xs text-red-600 dark:text-red-400">Required</p>}
+                  </div>
+                  <div>
+                    <Label>Available time slot</Label>
+                    <Select
+                      value={startTime || undefined}
+                      onValueChange={(v) => setValue('startTime', v, { shouldValidate: true })}
+                      disabled={!accountId || !serviceId || !date || slotsLoading}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={slotsLoading ? 'Loading slots…' : 'Select a time slot'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {slots.map((slot) => (
+                          <SelectItem key={slot.startTime} value={slot.startTime}>
+                            {formatDateTime(slot.startTime)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.startTime && <p className="text-xs text-red-600 dark:text-red-400">Select a time slot</p>}
+                    {!slotsLoading && accountId && serviceId && date && slots.length === 0 && (
+                      <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+                        No open slots on this date. Try another day or add availability rules for this staff member.
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <CustomerServiceNoteHistory
+                  orgId={orgId}
+                  customerId={selectedCustomerId}
+                  serviceId={serviceId}
+                />
+                <div>
+                  <Label>Notes</Label>
+                  <Textarea {...register('appointmentNotes')} />
+                </div>
+                <div className="flex items-start justify-between gap-4 rounded-lg border border-stone-200 px-3 py-3 dark:border-stone-700 dark:bg-stone-800/40">
+                  <div className="min-w-0 flex-1">
+                    <Label>Make recurring</Label>
+                    {!makeRecurring && (
+                      <p className={helperTextClass}>
+                        {plan && !plan.recurringAppointmentsEnabled
+                          ? 'Upgrade to Professional or Business to schedule repeating appointments.'
+                          : 'Generate future appointments on a repeating schedule.'}
+                      </p>
+                    )}
+                  </div>
+                  <Switch
+                    checked={makeRecurring}
+                    onCheckedChange={setMakeRecurring}
+                    disabled={plan ? !plan.recurringAppointmentsEnabled : false}
+                    aria-label="Make recurring"
+                  />
+                </div>
+                {makeRecurring && plan?.recurringAppointmentsEnabled && (
+                  <RecurringOptionsFields
+                    compact
+                    frequency={frequency}
+                    onFrequencyChange={setFrequency}
+                    customInterval={customInterval}
+                    onCustomIntervalChange={setCustomInterval}
+                    endDate={endDate}
+                    onEndDateChange={setEndDate}
+                    selectedDays={selectedDays}
+                    onToggleDay={toggleDay}
+                    dayTimes={dayTimes}
+                    onDayTimeChange={setDayTime}
+                    dayConflicts={dayConflicts}
+                    defaultTime={defaultRecurringTime}
+                  />
                 )}
-              </div>
-            </div>
-            <CustomerServiceNoteHistory
-              orgId={orgId}
-              customerId={selectedCustomerId}
-              serviceId={serviceId}
-            />
-            <div>
-              <Label>Notes</Label>
-              <Textarea {...register('appointmentNotes')} />
-            </div>
-            <div className="flex items-start justify-between gap-4 rounded-lg border border-stone-200 px-3 py-3 dark:border-stone-700 dark:bg-stone-800/40">
-              <div className="min-w-0 flex-1">
-                <Label>Make recurring</Label>
-                {!makeRecurring && (
-                  <p className={helperTextClass}>
-                    {plan && !plan.recurringAppointmentsEnabled
-                      ? 'Upgrade to Professional or Business to schedule repeating appointments.'
-                      : 'Generate future appointments on a repeating schedule.'}
-                  </p>
-                )}
-              </div>
-              <Switch
-                checked={makeRecurring}
-                onCheckedChange={setMakeRecurring}
-                disabled={plan ? !plan.recurringAppointmentsEnabled : false}
-                aria-label="Make recurring"
-              />
-            </div>
-            {makeRecurring && plan?.recurringAppointmentsEnabled && (
-              <RecurringOptionsFields
-                compact
-                frequency={frequency}
-                onFrequencyChange={setFrequency}
-                customInterval={customInterval}
-                onCustomIntervalChange={setCustomInterval}
-                endDate={endDate}
-                onEndDateChange={setEndDate}
-                selectedDays={selectedDays}
-                onToggleDay={toggleDay}
-                dayTimes={dayTimes}
-                onDayTimeChange={setDayTime}
-                dayConflicts={dayConflicts}
-                defaultTime={defaultRecurringTime}
-              />
-            )}
               </>
             ) : null}
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button
-                type="submit"
-                disabled={mutation.isPending || !canSubmit || trialExpired}
-                className="disabled:bg-brand-600/40 disabled:text-white disabled:opacity-100"
-              >
-                {makeRecurring ? 'Create Series' : 'Create'}
-              </Button>
+              {step === 1 ? (
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+              ) : (
+                <Button type="button" variant="outline" onClick={() => setStep((step - 1) as AppointmentWizardStep)}>
+                  Back
+                </Button>
+              )}
+              {step < 3 ? (
+                <Button type="submit">Next</Button>
+              ) : (
+                <Button
+                  type="submit"
+                  disabled={mutation.isPending || !canSubmit || trialExpired}
+                  className="disabled:bg-brand-600/40 disabled:text-white disabled:opacity-100"
+                >
+                  {makeRecurring ? 'Create Series' : 'Create'}
+                </Button>
+              )}
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
       <ConfirmDialog
+        open={undoConfirmOpen}
+        onOpenChange={setUndoConfirmOpen}
+        title="Restore saved customer details?"
+        description={
+          selectedCustomer
+            ? `This discards your edits and puts ${customerDisplayName(selectedCustomer)}'s on-file name, phone, and email back into the form.`
+            : 'Discard these edits?'
+        }
+        confirmLabel="Restore"
+        onConfirm={() => {
+          if (selectedCustomer) handleSelectCustomer(selectedCustomer);
+          setUndoConfirmOpen(false);
+        }}
+      />
+
+      <ConfirmDialog
         open={!!mergeConfirm}
         onOpenChange={(nextOpen) => !nextOpen && setMergeConfirm(null)}
-        title="Confirm customer changes?"
+        title="Update this customer in the system?"
         description={mergeDescription}
         confirmLabel="Update & Schedule"
         loading={mutation.isPending}

@@ -354,6 +354,62 @@ assert(
 );
 assert(closestAvailableSlot([], 10 * 60) === undefined, 'no slots → no closest pick');
 
+function revealStaffAfterCreate(
+  selectedIds: string[] | null,
+  createdAccountId: string,
+): string[] | null {
+  if (selectedIds === null) return null;
+  if (selectedIds.includes(createdAccountId)) return selectedIds;
+  return [...selectedIds, createdAccountId];
+}
+
+function shouldRevealAllAfterCreate(
+  viewedAccountId: string | null,
+  createdAccountId: string,
+): boolean {
+  return Boolean(viewedAccountId && createdAccountId !== viewedAccountId);
+}
+
+function shouldClearDayZoom(zoomedDayKeys: string[] | null, createdDayKey: string): boolean {
+  if (!zoomedDayKeys || zoomedDayKeys.length === 0) return false;
+  return !zoomedDayKeys.includes(createdDayKey);
+}
+
+assert(
+  JSON.stringify(revealStaffAfterCreate([], 'staff-2')) === JSON.stringify(['staff-2']),
+  'empty staff filter must include the staff the new appointment was booked with',
+);
+assert(revealStaffAfterCreate(null, 'staff-2') === null, 'all-staff mode stays all-staff');
+assert(
+  JSON.stringify(revealStaffAfterCreate(['staff-1'], 'staff-2')) === JSON.stringify(['staff-1', 'staff-2']),
+  'partial staff filter adds the created staff rather than hiding the booking',
+);
+assert(
+  shouldRevealAllAfterCreate('me', 'other') === true,
+  'mobile scoped-to-one view must widen to all when booking another staff member',
+);
+assert(
+  shouldRevealAllAfterCreate('me', 'me') === false,
+  'booking the person you are viewing keeps the scoped view',
+);
+assert(
+  shouldRevealAllAfterCreate(null, 'other') === false,
+  'showing all appointments never needs to widen after a booking',
+);
+assert(
+  shouldClearDayZoom(['2026-08-17'], '2026-08-24') === true,
+  'zoomed into another day must exit so the new booking is visible',
+);
+assert(
+  shouldClearDayZoom(['2026-08-24'], '2026-08-24') === false,
+  'zoomed into the created day stays zoomed',
+);
+
+assert(
+  '2026-08-24T14:00:00.000Z'.slice(0, 10) === '2026-08-24',
+  'appointment ISO for the clicked empty square lands on that day column',
+);
+
 assert(
   nextAppointmentOnDay(jumpAppointments, '2026-08-24', 11 * 60 + 30) === 14 * 60,
   'exclusive next after 11:30 skips that booking',
@@ -373,6 +429,19 @@ assert(
 assert(
   nextAppointmentOnDay(elevenThirtyDay, '2026-08-24', 11 * 60 + 30, { inclusive: true }) === 11 * 60 + 30,
   'inclusive Down keeps the visible 11:30 at the viewport top',
+);
+assert(
+  nextAppointmentOnDay(elevenThirtyDay, '2026-08-24', 3 * 60 + 30, { inclusive: true }) === 9 * 60,
+  'from early-morning / now-line viewport, Down still finds later same-day bookings',
+);
+assert(
+  nextAppointmentOnDay(
+    [{ startTime: '2026-08-23T11:30:00.000Z' }],
+    '2026-08-23',
+    0,
+    { inclusive: true },
+  ) === 11 * 60 + 30,
+  'Sunday 11:30 is found from the top of that day',
 );
 
 if (process.exitCode) {

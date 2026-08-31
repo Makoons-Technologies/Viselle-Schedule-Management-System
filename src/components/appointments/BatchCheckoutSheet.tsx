@@ -1,13 +1,17 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Banknote, ChevronLeft, CreditCard, Loader2, Minus, PackagePlus, Plus } from 'lucide-react';
+import { Banknote, ChevronLeft, CreditCard, Gift, Loader2, Minus, PackagePlus, Plus } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { orgApi } from '@/lib/api';
+import { getApiErrorMessage, isRequestAborted, orgApi } from '@/lib/api';
+import { BlockingProgressDialog, useBlockingProgress } from '@/components/common/BlockingProgressDialog';
+import { formatCreditCount } from '@/lib/credits';
 import { useCardCheckout } from '@/hooks/useCardCheckout';
+import { useProtectSheetFromNestedOverlays } from '@/hooks/useProtectSheetFromNestedOverlays';
 import { cn, formatCurrency } from '@/lib/utils';
 import type { BatchCheckoutAppointmentInput, CheckoutLineInput } from '@/types/api';
 import { CardUnavailableHint } from '@/components/appointments/CardUnavailableHint';
 import { CheckoutProductPickerDialog } from '@/components/appointments/CheckoutProductPickerDialog';
+import { ReceiptChoiceDialog } from '@/components/receipts/ReceiptChoiceDialog';
 import { KeyedCardForm } from '@/components/appointments/KeyedCardForm';
 import { isCardCheckoutReady } from '@/lib/stripe-connect-hint';
 import { sectionHeadingClass, sectionMutedClass } from '@/components/common/Panel';
@@ -51,7 +55,15 @@ export function BatchCheckoutSheet({ orgId, items, open, onOpenChange, onSuccess
   const [customTipDollars, setCustomTipDollars] = useState('');
   const [productPickerFor, setProductPickerFor] = useState<string | null>(null);
   const [cashConfirmOpen, setCashConfirmOpen] = useState(false);
+  const [receiptOpen, setReceiptOpen] = useState(false);
+  const [receiptSaleIds, setReceiptSaleIds] = useState<string[]>([]);
+  const [usedTerminalReader, setUsedTerminalReader] = useState(false);
+  const [giftCardCodeInput, setGiftCardCodeInput] = useState('');
+  const [appliedGiftCardCode, setAppliedGiftCardCode] = useState<string | undefined>();
   const customTipInputRef = useRef<HTMLInputElement>(null);
+  const giftCardInputRef = useRef<HTMLInputElement>(null);
+  const pendingSaleIdsRef = useRef<string[]>([]);
+  const giftCardProgress = useBlockingProgress();
 
   useEffect(() => {
     if (open) {
@@ -62,6 +74,12 @@ export function BatchCheckoutSheet({ orgId, items, open, onOpenChange, onSuccess
       setCustomTipDollars('');
       setProductPickerFor(null);
       setCashConfirmOpen(false);
+      setReceiptOpen(false);
+      setReceiptSaleIds([]);
+      setUsedTerminalReader(false);
+      setGiftCardCodeInput('');
+      setAppliedGiftCardCode(undefined);
+      pendingSaleIdsRef.current = [];
     }
   }, [open, items]);
 
@@ -90,13 +108,21 @@ export function BatchCheckoutSheet({ orgId, items, open, onOpenChange, onSuccess
   });
 
   const previewQuery = useQuery({
-    queryKey: ['batch-checkout-preview', orgId, batchAppointments],
-    queryFn: () => orgApi.previewBatchCheckout(orgId, { appointments: batchAppointments, tipCents: 0 }),
+    queryKey: ['batch-checkout-preview', orgId, batchAppointments, tipCents, appliedGiftCardCode],
+    queryFn: () =>
+      orgApi.previewBatchCheckout(orgId, {
+        appointments: batchAppointments,
+        tipCents,
+        ...(appliedGiftCardCode ? { giftCardCode: appliedGiftCardCode } : {}),
+      }),
     enabled: open && items.length > 0,
   });
 
   const subtotalCents = previewQuery.data?.subtotalCents ?? 0;
-  const totalCents = subtotalCents + tipCents;
+  const giftCardAppliedCents = previewQuery.data?.giftCardAppliedCents ?? 0;
+  const dueCents = previewQuery.data?.totalCents ?? Math.max(0, subtotalCents + tipCents - giftCardAppliedCents);
+  const totalCents = dueCents;
+  const coveredByGiftCard = giftCardAppliedCents > 0 && dueCents < 1;
 
   useEffect(() => {
     if (typeof tipSelection === 'number' && subtotalCents > 0) {
@@ -119,14 +145,58 @@ export function BatchCheckoutSheet({ orgId, items, open, onOpenChange, onSuccess
   }, []);
 
   const cashMutation = useMutation({
-    mutationFn: () => orgApi.batchCheckoutCash(orgId, { appointments: batchAppointments, tipCents: 0 }),
-    onSuccess: () => {
-      toast.success('Cash payment recorded');
+    mutationFn: () =>
+      orgApi.batchCheckoutCash(orgId, {
+        appointments: batchAppointments,
+        tipCents: 0,
+        ...(appliedGiftCardCode ? { giftCardCode: appliedGiftCardCode } : {}),
+      }),
+    onSuccess: (result) => {
+      toast.success(coveredByGiftCard ? 'Sale completed with gift card' : 'Cash payment recorded');
       setCashConfirmOpen(false);
-      onSuccess();
-      onOpenChange(false);
+      setUsedTerminalReader(false);
+      setReceiptSaleIds(result.saleIds ?? []);
+      setReceiptOpen(true);
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: unknown) => toast.error(getApiErrorMessage(err, 'Could not complete checkout')),
+  });
+
+  const applyGiftCardMutation = useMutation({
+    mutationFn: async (code: string) => {
+      const controller = new AbortController();
+      giftCardProgress.start({
+        title: 'Gift card',
+        message: 'Looking up gift card…',
+        onCancel: () => controller.abort(),
+      });
+      try {
+        const { giftCard } = await orgApi.lookupGiftCard(orgId, { code }, controller.signal);
+        giftCardProgress.update({
+          message: 'Applying gift card…',
+        });
+        const preview = await orgApi.previewBatchCheckout(orgId, {
+          appointments: batchAppointments,
+          tipCents,
+          giftCardCode: giftCard.code,
+        });
+        return { giftCard, preview };
+      } finally {
+        giftCardProgress.stop();
+      }
+    },
+    onSuccess: ({ giftCard, preview }) => {
+      if (!preview.giftCardAppliedCents) {
+        toast.error('This gift card has no remaining credits');
+        return;
+      }
+      setAppliedGiftCardCode(giftCard.code);
+      setGiftCardCodeInput(giftCard.code);
+      toast.success(`Applied ${formatCurrency(preview.giftCardAppliedCents)}`);
+    },
+    onError: (err: unknown) => {
+      if (isRequestAborted(err)) return;
+      toast.error(getApiErrorMessage(err, 'That gift card could not be used'));
+    },
   });
 
   const products = productsData?.products ?? [];
@@ -164,19 +234,33 @@ export function BatchCheckoutSheet({ orgId, items, open, onOpenChange, onSuccess
 
   const completeCardPayment = useCallback(() => {
     toast.success('Card payment successful');
-    onSuccess();
-    onOpenChange(false);
-  }, [onSuccess, onOpenChange]);
+    setReceiptSaleIds(pendingSaleIdsRef.current);
+    setReceiptOpen(true);
+  }, []);
 
-  const startTerminalCheckout = useCallback(
-    () => orgApi.batchCheckoutCard(orgId, { appointments: batchAppointments, tipCents, mode: 'terminal' }),
-    [orgId, batchAppointments, tipCents],
-  );
+  const startTerminalCheckout = useCallback(async () => {
+    const result = await orgApi.batchCheckoutCard(orgId, {
+      appointments: batchAppointments,
+      tipCents,
+      mode: 'terminal',
+      ...(appliedGiftCardCode ? { giftCardCode: appliedGiftCardCode } : {}),
+    });
+    pendingSaleIdsRef.current = result.saleIds ?? [];
+    setUsedTerminalReader(true);
+    return result;
+  }, [orgId, batchAppointments, tipCents, appliedGiftCardCode]);
 
-  const startOnlineCheckout = useCallback(
-    () => orgApi.batchCheckoutCard(orgId, { appointments: batchAppointments, tipCents, mode: 'online' }),
-    [orgId, batchAppointments, tipCents],
-  );
+  const startOnlineCheckout = useCallback(async () => {
+    const result = await orgApi.batchCheckoutCard(orgId, {
+      appointments: batchAppointments,
+      tipCents,
+      mode: 'online',
+      ...(appliedGiftCardCode ? { giftCardCode: appliedGiftCardCode } : {}),
+    });
+    pendingSaleIdsRef.current = result.saleIds ?? [];
+    setUsedTerminalReader(false);
+    return result;
+  }, [orgId, batchAppointments, tipCents, appliedGiftCardCode]);
 
   const confirmPaymentIntent = useCallback(
     (paymentIntentId: string) => orgApi.confirmBatchCheckoutCard(orgId, paymentIntentId),
@@ -212,17 +296,42 @@ export function BatchCheckoutSheet({ orgId, items, open, onOpenChange, onSuccess
     return quantities;
   }, [productPickerFor, productLines]);
 
+  const nestedOverlayOpen =
+    productPickerFor !== null ||
+    cashConfirmOpen ||
+    receiptOpen ||
+    cashMutation.isPending ||
+    applyGiftCardMutation.isPending ||
+    giftCardProgress.dialogProps.open ||
+    card.manualPreparing ||
+    card.phase === 'starting' ||
+    card.phase === 'confirming';
+
+  const {
+    handleSheetOpenChange: protectSheetOpenChange,
+    preventSheetDismissWhileNested,
+  } = useProtectSheetFromNestedOverlays(nestedOverlayOpen);
+
+  const handleSheetOpenChange = useCallback(
+    (next: boolean) => protectSheetOpenChange(next, onOpenChange),
+    [protectSheetOpenChange, onOpenChange],
+  );
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <>
+    <Sheet open={open} onOpenChange={handleSheetOpenChange}>
       <SheetContent
         className={cn(
           '!inset-0 !h-[100dvh] !w-full !max-w-none border-0 p-0',
           'data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom',
           'sm:!max-w-none',
         )}
+        onPointerDownOutside={preventSheetDismissWhileNested}
+        onInteractOutside={preventSheetDismissWhileNested}
+        onFocusOutside={preventSheetDismissWhileNested}
       >
         <div className="flex h-[100dvh] flex-col text-stone-900 dark:text-stone-100">
-          <SheetHeader className="shrink-0 border-b border-stone-200 px-6 py-4 pr-14 dark:border-stone-800">
+          <SheetHeader className="shrink-0 border-b border-stone-200 px-6 pb-4 pr-14 pt-[max(1rem,var(--safe-area-top))] dark:border-stone-800">
             <SheetTitle className="text-xl">Batch checkout</SheetTitle>
             <SheetDescription>
               {items.length} appointment{items.length === 1 ? '' : 's'} · one combined payment
@@ -318,6 +427,76 @@ export function BatchCheckoutSheet({ orgId, items, open, onOpenChange, onSuccess
                     </section>
                   );
                 })}
+
+                <section className="space-y-3">
+                  <h4 className={cn(sectionHeadingClass)}>Gift card</h4>
+                  {appliedGiftCardCode ? (
+                    <div className="rounded-lg border border-stone-200 bg-white px-3 py-2.5 text-sm dark:border-stone-700 dark:bg-stone-800">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-mono font-medium tracking-wide">{appliedGiftCardCode}</p>
+                          <p className={cn('mt-0.5 text-xs', sectionMutedClass)}>
+                            {previewQuery.data?.giftCardRemainingCents != null
+                              ? `${formatCreditCount(previewQuery.data.giftCardRemainingCents)} left after this sale`
+                              : 'Applied to this sale'}
+                          </p>
+                        </div>
+                        <span className="shrink-0 font-semibold tabular-nums">
+                          −{formatCurrency(giftCardAppliedCents)}
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="mt-1 px-0 text-stone-500"
+                        onClick={() => {
+                          setAppliedGiftCardCode(undefined);
+                          setGiftCardCodeInput('');
+                          giftCardInputRef.current?.focus();
+                        }}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ) : (
+                    <form
+                      className="flex flex-col gap-2 sm:flex-row"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        const code = giftCardCodeInput.trim();
+                        if (code.replace(/[^A-Za-z0-9]/g, '').length < 4) {
+                          toast.error('Enter the gift card code');
+                          return;
+                        }
+                        applyGiftCardMutation.mutate(code);
+                      }}
+                    >
+                      <Input
+                        ref={giftCardInputRef}
+                        value={giftCardCodeInput}
+                        onChange={(event) => setGiftCardCodeInput(event.target.value.toUpperCase())}
+                        autoCapitalize="characters"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        placeholder="Enter code"
+                        className="font-mono tracking-wide sm:flex-1"
+                      />
+                      <Button
+                        type="submit"
+                        variant="outline"
+                        disabled={applyGiftCardMutation.isPending || !giftCardCodeInput.trim()}
+                      >
+                        {applyGiftCardMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Gift className="h-4 w-4" />
+                        )}
+                        Apply
+                      </Button>
+                    </form>
+                  )}
+                </section>
               </div>
             )}
 
@@ -345,8 +524,16 @@ export function BatchCheckoutSheet({ orgId, items, open, onOpenChange, onSuccess
                     <span>Tip</span>
                     <span className="tabular-nums text-stone-900 dark:text-stone-100">{formatCurrency(tipCents)}</span>
                   </div>
+                  {giftCardAppliedCents > 0 && (
+                    <div className={cn('mt-2 flex justify-between', sectionMutedClass)}>
+                      <span>Gift card {appliedGiftCardCode}</span>
+                      <span className="tabular-nums text-stone-900 dark:text-stone-100">
+                        −{formatCurrency(giftCardAppliedCents)}
+                      </span>
+                    </div>
+                  )}
                   <div className="mt-3 flex justify-between border-t border-stone-200 pt-3 text-lg font-semibold dark:border-stone-700">
-                    <span>Total</span>
+                    <span>{giftCardAppliedCents > 0 ? 'Due' : 'Total'}</span>
                     <span className="tabular-nums">{formatCurrency(totalCents)}</span>
                   </div>
                 </section>
@@ -463,39 +650,53 @@ export function BatchCheckoutSheet({ orgId, items, open, onOpenChange, onSuccess
             )}
           </div>
 
-          <footer className="shrink-0 border-t border-stone-200 bg-white px-6 py-4 dark:border-stone-800 dark:bg-stone-900">
+          <footer className="sticky bottom-0 z-10 shrink-0 border-t border-stone-200 bg-white px-6 pb-safe-or-3 pt-4 dark:border-stone-800 dark:bg-stone-900">
             {step === 'items' ? (
               <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm font-medium tabular-nums text-stone-900 dark:text-stone-100">
-                  {previewQuery.data ? `Subtotal ${formatCurrency(previewQuery.data.subtotalCents)}` : ''}
-                </p>
+                {previewQuery.data && (
+                  <div className="text-sm tabular-nums text-stone-900 dark:text-stone-100">
+                    <p className={cn(giftCardAppliedCents > 0 && sectionMutedClass)}>
+                      Subtotal {formatCurrency(previewQuery.data.subtotalCents)}
+                    </p>
+                    {giftCardAppliedCents > 0 && (
+                      <>
+                        <p className={sectionMutedClass}>
+                          Gift card −{formatCurrency(giftCardAppliedCents)}
+                        </p>
+                        <p className="font-medium">Due {formatCurrency(dueCents)}</p>
+                      </>
+                    )}
+                  </div>
+                )}
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <Button
                     type="button"
-                    variant="outline"
+                    variant={coveredByGiftCard ? 'default' : 'outline'}
                     onClick={() => setCashConfirmOpen(true)}
                     disabled={!previewQuery.data || previewQuery.isLoading || cashMutation.isPending}
                   >
-                    <Banknote className="h-4 w-4" />
-                    Pay with cash
+                    {coveredByGiftCard ? <Gift className="h-4 w-4" /> : <Banknote className="h-4 w-4" />}
+                    {coveredByGiftCard ? 'Complete with gift card' : 'Pay with cash'}
                   </Button>
-                  <div className="flex flex-col gap-1.5">
-                    {!cardReady && (
-                      <CardUnavailableHint
-                        orgId={orgId}
-                        connectStatus={connectStatus}
-                        className="text-left sm:max-w-[16rem] sm:text-right"
-                      />
-                    )}
-                    <Button
-                      type="button"
-                      onClick={() => setStep('tip')}
-                      disabled={!previewQuery.data || previewQuery.isLoading || !cardReady}
-                    >
-                      <CreditCard className="h-4 w-4" />
-                      {cardReady ? 'Pay with card' : 'Card unavailable'}
-                    </Button>
-                  </div>
+                  {!coveredByGiftCard && (
+                    <div className="flex flex-col gap-1.5">
+                      {!cardReady && (
+                        <CardUnavailableHint
+                          orgId={orgId}
+                          connectStatus={connectStatus}
+                          className="text-left sm:max-w-[16rem] sm:text-right"
+                        />
+                      )}
+                      <Button
+                        type="button"
+                        onClick={() => setStep('tip')}
+                        disabled={!previewQuery.data || previewQuery.isLoading || !cardReady}
+                      >
+                        <CreditCard className="h-4 w-4" />
+                        {cardReady ? 'Pay with card' : 'Card unavailable'}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
@@ -512,53 +713,96 @@ export function BatchCheckoutSheet({ orgId, items, open, onOpenChange, onSuccess
           </footer>
         </div>
       </SheetContent>
-
-      <CheckoutProductPickerDialog
-        open={productPickerFor !== null}
-        onOpenChange={(open) => !open && setProductPickerFor(null)}
-        products={products}
-        quantitiesByProductId={pickerQuantities}
-        onSetProductQuantity={(productId, quantity) =>
-          productPickerFor && setProductQuantity(productPickerFor, productId, quantity)
-        }
-      />
-
-      <Dialog open={cashConfirmOpen} onOpenChange={setCashConfirmOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm cash payment</DialogTitle>
-            <DialogDescription>
-              Mark {items.length} appointment{items.length === 1 ? '' : 's'} as paid in cash for{' '}
-              <span className="font-semibold text-stone-900 dark:text-stone-100">
-                {formatCurrency(subtotalCents)}
-              </span>
-              ?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setCashConfirmOpen(false)}
-              disabled={cashMutation.isPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={() => cashMutation.mutate()}
-              disabled={cashMutation.isPending}
-            >
-              {cashMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Banknote className="h-4 w-4" />
-              )}
-              Confirm paid
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </Sheet>
+
+    <CheckoutProductPickerDialog
+      open={productPickerFor !== null}
+      onOpenChange={(open) => !open && setProductPickerFor(null)}
+      products={products}
+      quantitiesByProductId={pickerQuantities}
+      onSetProductQuantity={(productId, quantity) =>
+        productPickerFor && setProductQuantity(productPickerFor, productId, quantity)
+      }
+    />
+
+    <Dialog open={cashConfirmOpen} onOpenChange={setCashConfirmOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{coveredByGiftCard ? 'Complete with gift card' : 'Confirm cash payment'}</DialogTitle>
+          <DialogDescription>
+            {coveredByGiftCard ? (
+              <>
+                Apply gift card{' '}
+                <span className="font-semibold text-stone-900 dark:text-stone-100">{appliedGiftCardCode}</span> to
+                finish {items.length} appointment{items.length === 1 ? '' : 's'}?
+              </>
+            ) : (
+              <>
+                Mark {items.length} appointment{items.length === 1 ? '' : 's'} as paid
+                {giftCardAppliedCents > 0 ? ' in cash after the gift card' : ' in cash'} for{' '}
+                <span className="font-semibold text-stone-900 dark:text-stone-100">
+                  {formatCurrency(dueCents)}
+                </span>
+                ?
+              </>
+            )}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setCashConfirmOpen(false)}
+            disabled={cashMutation.isPending}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={() => cashMutation.mutate()}
+            disabled={cashMutation.isPending}
+          >
+            {cashMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : coveredByGiftCard ? (
+              <Gift className="h-4 w-4" />
+            ) : (
+              <Banknote className="h-4 w-4" />
+            )}
+            {coveredByGiftCard ? 'Complete sale' : 'Confirm paid'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <BlockingProgressDialog
+      open={cashMutation.isPending}
+      title="Checkout"
+      message={coveredByGiftCard ? 'Completing sale with gift card…' : 'Recording cash payment…'}
+    />
+    <BlockingProgressDialog
+      open={card.manualPreparing || card.phase === 'starting' || card.phase === 'confirming'}
+      title="Card payment"
+      message={
+        card.manualPreparing
+          ? 'Preparing secure card form…'
+          : (card.status ??
+            (card.phase === 'confirming' ? 'Recording card payment…' : 'Starting card payment…'))
+      }
+    />
+    <BlockingProgressDialog {...giftCardProgress.dialogProps} />
+
+    <ReceiptChoiceDialog
+      orgId={orgId}
+      open={receiptOpen}
+      saleIds={receiptSaleIds}
+      usedTerminalReader={usedTerminalReader}
+      onFinished={() => {
+        setReceiptOpen(false);
+        onSuccess();
+        onOpenChange(false);
+      }}
+    />
+    </>
   );
 }

@@ -64,7 +64,14 @@ export function CheckoutProductPickerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[min(85dvh,720px)] max-w-lg flex-col overflow-hidden sm:max-w-xl">
+      <DialogContent
+        className="flex max-h-[min(85dvh,720px)] max-w-lg flex-col overflow-hidden sm:max-w-xl"
+        // Keep focus on checkout after Done so Sheet dismiss layers do not treat
+        // autofocus restore as an outside interaction that closes checkout.
+        onCloseAutoFocus={(event) => event.preventDefault()}
+        onPointerDownOutside={(event) => event.stopPropagation()}
+        onInteractOutside={(event) => event.stopPropagation()}
+      >
         <DialogHeader>
           <DialogTitle>Add products</DialogTitle>
           <DialogDescription>Search and add items to this checkout.</DialogDescription>
@@ -142,7 +149,14 @@ export function CheckoutProductPickerDialog({
         </div>
 
         <DialogFooter className="mt-4 shrink-0 border-t border-stone-200 pt-4 dark:border-stone-800">
-          <Button type="button" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onOpenChange(false);
+            }}
+          >
             Done{selectedCount > 0 ? ` (${selectedCount} item${selectedCount === 1 ? '' : 's'})` : ''}
           </Button>
         </DialogFooter>

@@ -22,12 +22,17 @@ export function useAppShellViewport() {
 
     const themeMeta = document.querySelector('meta[name="theme-color"]');
     const previousTheme = themeMeta?.getAttribute('content');
+    const statusBarMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+    const previousStatusBarStyle = statusBarMeta?.getAttribute('content');
     const syncThemeColor = () => {
       if (!themeMeta) return;
       const dark = document.documentElement.classList.contains('dark');
       themeMeta.setAttribute('content', dark ? '#1c1917' : '#ffffff');
     };
     syncThemeColor();
+    // Opaque status bar. index.html must also default to `black` — iOS reads
+    // this at PWA launch and often ignores runtime changes (BEA-78).
+    statusBarMeta?.setAttribute('content', 'black');
 
     let keyboardWasOpen = false;
     const settleTimers: number[] = [];
@@ -38,12 +43,16 @@ export function useAppShellViewport() {
       }
     };
 
+    const syncAppHeight = () => {
+      setAppHeightCSSProperty();
+    };
+
     const onViewportSettle = () => {
       const keyboardOpen = isKeyboardOpen();
       if (keyboardOpen) {
         keyboardWasOpen = true;
         // Shrink to the visual viewport while the keyboard is up so the tab bar is not stranded.
-        setAppHeightCSSProperty();
+        syncAppHeight();
         return;
       }
 
@@ -53,17 +62,17 @@ export function useAppShellViewport() {
         scheduleSettle(KEYBOARD_CLOSE_DELAYS_MS);
       }
 
-      // Reset window scroll only when the layout viewport changed — not on visualViewport
-      // pan/scroll, which fights <main> scrolling and feels like a snag.
+      // Window scroller only, and only when it actually moved. Nested
+      // overflow-x (calendar) must keep native momentum.
       resetWindowScroll();
-      setAppHeightCSSProperty();
+      syncAppHeight();
     };
 
     const onVisualViewportResize = () => {
       const keyboardOpen = isKeyboardOpen();
       if (keyboardOpen) {
         keyboardWasOpen = true;
-        setAppHeightCSSProperty();
+        syncAppHeight();
         return;
       }
       if (keyboardWasOpen) {
@@ -72,8 +81,9 @@ export function useAppShellViewport() {
         scheduleSettle(KEYBOARD_CLOSE_DELAYS_MS);
         return;
       }
-      // Height only. resetWindowScroll here snaps calendar overflow-x mid-flick.
-      setAppHeightCSSProperty();
+      // Height only. resetWindowScroll here snaps calendar overflow-x mid-flick
+      // (~64ms settle / iOS chrome hide) — QA BEA-67 snap-back.
+      syncAppHeight();
     };
 
     const onFocusOut = (event: FocusEvent) => {
@@ -116,6 +126,9 @@ export function useAppShellViewport() {
       document.documentElement.classList.remove('app-shell');
       document.documentElement.style.removeProperty('--app-height');
       if (themeMeta && previousTheme) themeMeta.setAttribute('content', previousTheme);
+      if (statusBarMeta && previousStatusBarStyle) {
+        statusBarMeta.setAttribute('content', previousStatusBarStyle);
+      }
       for (const id of settleTimers) window.clearTimeout(id);
       vv?.removeEventListener('resize', onVisualViewportResize);
       window.removeEventListener('resize', onViewportSettle);

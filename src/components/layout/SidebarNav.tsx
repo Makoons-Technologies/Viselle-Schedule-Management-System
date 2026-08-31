@@ -1,8 +1,7 @@
 import {
   ArrowLeft,
-  Clock,
   LayoutDashboard,
-  Shield,
+  Settings,
   UserCircle,
 } from 'lucide-react';
 
@@ -12,8 +11,6 @@ import { useAuth } from '@/context/AuthContext';
 import { useOrg } from '@/context/OrgContext';
 import { useOrgOwnerTour } from '@/context/OrgOwnerTourContext';
 
-import { useOrgId } from '@/hooks/useOrgId';
-import { useOrgAdminAccess } from '@/hooks/useOrgAdminAccess';
 import { useOrgProductClosed } from '@/hooks/useOrgProductClosed';
 import { useOrgNeedsBilling } from '@/hooks/useOrgNeedsBilling';
 import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
@@ -215,27 +212,16 @@ function NavSectionWithGroups({
 
 
 export function SidebarBrand({ subtitle }: { subtitle?: string }) {
-
   return (
-
     <div className="border-b border-stone-200 px-4 py-5 dark:border-stone-800">
-
       <div className="flex items-center gap-2.5">
-
         <ViselleLogo size={32} />
-
         <span className="text-lg font-semibold text-brand-700 dark:text-brand-300">Viselle</span>
-
       </div>
-
       {subtitle && <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">{subtitle}</p>}
-
       <SidebarTrialStatus />
-
     </div>
-
   );
-
 }
 
 
@@ -246,14 +232,9 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
 
   const { selectedOrgId, selectedOrg } = useOrg();
 
-  const routeOrgId = useOrgId();
-
-  const effectiveOrgId = user?.role === 'platform_owner' ? selectedOrgId : user?.organizationId ?? routeOrgId;
-
   const location = useLocation();
 
   const showRecurring = true;
-  const canManageStaff = useOrgAdminAccess(effectiveOrgId ?? undefined);
   const writeLocked = useOrgWriteLocked();
   const needsBilling = useOrgNeedsBilling();
   const productClosed = useOrgProductClosed();
@@ -281,31 +262,12 @@ export function SidebarNav({ onNavigate, mobile }: SidebarNavProps) {
       );
     }
 
-    const staffItems = [
-      ...orgNav.main,
-      { label: 'Hours', to: '/staff/availability', icon: Clock },
-    ];
-
-    if (canManageStaff && !writeLocked) {
-      staffItems.push({
-        label: 'Staff permissions',
-        to: '/staff/settings/staff-permissions',
-        icon: Shield,
-      });
-    }
-
-    staffItems.push({
-      label: 'Account',
-      to: `${orgBase}/settings/account`,
-      icon: UserCircle,
-    });
-
     return (
       <NavSectionWithGroups
         onNavigate={onNavigate}
         mobile={mobile}
-        mainItems={staffItems}
-        settingsItems={orgNav.settings}
+        mainItems={orgNav.main}
+        settingsItems={[{ label: 'Settings', to: '/staff/settings', icon: Settings }]}
       />
     );
   }

@@ -61,7 +61,7 @@ function drawerNavWantsVerticalScroll(element: Element, dy: number): boolean {
  * - swipe right from a left edge strip to open
  * - drag the open panel left past a threshold (or with velocity) to close
  * Edge touchstarts call preventDefault so the browser does not steal them as
- * history back/forward. Desktop (md+) is a no-op.
+ * history back/forward. Desktop shell is a no-op.
  */
 export function useMobileDrawerGestures(
   open: boolean,
@@ -128,6 +128,10 @@ export function useMobileDrawerGestures(
       const target = event.target as Node | null;
       const panel = panelRef.current;
       const insidePanel = isInsidePanel(panel, target);
+
+
+      // Do not skip nav links / the drawer scroller — that blocked drag-to-dismiss
+      // (QA BEA-70). Vertical list scroll still wins once the axis locks.
       const nearEdge = isNearHorizontalEdge(touch.clientX);
 
       // iOS 13.4+: edge touchstart blocks swipe-back/forward — never on open-panel taps.
@@ -174,13 +178,14 @@ export function useMobileDrawerGestures(
         const dy = touch.clientY - pending.startY;
         if (Math.abs(dx) < LOCK_AXIS_PX && Math.abs(dy) < LOCK_AXIS_PX) return;
 
-        const scrollEl = panelRef.current?.querySelector('[data-mobile-drawer-scroll]');
-        if (scrollEl instanceof HTMLElement && drawerNavWantsVerticalScroll(scrollEl, dy)) {
-          pendingCloseRef.current = null;
-          return;
-        }
-
+        // Horizontal dismiss wins when the gesture is clearly sideways so a
+        // scrollable nav list does not swallow drag-left-to-close.
         if (Math.abs(dx) <= Math.abs(dy) * 1.15) {
+          const scrollEl = panelRef.current?.querySelector('[data-mobile-drawer-scroll]');
+          if (scrollEl instanceof HTMLElement && drawerNavWantsVerticalScroll(scrollEl, dy)) {
+            pendingCloseRef.current = null;
+            return;
+          }
           pendingCloseRef.current = null;
           return;
         }

@@ -35,7 +35,7 @@ import { publicBookingLockReason } from '@/lib/trial';
 import type { FirstVisitCardSession } from '@/lib/stripe-first-visit';
 import { createFirstVisitCardSession } from '@/lib/stripe-first-visit';
 import type { BookingPaymentMode } from '@/types/api';
-import { SMS_UNDER_REVIEW_OPT_IN_NOTE } from '@/lib/sms';
+import { isSmsSendingEnabled, SMS_UNDER_REVIEW_OPT_IN_NOTE } from '@/lib/sms';
 import { centsToDollars, filterFutureAppointmentSlots, formatDateTime, appointmentScheduleFromIso, cn } from '@/lib/utils';
 import type { Service, BookingBranding } from '@/types/api';
 
@@ -228,7 +228,7 @@ export function PublicBookingPage({ slugOverride }: PublicBookingPageProps = {})
   };
 
   const smsRemindersEnabled = Boolean(org?.smsRemindersEnabled);
-  const smsSendingOn = org?.smsSendingEnabled === true;
+  const smsSendingOn = isSmsSendingEnabled(org);
   const consentQuery = useQuery({
     queryKey: ['public-sms-consent', slug, emailTrimmed, phoneTrimmed],
     queryFn: () =>

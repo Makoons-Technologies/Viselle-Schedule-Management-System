@@ -1,5 +1,6 @@
 import { shouldOmitAuthHeader } from '@/lib/api';
 import { isPublicPathBookingOpen, readPublicOrganization } from '@/lib/public-booking';
+import { isSmsSendingEnabled, isStagingApp } from '@/lib/sms';
 import { publicBookingLockReason, PUBLIC_BOOKING_UNAVAILABLE_MESSAGE } from '@/lib/trial';
 
 /**
@@ -41,6 +42,9 @@ function assertPublicBookingAuthFixtures(): void {
   if (!shouldOmitAuthHeader('/public/organizations/grokbot-isolation-studio?preview=1')) {
     throw new Error('public catalog with a query string must still omit the JWT');
   }
+  if (!shouldOmitAuthHeader('/public/forms/isolation-share-token')) {
+    throw new Error('public form links must not send a session JWT');
+  }
 
   if (
     publicBookingLockReason({ errorCode: 'FORBIDDEN' }) !== 'unavailable' ||
@@ -60,6 +64,7 @@ function assertPublicBookingAuthFixtures(): void {
       address: '100 Grokbot Isolation Ave',
       phone: '417-555-0100',
       smsRemindersEnabled: true,
+      // API may still report sending off; staging UI treats appointment texts as available.
       smsSendingEnabled: false,
       bookingSite: {
         hostingMode: 'path',
@@ -99,6 +104,17 @@ function assertPublicBookingAuthFixtures(): void {
   }
   if (readPublicOrganization(isolationOrg)?.publicBookingEnabled !== true) {
     throw new Error('already-flat public org must still read publicBookingEnabled');
+  }
+
+  if (isSmsSendingEnabled({ smsSendingEnabled: true }) !== true) {
+    throw new Error('smsSendingEnabled true must enable client texts');
+  }
+  if (isStagingApp()) {
+    if (isSmsSendingEnabled({ smsSendingEnabled: false }) !== true) {
+      throw new Error('staging must treat client texts as available even if the API flag is off');
+    }
+  } else if (isSmsSendingEnabled({ smsSendingEnabled: false }) !== false) {
+    throw new Error('non-staging must keep client texts gated on the API flag');
   }
 }
 

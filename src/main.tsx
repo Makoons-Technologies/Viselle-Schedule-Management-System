@@ -17,6 +17,7 @@ import './index.css';
 import '@/lib/canceled-salon-lockout.fixtures';
 import '@/lib/api-error.fixtures';
 import '@/lib/public-booking.fixtures';
+import '@/lib/availability.fixtures';
 
 applyPlatformTheme(readStoredThemeId());
 initColorMode();

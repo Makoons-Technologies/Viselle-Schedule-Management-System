@@ -3,12 +3,14 @@ import { CreditCard, Loader2, RefreshCw } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { orgApi } from '@/lib/api';
+import { isRequestAborted, orgApi } from '@/lib/api';
+import { BlockingProgressDialog, useBlockingProgress } from '@/components/common/BlockingProgressDialog';
 import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { cn } from '@/lib/utils';
 import { redirectToStripeUrl } from '@/lib/safe-redirect';
 import { FirstVisitProtectionSection } from '@/components/settings/FirstVisitProtectionSection';
+import { StaffPayoutsSection } from '@/components/settings/StaffPayoutsSection';
 import { Panel, sectionMutedClass } from '@/components/common/Panel';
 import { LoadingState } from '@/components/common/LoadingState';
 import { TrialLockedControl } from '@/components/common/TrialLockedControl';
@@ -24,6 +26,7 @@ export function PaymentsSettingsPage() {
   const [searchParams] = useSearchParams();
   const [readerCode, setReaderCode] = useState('');
   const autoSyncedRef = useRef(false);
+  const onboardProgress = useBlockingProgress();
 
   const { data, isLoading } = useQuery({
     queryKey: ['stripe-connect', orgId],
@@ -46,13 +49,32 @@ export function PaymentsSettingsPage() {
   });
 
   const onboardMutation = useMutation({
-    mutationFn: () => orgApi.startStripeConnectOnboarding(orgId),
+    mutationFn: async () => {
+      const controller = new AbortController();
+      onboardProgress.start({
+        title: 'Stripe',
+        message: 'Starting Stripe onboarding…',
+        onCancel: () => controller.abort(),
+      });
+      try {
+        const result = await orgApi.startStripeConnectOnboarding(orgId, controller.signal);
+        onboardProgress.update({ message: 'Opening Stripe…', onCancel: undefined });
+        return result;
+      } catch (err) {
+        onboardProgress.stop();
+        throw err;
+      }
+    },
     onSuccess: (result) => {
       if (!redirectToStripeUrl(result.url)) {
+        onboardProgress.stop();
         toast.error('Received an unexpected onboarding URL');
       }
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => {
+      if (isRequestAborted(err)) return;
+      toast.error(err.message);
+    },
   });
 
   const registerReaderMutation = useMutation({
@@ -99,7 +121,8 @@ export function PaymentsSettingsPage() {
           <div>
             <h3 className="font-semibold">Stripe Connect</h3>
             <p className={cn('mt-1', sectionMutedClass)}>
-              Connect your salon&apos;s Stripe account to accept in-person card payments. Funds go directly to your bank.
+              Connect your salon&apos;s Stripe account to accept in-person card payments and online invoice
+              pay links (Apple Pay and card entry). Funds go directly to your bank.
             </p>
           </div>
           <Badge variant={ready ? 'success' : pendingActivation ? 'secondary' : 'secondary'}>
@@ -175,6 +198,9 @@ export function PaymentsSettingsPage() {
         stripeReady={Boolean(ready)}
         firstVisitPayment={data?.firstVisitPayment}
       />
+
+      <StaffPayoutsSection orgId={orgId} salonStripeReady={Boolean(ready)} />
+      <BlockingProgressDialog {...onboardProgress.dialogProps} />
     </div>
   );
 }

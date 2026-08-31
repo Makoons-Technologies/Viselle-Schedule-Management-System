@@ -56,6 +56,13 @@ export function StaffPage() {
     enabled: !!orgId,
   });
 
+  const payoutSettingsQuery = useQuery({
+    queryKey: ['staff-payouts', orgId],
+    queryFn: () => orgApi.getStaffPayoutSettings(orgId),
+    enabled: !!orgId,
+  });
+  const payoutOptedIn = payoutSettingsQuery.data?.mode === 'salon_stripe';
+
   const removeMutation = useMutation({
     mutationFn: (accountId: string) => orgApi.deleteAccount(orgId, accountId),
     onSuccess: () => {
@@ -181,6 +188,7 @@ export function StaffPage() {
                     <TableHead>Role</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Bookable</TableHead>
+                    {payoutOptedIn ? <TableHead>Payout bank</TableHead> : null}
                     <TableHead>Login</TableHead>
                     <TableHead className="w-[116px]" />
                   </TableRow>
@@ -193,6 +201,13 @@ export function StaffPage() {
                       <TableCell className="capitalize">{a.role.replace('_', ' ')}</TableCell>
                       <TableCell><Badge variant={a.status === 'active' ? 'success' : 'secondary'}>{a.status}</Badge></TableCell>
                       <TableCell>{a.isBookable ? 'Yes' : 'No'}</TableCell>
+                      {payoutOptedIn ? (
+                        <TableCell>
+                          <Badge variant={a.stripeRecipientPayoutsReady ? 'success' : 'secondary'}>
+                            {a.stripeRecipientPayoutsReady ? 'Ready' : 'Needs bank'}
+                          </Badge>
+                        </TableCell>
+                      ) : null}
                       <TableCell>
                         {a.userId ? (
                           <Badge variant="success">Enabled</Badge>

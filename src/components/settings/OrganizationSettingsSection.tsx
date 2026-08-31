@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { helperTextClass } from '@/components/common/Panel';
 import { SmsUnderReviewNotice } from '@/components/common/SmsUnderReviewNotice';
 import { cn, slugify } from '@/lib/utils';
-import { isSmsSendingEnabled } from '@/lib/sms';
+import { CLIENT_TEXTS_HELPER, isSmsSendingEnabled, isStagingApp } from '@/lib/sms';
 import { Switch } from '@/components/ui/switch';
 import { TRIAL_LOCKED_MESSAGE } from '@/lib/trial';
 
@@ -78,7 +78,7 @@ export function OrganizationSettingsSection({ orgId }: OrganizationSettingsSecti
   if (!org) return null;
 
   const emailPlanEnabled = plan?.emailRemindersEnabled ?? true;
-  const smsPlanEnabled = plan?.smsRemindersEnabled ?? true;
+  const smsPlanEnabled = isStagingApp() || (plan?.smsRemindersEnabled ?? true);
   const smsSendingOn = isSmsSendingEnabled(plan);
 
   return (
@@ -258,15 +258,11 @@ export function OrganizationSettingsSection({ orgId }: OrganizationSettingsSecti
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0 flex-1">
-                <Label>Text (SMS) reminders</Label>
+                <Label>Client texts</Label>
                 {!smsPlanEnabled ? (
                   <p className={helperTextClass}>Not included in your plan</p>
-                ) : !smsSendingOn ? (
-                  <p className={helperTextClass}>
-                    Settings are saved, but texts will not send until the number is approved
-                  </p>
                 ) : (
-                  <p className={helperTextClass}>Send a text reminder before the appointment</p>
+                  <p className={helperTextClass}>{CLIENT_TEXTS_HELPER}</p>
                 )}
               </div>
               <Switch
@@ -276,7 +272,7 @@ export function OrganizationSettingsSection({ orgId }: OrganizationSettingsSecti
               />
             </div>
             <div>
-              <Label htmlFor="sms-hours">Hours before (SMS)</Label>
+              <Label htmlFor="sms-hours">Hours before (text)</Label>
               <Input
                 id="sms-hours"
                 key={`sms-hours-${org.smsReminderHoursBefore}-${org.updatedAt}`}
@@ -308,8 +304,7 @@ export function OrganizationSettingsSection({ orgId }: OrganizationSettingsSecti
             </p>
             <p className={helperTextClass}>
               Customers receive a link to confirm they will attend, by default 3 days before the
-              appointment. Uses the same email{smsSendingOn ? '/SMS' : ''} channels as reminders
-              {smsSendingOn ? '.' : '. Text confirmations are paused until the number is approved.'}
+              appointment. Uses the same email{smsSendingOn ? ' and text' : ''} channels as reminders.
             </p>
           </div>
 
@@ -358,9 +353,8 @@ export function OrganizationSettingsSection({ orgId }: OrganizationSettingsSecti
             </p>
             <p className={helperTextClass}>
               Notify the assigned staff member before their appointment (email
-              {smsSendingOn ? ', SMS, ' : ' '}
-              and/or push)
-              {smsSendingOn ? '.' : '. Staff texts are paused until the number is approved.'}
+              {smsSendingOn ? ', text, ' : ' '}
+              and/or push).
             </p>
           </div>
           <div className="flex items-center justify-between gap-4">
@@ -375,10 +369,7 @@ export function OrganizationSettingsSection({ orgId }: OrganizationSettingsSecti
           </div>
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0 flex-1">
-              <Label>Staff text (SMS)</Label>
-              {!smsSendingOn && (
-                <p className={helperTextClass}>Paused during carrier review</p>
-              )}
+              <Label>Staff text</Label>
             </div>
             <Switch
               checked={org.staffSmsRemindersOptIn ?? false}
@@ -448,10 +439,7 @@ export function OrganizationSettingsSection({ orgId }: OrganizationSettingsSecti
           </div>
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0 flex-1">
-              <Label>Text (SMS)</Label>
-              {!smsSendingOn && (
-                <p className={helperTextClass}>Paused during carrier review</p>
-              )}
+              <Label>Text</Label>
             </div>
             <Switch
               checked={org.lowStockAlertSms ?? false}

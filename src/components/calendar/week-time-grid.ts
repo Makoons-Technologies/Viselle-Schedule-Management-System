@@ -38,17 +38,31 @@ export interface WeekAppointmentCursor {
   minutes: number;
 }
 
+/** Civil day key used by week columns (`yyyy-MM-dd` UTC wall-clock). */
+export function appointmentDayKey(iso: string): string {
+  return appointmentScheduleFromIso(iso).date;
+}
+
+export type NextAppointmentOptions = {
+  /**
+   * When true, an appointment whose start equals `afterMinutes` still counts.
+   * Used for the viewport cursor so a booking aligned with the top of the
+   * visible grid (QA: 11:30 AM) is not treated as already passed.
+   */
+  inclusive?: boolean;
+};
+
 /** Later booking on `dayKey` only (does not walk to the next day). */
 export function nextAppointmentOnDay(
   appointments: Array<{ startTime: string }>,
   dayKey: string,
   afterMinutes: number,
-  options?: { inclusive?: boolean },
+  options?: NextAppointmentOptions,
 ): number | undefined {
   const inclusive = options?.inclusive === true;
   let nextMinutes: number | undefined;
   for (const appointment of appointments) {
-    if (appointment.startTime.slice(0, 10) !== dayKey) continue;
+    if (appointmentDayKey(appointment.startTime) !== dayKey) continue;
     const minutes = appointmentStartMinutes(appointment.startTime);
     if (inclusive ? minutes < afterMinutes : minutes <= afterMinutes) continue;
     if (nextMinutes === undefined || minutes < nextMinutes) nextMinutes = minutes;
@@ -197,7 +211,7 @@ export function groupAppointmentsByDay<T extends { startTime: string }>(
   const byDay = new Map<string, T[]>();
 
   for (const appointment of appointments) {
-    const dayKey = appointment.startTime.slice(0, 10);
+    const dayKey = appointmentDayKey(appointment.startTime);
     if (!dayKeys.includes(dayKey)) continue;
     const list = byDay.get(dayKey) ?? [];
     list.push(appointment);

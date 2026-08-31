@@ -89,11 +89,24 @@ export function setAppHeightCSSProperty(root: HTMLElement = document.documentEle
   root.style.setProperty('--app-height', getAppHeightCSSValue());
 }
 
+/**
+ * Pin the layout viewport to (0, 0) without touching nested overflow panes.
+ * Reading/assigning `document.body.scrollTop` when `body` is null throws
+ * (`Cannot read properties of null (reading 'scrollTop')`) and aborts
+ * compositor fling. `window.scrollTo` during a gesture does the same.
+ */
 export function resetWindowScroll(): void {
-  // Only the window scroller. Assigning documentElement/body.scrollTop = 0
-  // during a gesture cancels nested overflow momentum (calendar flick).
-  if (window.scrollX === 0 && window.scrollY === 0) return;
-  window.scrollTo(0, 0);
+  try {
+    const windowX = window.scrollX ?? 0;
+    const windowY = window.scrollY ?? 0;
+    if (windowX === 0 && windowY === 0) return;
+    // Window scroller only. Do not assign documentElement/body.scrollTop —
+    // that cancels nested overflow-x momentum on iOS/WebKit, and body can
+    // be null during early settle (`reading 'scrollTop'`).
+    window.scrollTo(0, 0);
+  } catch {
+    // Viewport settle must never throw.
+  }
 }
 
 /** Brief scroll nudge can trigger iOS standalone viewport "docking" without rotating. */

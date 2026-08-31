@@ -2,6 +2,7 @@ import { CreditCard, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { KeyedPaymentSession } from '@/lib/stripe-keyed';
 import { cn, formatCurrency } from '@/lib/utils';
+import { BlockingProgressDialog } from '@/components/common/BlockingProgressDialog';
 import { sectionMutedClass } from '@/components/common/Panel';
 import { Button } from '@/components/ui/button';
 
@@ -9,10 +10,20 @@ interface KeyedCardFormProps {
   session: KeyedPaymentSession;
   totalCents: number;
   onSuccess: () => void;
+  /** Shown above the Payment Element. */
+  description?: string;
+  /** Label verb on the submit button (`Pay $X` vs `Charge $X`). */
+  submitVerb?: 'pay' | 'charge';
 }
 
 /** Stripe Payment Element form used when the card reader is unavailable or failed. */
-export function KeyedCardForm({ session, totalCents, onSuccess }: KeyedCardFormProps) {
+export function KeyedCardForm({
+  session,
+  totalCents,
+  onSuccess,
+  description = 'Enter the card details to charge manually.',
+  submitVerb = 'charge',
+}: KeyedCardFormProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +51,7 @@ export function KeyedCardForm({ session, totalCents, onSuccess }: KeyedCardFormP
 
   return (
     <section className="space-y-3 rounded-xl border border-stone-200 p-4 dark:border-stone-700">
-      <p className={cn('text-sm', sectionMutedClass)}>Enter the card details to charge manually.</p>
+      <p className={cn('text-sm', sectionMutedClass)}>{description}</p>
       <div ref={containerRef} />
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
       <Button
@@ -51,8 +62,13 @@ export function KeyedCardForm({ session, totalCents, onSuccess }: KeyedCardFormP
         disabled={confirming}
       >
         {confirming ? <Loader2 className="h-5 w-5 animate-spin" /> : <CreditCard className="h-5 w-5" />}
-        Charge {formatCurrency(totalCents)}
+        {submitVerb === 'pay' ? 'Pay' : 'Charge'} {formatCurrency(totalCents)}
       </Button>
+      <BlockingProgressDialog
+        open={confirming}
+        title="Card payment"
+        message="Charging the card…"
+      />
     </section>
   );
 }

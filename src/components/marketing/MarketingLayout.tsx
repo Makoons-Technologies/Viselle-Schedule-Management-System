@@ -9,7 +9,7 @@ const navLinkClassName =
 
 export function MarketingHeader() {
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0f172a]/90 px-safe pt-safe backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0f172a] px-safe pt-safe">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
         <Link to="/" className="flex items-center gap-2.5">
           <ViselleLogo size={36} />
@@ -26,8 +26,14 @@ export function MarketingHeader() {
             <Link to="/contact" className={navLinkClassName}>
               Contact
             </Link>
+            <Link to="/request-demo" className={cn(navLinkClassName, 'hidden sm:inline')}>
+              Request a demo
+            </Link>
           </div>
           <div className="flex items-center gap-2">
+            <Button asChild size="sm" variant="outline" className="border-white/30 bg-white/5 text-white hover:bg-white/15 hover:text-white sm:hidden">
+              <Link to="/request-demo">Demo</Link>
+            </Button>
             <Button asChild size="sm">
               <Link to="/get-started">Get started</Link>
             </Button>

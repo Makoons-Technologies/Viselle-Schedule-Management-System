@@ -4,6 +4,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type MutableRefObject,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react';
@@ -15,10 +16,10 @@ import {
   formatMinutesLabel,
   groupAppointmentsByDay,
   layoutDayAppointments,
-  minutesFromGridOffset,
   minutesToOffsetRem,
   nextAppointmentOnDay,
   firstAppointmentAfterDay,
+  appointmentStartMinutes,
   DEFAULT_DAY_START,
   SLOT_HEIGHT_REM,
   SLOT_MINUTES,
@@ -26,6 +27,20 @@ import {
 import { buildWeekColumns, type WeekCalendarColumn } from '@/components/calendar/WeekCalendarTable';
 import { Button } from '@/components/ui/button';
 import { useSyncedHorizontalScroll } from '@/hooks/useSyncedHorizontalScroll';
+import {
+  appointmentDurationMinutes,
+  clampMoveStart,
+  clampResizeEnd,
+  minutesToIsoOnDay,
+} from '@/lib/calendar-dnd';
+import {
+  findVerticalScroller,
+  getScrollLeft,
+  getScrollTop,
+  scrollElementTo,
+  setScrollLeft,
+  setScrollTop,
+} from '@/lib/scroll-helpers';
 import { cn } from '@/lib/utils';
 
 /** Native overflow-x so trackpad/touch keep compositor momentum (no JS physics). */
@@ -35,10 +50,51 @@ const CALENDAR_HSCROLL_CLASS =
 /** Far-right hit strip for overlap cycle arrows (~32px; tall targets stay tappable). */
 const STACK_RAIL_CLASS = 'w-8';
 
+const MOVE_THRESHOLD_PX = 4;
+
 export type AppointmentStackMeta = {
   size: number;
   index: number;
   isFront: boolean;
+};
+
+export type AppointmentScheduleChange = {
+  appointment: Appointment;
+  startTime: string;
+  endTime: string;
+};
+
+export type AppointmentGridInteraction = {
+  draggable: boolean;
+  onResizePointerDown: (event: ReactPointerEvent<HTMLElement>) => void;
+};
+
+function appointmentInteractionKey(appointment: Appointment): string {
+  return `${appointment.id}:${appointment.startTime}`;
+}
+
+function isDraggableVisit(appointment: Appointment): boolean {
+  return appointment.visitStatus === 'scheduled' || appointment.visitStatus === 'arrived';
+}
+
+type DragSession = {
+  mode: 'move' | 'resize';
+  pointerId: number;
+  appointment: Appointment;
+  /** Stable id+originalStart key for the dragged occurrence. */
+  key: string;
+  originDayKey: string;
+  originStartMinutes: number;
+  originEndMinutes: number;
+  durationMinutes: number;
+  /** Minutes from block start to the pointer at grab (move only). */
+  grabOffsetMinutes: number;
+  startClientX: number;
+  startClientY: number;
+  dayKey: string;
+  startMinutes: number;
+  endMinutes: number;
+  moved: boolean;
 };
 
 interface WeekAppointmentTimeGridProps {
@@ -48,6 +104,7 @@ interface WeekAppointmentTimeGridProps {
     appointment: Appointment,
     stack: AppointmentStackMeta | undefined,
     heightRem: number,
+    interaction?: AppointmentGridInteraction,
   ) => ReactNode;
   className?: string;
   /** Day keys (yyyy-MM-dd) highlighted for zoom selection. Ignored while zoomed. */
@@ -60,8 +117,15 @@ interface WeekAppointmentTimeGridProps {
   onDayHeaderActivate?: (dayKey: string) => void;
   /** Click an empty time slot to create an appointment (date = day key yyyy-MM-dd). */
   onEmptySlotClick?: (slot: { dayKey: string; minutes: number }) => void;
+  /** When set, slots outside staff hours are muted and not bookable. */
+  isSlotInHours?: (dayKey: string, minutes: number) => boolean;
+  /** After creating, scroll this civil-time slot into view. */
+  focusSlot?: { dayKey: string; minutes: number; nonce: number } | null;
   /** Sticks above the day headers while the calendar scrolls. */
   toolbar?: ReactNode;
+  /** Desktop drag/resize. Parent should disable on mobile, select mode, trial lock, etc. */
+  interactionEnabled?: boolean;
+  onAppointmentScheduleChange?: (change: AppointmentScheduleChange) => void;
 }
 
 export function WeekAppointmentTimeGrid({
@@ -75,7 +139,11 @@ export function WeekAppointmentTimeGrid({
   onDayHeaderRangeSelect,
   onDayHeaderActivate,
   onEmptySlotClick,
+  isSlotInHours,
+  focusSlot = null,
   toolbar,
+  interactionEnabled = false,
+  onAppointmentScheduleChange,
 }: WeekAppointmentTimeGridProps) {
   const allColumns = buildWeekColumns(days);
   const isZoomed = !!zoomedDayKeys && zoomedDayKeys.length > 0;
@@ -124,13 +192,15 @@ export function WeekAppointmentTimeGrid({
   const [navDayKey, setNavDayKey] = useState<string | null>(null);
   const originDayKey = columns.find((column) => column.isToday)?.key ?? visibleDayKeys[0];
   const activeDayKey = navDayKey && visibleDayKeys.includes(navDayKey) ? navDayKey : originDayKey;
+  const jumpedOnActiveDay = Boolean(jumpCursor && jumpCursor.dayKey === activeDayKey);
   const afterMinutes =
-    jumpCursor && jumpCursor.dayKey === activeDayKey ? jumpCursor.minutes : viewportMinutes;
+    jumpedOnActiveDay && jumpCursor ? jumpCursor.minutes : viewportMinutes;
   const nextOnActiveDay = activeDayKey
     ? nextAppointmentOnDay(appointments, activeDayKey, afterMinutes, {
-        // Viewport cursor must include the appointment aligned with the top
-        // (QA: Down skipped a visible 11:30). After a jump, stay exclusive.
-        inclusive: !(jumpCursor && jumpCursor.dayKey === activeDayKey),
+        // Viewport cursor is inclusive so a booking sitting at the top of the
+        // visible grid (QA: today's 11:30) is not treated as already passed.
+        // After a jump, stay exclusive so the same booking is not repeated.
+        inclusive: !jumpedOnActiveDay,
       })
     : undefined;
   const nextDayTarget = activeDayKey
@@ -152,22 +222,29 @@ export function WeekAppointmentTimeGrid({
     moved: boolean;
   } | null>(null);
   const headerRowRef = useRef<HTMLDivElement | null>(null);
+  const appointmentDragRef = useRef<DragSession | null>(null);
+  const suppressClickRef = useRef(false);
+  const [appointmentDrag, setAppointmentDrag] = useState<DragSession | null>(null);
+
+  const dndActive =
+    interactionEnabled && typeof onAppointmentScheduleChange === 'function';
 
   useSyncedHorizontalScroll(headerScrollRef, scrollRef);
 
   const mainScroller = () =>
-    bodyRef.current?.closest('main') ?? scrollRef.current?.closest('main');
+    findVerticalScroller(bodyRef.current) ?? findVerticalScroller(scrollRef.current);
 
   useLayoutEffect(() => {
+    if (focusSlot) return;
     if (!showNowLine) return;
     const body = bodyRef.current;
     const scroller = mainScroller();
     if (!body || !scroller) return;
     const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
     const bodyTop =
-      body.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
-    scroller.scrollTop = bodyTop + nowTopRem * rem - scroller.clientHeight / 2;
-  }, [showNowLine, dayKeys.join(',')]);
+      body.getBoundingClientRect().top - scroller.getBoundingClientRect().top + getScrollTop(scroller);
+    setScrollTop(scroller, bodyTop + nowTopRem * rem - scroller.clientHeight / 2);
+  }, [showNowLine, dayKeys.join(','), focusSlot]);
 
   const scrollMainToMinutes = (minutes: number, align: 'center' | 'start') => {
     const body = bodyRef.current;
@@ -176,14 +253,34 @@ export function WeekAppointmentTimeGrid({
     const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
     const chromeHeight = chromeRef.current?.offsetHeight ?? 0;
     const bodyTop =
-      body.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+      body.getBoundingClientRect().top - scroller.getBoundingClientRect().top + getScrollTop(scroller);
     const offsetRem = minutesToOffsetRem(minutes, gridStartMinutes);
     const top =
       align === 'center'
         ? bodyTop + offsetRem * rem - scroller.clientHeight / 2
         : bodyTop + offsetRem * rem - chromeHeight - 12;
-    scroller.scrollTo({ top, behavior: align === 'start' ? 'smooth' : 'auto' });
+    scrollElementTo(scroller, { top, behavior: align === 'start' ? 'smooth' : 'auto' });
   };
+
+  /** Horizontal only — `scrollIntoView` on a full-height day column fights vertical jump. */
+  const scrollDayColumnInline = (dayKey: string) => {
+    const scroller = scrollRef.current;
+    const header = headerScrollRef.current;
+    const columnEl = bodyRef.current?.querySelector<HTMLElement>(`[data-day-column="${dayKey}"]`);
+    if (!scroller || !columnEl) return;
+    const gutter = bodyRef.current?.querySelector<HTMLElement>('.sticky.left-0');
+    const gutterWidth = gutter?.getBoundingClientRect().width ?? 64;
+    const delta = columnEl.getBoundingClientRect().left - (scroller.getBoundingClientRect().left + gutterWidth);
+    const nextLeft = Math.max(0, getScrollLeft(scroller) + delta);
+    setScrollLeft(scroller, nextLeft);
+    setScrollLeft(header, nextLeft);
+  };
+
+  useLayoutEffect(() => {
+    if (!focusSlot) return;
+    scrollDayColumnInline(focusSlot.dayKey);
+    scrollMainToMinutes(focusSlot.minutes, 'center');
+  }, [focusSlot?.nonce, focusSlot?.dayKey, focusSlot?.minutes]);
 
   const readViewportMinutes = () => {
     const body = bodyRef.current;
@@ -300,8 +397,7 @@ export function WeekAppointmentTimeGrid({
     setNavDayKey(nextJumpTarget.dayKey);
     beginProgrammaticScroll();
     scrollMainToMinutes(nextJumpTarget.minutes, 'start');
-    const columnEl = bodyRef.current?.querySelector(`[data-day-column="${nextJumpTarget.dayKey}"]`);
-    columnEl?.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' });
+    scrollDayColumnInline(nextJumpTarget.dayKey);
   };
 
   const cycleStack = (stackKey: string, stackSize: number, delta: number) => {
@@ -332,6 +428,199 @@ export function WeekAppointmentTimeGrid({
       }
     }
     return null;
+  };
+
+  const dayColumnKeyFromClientX = (clientX: number): string | null => {
+    const body = bodyRef.current;
+    if (!body) return null;
+    const columns = Array.from(body.querySelectorAll<HTMLElement>('[data-day-column]'));
+    for (const el of columns) {
+      const rect = el.getBoundingClientRect();
+      if (clientX >= rect.left && clientX <= rect.right) {
+        return el.dataset.dayColumn ?? null;
+      }
+    }
+    let best: string | null = null;
+    let bestDist = Infinity;
+    for (const el of columns) {
+      const rect = el.getBoundingClientRect();
+      const mid = (rect.left + rect.right) / 2;
+      const dist = Math.abs(mid - clientX);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = el.dataset.dayColumn ?? null;
+      }
+    }
+    return best;
+  };
+
+  const minutesFromClientY = (clientY: number, dayKey: string): number | null => {
+    const body = bodyRef.current;
+    if (!body) return null;
+    const columnEl = body.querySelector<HTMLElement>(`[data-day-column="${dayKey}"]`);
+    if (!columnEl) return null;
+    const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    const rect = columnEl.getBoundingClientRect();
+    const offsetPx = clientY - rect.top;
+    return gridStartMinutes + (offsetPx / rem / SLOT_HEIGHT_REM) * SLOT_MINUTES;
+  };
+
+  const commitAppointmentDrag = (session: DragSession) => {
+    if (!onAppointmentScheduleChange) return;
+    const startChanged =
+      session.dayKey !== session.originDayKey ||
+      session.startMinutes !== session.originStartMinutes;
+    const endChanged = session.endMinutes !== session.originEndMinutes;
+    if (!startChanged && !endChanged) return;
+    onAppointmentScheduleChange({
+      appointment: session.appointment,
+      startTime: minutesToIsoOnDay(session.dayKey, session.startMinutes),
+      endTime: minutesToIsoOnDay(session.dayKey, session.endMinutes),
+    });
+  };
+
+  const updateDragSession = (next: DragSession) => {
+    appointmentDragRef.current = next;
+    setAppointmentDrag(next);
+  };
+
+  const endDragSession = (session: DragSession | null, didMove: boolean) => {
+    appointmentDragRef.current = null;
+    setAppointmentDrag(null);
+    if (didMove && session) {
+      suppressClickRef.current = true;
+      commitAppointmentDrag(session);
+    }
+  };
+
+  useEffect(() => {
+    if (!appointmentDrag) return;
+
+    const onPointerMove = (event: PointerEvent) => {
+      const session = appointmentDragRef.current;
+      if (!session || session.pointerId !== event.pointerId) return;
+
+      const distance = Math.hypot(
+        event.clientX - session.startClientX,
+        event.clientY - session.startClientY,
+      );
+      const pastThreshold = session.moved || distance >= MOVE_THRESHOLD_PX;
+      if (!pastThreshold) return;
+
+      const dayKey =
+        session.mode === 'move'
+          ? dayColumnKeyFromClientX(event.clientX) ?? session.dayKey
+          : session.dayKey;
+      const rawMinutes = minutesFromClientY(event.clientY, dayKey);
+      if (rawMinutes == null) return;
+
+      let startMinutes = session.startMinutes;
+      let endMinutes = session.endMinutes;
+
+      if (session.mode === 'move') {
+        startMinutes = clampMoveStart(rawMinutes - session.grabOffsetMinutes, session.durationMinutes);
+        endMinutes = startMinutes + session.durationMinutes;
+      } else {
+        endMinutes = clampResizeEnd(session.startMinutes, rawMinutes);
+        startMinutes = session.startMinutes;
+      }
+
+      if (
+        session.moved &&
+        dayKey === session.dayKey &&
+        startMinutes === session.startMinutes &&
+        endMinutes === session.endMinutes
+      ) {
+        return;
+      }
+
+      updateDragSession({
+        ...session,
+        dayKey,
+        startMinutes,
+        endMinutes,
+        moved: true,
+      });
+      event.preventDefault();
+    };
+
+    const onPointerUp = (event: PointerEvent) => {
+      const session = appointmentDragRef.current;
+      if (!session || session.pointerId !== event.pointerId) return;
+      endDragSession(session, session.moved);
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
+    };
+  }, [appointmentDrag, gridStartMinutes, onAppointmentScheduleChange]);
+
+  const beginAppointmentDrag = (
+    mode: 'move' | 'resize',
+    appointment: Appointment,
+    dayKey: string,
+    event: ReactPointerEvent<HTMLElement>,
+  ) => {
+    if (!dndActive || !isDraggableVisit(appointment)) return;
+    if (event.button !== 0) return;
+    if (appointmentDragRef.current) return;
+
+    const startMinutes = appointmentStartMinutes(appointment.startTime);
+    const duration = appointmentDurationMinutes(appointment.startTime, appointment.endTime);
+    const endMinutes = startMinutes + duration;
+    const pointerMinutes = minutesFromClientY(event.clientY, dayKey) ?? startMinutes;
+    const grabOffsetMinutes =
+      mode === 'move' ? Math.max(0, Math.min(duration, pointerMinutes - startMinutes)) : 0;
+
+    const session: DragSession = {
+      mode,
+      pointerId: event.pointerId,
+      appointment,
+      key: appointmentInteractionKey(appointment),
+      originDayKey: dayKey,
+      originStartMinutes: startMinutes,
+      originEndMinutes: endMinutes,
+      durationMinutes: duration,
+      grabOffsetMinutes,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      dayKey,
+      startMinutes,
+      endMinutes,
+      moved: false,
+    };
+    appointmentDragRef.current = session;
+    setAppointmentDrag(session);
+    // Resize should not also trigger the chip click path.
+    if (mode === 'resize') {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  };
+
+  const handleAppointmentPointerDown = (
+    appointment: Appointment,
+    dayKey: string,
+    event: ReactPointerEvent<HTMLElement>,
+  ) => {
+    if (!dndActive || !isDraggableVisit(appointment)) return;
+    const target = event.target as HTMLElement;
+    if (target.closest('[data-resize-handle]')) return;
+    if (target.closest('[data-stack-controls]')) return;
+    beginAppointmentDrag('move', appointment, dayKey, event);
+  };
+
+  const handleResizePointerDown = (
+    appointment: Appointment,
+    dayKey: string,
+    event: ReactPointerEvent<HTMLElement>,
+  ) => {
+    beginAppointmentDrag('resize', appointment, dayKey, event);
   };
 
   const handleHeaderPointerDown = (columnKey: string, event: ReactPointerEvent<HTMLButtonElement>) => {
@@ -378,6 +667,24 @@ export function WeekAppointmentTimeGrid({
         : 9
     : 6;
   const gridMinWidthRem = 5 + columns.length * columnMinWidthRem;
+
+  const appointmentsForDay = (dayKey: string): Appointment[] => {
+    const base = byDay.get(dayKey) ?? [];
+    if (!appointmentDrag) return base;
+
+    const withoutDragged = base.filter(
+      (appointment) => appointmentInteractionKey(appointment) !== appointmentDrag.key,
+    );
+
+    if (appointmentDrag.dayKey !== dayKey) return withoutDragged;
+
+    const preview: Appointment = {
+      ...appointmentDrag.appointment,
+      startTime: minutesToIsoOnDay(appointmentDrag.dayKey, appointmentDrag.startMinutes),
+      endTime: minutesToIsoOnDay(appointmentDrag.dayKey, appointmentDrag.endMinutes),
+    };
+    return [...withoutDragged, preview];
+  };
 
   const headerRow = (
     <div
@@ -451,7 +758,7 @@ export function WeekAppointmentTimeGrid({
           </div>
 
           {columns.map((column) => {
-            const dayAppointments = byDay.get(column.key) ?? [];
+            const dayAppointments = appointmentsForDay(column.key);
             const positioned = layoutDayAppointments(
               dayAppointments,
               gridStartMinutes,
@@ -470,7 +777,23 @@ export function WeekAppointmentTimeGrid({
                 stackFrontByKey={stackFrontByKey}
                 onCycleStack={cycleStack}
                 renderAppointment={renderAppointment}
-                onEmptySlotClick={onEmptySlotClick}
+                onEmptySlotClick={appointmentDrag ? undefined : onEmptySlotClick}
+                dndActive={dndActive}
+                dragPreview={
+                  appointmentDrag
+                    ? {
+                        key: appointmentDrag.key,
+                        appointmentId: appointmentDrag.appointment.id,
+                        dayKey: appointmentDrag.dayKey,
+                        startMinutes: appointmentDrag.startMinutes,
+                        endMinutes: appointmentDrag.endMinutes,
+                      }
+                    : null
+                }
+                suppressClickRef={suppressClickRef}
+                onAppointmentPointerDown={handleAppointmentPointerDown}
+                onResizePointerDown={handleResizePointerDown}
+                isSlotInHours={isSlotInHours}
               />
             );
           })}
@@ -510,6 +833,12 @@ function DayColumn({
   onCycleStack,
   renderAppointment,
   onEmptySlotClick,
+  dndActive,
+  dragPreview,
+  suppressClickRef,
+  onAppointmentPointerDown,
+  onResizePointerDown,
+  isSlotInHours,
 }: {
   column: WeekCalendarColumn;
   gridHeightRem: number;
@@ -522,8 +851,29 @@ function DayColumn({
     appointment: Appointment,
     stack: AppointmentStackMeta | undefined,
     heightRem: number,
+    interaction?: AppointmentGridInteraction,
   ) => ReactNode;
   onEmptySlotClick?: (slot: { dayKey: string; minutes: number }) => void;
+  dndActive: boolean;
+  dragPreview: {
+    key: string;
+    appointmentId: string;
+    dayKey: string;
+    startMinutes: number;
+    endMinutes: number;
+  } | null;
+  suppressClickRef: MutableRefObject<boolean>;
+  onAppointmentPointerDown: (
+    appointment: Appointment,
+    dayKey: string,
+    event: ReactPointerEvent<HTMLElement>,
+  ) => void;
+  onResizePointerDown: (
+    appointment: Appointment,
+    dayKey: string,
+    event: ReactPointerEvent<HTMLElement>,
+  ) => void;
+  isSlotInHours?: (dayKey: string, minutes: number) => boolean;
 }) {
   return (
     <div
@@ -531,54 +881,82 @@ function DayColumn({
       className={cn(
         'relative min-w-0 flex-1 border-r border-stone-100 last:border-r-0 dark:border-stone-800',
         column.isToday && 'bg-brand-50/25 dark:bg-brand-900/20',
-        onEmptySlotClick && 'cursor-pointer',
       )}
       style={{ height: `${gridHeightRem}rem` }}
-      onClick={
-        onEmptySlotClick
-          ? (event) => {
-              if ((event.target as HTMLElement).closest('[data-appointment-block]')) return;
-              const rect = event.currentTarget.getBoundingClientRect();
-              const rem =
-                Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-              onEmptySlotClick({
-                dayKey: column.key,
-                minutes: minutesFromGridOffset(
-                  event.clientY - rect.top,
-                  rem,
-                  gridStartMinutes,
-                  timeSlots.length,
-                ),
-              });
-            }
-          : undefined
-      }
     >
-      {timeSlots.map((slotMinutes) => (
-        <div
-          key={`${column.key}-line-${slotMinutes}`}
-          className="pointer-events-none absolute inset-x-0 border-t border-stone-100 dark:border-stone-800"
-          style={{ top: `${minutesToOffsetRem(slotMinutes, gridStartMinutes)}rem` }}
-        />
-      ))}
+      {timeSlots.map((slotMinutes) => {
+        const inHours = !isSlotInHours || isSlotInHours(column.key, slotMinutes);
+        const canBook = Boolean(onEmptySlotClick && inHours);
+        return (
+          <div
+            key={`${column.key}-slot-${slotMinutes}`}
+            data-hours-slot={inHours ? 'in' : 'out'}
+            role={canBook ? 'button' : undefined}
+            title={inHours ? undefined : 'Outside working hours'}
+            aria-label={
+              canBook ? `Add appointment at ${formatMinutesLabel(slotMinutes)}` : undefined
+            }
+            className={cn(
+              'absolute inset-x-0 border-t border-stone-100 dark:border-stone-800',
+              !inHours && 'bg-stone-200/80 dark:bg-stone-800/75',
+              canBook &&
+                'cursor-pointer hover:bg-brand-50/70 dark:hover:bg-brand-900/35',
+              onEmptySlotClick && !inHours && 'cursor-not-allowed',
+            )}
+            style={{
+              top: `${minutesToOffsetRem(slotMinutes, gridStartMinutes)}rem`,
+              height: `${SLOT_HEIGHT_REM}rem`,
+            }}
+            onClick={
+              canBook
+                ? () => onEmptySlotClick?.({ dayKey: column.key, minutes: slotMinutes })
+                : undefined
+            }
+          />
+        );
+      })}
 
       {positioned.map(({ appointment, topRem, heightRem, stackKey, stackIndex, stackSize }) => {
         const frontIndex = stackKey ? (stackFrontByKey[stackKey] ?? 0) : 0;
         const isFront = stackSize <= 1 || stackIndex === frontIndex;
         const zIndex = isFront ? stackSize + 2 : stackIndex + 1;
         const hasStackControls = stackSize > 1 && isFront && !!stackKey;
+        const isDragging =
+          !!dragPreview &&
+          dragPreview.dayKey === column.key &&
+          appointment.id === dragPreview.appointmentId &&
+          appointmentStartMinutes(appointment.startTime) === dragPreview.startMinutes &&
+          appointmentStartMinutes(appointment.endTime) === dragPreview.endMinutes;
+        const canDrag = dndActive && isDraggableVisit(appointment);
+        const blockKey = isDragging
+          ? `dragging-${dragPreview.key}`
+          : `${appointment.id}-${appointment.startTime}`;
 
         return (
           <div
-            key={`${appointment.id}-${appointment.startTime}`}
+            key={blockKey}
             data-appointment-block
-            className="absolute px-0.5 sm:px-1"
+            className={cn(
+              'absolute px-0.5 sm:px-1',
+              isDragging && 'z-30 opacity-90 ring-2 ring-brand-400 ring-offset-1 ring-offset-white dark:ring-brand-500 dark:ring-offset-stone-900',
+            )}
             style={{
               top: `${topRem}rem`,
               height: `${heightRem}rem`,
               left: 0,
               width: '100%',
-              zIndex,
+              zIndex: isDragging ? 40 : zIndex,
+            }}
+            onPointerDown={
+              canDrag
+                ? (event) => onAppointmentPointerDown(appointment, column.key, event)
+                : undefined
+            }
+            onClickCapture={(event) => {
+              if (!suppressClickRef.current) return;
+              suppressClickRef.current = false;
+              event.preventDefault();
+              event.stopPropagation();
             }}
             onClick={(event) => event.stopPropagation()}
           >
@@ -594,6 +972,13 @@ function DayColumn({
                   ? { size: stackSize, index: stackIndex, isFront }
                   : undefined,
                 heightRem,
+                canDrag
+                  ? {
+                      draggable: true,
+                      onResizePointerDown: (event) =>
+                        onResizePointerDown(appointment, column.key, event),
+                    }
+                  : undefined,
               )}
               {hasStackControls ? (
                 <StackEdgeControls
@@ -618,6 +1003,7 @@ function StackEdgeControls({
 }) {
   return (
     <div
+      data-stack-controls
       className={cn(
         'pointer-events-none absolute inset-y-0 right-0 z-20 flex flex-col items-stretch',
         STACK_RAIL_CLASS,

@@ -6,12 +6,19 @@
   "scripts": {
     "dev": "vite",
     "dev:mobile": "vite --mode mobile --host",
-    "build": "tsc -b && vite build",
+    "build": "node scripts/fetch-industry-stats.mjs && tsc -b && vite build",
+    "fetch-industry-stats": "node scripts/fetch-industry-stats.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
-    "cut-release": "node scripts/cut-release.mjs"
+    "cut-release": "node scripts/cut-release.mjs",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:install": "playwright install chromium"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@hookform/resolvers": "^5.4.0",
     "@radix-ui/react-avatar": "^1.1.12",
     "@radix-ui/react-dialog": "^1.1.16",
@@ -44,6 +51,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/vite": "^4.3.0",
     "@types/node": "^24.12.3",
     "@types/qrcode": "^1.5.6",

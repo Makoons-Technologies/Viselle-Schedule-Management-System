@@ -28,7 +28,7 @@ export function SettingsBackHeader({ title, backTo, onBack, actions, className }
   };
 
   return (
-    <header className={cn('mb-6 flex items-center gap-1', className)}>
+    <header className={cn('mb-6 flex flex-wrap items-center gap-2', className)}>
       <Button
         type="button"
         variant="ghost"
@@ -40,7 +40,7 @@ export function SettingsBackHeader({ title, backTo, onBack, actions, className }
         <ArrowLeft className="h-5 w-5" />
       </Button>
       <h1 className="min-w-0 flex-1 text-lg font-semibold text-stone-900 dark:text-stone-100">{title}</h1>
-      {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+      {actions ? <div className="flex w-full shrink-0 flex-wrap items-center justify-end gap-2 sm:w-auto">{actions}</div> : null}
     </header>
   );
 }

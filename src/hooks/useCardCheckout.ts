@@ -3,6 +3,7 @@ import { createKeyedPaymentSession, type KeyedPaymentSession } from '@/lib/strip
 import { TerminalAbortError, collectTerminalPayment } from '@/lib/stripe-terminal';
 
 export type CardMode = 'reader' | 'manual';
+export type CardCheckoutPhase = 'idle' | 'starting' | 'waiting' | 'confirming';
 
 export interface CardCheckoutController {
   cardMode: CardMode;
@@ -16,6 +17,8 @@ export interface CardCheckoutController {
   /** True while the manual Payment Element session is being prepared. */
   manualPreparing: boolean;
   manualEntryAvailable: boolean;
+  /** Reader lifecycle so callers can block the UI during start/confirm only. */
+  phase: CardCheckoutPhase;
 }
 
 /**
@@ -52,6 +55,7 @@ export function useCardCheckout(params: {
   const [keyedSession, setKeyedSession] = useState<KeyedPaymentSession | null>(null);
   const [reading, setReading] = useState(false);
   const [manualPreparing, setManualPreparing] = useState(false);
+  const [phase, setPhase] = useState<CardCheckoutPhase>('idle');
   const manualEntryAvailable = Boolean(publishableKey?.trim());
   const abortRef = useRef<AbortController | null>(null);
 
@@ -63,6 +67,7 @@ export function useCardCheckout(params: {
       setError(null);
       setReading(false);
       setManualPreparing(false);
+      setPhase('idle');
       setKeyedSession((prev) => {
         prev?.destroy();
         return null;
@@ -81,10 +86,12 @@ export function useCardCheckout(params: {
     const timer = setTimeout(async () => {
       setReading(true);
       setError(null);
-      setStatus('Connecting to card reader…');
+      setPhase('starting');
+      setStatus('Starting card payment…');
       try {
         const { clientSecret, paymentIntentId } = await startTerminalCheckout();
         if (controller.signal.aborted) return;
+        setPhase('waiting');
         await collectTerminalPayment({
           orgId,
           clientSecret,
@@ -93,15 +100,21 @@ export function useCardCheckout(params: {
           signal: controller.signal,
         });
         if (controller.signal.aborted) return;
+        setPhase('confirming');
+        setStatus('Recording card payment…');
         await confirmPaymentIntent(paymentIntentId);
         if (controller.signal.aborted) return;
         onSuccess();
       } catch (err) {
         if (controller.signal.aborted || err instanceof TerminalAbortError) return;
         setStatus(null);
+        setPhase('idle');
         setError(err instanceof Error ? err.message : 'Card reader payment failed');
       } finally {
-        if (!controller.signal.aborted) setReading(false);
+        if (!controller.signal.aborted) {
+          setReading(false);
+          setPhase('idle');
+        }
       }
     }, 500);
 
@@ -191,5 +204,6 @@ export function useCardCheckout(params: {
     reading,
     manualPreparing,
     manualEntryAvailable,
+    phase,
   };
 }

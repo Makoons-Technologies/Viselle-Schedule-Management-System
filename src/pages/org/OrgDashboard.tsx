@@ -1,19 +1,31 @@
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, Scissors, UserCircle, Users } from 'lucide-react';
-import { orgApi } from '@/lib/api';
-import { useOrgId } from '@/hooks/useOrgId';
-import { PageHeader } from '@/components/common/PageHeader';
+import { DoorOpen } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { WalkInDialog } from '@/components/appointments/WalkInDialog';
 import { LoadingState } from '@/components/common/LoadingState';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DashboardBookingLink } from '@/components/dashboard/DashboardBookingLink';
-import { DashboardTrialStatus } from '@/components/dashboard/DashboardTrialStatus';
-import { RevenueChart } from '@/components/dashboard/RevenueChart';
-import { OrgSetupChecklist } from '@/components/onboarding/OrgSetupChecklist';
+import { TrialLockedControl } from '@/components/common/TrialLockedControl';
+import { DEFAULT_HOMEPAGE_BLOCKS, HomepageBlocks } from '@/components/dashboard/HomepageBlocks';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
+import { useOrgId } from '@/hooks/useOrgId';
+import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
+import { useStaffPermissions } from '@/hooks/useStaffPermissions';
+import { calendarAppointmentHref } from '@/lib/calendar-appointment-href';
+import { orgApi } from '@/lib/api';
 
 export function OrgDashboard() {
   const orgId = useOrgId();
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { user, memberships } = useAuth();
+  const { permissions } = useStaffPermissions(orgId);
+  const trialExpired = useOrgWriteLocked();
+  const [walkInOpen, setWalkInOpen] = useState(false);
+
+  const myAccountId = useMemo(() => {
+    if (user?.accountId) return user.accountId;
+    return memberships.find((membership) => membership.organizationId === orgId)?.accountId ?? null;
+  }, [user?.accountId, memberships, orgId]);
 
   const { data: appointments, isLoading: loadingAppts } = useQuery({
     queryKey: ['appointments', orgId],
@@ -39,45 +51,66 @@ export function OrgDashboard() {
     enabled: !!orgId,
   });
 
+  const { data: layout } = useQuery({
+    queryKey: ['homepage-layout', orgId],
+    queryFn: () => orgApi.getHomepageLayout(orgId),
+    enabled: !!orgId,
+  });
+
   if (loadingAppts) return <LoadingState />;
 
   const upcoming = (appointments?.appointments ?? []).filter(
-    (a) => a.visitStatus !== 'cancelled' && new Date(a.startTime) > new Date(),
-  ).length;
-
-  const stats = [
-    { label: 'Upcoming Appointments', value: upcoming, icon: Calendar },
-    { label: 'Staff Members', value: staff?.accounts.length ?? 0, icon: Users },
-    { label: 'Services', value: services?.services.length ?? 0, icon: Scissors },
-    { label: 'Customers', value: customers?.customers.length ?? 0, icon: UserCircle },
-  ];
-
+    (appointment) => appointment.visitStatus !== 'cancelled' && new Date(appointment.startTime) > new Date(),
+  );
   return (
     <div>
-      <PageHeader
-        title="Dashboard"
-        description="Organization overview and key metrics"
-        actions={orgId ? <DashboardBookingLink orgId={orgId} /> : null}
-      />
-      <DashboardTrialStatus />
-      {user?.role === 'org_owner' && orgId ? <OrgSetupChecklist orgId={orgId} /> : null}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((s) => (
-          <Card key={s.label}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-stone-500 dark:text-stone-400">{s.label}</CardTitle>
-              <s.icon className="h-4 w-4 text-brand-600 dark:text-brand-400" />
-            </CardHeader>
-            <CardContent><p className="text-3xl font-bold">{s.value}</p></CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {orgId && (
-        <div className="mt-6">
-          <RevenueChart orgId={orgId} />
+      {orgId && permissions.canCreateAppointments ? (
+        <div className="mb-6 flex flex-col gap-3 rounded-xl border border-stone-200 bg-white p-4 shadow-sm dark:border-stone-800 dark:bg-stone-900 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-medium text-stone-900 dark:text-stone-50">Guest just walked in?</p>
+            <p className="text-sm text-stone-600 dark:text-stone-400">
+              Book them for right now — service, staff, and customer.
+            </p>
+          </div>
+          <TrialLockedControl locked={trialExpired}>
+            <Button disabled={trialExpired} onClick={() => setWalkInOpen(true)}>
+              <DoorOpen className="h-4 w-4" />
+              Take a walk-in
+            </Button>
+          </TrialLockedControl>
         </div>
-      )}
+      ) : null}
+      {orgId ? (
+        <HomepageBlocks
+          orgId={orgId}
+          blocks={layout?.blocks?.length ? layout.blocks : DEFAULT_HOMEPAGE_BLOCKS}
+          showSetup={user?.role === 'org_owner'}
+          stats={{
+            upcoming: upcoming.length,
+            staff: staff?.accounts.length ?? 0,
+            services: services?.services.length ?? 0,
+            customers: customers?.customers.length ?? 0,
+          }}
+          services={services?.services ?? []}
+          upcomingAppointments={upcoming}
+        />
+      ) : null}
+      {orgId ? (
+        <WalkInDialog
+          orgId={orgId}
+          open={walkInOpen}
+          onOpenChange={setWalkInOpen}
+          defaultAccountId={myAccountId}
+          onCreated={(created) => {
+            const appointment = created[0];
+            if (!appointment) return;
+            const href = calendarAppointmentHref(orgId, appointment);
+            setWalkInOpen(false);
+            // Close the dialog before routing so the focus trap cannot cancel navigation.
+            window.setTimeout(() => navigate(href), 0);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

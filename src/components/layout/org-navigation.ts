@@ -4,10 +4,16 @@ import {
   CalendarDays,
   Clock,
   CreditCard,
+  ClipboardList,
+  FileText,
+  Gift,
   Globe,
   LayoutDashboard,
+  LayoutTemplate,
   Package,
+  Percent,
   Repeat,
+  Ticket,
   Scissors,
   ScrollText,
   Shield,
@@ -68,6 +74,15 @@ export function getOrgSettingsHubGroups(
 
     groups.push({
       items: [
+        { label: 'Homepage', to: `${orgBase}/settings/homepage`, icon: LayoutTemplate },
+        { label: 'Packages', to: `${orgBase}/settings/packages`, icon: Ticket },
+        { label: 'Memberships', to: `${orgBase}/settings/memberships`, icon: Sparkles },
+        { label: 'Commissions', to: `${orgBase}/settings/commissions`, icon: Percent },
+      ],
+    });
+
+    groups.push({
+      items: [
         { label: 'Booking website', to: `${orgBase}/website`, icon: Globe },
         { label: 'Payments', to: `${orgBase}/settings/payments`, icon: CreditCard },
         { label: 'Account', to: `${orgBase}/settings/account`, icon: UserCircle },
@@ -106,14 +121,13 @@ export function getOrgNavigation(
     { label: 'Calendar', to: `${orgBase}/calendar`, icon: CalendarDays },
     { label: 'Appointments', to: `${orgBase}/appointments`, icon: Calendar },
     { label: 'Customers', to: `${orgBase}/customers`, icon: UserCircle },
+    { label: 'Waitlist', to: `${orgBase}/waitlist`, icon: ClipboardList },
+    { label: 'Forms', to: `${orgBase}/forms`, icon: FileText },
+    { label: 'Gift cards', to: `${orgBase}/gift-cards`, icon: Gift },
   ];
 
   if (options.showRecurring) {
     main.push({ label: 'Recurring', to: `${orgBase}/recurring`, icon: Repeat });
-  }
-
-  if (options.showAdminSettings) {
-    main.push({ label: 'Hours', to: `${orgBase}/availability`, icon: Clock });
   }
 
   const settings: OrgNavLink[] = options.showAdminSettings
@@ -128,6 +142,7 @@ export function isOrgSettingsPath(pathname: string, orgBase: string): boolean {
   if (pathname === `${orgBase}/settings` || pathname.startsWith(`${orgBase}/settings/`)) return true;
   return (
     pathname.startsWith(`${orgBase}/staff`) ||
-    pathname.startsWith(`${orgBase}/website`)
+    pathname.startsWith(`${orgBase}/website`) ||
+    pathname.startsWith(`${orgBase}/availability`)
   );
 }

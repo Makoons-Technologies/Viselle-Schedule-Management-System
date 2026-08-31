@@ -53,7 +53,11 @@ export const SheetContent = forwardRef<HTMLDivElement, SheetContentProps>(
         // Keep `fixed` from sheetVariants. `relative` here is merged away by
         // tailwind-merge and drops `fixed`, so the portaled panel sits after
         // #root and is clipped by html.app-shell overflow — a blank overlay.
-        className={cn(sheetVariants({ side }), 'z-[51] flex flex-col p-4 sm:p-6', className)}
+        className={cn(
+          sheetVariants({ side }),
+          'z-[51] flex flex-col px-4 pt-safe-add-4 pb-safe-add-4 sm:px-6 sm:pt-safe-add-6 sm:pb-safe-add-6',
+          className,
+        )}
         {...props}
       >
         {children}

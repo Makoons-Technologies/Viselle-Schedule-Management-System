@@ -15,6 +15,7 @@ import { ReleasesPage } from '@/pages/public/ReleasesPage';
 import { BusinessCardPage } from '@/pages/public/BusinessCardPage';
 import { SocialSharePage } from '@/pages/public/SocialSharePage';
 import { GetStartedPage } from '@/pages/GetStartedPage';
+import { RequestDemoPage } from '@/pages/public/RequestDemoPage';
 import { GetStartedSuccessPage } from '@/pages/GetStartedSuccessPage';
 import { PublicBookingPage } from '@/pages/public/PublicBookingPage';
 import { ManageBookingPage } from '@/pages/public/ManageBookingPage';
@@ -44,9 +45,22 @@ import { OrgSettingsPage } from '@/pages/org/settings/OrgSettingsPage';
 import { AccountSettingsPage } from '@/pages/org/settings/AccountSettingsPage';
 import { PaymentsSettingsPage } from '@/pages/org/settings/PaymentsSettingsPage';
 import { StaffPermissionsSettingsPage } from '@/pages/org/settings/StaffPermissionsSettingsPage';
+import { HomepageEditorPage } from '@/pages/org/settings/HomepageEditorPage';
+import { PackagesPage } from '@/pages/org/settings/PackagesPage';
+import { MembershipsPage } from '@/pages/org/settings/MembershipsPage';
+import { CommissionsPage } from '@/pages/org/settings/CommissionsPage';
+import { WaitlistPage } from '@/pages/org/WaitlistPage';
+import { FormsPage } from '@/pages/org/FormsPage';
+import { FormBuilderPage } from '@/pages/org/FormBuilderPage';
+import { FormFillPage } from '@/pages/org/FormFillPage';
+import { FormSubmissionsPage } from '@/pages/org/FormSubmissionsPage';
+import { PublicFormPage } from '@/pages/public/PublicFormPage';
+import { PublicInvoicePage } from '@/pages/public/PublicInvoicePage';
+import { GiftCardsPage } from '@/pages/org/GiftCardsPage';
 import { RecurringPage } from '@/pages/org/RecurringPage';
 import { StaffAdminPermissionsPage } from '@/pages/staff/StaffAdminPermissionsPage';
 import { StaffAvailabilityPage } from '@/pages/staff/StaffAvailabilityPage';
+import { StaffSettingsHubPage } from '@/pages/staff/StaffSettingsHubPage';
 import { TrialSettingsGuard } from '@/routes/TrialSettingsGuard';
 import { PlanRequiredGuard } from '@/routes/PlanRequiredGuard';
 import { CanceledOrgGuard } from '@/routes/CanceledOrgGuard';
@@ -58,6 +72,7 @@ import { PlatformTicketDetailPage } from '@/pages/platform/PlatformTicketDetailP
 import { PlatformCustomWebsitesPage } from '@/pages/platform/PlatformCustomWebsitesPage';
 import { PlatformCustomWebsiteDetailPage } from '@/pages/platform/PlatformCustomWebsiteDetailPage';
 import { PlatformNotificationsPage } from '@/pages/platform/PlatformNotificationsPage';
+import { PlatformDemosPage } from '@/pages/platform/PlatformDemosPage';
 import type { UserRole } from '@/types/api';
 
 function StaffOrgRedirect({ to }: { to: 'calendar' | 'appointments' }) {
@@ -94,9 +109,12 @@ export const appRoutes = [
   { path: '/release-notes', element: <Navigate to="/releases" replace /> },
   { path: '/developers', element: <Navigate to="/docs/api" replace /> },
   { path: '/get-started', element: <GetStartedPage /> },
+  { path: '/request-demo', element: <RequestDemoPage /> },
   { path: '/get-started/success', element: <GetStartedSuccessPage /> },
   { path: '/website', element: <Navigate to="/#websites" replace /> },
   { path: '/book/:slug', element: <PublicBookingPage /> },
+  { path: '/f/:shareToken', element: <PublicFormPage /> },
+  { path: '/invoice/:token', element: <PublicInvoicePage /> },
   { path: '/book/:slug/manage/:token', element: <ManageBookingPage /> },
   { path: '/login', element: <LoginPage /> },
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
@@ -114,6 +132,7 @@ export const appRoutes = [
             element: <ProtectedRoute roles={['platform_owner']} />,
             children: [
               { path: '/platform/dashboard', element: <PlatformDashboard /> },
+              { path: '/platform/demos', element: <PlatformDemosPage /> },
               { path: '/platform/organizations', element: <OrganizationsPage /> },
               { path: '/platform/organizations/new', element: <CreateOrganizationPage /> },
               { path: '/platform/trials', element: <TrialsCampaignsPage /> },
@@ -163,6 +182,12 @@ export const appRoutes = [
                           { path: 'appointments', element: <AppointmentsPage /> },
                           { path: 'customers', element: <CustomersPage /> },
                           { path: 'customers/:customerId', element: <CustomerDetailPage /> },
+                          { path: 'waitlist', element: <WaitlistPage /> },
+                          { path: 'forms', element: <FormsPage /> },
+                          { path: 'forms/:formId', element: <FormBuilderPage /> },
+                          { path: 'forms/:formId/fill', element: <FormFillPage /> },
+                          { path: 'forms/:formId/submissions', element: <FormSubmissionsPage /> },
+                          { path: 'gift-cards', element: <GiftCardsPage /> },
                           {
                             element: <ProtectedRoute roles={['platform_owner', 'org_owner']} />,
                             children: [
@@ -189,6 +214,10 @@ export const appRoutes = [
                                           { path: 'products', element: <ProductsPage /> },
                                           { path: 'payments', element: <PaymentsSettingsPage /> },
                                           { path: 'staff-permissions', element: <StaffPermissionsSettingsPage /> },
+                                          { path: 'homepage', element: <HomepageEditorPage /> },
+                                          { path: 'packages', element: <PackagesPage /> },
+                                          { path: 'memberships', element: <MembershipsPage /> },
+                                          { path: 'commissions', element: <CommissionsPage /> },
                                         ],
                                       },
                                     ],
@@ -213,6 +242,7 @@ export const appRoutes = [
               {
                 element: <CanceledOrgGuard />,
                 children: [
+                  { path: '/staff/settings', element: <StaffSettingsHubPage /> },
                   { path: '/staff/availability', element: <StaffAvailabilityPage /> },
                   {
                     element: <TrialSettingsGuard />,

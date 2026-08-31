@@ -1,11 +1,13 @@
 import { cn } from '@/lib/utils';
-import { SMS_UNDER_REVIEW_NOTICE } from '@/lib/sms';
+import { isStagingApp, SMS_UNDER_REVIEW_NOTICE } from '@/lib/sms';
 
 interface SmsUnderReviewNoticeProps {
   className?: string;
 }
 
 export function SmsUnderReviewNotice({ className }: SmsUnderReviewNoticeProps) {
+  if (isStagingApp()) return null;
+
   return (
     <p
       role="status"

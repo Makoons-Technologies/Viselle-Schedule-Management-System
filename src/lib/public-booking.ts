@@ -51,7 +51,7 @@ export interface PublicOrganization {
   trialEndsAt?: string | null;
   publicBookingEnabled: boolean;
   smsRemindersEnabled?: boolean;
-  /** False while the platform sending number is under A2P / carrier review. */
+  /** False while production sending is paused. Staging UI treats texts as available. */
   smsSendingEnabled?: boolean;
   city?: string | null;
   address?: string | null;

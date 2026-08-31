@@ -37,6 +37,8 @@ import type {
   CustomWebsiteRequest,
   CustomWebsiteRequestNote,
   CustomWebsiteRequestStatus,
+  DemoBooking,
+  DemoBookingStatus,
   RecurringAppointmentRule,
   RecurringFrequency,
   Product,
@@ -65,6 +67,31 @@ import type {
   TrialPaymentMode,
   TrialLockedTier,
   ReferralStat,
+  HomepageBlock,
+  OrgForm,
+  OrgFormStatus,
+  OrgFormVisibility,
+  OrgFormVersion,
+  PublicOrgForm,
+  FormioSchema,
+  OrgFormSubmission,
+  WaitlistEntry,
+  WaitlistStatus,
+  GiftCard,
+  ServicePackage,
+  CustomerPackage,
+  MembershipPlan,
+  CustomerMembership,
+  CustomerMembershipStatus,
+  CommissionReport,
+  StaffPayoutPreview,
+  StaffPayoutPreviewRow,
+  StaffPayoutSettings,
+  DeliverReceiptResult,
+  SendInvoiceResult,
+  PublicInvoiceView,
+  ReceiptChannel,
+  InvoiceStatus,
 } from '@/types/api';
 
 const TOKEN_KEY = 'viselle_auth_token';
@@ -207,9 +234,26 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
+/** True when the browser aborted the request (Cancel on a blocking dialog). */
+export function isRequestAborted(err: unknown): boolean {
+  if (axios.isCancel(err)) return true;
+  if (typeof err === 'object' && err && 'code' in err && (err as { code?: string }).code === 'ERR_CANCELED') {
+    return true;
+  }
+  if (err instanceof Error) {
+    if (err.name === 'CanceledError' || err.name === 'AbortError') return true;
+    const message = err.message.toLowerCase();
+    if (message === 'canceled' || message === 'cancelled') return true;
+  }
+  return false;
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError<ApiErrorBody>) => {
+    if (isRequestAborted(error)) {
+      return Promise.reject(error);
+    }
     const data = error.response?.data;
     if (data?.error) {
       return Promise.reject(
@@ -454,6 +498,11 @@ export const ownerApi = {
         body,
       })
       .then((r) => r.data),
+
+  listDemoBookings: (params: { from: string; to: string }) =>
+    apiClient.get<{ bookings: DemoBooking[] }>('/owner/demo-bookings', { params }).then((r) => r.data),
+  updateDemoBookingStatus: (id: string, status: DemoBookingStatus) =>
+    apiClient.patch<{ booking: DemoBooking }>(`/owner/demo-bookings/${id}`, { status }).then((r) => r.data),
 };
 
 export const supportApi = {
@@ -625,7 +674,18 @@ export const orgApi = {
         createdAppointments: Appointment[];
       }>(`/organizations/${orgId}/appointments/${appointmentId}/recurring`, data)
       .then((r) => r.data),
-  rescheduleAppointment: (orgId: string, appointmentId: string, data: { accountId: string; startTime: string; timezone: string }) =>
+  rescheduleAppointment: (
+    orgId: string,
+    appointmentId: string,
+    data: {
+      accountId: string;
+      startTime: string;
+      timezone: string;
+      endTime?: string;
+      scope?: 'single' | 'future';
+      occurrenceDate?: string;
+    },
+  ) =>
     apiClient.patch<{ appointment: Appointment }>(`/organizations/${orgId}/appointments/${appointmentId}/reschedule`, data).then((r) => r.data),
   listReminders: (orgId: string, appointmentId: string) =>
     apiClient.get<{ reminders: Reminder[] }>(`/organizations/${orgId}/appointments/${appointmentId}/reminders`).then((r) => r.data),
@@ -637,7 +697,10 @@ export const orgApi = {
   getCustomer: (orgId: string, customerId: string) =>
     apiClient.get<{ customer: Customer }>(`/organizations/${orgId}/customers/${customerId}`).then((r) => r.data),
 
-  getRevenueReport: (orgId: string, params?: { granularity?: RevenueGranularity; from?: string; to?: string }) =>
+  getRevenueReport: (
+    orgId: string,
+    params?: { granularity?: RevenueGranularity; from?: string; to?: string; scope?: 'org' | 'mine' },
+  ) =>
     apiClient.get<RevenueReport>(`/organizations/${orgId}/reports/revenue`, { params }).then((r) => r.data),
   updateCustomer: (
     orgId: string,
@@ -752,18 +815,31 @@ export const orgApi = {
   deleteProduct: (orgId: string, productId: string) =>
     apiClient.delete<{ product: Product }>(`/organizations/${orgId}/products/${productId}`).then((r) => r.data),
 
-  previewCheckout: (orgId: string, appointmentId: string, data: { lines: CheckoutLineInput[]; tipCents: number }) =>
+  previewCheckout: (
+    orgId: string,
+    appointmentId: string,
+    data: { lines: CheckoutLineInput[]; tipCents: number; giftCardCode?: string },
+    signal?: AbortSignal,
+  ) =>
     apiClient
-      .post<CheckoutPreview>(`/organizations/${orgId}/appointments/${appointmentId}/checkout/preview`, data)
+      .post<CheckoutPreview>(
+        `/organizations/${orgId}/appointments/${appointmentId}/checkout/preview`,
+        data,
+        { signal },
+      )
       .then((r) => r.data),
-  checkoutCash: (orgId: string, appointmentId: string, data: { lines: CheckoutLineInput[]; tipCents: number }) =>
+  checkoutCash: (
+    orgId: string,
+    appointmentId: string,
+    data: { lines: CheckoutLineInput[]; tipCents: number; giftCardCode?: string },
+  ) =>
     apiClient
-      .post(`/organizations/${orgId}/appointments/${appointmentId}/checkout/cash`, data)
+      .post<{ sale: { id: string } }>(`/organizations/${orgId}/appointments/${appointmentId}/checkout/cash`, data)
       .then((r) => r.data),
   checkoutCard: (
     orgId: string,
     appointmentId: string,
-    data: { lines: CheckoutLineInput[]; tipCents: number; mode?: 'terminal' | 'online' },
+    data: { lines: CheckoutLineInput[]; tipCents: number; giftCardCode?: string; mode?: 'terminal' | 'online' },
   ) =>
     apiClient
       .post<{
@@ -776,16 +852,22 @@ export const orgApi = {
       .then((r) => r.data),
   confirmCheckoutCard: (orgId: string, appointmentId: string, paymentIntentId: string) =>
     apiClient
-      .post<{ confirmed: true }>(
+      .post<{ confirmed: true; saleIds?: string[] }>(
         `/organizations/${orgId}/appointments/${appointmentId}/checkout/card/confirm`,
         { paymentIntentId },
       )
       .then((r) => r.data),
-  previewBatchCheckout: (orgId: string, data: { appointments: BatchCheckoutAppointmentInput[]; tipCents: number }) =>
+  previewBatchCheckout: (
+    orgId: string,
+    data: { appointments: BatchCheckoutAppointmentInput[]; tipCents: number; giftCardCode?: string },
+  ) =>
     apiClient
       .post<BatchCheckoutPreview>(`/organizations/${orgId}/checkout/batch/preview`, data)
       .then((r) => r.data),
-  batchCheckoutCash: (orgId: string, data: { appointments: BatchCheckoutAppointmentInput[]; tipCents: number }) =>
+  batchCheckoutCash: (
+    orgId: string,
+    data: { appointments: BatchCheckoutAppointmentInput[]; tipCents: number; giftCardCode?: string },
+  ) =>
     apiClient
       .post<{ paymentGroupId: string; saleIds: string[]; totalCents: number }>(
         `/organizations/${orgId}/checkout/batch/cash`,
@@ -794,7 +876,12 @@ export const orgApi = {
       .then((r) => r.data),
   batchCheckoutCard: (
     orgId: string,
-    data: { appointments: BatchCheckoutAppointmentInput[]; tipCents: number; mode?: 'terminal' | 'online' },
+    data: {
+      appointments: BatchCheckoutAppointmentInput[];
+      tipCents: number;
+      giftCardCode?: string;
+      mode?: 'terminal' | 'online';
+    },
   ) =>
     apiClient
       .post<{
@@ -808,21 +895,285 @@ export const orgApi = {
       .then((r) => r.data),
   confirmBatchCheckoutCard: (orgId: string, paymentIntentId: string) =>
     apiClient
-      .post<{ confirmed: true }>(`/organizations/${orgId}/checkout/batch/card/confirm`, {
+      .post<{ confirmed: true; saleIds?: string[] }>(`/organizations/${orgId}/checkout/batch/card/confirm`, {
+        paymentIntentId,
+      })
+      .then((r) => r.data),
+
+  deliverReceipt: (
+    orgId: string,
+    data: {
+      saleIds: string[];
+      customerChannel: ReceiptChannel;
+      destination?: string;
+      printerConfigured?: boolean;
+      stripeReaderId?: string;
+    },
+    signal?: AbortSignal,
+  ) =>
+    apiClient
+      .post<DeliverReceiptResult>(`/organizations/${orgId}/receipts`, data, { signal })
+      .then((r) => r.data),
+
+  sendInvoice: (
+    orgId: string,
+    data: {
+      appointmentId?: string;
+      saleId?: string;
+      status: InvoiceStatus;
+      channel: 'email' | 'sms';
+      destination?: string;
+    },
+    signal?: AbortSignal,
+  ) =>
+    apiClient
+      .post<SendInvoiceResult>(`/organizations/${orgId}/invoices`, data, { signal })
+      .then((r) => r.data),
+
+  getPublicInvoice: (token: string) =>
+    apiClient.get<PublicInvoiceView>(`/public/invoices/${token}`).then((r) => r.data),
+  startPublicInvoicePay: (token: string) =>
+    apiClient
+      .post<{
+        paymentIntentId: string;
+        clientSecret: string;
+        stripeAccountId: string;
+        publishableKey: string | null;
+      }>(`/public/invoices/${token}/pay`)
+      .then((r) => r.data),
+  confirmPublicInvoicePay: (token: string, paymentIntentId: string) =>
+    apiClient
+      .post<{ invoice: { id: string; status: InvoiceStatus } }>(`/public/invoices/${token}/confirm`, {
         paymentIntentId,
       })
       .then((r) => r.data),
 
   getStripeConnectStatus: (orgId: string) =>
     apiClient.get<StripeConnectStatus>(`/organizations/${orgId}/stripe-connect/status`).then((r) => r.data),
-  startStripeConnectOnboarding: (orgId: string) =>
-    apiClient.post<{ url: string; accountId: string }>(`/organizations/${orgId}/stripe-connect/onboard`).then((r) => r.data),
+  startStripeConnectOnboarding: (orgId: string, signal?: AbortSignal) =>
+    apiClient
+      .post<{ url: string; accountId: string }>(`/organizations/${orgId}/stripe-connect/onboard`, undefined, {
+        signal,
+      })
+      .then((r) => r.data),
   syncStripeConnectStatus: (orgId: string) =>
     apiClient.post<{ chargesEnabled: boolean; onboardingComplete: boolean }>(`/organizations/${orgId}/stripe-connect/sync`).then((r) => r.data),
   getTerminalConnectionToken: (orgId: string) =>
     apiClient.post<{ secret: string }>(`/organizations/${orgId}/stripe-connect/terminal/connection-token`).then((r) => r.data),
   registerTerminalReader: (orgId: string, data: { registrationCode: string; label?: string }) =>
     apiClient.post<{ readerId: string; label: string }>(`/organizations/${orgId}/stripe-connect/terminal/register-reader`, data).then((r) => r.data),
+
+  getHomepageLayout: (orgId: string) =>
+    apiClient.get<{ blocks: HomepageBlock[] }>(`/organizations/${orgId}/homepage-layout`).then((r) => r.data),
+  saveHomepageLayout: (orgId: string, blocks: HomepageBlock[]) =>
+    apiClient.put<{ blocks: HomepageBlock[] }>(`/organizations/${orgId}/homepage-layout`, { blocks }).then((r) => r.data),
+
+  listForms: (orgId: string) =>
+    apiClient.get<{ forms: OrgForm[] }>(`/organizations/${orgId}/forms`).then((r) => r.data),
+  getForm: (orgId: string, formId: string) =>
+    apiClient.get<{ form: OrgForm }>(`/organizations/${orgId}/forms/${formId}`).then((r) => r.data),
+  createForm: (orgId: string, data: { name: string; description?: string; schema?: FormioSchema }) =>
+    apiClient.post<{ form: OrgForm }>(`/organizations/${orgId}/forms`, data).then((r) => r.data),
+  updateForm: (
+    orgId: string,
+    formId: string,
+    data: {
+      name?: string;
+      description?: string | null;
+      schema?: FormioSchema;
+      status?: OrgFormStatus;
+      visibility?: OrgFormVisibility;
+    },
+    signal?: AbortSignal,
+  ) =>
+    apiClient
+      .patch<{ form: OrgForm }>(`/organizations/${orgId}/forms/${formId}`, data, { signal })
+      .then((r) => r.data),
+  duplicateForm: (orgId: string, formId: string) =>
+    apiClient.post<{ form: OrgForm }>(`/organizations/${orgId}/forms/${formId}/duplicate`).then((r) => r.data),
+  listFormVersions: (orgId: string, formId: string) =>
+    apiClient.get<{ versions: OrgFormVersion[] }>(`/organizations/${orgId}/forms/${formId}/versions`).then((r) => r.data),
+  restoreFormVersion: (orgId: string, formId: string, versionNumber: number) =>
+    apiClient
+      .post<{ form: OrgForm }>(`/organizations/${orgId}/forms/${formId}/versions/${versionNumber}/restore`)
+      .then((r) => r.data),
+  deleteForm: (orgId: string, formId: string) =>
+    apiClient.delete(`/organizations/${orgId}/forms/${formId}`).then((r) => r.data),
+  listFormSubmissions: (orgId: string, formId?: string) =>
+    apiClient
+      .get<{ submissions: OrgFormSubmission[] }>(`/organizations/${orgId}/form-submissions`, {
+        params: formId ? { formId } : undefined,
+      })
+      .then((r) => r.data),
+  submitForm: (
+    orgId: string,
+    formId: string,
+    data: { data: Record<string, unknown>; customerId?: string; appointmentId?: string },
+  ) =>
+    apiClient
+      .post<{ submission: OrgFormSubmission }>(`/organizations/${orgId}/forms/${formId}/submissions`, data)
+      .then((r) => r.data),
+  getFormSubmission: (orgId: string, formId: string, submissionId: string) =>
+    apiClient
+      .get<{ submission: OrgFormSubmission }>(`/organizations/${orgId}/forms/${formId}/submissions/${submissionId}`)
+      .then((r) => r.data),
+  updateFormSubmission: (
+    orgId: string,
+    formId: string,
+    submissionId: string,
+    data: { data?: Record<string, unknown>; customerId?: string | null },
+  ) =>
+    apiClient
+      .patch<{ submission: OrgFormSubmission }>(
+        `/organizations/${orgId}/forms/${formId}/submissions/${submissionId}`,
+        data,
+      )
+      .then((r) => r.data),
+  getPublicForm: (shareToken: string) =>
+    apiClient.get<{ form: PublicOrgForm }>(`/public/forms/${shareToken}`).then((r) => r.data),
+  submitPublicForm: (shareToken: string, data: { data: Record<string, unknown> }) =>
+    apiClient
+      .post<{ submission: OrgFormSubmission }>(`/public/forms/${shareToken}/submissions`, data)
+      .then((r) => r.data),
+
+  listWaitlist: (orgId: string) =>
+    apiClient.get<{ entries: WaitlistEntry[] }>(`/organizations/${orgId}/waitlist`).then((r) => r.data),
+  addWaitlist: (
+    orgId: string,
+    data: { customerId: string; serviceId?: string; accountId?: string; preferredDate?: string; notes?: string },
+  ) => apiClient.post<{ entry: WaitlistEntry }>(`/organizations/${orgId}/waitlist`, data).then((r) => r.data),
+  updateWaitlist: (orgId: string, entryId: string, data: { status?: WaitlistStatus; notes?: string | null }) =>
+    apiClient.patch<{ entry: WaitlistEntry }>(`/organizations/${orgId}/waitlist/${entryId}`, data).then((r) => r.data),
+
+  listGiftCards: (orgId: string, params?: { code?: string }) =>
+    apiClient
+      .get<{ giftCards: GiftCard[] }>(`/organizations/${orgId}/gift-cards`, {
+        params: params?.code ? { code: params.code } : undefined,
+      })
+      .then((r) => r.data),
+  createGiftCard: (
+    orgId: string,
+    data: { amountCents: number; creditCents?: number; code?: string },
+  ) => apiClient.post<{ giftCard: GiftCard }>(`/organizations/${orgId}/gift-cards`, data).then((r) => r.data),
+  activateGiftCards: (orgId: string, data: { codes: string[] }) =>
+    apiClient
+      .post<{ giftCards: GiftCard[]; errors: Array<{ code: string; message: string }> }>(
+        `/organizations/${orgId}/gift-cards/activate`,
+        data,
+      )
+      .then((r) => r.data),
+  addFundsToGiftCard: (
+    orgId: string,
+    giftCardId: string,
+    data: { amountCents: number; creditCents?: number },
+  ) =>
+    apiClient
+      .post<{ giftCard: GiftCard }>(`/organizations/${orgId}/gift-cards/${giftCardId}/add-funds`, data)
+      .then((r) => r.data),
+  lookupGiftCard: (orgId: string, data: { code: string }, signal?: AbortSignal) =>
+    apiClient
+      .post<{ giftCard: GiftCard }>(`/organizations/${orgId}/gift-cards/lookup`, data, { signal })
+      .then((r) => r.data),
+  redeemGiftCard: (orgId: string, data: { code: string; amountCents: number }) =>
+    apiClient.post<{ giftCard: GiftCard }>(`/organizations/${orgId}/gift-cards/redeem`, data).then((r) => r.data),
+  voidGiftCard: (orgId: string, giftCardId: string) =>
+    apiClient.post<{ giftCard: GiftCard }>(`/organizations/${orgId}/gift-cards/${giftCardId}/void`).then((r) => r.data),
+
+  listPackages: (orgId: string) =>
+    apiClient.get<{ packages: ServicePackage[] }>(`/organizations/${orgId}/packages`).then((r) => r.data),
+  createPackage: (
+    orgId: string,
+    data: { name: string; serviceId?: string; creditCents: number; priceCents: number },
+  ) => apiClient.post<{ package: ServicePackage }>(`/organizations/${orgId}/packages`, data).then((r) => r.data),
+  updatePackage: (orgId: string, packageId: string, data: Partial<ServicePackage>) =>
+    apiClient.patch<{ package: ServicePackage }>(`/organizations/${orgId}/packages/${packageId}`, data).then((r) => r.data),
+  listCustomerPackages: (orgId: string) =>
+    apiClient
+      .get<{ customerPackages: CustomerPackage[] }>(`/organizations/${orgId}/customer-packages`)
+      .then((r) => r.data),
+  sellPackage: (orgId: string, data: { packageId: string; customerId: string }) =>
+    apiClient
+      .post<{ customerPackage: CustomerPackage }>(`/organizations/${orgId}/customer-packages`, data)
+      .then((r) => r.data),
+  usePackageCredits: (orgId: string, customerPackageId: string, data: { amountCents: number }) =>
+    apiClient
+      .post<{ customerPackage: CustomerPackage }>(
+        `/organizations/${orgId}/customer-packages/${customerPackageId}/use-credits`,
+        data,
+      )
+      .then((r) => r.data),
+  usePackageVisit: (orgId: string, customerPackageId: string, data?: { amountCents: number }) =>
+    apiClient
+      .post<{ customerPackage: CustomerPackage }>(
+        `/organizations/${orgId}/customer-packages/${customerPackageId}/use-credits`,
+        data ?? { amountCents: 100 },
+      )
+      .then((r) => r.data),
+
+  listMembershipPlans: (orgId: string) =>
+    apiClient.get<{ plans: MembershipPlan[] }>(`/organizations/${orgId}/membership-plans`).then((r) => r.data),
+  createMembershipPlan: (
+    orgId: string,
+    data: { name: string; priceCents: number; interval?: 'month' | 'year'; visitsIncluded?: number | null },
+  ) => apiClient.post<{ plan: MembershipPlan }>(`/organizations/${orgId}/membership-plans`, data).then((r) => r.data),
+  updateMembershipPlan: (orgId: string, planId: string, data: Partial<MembershipPlan>) =>
+    apiClient
+      .patch<{ plan: MembershipPlan }>(`/organizations/${orgId}/membership-plans/${planId}`, data)
+      .then((r) => r.data),
+  listMemberships: (orgId: string) =>
+    apiClient.get<{ memberships: CustomerMembership[] }>(`/organizations/${orgId}/memberships`).then((r) => r.data),
+  subscribeMembership: (orgId: string, data: { planId: string; customerId: string; nextBillOn: string }) =>
+    apiClient.post<{ membership: CustomerMembership }>(`/organizations/${orgId}/memberships`, data).then((r) => r.data),
+  updateMembership: (
+    orgId: string,
+    membershipId: string,
+    data: { status?: CustomerMembershipStatus; nextBillOn?: string },
+  ) =>
+    apiClient
+      .patch<{ membership: CustomerMembership }>(`/organizations/${orgId}/memberships/${membershipId}`, data)
+      .then((r) => r.data),
+  recordMembershipBill: (orgId: string, membershipId: string) =>
+    apiClient
+      .post<{ membership: CustomerMembership }>(`/organizations/${orgId}/memberships/${membershipId}/record-bill`)
+      .then((r) => r.data),
+
+  getCommissions: (orgId: string, params: { from: string; to: string }) =>
+    apiClient.get<CommissionReport>(`/organizations/${orgId}/commissions`, { params }).then((r) => r.data),
+
+  getStaffPayoutSettings: (orgId: string) =>
+    apiClient.get<StaffPayoutSettings>(`/organizations/${orgId}/staff-payouts/settings`).then((r) => r.data),
+  updateStaffPayoutSettings: (
+    orgId: string,
+    data: Partial<Pick<StaffPayoutSettings, 'mode' | 'schedule' | 'includeCommission' | 'includeTips'>>,
+  ) =>
+    apiClient
+      .patch<StaffPayoutSettings>(`/organizations/${orgId}/staff-payouts/settings`, data)
+      .then((r) => r.data),
+  startStaffPayoutOnboarding: (orgId: string, accountId: string, signal?: AbortSignal) =>
+    apiClient
+      .post<{ url: string; accountId: string }>(
+        `/organizations/${orgId}/staff-payouts/recipients/${accountId}/onboard`,
+        undefined,
+        { signal },
+      )
+      .then((r) => r.data),
+  syncStaffPayoutRecipient: (orgId: string, accountId: string) =>
+    apiClient
+      .post<{ onboardingComplete: boolean; payoutsReady: boolean }>(
+        `/organizations/${orgId}/staff-payouts/recipients/${accountId}/sync`,
+      )
+      .then((r) => r.data),
+  previewStaffPayouts: (orgId: string, params: { from: string; to: string }) =>
+    apiClient
+      .get<StaffPayoutPreview>(`/organizations/${orgId}/staff-payouts/preview`, { params })
+      .then((r) => r.data),
+  sendStaffPayouts: (orgId: string, data: { from: string; to: string }) =>
+    apiClient
+      .post<{ from: string; to: string; rows: StaffPayoutPreviewRow[] }>(
+        `/organizations/${orgId}/staff-payouts/send`,
+        data,
+      )
+      .then((r) => r.data),
 };
 
 export const appointmentApi = {

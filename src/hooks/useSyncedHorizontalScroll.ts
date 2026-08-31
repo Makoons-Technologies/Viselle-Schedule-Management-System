@@ -1,11 +1,12 @@
 import { useEffect, type RefObject } from 'react';
+import { getScrollLeft, setScrollLeft } from '@/lib/scroll-helpers';
 
 /**
  * Keep two overflow-x panes aligned without killing native momentum.
  *
- * Only user intent (pointer/wheel/touch) on a pane may become the driver.
- * Follower `scroll` events from writing `scrollLeft` never take over, so a
- * late echo cannot snap the coasting pane back.
+ * Writing `scrollLeft` back onto the pane the user (or trackpad inertia) is
+ * still driving cancels compositor scrolling. Only pointer/wheel/touch on a
+ * pane may become the driver; follower echoes never take over.
  */
 export function useSyncedHorizontalScroll(
   firstRef: RefObject<HTMLElement | null>,
@@ -17,6 +18,7 @@ export function useSyncedHorizontalScroll(
     if (!first || !second) return;
 
     let driver: HTMLElement | null = null;
+    let syncing = false;
 
     const bindDriver = (el: HTMLElement) => {
       const mark = () => {
@@ -32,12 +34,17 @@ export function useSyncedHorizontalScroll(
       };
     };
 
-    const syncFrom = (source: HTMLElement, target: HTMLElement) => {
+    const syncFrom = (source: HTMLElement | null, target: HTMLElement | null) => {
+      if (!source || !target || syncing) return;
       if (driver && driver !== source) return;
       if (!driver) driver = source;
-      if (target.scrollLeft !== source.scrollLeft) {
-        target.scrollLeft = source.scrollLeft;
-      }
+      const left = getScrollLeft(source);
+      if (getScrollLeft(target) === left) return;
+      syncing = true;
+      setScrollLeft(target, left);
+      requestAnimationFrame(() => {
+        syncing = false;
+      });
     };
 
     const onFirstScroll = () => syncFrom(first, second);

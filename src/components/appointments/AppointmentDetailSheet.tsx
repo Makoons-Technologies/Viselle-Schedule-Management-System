@@ -7,6 +7,7 @@ import { cn, formatLongDate, formatTime } from '@/lib/utils';
 import { MakeRecurringDialog } from '@/components/appointments/MakeRecurringDialog';
 import { EditRecurringDialog } from '@/components/appointments/EditRecurringDialog';
 import { AppointmentCheckoutSheet } from '@/components/appointments/AppointmentCheckoutSheet';
+import { SendInvoiceDialog } from '@/components/receipts/SendInvoiceDialog';
 import { EditAppointmentDialog } from '@/components/appointments/EditAppointmentDialog';
 import { NoteHistoryList } from '@/components/appointments/CustomerServiceNoteHistory';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
@@ -81,6 +82,7 @@ export function AppointmentDetailSheet({
   const [deleteSeriesOpen, setDeleteSeriesOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [missedConfirmOpen, setMissedConfirmOpen] = useState(false);
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
 
   useEffect(() => {
     if (!trialExpired) return;
@@ -91,6 +93,7 @@ export function AppointmentDetailSheet({
     setDeleteSeriesOpen(false);
     setCheckoutOpen(false);
     setMissedConfirmOpen(false);
+    setInvoiceOpen(false);
   }, [trialExpired]);
 
   const occurrenceDateFromProps = occurrenceStartTime?.slice(0, 10);
@@ -101,7 +104,10 @@ export function AppointmentDetailSheet({
     enabled: !!appointmentId,
   });
 
-  const displayStartTime = occurrenceStartTime ?? data?.appointment.startTime;
+  const occurrenceMs = occurrenceStartTime ? new Date(occurrenceStartTime).getTime() : Number.NaN;
+  const displayStartTime = Number.isNaN(occurrenceMs)
+    ? data?.appointment.startTime
+    : occurrenceStartTime;
 
   const displayEndTime = useMemo(() => {
     if (!data?.appointment || !displayStartTime) return null;
@@ -110,10 +116,14 @@ export function AppointmentDetailSheet({
       return data.appointment.endTime;
     }
 
+    const startMs = new Date(displayStartTime).getTime();
     const durationMs =
       new Date(data.appointment.endTime).getTime() - new Date(data.appointment.startTime).getTime();
+    if (Number.isNaN(startMs) || Number.isNaN(durationMs)) {
+      return data.appointment.endTime;
+    }
 
-    return new Date(new Date(displayStartTime).getTime() + durationMs).toISOString();
+    return new Date(startMs + durationMs).toISOString();
   }, [data?.appointment, displayStartTime, occurrenceStartTime]);
 
   const occurrenceDate = displayStartTime?.slice(0, 10);
@@ -235,8 +245,60 @@ export function AppointmentDetailSheet({
   })();
 
   return (
-    <Sheet open={!!appointmentId} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="overflow-y-auto sm:max-w-md">
+    <>
+    <Sheet
+      open={!!appointmentId}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) {
+          // Nested checkout / edit dialogs live as siblings now, but still ignore
+          // dismiss events that fire while those overlays are open.
+          if (
+            checkoutOpen ||
+            invoiceOpen ||
+            editOpen ||
+            recurringOpen ||
+            editRecurringOpen ||
+            missedConfirmOpen ||
+            cancelConfirmOpen ||
+            deleteSeriesOpen
+          ) {
+            return;
+          }
+          onClose();
+        }
+      }}
+    >
+      <SheetContent
+        className="overflow-y-auto sm:max-w-md"
+        onPointerDownOutside={(event) => {
+          if (
+            checkoutOpen ||
+            invoiceOpen ||
+            editOpen ||
+            recurringOpen ||
+            editRecurringOpen ||
+            missedConfirmOpen ||
+            cancelConfirmOpen ||
+            deleteSeriesOpen
+          ) {
+            event.preventDefault();
+          }
+        }}
+        onInteractOutside={(event) => {
+          if (
+            checkoutOpen ||
+            invoiceOpen ||
+            editOpen ||
+            recurringOpen ||
+            editRecurringOpen ||
+            missedConfirmOpen ||
+            cancelConfirmOpen ||
+            deleteSeriesOpen
+          ) {
+            event.preventDefault();
+          }
+        }}
+      >
         <SheetHeader className="sr-only">
           <SheetTitle>Appointment details</SheetTitle>
           <SheetDescription>View and manage appointment information</SheetDescription>
@@ -446,6 +508,16 @@ export function AppointmentDetailSheet({
                         </Button>
                       )}
 
+                      {permissions.canManageVisitPayment && (
+                          <Button
+                            variant="outline"
+                            className={pillOutline}
+                            onClick={() => setInvoiceOpen(true)}
+                          >
+                            {data.appointment.paymentStatus === 'paid' ? 'Send receipt' : 'Send invoice'}
+                          </Button>
+                        )}
+
                       <Button
                         variant="outline"
                         className={pillOutline}
@@ -500,91 +572,101 @@ export function AppointmentDetailSheet({
             )}
           </div>
         )}
-
-        {appointmentId && data && (
-          <>
-            <AppointmentCheckoutSheet
-              orgId={orgId}
-              appointmentInfo={data}
-              open={checkoutOpen}
-              onOpenChange={setCheckoutOpen}
-              onSuccess={() => {
-                queryClient.invalidateQueries({ queryKey: ['appointments', orgId] });
-                queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId, 'info'] });
-              }}
-            />
-            <EditAppointmentDialog
-              orgId={orgId}
-              appointmentInfo={data}
-              open={editOpen}
-              onOpenChange={setEditOpen}
-              lockStaffMember={!isManager}
-              onSuccess={() => {
-                queryClient.invalidateQueries({ queryKey: ['appointments', orgId] });
-                queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId, 'info'] });
-              }}
-            />
-            <MakeRecurringDialog
-              orgId={orgId}
-              appointmentId={appointmentId}
-              appointmentStartTime={displayStartTime ?? data.appointment.startTime}
-              accountId={data.appointment.accountId}
-              serviceId={data.appointment.serviceId}
-              timezone={data.appointment.timezone}
-              open={recurringOpen}
-              onOpenChange={setRecurringOpen}
-              onSuccess={() =>
-                queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId, 'info'] })
-              }
-            />
-            <EditRecurringDialog
-              orgId={orgId}
-              rule={recurringRule ?? null}
-              open={editRecurringOpen}
-              onOpenChange={setEditRecurringOpen}
-            />
-          </>
-        )}
-
-        <ConfirmDialog
-          open={missedConfirmOpen}
-          onOpenChange={setMissedConfirmOpen}
-          title="Mark as missed?"
-          description="This client did not show up for their appointment."
-          confirmLabel="Mark missed"
-          destructive
-          loading={visitStatusMutation.isPending}
-          onConfirm={() => visitStatusMutation.mutate('missed')}
-        />
-
-        <ConfirmDialog
-          open={cancelConfirmOpen}
-          onOpenChange={setCancelConfirmOpen}
-          title="Cancel appointment?"
-          description={
-            isRecurring && recurringSeriesActive
-              ? 'Only this occurrence will be cancelled. Use Delete Series to remove the entire recurring schedule.'
-              : 'This appointment will be marked as cancelled and any pending reminders will be stopped. This action cannot be undone.'
-          }
-          confirmLabel="Cancel Appointment"
-          destructive
-          loading={cancelMutation.isPending}
-          onConfirm={() =>
-            cancelMutation.mutate(isRecurring && recurringSeriesActive ? 'single' : undefined)
-          }
-        />
-
-        <ConfirmDialog
-          open={deleteSeriesOpen}
-          onOpenChange={setDeleteSeriesOpen}
-          title="Delete recurring series?"
-          description="This permanently removes the recurring rule and cancels all linked appointments. This cannot be undone."
-          confirmLabel="Delete Series"
-          destructive
-          loading={deleteSeriesMutation.isPending}
-          onConfirm={() => recurringRule && deleteSeriesMutation.mutate(recurringRule.id)}
-        />
       </SheetContent>
     </Sheet>
+
+    {appointmentId && data && (
+      <>
+        <AppointmentCheckoutSheet
+          orgId={orgId}
+          appointmentInfo={data}
+          open={checkoutOpen}
+          onOpenChange={setCheckoutOpen}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['appointments', orgId] });
+            queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId, 'info'] });
+          }}
+        />
+        <SendInvoiceDialog
+          orgId={orgId}
+          appointmentId={data.appointment.id}
+          open={invoiceOpen}
+          status={data.appointment.paymentStatus === 'paid' ? 'paid' : 'unpaid'}
+          customerEmail={data.customer?.email}
+          customerPhone={data.customer?.phone}
+          onOpenChange={setInvoiceOpen}
+        />
+        <EditAppointmentDialog
+          orgId={orgId}
+          appointmentInfo={data}
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          lockStaffMember={!isManager}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['appointments', orgId] });
+            queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId, 'info'] });
+          }}
+        />
+        <MakeRecurringDialog
+          orgId={orgId}
+          appointmentId={appointmentId}
+          appointmentStartTime={displayStartTime ?? data.appointment.startTime}
+          accountId={data.appointment.accountId}
+          serviceId={data.appointment.serviceId}
+          timezone={data.appointment.timezone}
+          open={recurringOpen}
+          onOpenChange={setRecurringOpen}
+          onSuccess={() =>
+            queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId, 'info'] })
+          }
+        />
+        <EditRecurringDialog
+          orgId={orgId}
+          rule={recurringRule ?? null}
+          open={editRecurringOpen}
+          onOpenChange={setEditRecurringOpen}
+        />
+      </>
+    )}
+
+    <ConfirmDialog
+      open={missedConfirmOpen}
+      onOpenChange={setMissedConfirmOpen}
+      title="Mark as missed?"
+      description="This client did not show up for their appointment."
+      confirmLabel="Mark missed"
+      destructive
+      loading={visitStatusMutation.isPending}
+      onConfirm={() => visitStatusMutation.mutate('missed')}
+    />
+
+    <ConfirmDialog
+      open={cancelConfirmOpen}
+      onOpenChange={setCancelConfirmOpen}
+      title="Cancel appointment?"
+      description={
+        isRecurring && recurringSeriesActive
+          ? 'Only this occurrence will be cancelled. Use Delete Series to remove the entire recurring schedule.'
+          : 'This appointment will be marked as cancelled and any pending reminders will be stopped. This action cannot be undone.'
+      }
+      confirmLabel="Cancel Appointment"
+      destructive
+      loading={cancelMutation.isPending}
+      onConfirm={() =>
+        cancelMutation.mutate(isRecurring && recurringSeriesActive ? 'single' : undefined)
+      }
+    />
+
+    <ConfirmDialog
+      open={deleteSeriesOpen}
+      onOpenChange={setDeleteSeriesOpen}
+      title="Delete recurring series?"
+      description="This permanently removes the recurring rule and cancels all linked appointments. This cannot be undone."
+      confirmLabel="Delete Series"
+      destructive
+      loading={deleteSeriesMutation.isPending}
+      onConfirm={() => recurringRule && deleteSeriesMutation.mutate(recurringRule.id)}
+    />
+    </>
   );
 }

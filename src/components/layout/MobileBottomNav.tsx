@@ -2,11 +2,9 @@ import {
   Building2,
   Calendar,
   CalendarDays,
-  Clock,
   LayoutDashboard,
   Settings,
   Sparkles,
-  TicketPercent,
   UserCircle,
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
@@ -30,7 +28,7 @@ interface BottomNavItem {
 }
 
 const bottomNavClassName =
-  'shrink-0 border-t border-stone-200 bg-white px-safe-or-2 pb-safe-or-2 pt-1 dark:border-stone-800 dark:bg-stone-900 desktop-shell:hidden';
+  'app-shell-bottomnav shrink-0 border-t border-stone-200 px-safe-or-2 pb-safe-or-2 pt-1 dark:border-stone-800 desktop-shell:hidden';
 
 function BottomNavLink({ item, active }: { item: BottomNavItem; active: boolean }) {
   const { isActive: tourActive, currentTarget } = useOrgOwnerTour();
@@ -115,11 +113,11 @@ export function MobileBottomNav() {
         match: (p, base) => p.startsWith(`${base}/appointments`),
       },
       {
-        key: 'availability',
-        label: 'Hours',
-        to: '/staff/availability',
-        icon: Clock,
-        match: (p) => p.startsWith('/staff/availability'),
+        key: 'settings',
+        label: 'Settings',
+        to: '/staff/settings',
+        icon: Settings,
+        match: (p) => p.startsWith('/staff/settings') || p.startsWith('/staff/availability') || p.startsWith(`${orgBase}/settings`),
       },
     ];
 
@@ -184,11 +182,11 @@ export function MobileBottomNav() {
         match: (p) => p.startsWith('/platform/organizations'),
       },
       {
-        key: 'trials',
-        label: 'Trials',
-        to: '/platform/trials',
-        icon: TicketPercent,
-        match: (p) => p.startsWith('/platform/trials'),
+        key: 'demos',
+        label: 'Demos',
+        to: '/platform/demos',
+        icon: CalendarDays,
+        match: (p) => p.startsWith('/platform/demos'),
       },
     ];
 

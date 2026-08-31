@@ -1,4 +1,5 @@
 import { Check } from 'lucide-react';
+import type { PointerEvent as ReactPointerEvent } from 'react';
 import type { PaymentStatus, VisitStatus } from '@/types/api';
 import { getAppointmentCalendarLipClass, getAppointmentCalendarLipLabel } from '@/lib/appointment-status';
 import { cn } from '@/lib/utils';
@@ -33,6 +34,9 @@ interface CalendarAppointmentChipProps {
   stackInset?: boolean;
   /** Visual height of the block in rem (from the week/day grid). */
   heightRem?: number;
+  /** Desktop drag/resize affordances (grab cursor + bottom resize handle). */
+  draggableInteraction?: boolean;
+  onResizePointerDown?: (event: ReactPointerEvent<HTMLElement>) => void;
 }
 
 export function CalendarAppointmentChip({
@@ -48,6 +52,8 @@ export function CalendarAppointmentChip({
   selectable = true,
   stackInset = false,
   heightRem = DEFAULT_CHIP_HEIGHT_REM,
+  draggableInteraction = false,
+  onResizePointerDown,
 }: CalendarAppointmentChipProps) {
   const lipClass = getAppointmentCalendarLipClass(visitStatus, paymentStatus);
   const lipLabel = getAppointmentCalendarLipLabel(visitStatus, paymentStatus);
@@ -72,7 +78,9 @@ export function CalendarAppointmentChip({
           : 'border-stone-200 bg-white dark:border-stone-600 dark:bg-stone-800',
         disabled
           ? 'cursor-not-allowed opacity-40'
-          : 'hover:border-stone-300 hover:shadow dark:hover:border-stone-500',
+          : draggableInteraction
+            ? 'cursor-grab active:cursor-grabbing hover:border-stone-300 hover:shadow dark:hover:border-stone-500'
+            : 'hover:border-stone-300 hover:shadow dark:hover:border-stone-500',
       )}
     >
       <span
@@ -98,6 +106,7 @@ export function CalendarAppointmentChip({
           'flex min-h-0 min-w-0 flex-1 flex-col justify-center overflow-hidden',
           density === 'compact' ? 'gap-0 py-0.5' : 'gap-0.5 py-1',
           stackInset ? 'pl-2.5 pr-8' : 'pl-2.5 pr-1.5 sm:pr-2',
+          draggableInteraction && 'pb-2',
         )}
       >
         <span
@@ -124,6 +133,23 @@ export function CalendarAppointmentChip({
           </span>
         ) : null}
       </div>
+      {draggableInteraction && onResizePointerDown ? (
+        <span
+          data-resize-handle
+          role="separator"
+          aria-orientation="horizontal"
+          aria-label="Resize appointment"
+          className="absolute inset-x-0 bottom-0 z-10 flex h-2 cursor-ns-resize items-end justify-center pb-0.5"
+          onPointerDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onResizePointerDown(event);
+          }}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <span className="h-0.5 w-8 rounded-full bg-stone-300 dark:bg-stone-500" aria-hidden />
+        </span>
+      ) : null}
     </button>
   );
 }

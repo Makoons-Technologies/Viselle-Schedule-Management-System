@@ -184,6 +184,27 @@ export function isAppointmentStartInPast(startTimeIso: string, now = new Date())
   return slotStartWallClockMs(startTimeIso) <= wallClockNowMs(now);
 }
 
+/**
+ * Start time for a walk-in: the next whole local minute, encoded the way
+ * appointments store wall-clock date/time in UTC field components.
+ * One minute ahead so `isAppointmentStartInPast` (uses <=) does not reject "now".
+ */
+export function walkInStartTimeIso(now = new Date()): string {
+  const next = new Date(now.getTime() + 60_000);
+  next.setSeconds(0, 0);
+  return new Date(
+    Date.UTC(
+      next.getFullYear(),
+      next.getMonth(),
+      next.getDate(),
+      next.getHours(),
+      next.getMinutes(),
+      0,
+      0,
+    ),
+  ).toISOString();
+}
+
 export function todayDateOnlyLocal(now = new Date()): string {
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');

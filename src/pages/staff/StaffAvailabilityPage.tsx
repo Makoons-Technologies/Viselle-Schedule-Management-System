@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { orgApi } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { AvailabilityWeekCalendar } from '@/components/availability/AvailabilityWeekCalendar';
-import { PageHeader } from '@/components/common/PageHeader';
+import { SettingsBackHeader } from '@/components/settings/SettingsBackHeader';
 import { LoadingState } from '@/components/common/LoadingState';
 import { useStaffPermissions } from '@/hooks/useStaffPermissions';
 import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
@@ -55,14 +55,12 @@ export function StaffAvailabilityPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Hours"
-        description={
-          canEdit
-            ? 'Your weekly bookable hours'
-            : 'Your weekly bookable hours (view only — contact your manager to make changes)'
-        }
-      />
+      <SettingsBackHeader title="Hours" backTo="/staff/settings" />
+      <p className="mb-4 text-sm text-stone-500 dark:text-stone-400">
+        {canEdit
+          ? 'Your weekly bookable hours'
+          : 'Your weekly bookable hours (view only — contact your manager to make changes)'}
+      </p>
       <AvailabilityWeekCalendar
         rules={data?.availabilityRules ?? []}
         readOnly={!canEdit}

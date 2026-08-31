@@ -1,4 +1,5 @@
-import type { Stripe, StripeElements } from '@stripe/stripe-js';
+import type { Stripe, StripeElements, StripePaymentElementOptions } from '@stripe/stripe-js';
+import { getStripeElementsAppearance } from '@/lib/stripe-appearance';
 
 export interface KeyedPaymentSession {
   /** Mounts the Stripe Payment Element into the given container. */
@@ -38,8 +39,18 @@ export async function createKeyedPaymentSession(params: {
     throw new Error('Stripe failed to load');
   }
 
-  const elements: StripeElements = stripe.elements({ clientSecret: params.clientSecret });
-  const paymentElement = elements.create('payment');
+  const elements: StripeElements = stripe.elements({
+    clientSecret: params.clientSecret,
+    appearance: getStripeElementsAppearance(),
+  });
+  const paymentOptions: StripePaymentElementOptions = {
+    layout: 'tabs',
+    wallets: {
+      applePay: 'auto',
+      googlePay: 'auto',
+    },
+  };
+  const paymentElement = elements.create('payment', paymentOptions);
   let destroyed = false;
 
   return {

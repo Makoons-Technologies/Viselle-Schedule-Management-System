@@ -272,7 +272,7 @@ export interface OrgPlanFeatures {
   subscriptionTier: SubscriptionTier | null;
   tierName: string;
   smsRemindersEnabled: boolean;
-  /** False while the platform sending number is under A2P / carrier review. */
+  /** False while production sending is paused. Staging UI treats texts as available. */
   smsSendingEnabled?: boolean;
   emailRemindersEnabled: boolean;
   recurringAppointmentsEnabled: boolean;
@@ -295,6 +295,7 @@ export interface PlatformStats {
 }
 
 export type RevenueGranularity = 'day' | 'week' | 'month';
+export type RevenueScope = 'org' | 'mine';
 
 export interface RevenuePoint {
   /** Bucket start date (YYYY-MM-DD). For "week" this is the Monday of that week. */
@@ -366,6 +367,10 @@ export interface Account {
   role: AccountRole;
   status: AccountStatus;
   isBookable: boolean;
+  commissionPercent?: number;
+  stripeRecipientAccountId?: string | null;
+  stripeRecipientOnboardingComplete?: boolean;
+  stripeRecipientPayoutsReady?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -494,6 +499,9 @@ export interface CheckoutPreview {
   lines: Array<CheckoutLineInput & { description: string; unitPriceCents: number; lineTotalCents: number }>;
   subtotalCents: number;
   tipCents: number;
+  giftCardAppliedCents?: number;
+  giftCardCode?: string | null;
+  giftCardRemainingCents?: number | null;
   totalCents: number;
 }
 
@@ -512,6 +520,9 @@ export interface BatchCheckoutPreview {
   }>;
   subtotalCents: number;
   tipCents: number;
+  giftCardAppliedCents?: number;
+  giftCardCode?: string | null;
+  giftCardRemainingCents?: number | null;
   totalCents: number;
 }
 
@@ -674,6 +685,8 @@ export interface CreateAppointmentInput {
   timezone: string;
   appointmentNotes?: string;
   smsOptIn?: boolean;
+  /** Guest is here now — skip working-hours rules (overlap still blocks). */
+  walkIn?: boolean;
 }
 
 export interface CreateAccountInput {
@@ -683,6 +696,7 @@ export interface CreateAccountInput {
   phone?: string;
   role: AccountRole;
   isBookable: boolean;
+  commissionPercent?: number;
 }
 
 export interface CreateServiceInput {
@@ -783,6 +797,28 @@ export interface SupportTicketMessage {
   attachments?: SupportTicketAttachment[];
 }
 
+export type DemoBookingStatus = 'scheduled' | 'canceled' | 'completed';
+
+export interface DemoBooking {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  businessName?: string | null;
+  notes?: string | null;
+  startsAt: string;
+  endsAt: string;
+  timezone: string;
+  status: DemoBookingStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DemoSlot {
+  startsAt: string;
+  endsAt: string;
+}
+
 export type CustomWebsiteRequestStatus = 'open' | 'in_progress' | 'done' | 'closed';
 export type CustomWebsiteRequestSource = 'signup' | 'backfill' | 'manual';
 
@@ -806,4 +842,392 @@ export interface CustomWebsiteRequestNote {
   authorEmail: string;
   body: string;
   createdAt: string;
+}
+
+export type HomepageWidgetType =
+  | 'welcome'
+  | 'announcement'
+  | 'stats'
+  | 'setup'
+  | 'bookingCta'
+  | 'featuredServices'
+  | 'upcoming'
+  | 'revenue'
+  | 'form';
+
+export type HomepageBlockType = HomepageWidgetType | string;
+
+export interface HomepageColumn {
+  width?: number;
+  components: HomepageBlock[];
+}
+
+export interface HomepageTab {
+  label: string;
+  key?: string;
+  components: HomepageBlock[];
+}
+
+export interface HomepageBlock {
+  id: string;
+  type: string;
+  visible?: boolean;
+  title?: string;
+  body?: string;
+  serviceIds?: string[];
+  formId?: string;
+  label?: string;
+  content?: string;
+  placeholder?: string;
+  input?: boolean;
+  validate?: { required?: boolean };
+  values?: Array<{ label: string; value: string }>;
+  components?: HomepageBlock[];
+  columns?: HomepageColumn[];
+  tabs?: HomepageTab[];
+  rows?: Array<Array<{ components: HomepageBlock[] }>>;
+}
+
+export type OrgFormStatus = 'draft' | 'published' | 'archived';
+export type OrgFormVisibility = 'public' | 'private';
+
+export interface FormioColumn {
+  width?: number;
+  currentWidth?: number;
+  components: FormioComponent[];
+}
+
+export interface FormioComponent {
+  type: string;
+  key?: string;
+  label?: string;
+  title?: string;
+  legend?: string;
+  input?: boolean;
+  placeholder?: string;
+  description?: string;
+  content?: string;
+  html?: string;
+  tag?: string;
+  hidden?: boolean;
+  disabled?: boolean;
+  multiple?: boolean;
+  defaultValue?: unknown;
+  inputMask?: string;
+  prefix?: string;
+  suffix?: string;
+  action?: string;
+  theme?: string;
+  collapsible?: boolean;
+  collapsed?: boolean;
+  form?: string;
+  formId?: string;
+  image?: string;
+  questions?: Array<{ label: string; value: string }>;
+  validate?: {
+    required?: boolean;
+    min?: number;
+    max?: number;
+    minLength?: number;
+    maxLength?: number;
+    pattern?: string;
+  };
+  values?: Array<{ label: string; value: string }>;
+  data?: { values?: Array<{ label: string; value: string }> };
+  components?: FormioComponent[];
+  columns?: FormioColumn[];
+  rows?: Array<Array<{ components: FormioComponent[] }>>;
+  serviceIds?: string[];
+}
+
+export interface FormioSchema {
+  display?: string;
+  components: FormioComponent[];
+}
+
+export interface OrgForm {
+  id: string;
+  organizationId: string;
+  name: string;
+  description?: string | null;
+  schema: FormioSchema;
+  publishedSchema?: FormioSchema | null;
+  status: OrgFormStatus;
+  visibility?: OrgFormVisibility;
+  shareToken?: string | null;
+  currentVersion?: number;
+  publishedAt?: string | null;
+  hasUnpublishedChanges?: boolean;
+  submissionCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrgFormVersion {
+  id: string;
+  organizationId: string;
+  formId: string;
+  versionNumber: number;
+  name: string;
+  schema: FormioSchema;
+  createdByUserId?: string | null;
+  createdAt: string;
+}
+
+export interface PublicOrgForm {
+  name: string;
+  description?: string | null;
+  schema: FormioSchema;
+  organizationName?: string | null;
+}
+
+export interface OrgFormSubmission {
+  id: string;
+  organizationId: string;
+  formId: string;
+  customerId?: string | null;
+  appointmentId?: string | null;
+  data: Record<string, unknown>;
+  submittedByUserId?: string | null;
+  formVersion?: number | null;
+  createdAt: string;
+}
+
+export type WaitlistStatus = 'waiting' | 'offered' | 'booked' | 'cancelled';
+
+export interface WaitlistEntry {
+  id: string;
+  organizationId: string;
+  customerId: string;
+  serviceId?: string | null;
+  accountId?: string | null;
+  preferredDate?: string | null;
+  notes?: string | null;
+  status: WaitlistStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type GiftCardStatus = 'inactive' | 'active' | 'redeemed' | 'void';
+
+export interface GiftCard {
+  id: string;
+  organizationId: string;
+  code: string;
+  originalCents: number;
+  remainingCents: number;
+  /** What the guest paid. May be less than originalCents when the card includes bonus credits. */
+  priceCents?: number;
+  customerId?: string | null;
+  status: GiftCardStatus;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ServicePackage {
+  id: string;
+  organizationId: string;
+  name: string;
+  serviceId?: string | null;
+  /** Redeemable value. 1 credit = $1 = 100 cents. */
+  creditCents: number;
+  /** Legacy visit count; kept in sync as whole credits. */
+  visitCount?: number;
+  priceCents: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CustomerPackageStatus = 'active' | 'used' | 'void';
+
+export interface CustomerPackage {
+  id: string;
+  organizationId: string;
+  packageId: string;
+  customerId: string;
+  remainingCreditCents: number;
+  remainingVisits?: number;
+  status: CustomerPackageStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MembershipPlan {
+  id: string;
+  organizationId: string;
+  name: string;
+  priceCents: number;
+  interval: 'month' | 'year';
+  visitsIncluded?: number | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CustomerMembershipStatus = 'active' | 'paused' | 'cancelled';
+
+export interface CustomerMembership {
+  id: string;
+  organizationId: string;
+  planId: string;
+  customerId: string;
+  status: CustomerMembershipStatus;
+  nextBillOn: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CommissionRow {
+  accountId: string;
+  name: string;
+  salesCents: number;
+  tipCents: number;
+  commissionCents: number;
+  saleCount: number;
+}
+
+export interface CommissionReport {
+  from: string;
+  to: string;
+  rows: CommissionRow[];
+}
+
+export type StaffPayoutMode = 'track_only' | 'salon_stripe';
+export type StaffPayoutSchedule = 'manual' | 'weekly' | 'biweekly' | 'monthly';
+export type StaffPayoutStatus = 'pending' | 'succeeded' | 'failed' | 'skipped';
+
+export interface StaffPayoutRecipient {
+  accountId: string;
+  name: string;
+  email: string;
+  onboardingComplete: boolean;
+  payoutsReady: boolean;
+}
+
+export interface StaffPayoutSettings {
+  mode: StaffPayoutMode;
+  schedule: StaffPayoutSchedule;
+  includeCommission: boolean;
+  includeTips: boolean;
+  lastAutoPeriodFrom: string | null;
+  lastAutoPeriodTo: string | null;
+  lastAutoRunAt: string | null;
+  salonStripeReady: boolean;
+  recipients: StaffPayoutRecipient[];
+}
+
+export interface StaffPayoutLedgerRow {
+  id: string;
+  organizationId: string;
+  staffAccountId: string;
+  periodFrom: string;
+  periodTo: string;
+  commissionCents: number;
+  tipCents: number;
+  totalCents: number;
+  stripeTransferId?: string | null;
+  status: StaffPayoutStatus;
+  error?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StaffPayoutPreviewRow {
+  accountId: string;
+  name: string;
+  salesCents: number;
+  tipCents: number;
+  commissionOnSubtotalCents: number;
+  commissionCents: number;
+  totalCents: number;
+  payoutsReady: boolean;
+  alreadyPaid: boolean;
+  skipReason: 'zero' | 'not_ready' | 'already_paid' | null;
+  status?: StaffPayoutStatus | 'zero';
+  payoutId?: string;
+  error?: string | null;
+}
+
+export interface StaffPayoutPreview {
+  from: string;
+  to: string;
+  mode: StaffPayoutMode;
+  includeCommission: boolean;
+  includeTips: boolean;
+  rows: StaffPayoutPreviewRow[];
+  recentPayouts: StaffPayoutLedgerRow[];
+}
+
+export type InvoiceStatus = 'unpaid' | 'paid';
+export type ReceiptChannel = 'print' | 'sms' | 'email' | 'none';
+export type MerchantPrintStatus = 'printed' | 'skipped' | 'failed';
+
+export interface InvoiceLineSnapshot {
+  description: string;
+  quantity: number;
+  unitPriceCents: number;
+  lineTotalCents: number;
+}
+
+export interface Invoice {
+  id: string;
+  organizationId: string;
+  customerId?: string | null;
+  appointmentId?: string | null;
+  saleId?: string | null;
+  status: InvoiceStatus;
+  amountCents: number;
+  currency: string;
+  publicToken: string;
+  lineItems: InvoiceLineSnapshot[];
+  sentAt?: string | null;
+  sentChannel?: 'email' | 'sms' | null;
+  paidAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReceiptSnapshot {
+  organizationName: string;
+  customerName: string;
+  lineItems: InvoiceLineSnapshot[];
+  subtotalCents: number;
+  tipCents: number;
+  totalCents: number;
+  paidAt: string;
+  paymentMethod: string;
+}
+
+export interface DeliverReceiptResult {
+  receipt: ReceiptSnapshot;
+  merchantPrint: { status: MerchantPrintStatus; attempted: boolean };
+  invoice: Invoice | null;
+  publicUrl: string | null;
+  smsPaused: boolean;
+  smsPausedMessage: string | null;
+}
+
+export interface SendInvoiceResult {
+  invoice: Invoice;
+  publicUrl: string;
+  smsPaused: boolean;
+  smsPausedMessage: string | null;
+  customerPrefill: { email: string | null; phone: string | null };
+}
+
+export interface PublicInvoiceView {
+  invoice: {
+    id: string;
+    status: InvoiceStatus;
+    amountCents: number;
+    currency: string;
+    lineItems: InvoiceLineSnapshot[];
+    paidAt?: string | null;
+  };
+  organizationName: string;
+  customerName: string;
+  canPayOnline: boolean;
+  publishableKey: string | null;
 }
