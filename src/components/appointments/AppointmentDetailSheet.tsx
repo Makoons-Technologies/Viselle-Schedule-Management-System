@@ -104,7 +104,10 @@ export function AppointmentDetailSheet({
     enabled: !!appointmentId,
   });
 
-  const displayStartTime = occurrenceStartTime ?? data?.appointment.startTime;
+  const occurrenceMs = occurrenceStartTime ? new Date(occurrenceStartTime).getTime() : Number.NaN;
+  const displayStartTime = Number.isNaN(occurrenceMs)
+    ? data?.appointment.startTime
+    : occurrenceStartTime;
 
   const displayEndTime = useMemo(() => {
     if (!data?.appointment || !displayStartTime) return null;
@@ -113,10 +116,14 @@ export function AppointmentDetailSheet({
       return data.appointment.endTime;
     }
 
+    const startMs = new Date(displayStartTime).getTime();
     const durationMs =
       new Date(data.appointment.endTime).getTime() - new Date(data.appointment.startTime).getTime();
+    if (Number.isNaN(startMs) || Number.isNaN(durationMs)) {
+      return data.appointment.endTime;
+    }
 
-    return new Date(new Date(displayStartTime).getTime() + durationMs).toISOString();
+    return new Date(startMs + durationMs).toISOString();
   }, [data?.appointment, displayStartTime, occurrenceStartTime]);
 
   const occurrenceDate = displayStartTime?.slice(0, 10);

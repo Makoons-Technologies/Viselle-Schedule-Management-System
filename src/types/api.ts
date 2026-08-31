@@ -685,6 +685,8 @@ export interface CreateAppointmentInput {
   timezone: string;
   appointmentNotes?: string;
   smsOptIn?: boolean;
+  /** Guest is here now — skip working-hours rules (overlap still blocks). */
+  walkIn?: boolean;
 }
 
 export interface CreateAccountInput {
