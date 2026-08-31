@@ -129,6 +129,7 @@ export function useMobileDrawerGestures(
       const panel = panelRef.current;
       const insidePanel = isInsidePanel(panel, target);
 
+
       // Do not skip nav links / the drawer scroller — that blocked drag-to-dismiss
       // (QA BEA-70). Vertical list scroll still wins once the axis locks.
       const nearEdge = isNearHorizontalEdge(touch.clientX);
