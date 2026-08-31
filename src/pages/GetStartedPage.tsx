@@ -28,6 +28,7 @@ import { contactPath } from '@/lib/contact';
 import { redirectToStripeUrl } from '@/lib/safe-redirect';
 import {
   calculateSignupCart,
+  checkEmailAvailable,
   checkSlugAvailable,
   createSignupCheckout,
   fetchLiveHomepageTrial,
@@ -414,6 +415,7 @@ export function GetStartedPage() {
 
   const [ownerName, setOwnerName] = useState('');
   const [ownerEmail, setOwnerEmail] = useState('');
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'error'>('idle');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [accountTouched, setAccountTouched] = useState({
@@ -615,6 +617,44 @@ export function GetStartedPage() {
     };
   }, [slug]);
 
+  useEffect(() => {
+    if (!isValidEmail(ownerEmail)) {
+      setEmailStatus('idle');
+      return;
+    }
+
+    let cancelled = false;
+    let retryTimer: number | undefined;
+    setEmailStatus('checking');
+    const timer = window.setTimeout(() => {
+      checkEmailAvailable(ownerEmail.trim())
+        .then((available) => {
+          if (!cancelled) setEmailStatus(available ? 'available' : 'taken');
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setEmailStatus('error');
+          retryTimer = window.setTimeout(() => {
+            if (cancelled) return;
+            setEmailStatus('checking');
+            checkEmailAvailable(ownerEmail.trim())
+              .then((available) => {
+                if (!cancelled) setEmailStatus(available ? 'available' : 'taken');
+              })
+              .catch(() => {
+                if (!cancelled) setEmailStatus('error');
+              });
+          }, 1500);
+        });
+    }, 400);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      if (retryTimer !== undefined) window.clearTimeout(retryTimer);
+    };
+  }, [ownerEmail]);
+
   const refreshCart = useCallback(async () => {
     const seq = ++cartPreviewSeq.current;
     const local = calculateSignupCart({
@@ -710,8 +750,9 @@ export function GetStartedPage() {
       case 'business':
         return businessName.trim().length > 0 && slug.length >= 2 && slugStatus === 'available';
       case 'account':
-        // Autofill can fill the DOM without a React change event — validate on Continue instead.
-        return true;
+        // Autofill can fill the DOM without a React change event — format still
+        // validates on Continue. A known-taken email must block immediately.
+        return emailStatus !== 'taken' && emailStatus !== 'checking';
       case 'plan':
         return Boolean(tier) && Boolean(catalog);
       case 'website':
@@ -730,6 +771,7 @@ export function GetStartedPage() {
     catalog,
     currentStep,
     displayCart,
+    emailStatus,
     isFreeTrialCheckout,
     loadingCart,
     slug,
@@ -810,12 +852,20 @@ export function GetStartedPage() {
     return next;
   }
 
-  function goNext() {
+  async function goNext() {
     setError(null);
     if (currentStep === 'account') {
       const next = syncAccountFieldsFromDom();
       if (Object.keys(getAccountFieldErrors(next)).length > 0) {
         setAccountShowAllErrors(true);
+        return;
+      }
+      try {
+        const available = await checkEmailAvailable(next.ownerEmail.trim());
+        setEmailStatus(available ? 'available' : 'taken');
+        if (!available) return;
+      } catch {
+        setEmailStatus('error');
         return;
       }
     }
@@ -1068,10 +1118,33 @@ export function GetStartedPage() {
                         markAccountTouched('ownerEmail');
                       }}
                       autoComplete="email"
-                      aria-invalid={Boolean(visibleAccountErrors.ownerEmail)}
+                      aria-invalid={Boolean(visibleAccountErrors.ownerEmail) || emailStatus === 'taken'}
                     />
                     {visibleAccountErrors.ownerEmail && (
                       <p className="text-xs text-red-600 dark:text-red-400">{visibleAccountErrors.ownerEmail}</p>
+                    )}
+                    {!visibleAccountErrors.ownerEmail && isValidEmail(ownerEmail) && emailStatus !== 'idle' && (
+                      <p
+                        className={cn(
+                          'text-xs',
+                          emailStatus === 'available' && 'text-emerald-600 dark:text-emerald-400',
+                          (emailStatus === 'taken' || emailStatus === 'error') &&
+                            'text-red-600 dark:text-red-400',
+                          emailStatus === 'checking' && 'text-stone-500 dark:text-stone-400',
+                        )}
+                      >
+                        {emailStatus === 'checking' && 'Checking availability…'}
+                        {emailStatus === 'available' && 'This email is available'}
+                        {emailStatus === 'taken' && (
+                          <>
+                            An account with this email already exists.{' '}
+                            <Link to="/login" className="font-medium underline">
+                              Log in
+                            </Link>
+                          </>
+                        )}
+                        {emailStatus === 'error' && 'Could not check this email — wait a moment or try again'}
+                      </p>
                     )}
                   </div>
                   <div className="space-y-2">
@@ -1313,7 +1386,7 @@ export function GetStartedPage() {
                     )}
                   </Button>
                 ) : (
-                  <Button type="button" onClick={goNext} disabled={!canContinue}>
+                  <Button type="button" onClick={() => void goNext()} disabled={!canContinue}>
                     Continue
                     <ChevronRight className="ml-1 h-4 w-4" />
                   </Button>
