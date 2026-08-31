@@ -381,7 +381,7 @@ export function CalendarPage() {
     const startTime =
       focusRequest.startTime ??
       data?.appointments.find((appointment) => appointment.id === focusRequest.id)?.startTime;
-    if (!startTime) return;
+    if (!startTime || Number.isNaN(new Date(startTime).getTime())) return;
 
     const dayKey = appointmentDayKey(startTime);
     if (!dayKeys.includes(dayKey)) {

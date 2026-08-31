@@ -103,9 +103,11 @@ export function OrgDashboard() {
           defaultAccountId={myAccountId}
           onCreated={(created) => {
             const appointment = created[0];
-            if (appointment) {
-              navigate(calendarAppointmentHref(orgId, appointment));
-            }
+            if (!appointment) return;
+            const href = calendarAppointmentHref(orgId, appointment);
+            setWalkInOpen(false);
+            // Close the dialog before routing so the focus trap cannot cancel navigation.
+            window.setTimeout(() => navigate(href), 0);
           }}
         />
       ) : null}
