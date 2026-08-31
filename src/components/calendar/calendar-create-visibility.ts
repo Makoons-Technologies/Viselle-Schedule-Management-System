@@ -9,16 +9,16 @@ export function revealStaffAfterCreate(
   return [...selectedIds, createdAccountId];
 }
 
-export function shouldDisableMyAppointmentsOnly(params: {
-  myAppointmentsOnly: boolean;
-  myAccountId: string | null;
+/**
+ * On mobile the calendar can be scoped to a single person (me or another staff
+ * member). If you book someone else while scoped, widen the view to "all" so the
+ * newly created appointment stays visible.
+ */
+export function shouldRevealAllAfterCreate(params: {
+  viewedAccountId: string | null;
   createdAccountId: string;
 }): boolean {
-  return Boolean(
-    params.myAppointmentsOnly &&
-      params.myAccountId &&
-      params.createdAccountId !== params.myAccountId,
-  );
+  return Boolean(params.viewedAccountId && params.createdAccountId !== params.viewedAccountId);
 }
 
 export function shouldClearDayZoom(
