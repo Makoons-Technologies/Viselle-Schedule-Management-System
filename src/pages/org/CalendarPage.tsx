@@ -1,6 +1,6 @@
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { addDays, format, parseISO, startOfDay } from 'date-fns';
-import { ListChecks, Plus, SlidersHorizontal, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { DoorOpen, ListChecks, Plus, SlidersHorizontal, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { Appointment } from '@/types/api';
@@ -20,6 +20,7 @@ import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { AppointmentDetailSheet } from '@/components/appointments/AppointmentDetailSheet';
 import { BatchCheckoutSheet, type BatchCheckoutItem } from '@/components/appointments/BatchCheckoutSheet';
 import { CreateAppointmentDialog } from '@/components/appointments/CreateAppointmentDialog';
+import { WalkInDialog } from '@/components/appointments/WalkInDialog';
 import { StaffScheduleFilter } from '@/components/calendar/StaffScheduleFilter';
 import { MobileScheduleFilter } from '@/components/calendar/MobileScheduleFilter';
 import { WeekAppointmentTimeGrid } from '@/components/calendar/WeekAppointmentTimeGrid';
@@ -75,6 +76,7 @@ export function CalendarPage() {
     startTime: string;
   } | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [walkInOpen, setWalkInOpen] = useState(false);
   const [createDefaultDate, setCreateDefaultDate] = useState<string | undefined>(undefined);
   const [createDefaultMinutes, setCreateDefaultMinutes] = useState<number | undefined>(undefined);
   /** null = default all staff selected once accounts load (desktop picker). */
@@ -486,21 +488,37 @@ export function CalendarPage() {
             )
           )}
           {permissions.canCreateAppointments && (
-            <TrialLockedControl locked={trialExpired}>
-              <Button
-                size="sm"
-                className="h-8 px-2"
-                disabled={trialExpired}
-                onClick={() => {
-                  setCreateDefaultDate(undefined);
-                  setCreateDefaultMinutes(undefined);
-                  setCreateOpen(true);
-                }}
-              >
-                <Plus className="h-3.5 w-3.5" />
-                {isMobile ? 'New' : 'New Appointment'}
-              </Button>
-            </TrialLockedControl>
+            <>
+              <TrialLockedControl locked={trialExpired}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-2"
+                  disabled={trialExpired}
+                  onClick={() => setWalkInOpen(true)}
+                  aria-label="Walk-in"
+                  title="Take a walk-in"
+                >
+                  <DoorOpen className="h-3.5 w-3.5" />
+                  Walk-in
+                </Button>
+              </TrialLockedControl>
+              <TrialLockedControl locked={trialExpired}>
+                <Button
+                  size="sm"
+                  className="h-8 px-2"
+                  disabled={trialExpired}
+                  onClick={() => {
+                    setCreateDefaultDate(undefined);
+                    setCreateDefaultMinutes(undefined);
+                    setCreateOpen(true);
+                  }}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  {isMobile ? 'New' : 'New Appointment'}
+                </Button>
+              </TrialLockedControl>
+            </>
           )}
           {isMobile && (
             <MobileScheduleFilter
@@ -730,6 +748,13 @@ export function CalendarPage() {
               ? resolvedStaffIds[0]
               : undefined
         }
+        onCreated={handleAppointmentsCreated}
+      />
+      <WalkInDialog
+        orgId={orgId}
+        open={walkInOpen}
+        onOpenChange={setWalkInOpen}
+        defaultAccountId={myAccountId}
         onCreated={handleAppointmentsCreated}
       />
     </div>
