@@ -655,6 +655,39 @@ export function GetStartedPage() {
     };
   }, [ownerEmail]);
 
+  // Autofill can fill the DOM without a React change event. Pull those values
+  // into state so Continue enables only after the form is actually complete.
+  useEffect(() => {
+    if (currentStep !== 'account') return;
+
+    const pull = () => {
+      const nextName = ownerNameRef.current?.value ?? '';
+      const nextEmail = ownerEmailRef.current?.value ?? '';
+      const nextPassword = passwordRef.current?.value ?? '';
+      const nextConfirm = confirmPasswordRef.current?.value ?? '';
+      setOwnerName((prev) => (prev === nextName ? prev : nextName));
+      setOwnerEmail((prev) => (prev === nextEmail ? prev : nextEmail));
+      setPassword((prev) => (prev === nextPassword ? prev : nextPassword));
+      setConfirmPassword((prev) => (prev === nextConfirm ? prev : nextConfirm));
+    };
+
+    pull();
+    const timer = window.setInterval(pull, 400);
+    const inputs = [ownerNameRef.current, ownerEmailRef.current, passwordRef.current, confirmPasswordRef.current];
+    inputs.forEach((el) => {
+      el?.addEventListener('input', pull);
+      el?.addEventListener('change', pull);
+    });
+
+    return () => {
+      window.clearInterval(timer);
+      inputs.forEach((el) => {
+        el?.removeEventListener('input', pull);
+        el?.removeEventListener('change', pull);
+      });
+    };
+  }, [currentStep]);
+
   const refreshCart = useCallback(async () => {
     const seq = ++cartPreviewSeq.current;
     const local = calculateSignupCart({
@@ -750,9 +783,7 @@ export function GetStartedPage() {
       case 'business':
         return businessName.trim().length > 0 && slug.length >= 2 && slugStatus === 'available';
       case 'account':
-        // Autofill can fill the DOM without a React change event — format still
-        // validates on Continue. A known-taken email must block immediately.
-        return emailStatus !== 'taken' && emailStatus !== 'checking';
+        return Object.keys(accountErrors).length === 0 && emailStatus === 'available';
       case 'plan':
         return Boolean(tier) && Boolean(catalog);
       case 'website':
@@ -767,6 +798,7 @@ export function GetStartedPage() {
         return false;
     }
   }, [
+    accountErrors,
     businessName,
     catalog,
     currentStep,
@@ -838,18 +870,30 @@ export function GetStartedPage() {
     }
   }
 
-  function syncAccountFieldsFromDom() {
-    const next = {
+  function readAccountFieldsFromDom() {
+    return {
       ownerName: ownerNameRef.current?.value ?? ownerName,
       ownerEmail: ownerEmailRef.current?.value ?? ownerEmail,
       password: passwordRef.current?.value ?? password,
       confirmPassword: confirmPasswordRef.current?.value ?? confirmPassword,
     };
-    setOwnerName(next.ownerName);
-    setOwnerEmail(next.ownerEmail);
-    setPassword(next.password);
-    setConfirmPassword(next.confirmPassword);
+  }
+
+  function applyAccountFields(next: {
+    ownerName: string;
+    ownerEmail: string;
+    password: string;
+    confirmPassword: string;
+  }) {
+    setOwnerName((prev) => (prev === next.ownerName ? prev : next.ownerName));
+    setOwnerEmail((prev) => (prev === next.ownerEmail ? prev : next.ownerEmail));
+    setPassword((prev) => (prev === next.password ? prev : next.password));
+    setConfirmPassword((prev) => (prev === next.confirmPassword ? prev : next.confirmPassword));
     return next;
+  }
+
+  function syncAccountFieldsFromDom() {
+    return applyAccountFields(readAccountFieldsFromDom());
   }
 
   async function goNext() {
