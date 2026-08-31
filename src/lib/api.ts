@@ -674,7 +674,18 @@ export const orgApi = {
         createdAppointments: Appointment[];
       }>(`/organizations/${orgId}/appointments/${appointmentId}/recurring`, data)
       .then((r) => r.data),
-  rescheduleAppointment: (orgId: string, appointmentId: string, data: { accountId: string; startTime: string; timezone: string }) =>
+  rescheduleAppointment: (
+    orgId: string,
+    appointmentId: string,
+    data: {
+      accountId: string;
+      startTime: string;
+      timezone: string;
+      endTime?: string;
+      scope?: 'single' | 'future';
+      occurrenceDate?: string;
+    },
+  ) =>
     apiClient.patch<{ appointment: Appointment }>(`/organizations/${orgId}/appointments/${appointmentId}/reschedule`, data).then((r) => r.data),
   listReminders: (orgId: string, appointmentId: string) =>
     apiClient.get<{ reminders: Reminder[] }>(`/organizations/${orgId}/appointments/${appointmentId}/reminders`).then((r) => r.data),
