@@ -363,12 +363,11 @@ function revealStaffAfterCreate(
   return [...selectedIds, createdAccountId];
 }
 
-function shouldDisableMyAppointmentsOnly(
-  myAppointmentsOnly: boolean,
-  myAccountId: string | null,
+function shouldRevealAllAfterCreate(
+  viewedAccountId: string | null,
   createdAccountId: string,
 ): boolean {
-  return Boolean(myAppointmentsOnly && myAccountId && createdAccountId !== myAccountId);
+  return Boolean(viewedAccountId && createdAccountId !== viewedAccountId);
 }
 
 function shouldClearDayZoom(zoomedDayKeys: string[] | null, createdDayKey: string): boolean {
@@ -386,12 +385,16 @@ assert(
   'partial staff filter adds the created staff rather than hiding the booking',
 );
 assert(
-  shouldDisableMyAppointmentsOnly(true, 'me', 'other') === true,
-  'mobile “my appointments” must turn off when booking another staff member',
+  shouldRevealAllAfterCreate('me', 'other') === true,
+  'mobile scoped-to-one view must widen to all when booking another staff member',
 );
 assert(
-  shouldDisableMyAppointmentsOnly(true, 'me', 'me') === false,
-  'booking yourself keeps “my appointments” on',
+  shouldRevealAllAfterCreate('me', 'me') === false,
+  'booking the person you are viewing keeps the scoped view',
+);
+assert(
+  shouldRevealAllAfterCreate(null, 'other') === false,
+  'showing all appointments never needs to widen after a booking',
 );
 assert(
   shouldClearDayZoom(['2026-08-17'], '2026-08-24') === true,

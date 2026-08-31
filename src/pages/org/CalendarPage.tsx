@@ -14,13 +14,14 @@ import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
 import { filterOutCancelled, useHideCancelledAppointments } from '@/hooks/useHideCancelledAppointments';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-import { useMyAppointmentsOnly } from '@/hooks/useMyAppointmentsOnly';
+import { ALL_SCHEDULES, MY_SCHEDULE, useMobileScheduleView } from '@/hooks/useMobileScheduleView';
 import { useStaffPermissions } from '@/hooks/useStaffPermissions';
 import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { AppointmentDetailSheet } from '@/components/appointments/AppointmentDetailSheet';
 import { BatchCheckoutSheet, type BatchCheckoutItem } from '@/components/appointments/BatchCheckoutSheet';
 import { CreateAppointmentDialog } from '@/components/appointments/CreateAppointmentDialog';
 import { StaffScheduleFilter } from '@/components/calendar/StaffScheduleFilter';
+import { MobileScheduleFilter } from '@/components/calendar/MobileScheduleFilter';
 import { WeekAppointmentTimeGrid } from '@/components/calendar/WeekAppointmentTimeGrid';
 import { appointmentDayKey, appointmentStartMinutes } from '@/components/calendar/week-time-grid';
 import { isCalendarSlotInHours } from '@/lib/availability';
@@ -28,7 +29,7 @@ import {
   localDateFromDayKey,
   revealStaffAfterCreate,
   shouldClearDayZoom,
-  shouldDisableMyAppointmentsOnly,
+  shouldRevealAllAfterCreate,
 } from '@/components/calendar/calendar-create-visibility';
 import { CalendarAppointmentChip } from '@/components/calendar/CalendarAppointmentChip';
 import { WeekCalendarNav } from '@/components/calendar/WeekCalendarNav';
@@ -67,7 +68,7 @@ export function CalendarPage() {
   const queryClient = useQueryClient();
   /** Matches Tailwind `md` — same breakpoint as mobile bottom nav. */
   const isMobile = useMediaQuery('(max-width: 767px)');
-  const { myAppointmentsOnly, setMyAppointmentsOnly } = useMyAppointmentsOnly();
+  const { scheduleView, setScheduleView } = useMobileScheduleView();
   const [weekStart, setWeekStart] = useState(() => startOfDay(new Date()));
   const [selectedAppointment, setSelectedAppointment] = useState<{
     id: string;
@@ -159,13 +160,29 @@ export function CalendarPage() {
     return memberships.find((membership) => membership.organizationId === orgId)?.accountId ?? null;
   }, [user?.accountId, memberships, orgId]);
 
+  /**
+   * Resolve the mobile schedule scope to a single account id to filter by, or
+   * null when showing all appointments. `'me'` with no known account falls back
+   * to showing everyone.
+   */
+  const viewedAccountId = useMemo(() => {
+    if (scheduleView === ALL_SCHEDULES) return null;
+    if (scheduleView === MY_SCHEDULE) return myAccountId;
+    return scheduleView;
+  }, [scheduleView, myAccountId]);
+
+  const otherStaffAccounts = useMemo(
+    () => staffAccounts.filter((account) => account.id !== myAccountId),
+    [staffAccounts, myAccountId],
+  );
+
   const hourAccountIds = useMemo(() => {
     if (isMobile) {
-      if (myAppointmentsOnly && myAccountId) return [myAccountId];
+      if (viewedAccountId) return [viewedAccountId];
       return staffAccounts.map((account) => account.id);
     }
     return resolvedStaffIds;
-  }, [isMobile, myAccountId, myAppointmentsOnly, resolvedStaffIds, staffAccounts]);
+  }, [isMobile, viewedAccountId, resolvedStaffIds, staffAccounts]);
 
   const availabilityQueries = useQueries({
     queries: hourAccountIds.map((accountId) => ({
@@ -203,14 +220,16 @@ export function CalendarPage() {
     [accountsData],
   );
 
+  const myAccount = myAccountId ? accountsById[myAccountId] ?? null : null;
+
   const appointments = useMemo(() => {
     const list = data?.appointments ?? [];
     let filtered = list;
     if (isMobile) {
-      // Filter by the logged-in account id directly so own appointments still
+      // Filter by the resolved account id directly so own appointments still
       // render even when that account is missing from the bookable staff list.
-      if (myAppointmentsOnly && myAccountId) {
-        filtered = list.filter((appt) => appt.accountId === myAccountId);
+      if (viewedAccountId) {
+        filtered = list.filter((appt) => appt.accountId === viewedAccountId);
       }
     } else {
       const selected = new Set(resolvedStaffIds);
@@ -221,8 +240,7 @@ export function CalendarPage() {
     data?.appointments,
     hideCancelled,
     isMobile,
-    myAccountId,
-    myAppointmentsOnly,
+    viewedAccountId,
     resolvedStaffIds,
   ]);
 
@@ -266,13 +284,10 @@ export function CalendarPage() {
 
     setSelectedStaffIds((prev) => revealStaffAfterCreate(prev, appointment.accountId));
     if (
-      shouldDisableMyAppointmentsOnly({
-        myAppointmentsOnly,
-        myAccountId,
-        createdAccountId: appointment.accountId,
-      })
+      isMobile &&
+      shouldRevealAllAfterCreate({ viewedAccountId, createdAccountId: appointment.accountId })
     ) {
-      setMyAppointmentsOnly(false);
+      setScheduleView(ALL_SCHEDULES);
     }
 
     const dayKey = appointmentDayKey(appointment.startTime);
@@ -378,13 +393,10 @@ export function CalendarPage() {
     if (raw) {
       setSelectedStaffIds((prev) => revealStaffAfterCreate(prev, raw.accountId));
       if (
-        shouldDisableMyAppointmentsOnly({
-          myAppointmentsOnly,
-          myAccountId,
-          createdAccountId: raw.accountId,
-        })
+        isMobile &&
+        shouldRevealAllAfterCreate({ viewedAccountId, createdAccountId: raw.accountId })
       ) {
-        setMyAppointmentsOnly(false);
+        setScheduleView(ALL_SCHEDULES);
       }
     }
     if (shouldClearDayZoom(zoomedDayKeys, dayKey)) {
@@ -403,9 +415,9 @@ export function CalendarPage() {
     dayKeys,
     focusRequest,
     isLoading,
-    myAccountId,
-    myAppointmentsOnly,
-    setMyAppointmentsOnly,
+    isMobile,
+    viewedAccountId,
+    setScheduleView,
     setSearchParams,
     zoomedDayKeys,
   ]);
@@ -490,6 +502,14 @@ export function CalendarPage() {
               </Button>
             </TrialLockedControl>
           )}
+          {isMobile && (
+            <MobileScheduleFilter
+              value={scheduleView}
+              onValueChange={setScheduleView}
+              myAccount={myAccount}
+              otherAccounts={otherStaffAccounts}
+            />
+          )}
           <div className="hidden desktop-shell:block">
             <StaffScheduleFilter
               accounts={staffAccounts}
@@ -512,15 +532,6 @@ export function CalendarPage() {
             >
               Hide cancelled
             </DropdownMenuCheckboxItem>
-            {isMobile && (
-              <DropdownMenuCheckboxItem
-                checked={myAppointmentsOnly}
-                onCheckedChange={(checked) => setMyAppointmentsOnly(checked === true)}
-                onSelect={(event) => event.preventDefault()}
-              >
-                My appointments only
-              </DropdownMenuCheckboxItem>
-            )}
             <DropdownMenuSeparator />
             <DropdownMenuLabel>Status colors</DropdownMenuLabel>
             {(Object.keys(APPOINTMENT_CALENDAR_LIP_CLASS) as Array<keyof typeof APPOINTMENT_CALENDAR_LIP_CLASS>)
@@ -714,9 +725,7 @@ export function CalendarPage() {
         defaultMinutes={createDefaultMinutes}
         defaultAccountId={
           isMobile
-            ? myAppointmentsOnly && myAccountId
-              ? myAccountId
-              : undefined
+            ? viewedAccountId ?? undefined
             : resolvedStaffIds.length === 1
               ? resolvedStaffIds[0]
               : undefined
