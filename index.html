@@ -150,6 +150,10 @@
           );
         }
 
+        if (isStandaloneWebApp()) {
+          document.documentElement.classList.add('standalone-pwa');
+        }
+
         function isIosStandaloneWebApp() {
           if (!isStandaloneWebApp()) return false;
           var ua = navigator.userAgent || '';
