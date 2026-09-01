@@ -10,38 +10,38 @@ const navLinkClassName =
 export function MarketingHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0f172a] px-safe pt-safe">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-        <Link to="/" className="flex items-center gap-2.5">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
+        <Link to="/" className="flex shrink-0 items-center gap-2.5">
           <ViselleLogo size={36} />
-          <span className="text-xl font-semibold text-white">Viselle</span>
+          <span className="whitespace-nowrap text-xl font-semibold text-white">Viselle</span>
         </Link>
-        <nav className="flex items-center gap-5 sm:gap-6">
-          <div className="flex items-center gap-5 sm:gap-6">
-            <a href="/#websites" className={cn(navLinkClassName, 'hidden sm:inline')}>
+        <nav className="flex min-w-0 flex-wrap items-center justify-end gap-2 sm:gap-6">
+          <div className="hidden items-center gap-5 sm:flex sm:gap-6">
+            <a href="/#websites" className={navLinkClassName}>
               Booking pages
             </a>
-            <a href="/#pricing" className={cn(navLinkClassName, 'hidden sm:inline')}>
+            <a href="/#pricing" className={navLinkClassName}>
               Pricing
             </a>
-            <Link to="/contact" className={navLinkClassName}>
+            <Link to="/contact" className={cn(navLinkClassName, 'hidden md:inline')}>
               Contact
             </Link>
-            <Link to="/request-demo" className={cn(navLinkClassName, 'hidden sm:inline')}>
+            <Link to="/request-demo" className={navLinkClassName}>
               Request a demo
             </Link>
           </div>
-          <div className="flex items-center gap-2">
-            <Button asChild size="sm" variant="outline" className="border-white/30 bg-white/5 text-white hover:bg-white/15 hover:text-white sm:hidden">
+          <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
+            <Button asChild size="sm" variant="outline" className="border-white/30 bg-white/5 px-2 text-white hover:bg-white/15 hover:text-white sm:hidden sm:px-3">
               <Link to="/request-demo">Demo</Link>
             </Button>
-            <Button asChild size="sm">
+            <Button asChild size="sm" className="px-2 sm:px-3">
               <Link to="/get-started">Get started</Link>
             </Button>
             <Button
               asChild
               variant="outline"
               size="sm"
-              className="border-white/30 bg-white/5 text-white hover:bg-white/15 hover:text-white"
+              className="border-white/30 bg-white/5 px-2 text-white hover:bg-white/15 hover:text-white sm:px-3"
             >
               <Link to="/login">Sign in</Link>
             </Button>
