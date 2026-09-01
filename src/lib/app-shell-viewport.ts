@@ -4,6 +4,12 @@ export const SETTLE_DELAYS_MS = [50, 150, 350, 700] as const;
 export const KEYBOARD_CLOSE_DELAYS_MS = [80, 200, 400, 600] as const;
 export const FIRST_SHELL_SETTLE_DELAYS_MS = [0, 16, 32, 64, 128, 250, 500, 1000] as const;
 
+/** Matches CSS (`html.standalone-pwa`). `navigator.standalone` can be true when the media query is not. */
+export const STANDALONE_PWA_CLASS = 'standalone-pwa';
+
+/** Portrait iPhone home-indicator height when `env(safe-area-inset-bottom)` reports 0 under 100vh. */
+export const IOS_STANDALONE_HOME_INDICATOR_FALLBACK_PX = 34;
+
 const FIRST_SHELL_SESSION_KEY = 'viselle-pwa-first-shell-viewport';
 
 /** Largest keyboard-closed height seen this orientation. Survives iOS shrinking 100vh after the keyboard. */
@@ -14,6 +20,11 @@ export function isStandaloneWebApp(): boolean {
   if (typeof window === 'undefined') return false;
   const iosStandalone = Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
   return iosStandalone || window.matchMedia('(display-mode: standalone)').matches;
+}
+
+/** Keep `html.standalone-pwa` in sync so CSS does not depend only on `@media (display-mode)`. */
+export function applyStandalonePwaClass(root: HTMLElement = document.documentElement): void {
+  root.classList.toggle(STANDALONE_PWA_CLASS, isStandaloneWebApp());
 }
 
 /** iOS standalone cold start under-reports innerHeight/visualViewport (WebKit #254868). */
@@ -87,6 +98,30 @@ export function getAppHeightCSSValue(): string {
 
 export function setAppHeightCSSProperty(root: HTMLElement = document.documentElement): void {
   root.style.setProperty('--app-height', getAppHeightCSSValue());
+  setSafeAreaCSSProperties(root);
+}
+
+/**
+ * Measure live `env(safe-area-inset-*)`. iOS standalone can leave :root tokens at 0px
+ * while 100vh still paints under the home indicator (BEA-83).
+ */
+export function measureCssEnvInset(edge: 'top' | 'right' | 'bottom' | 'left'): number {
+  if (typeof document === 'undefined' || !document.body) return 0;
+  const el = document.createElement('div');
+  el.setAttribute('aria-hidden', 'true');
+  el.style.cssText =
+    `position:fixed;visibility:hidden;pointer-events:none;padding-${edge}:env(safe-area-inset-${edge},0px)`;
+  document.body.appendChild(el);
+  const px = parseFloat(getComputedStyle(el).getPropertyValue(`padding-${edge}`)) || 0;
+  el.remove();
+  return px;
+}
+
+export function setSafeAreaCSSProperties(root: HTMLElement = document.documentElement): void {
+  const bottom = measureCssEnvInset('bottom');
+  const bottomPx =
+    isIosStandaloneWebApp() && bottom <= 0 ? IOS_STANDALONE_HOME_INDICATOR_FALLBACK_PX : bottom;
+  root.style.setProperty('--safe-area-bottom', `${bottomPx}px`);
 }
 
 /**

@@ -80,7 +80,7 @@ export function MobileBottomNav() {
       ];
 
       return (
-        <nav className={bottomNavClassName} aria-label="Primary navigation">
+        <nav className={bottomNavClassName} aria-label="Primary navigation" data-testid="app-shell-bottomnav">
           <div className="mx-auto flex max-w-lg items-stretch justify-center gap-1">
             {items.map((item) => (
               <BottomNavLink key={item.key} item={item} active={item.match(location.pathname, orgBase)} />
@@ -122,7 +122,7 @@ export function MobileBottomNav() {
     ];
 
     return (
-      <nav className={bottomNavClassName} aria-label="Primary navigation">
+      <nav className={bottomNavClassName} aria-label="Primary navigation" data-testid="app-shell-bottomnav">
         <div className="mx-auto flex max-w-lg items-stretch justify-between gap-1">
           {items.map((item) => (
             <BottomNavLink key={item.key} item={item} active={item.match(location.pathname, '')} />
@@ -155,7 +155,7 @@ export function MobileBottomNav() {
     ];
 
     return (
-      <nav className={bottomNavClassName} aria-label="Primary navigation">
+      <nav className={bottomNavClassName} aria-label="Primary navigation" data-testid="app-shell-bottomnav">
         <div className="mx-auto flex max-w-lg items-stretch justify-center gap-1">
           {items.map((item) => (
             <BottomNavLink key={item.key} item={item} active={item.match(location.pathname, platformOrgBase)} />
@@ -191,7 +191,7 @@ export function MobileBottomNav() {
     ];
 
     return (
-      <nav className={bottomNavClassName} aria-label="Primary navigation">
+      <nav className={bottomNavClassName} aria-label="Primary navigation" data-testid="app-shell-bottomnav">
         <div className="mx-auto flex max-w-lg items-stretch justify-center gap-1">
           {items.map((item) => (
             <BottomNavLink key={item.key} item={item} active={item.match(location.pathname, '')} />
@@ -257,7 +257,7 @@ export function MobileBottomNav() {
         ];
 
   return (
-    <nav className={bottomNavClassName} aria-label="Primary navigation">
+    <nav className={bottomNavClassName} aria-label="Primary navigation" data-testid="app-shell-bottomnav">
       <div className="mx-auto flex max-w-lg items-stretch justify-between gap-1">
         {items.map((item) => (
           <BottomNavLink
