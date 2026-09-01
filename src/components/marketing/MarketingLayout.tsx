@@ -30,18 +30,18 @@ export function MarketingHeader() {
               Request a demo
             </Link>
           </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <Button asChild size="sm" variant="outline" className="border-white/30 bg-white/5 text-white hover:bg-white/15 hover:text-white sm:hidden">
+          <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
+            <Button asChild size="sm" variant="outline" className="border-white/30 bg-white/5 px-2 text-white hover:bg-white/15 hover:text-white sm:hidden sm:px-3">
               <Link to="/request-demo">Demo</Link>
             </Button>
-            <Button asChild size="sm">
+            <Button asChild size="sm" className="px-2 sm:px-3">
               <Link to="/get-started">Get started</Link>
             </Button>
             <Button
               asChild
               variant="outline"
               size="sm"
-              className="border-white/30 bg-white/5 text-white hover:bg-white/15 hover:text-white"
+              className="border-white/30 bg-white/5 px-2 text-white hover:bg-white/15 hover:text-white sm:px-3"
             >
               <Link to="/login">Sign in</Link>
             </Button>
