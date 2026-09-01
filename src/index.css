@@ -344,8 +344,8 @@
  */
 html.app-shell .app-shell-bottomnav {
   box-sizing: border-box;
+  /* Drawer-footer pattern. Do not put env() inside this max() — WebKit drops it. */
   padding-bottom: max(0.5rem, var(--safe-area-bottom));
-  padding-bottom: var(--app-shell-bottomnav-pad);
 }
 
 html.standalone-pwa.app-shell {
@@ -354,10 +354,8 @@ html.standalone-pwa.app-shell {
 }
 
 html.standalone-pwa.app-shell .app-shell-bottomnav {
-  /* Literal floor — cannot be dropped the way max()+env() was. */
-  padding-bottom: 34px;
-  padding-bottom: max(34px, var(--safe-area-bottom));
-  padding-bottom: var(--app-shell-bottomnav-pad);
+  /* Fallback 34px is a literal so a minifier cannot drop the home-indicator floor. */
+  padding-bottom: var(--app-shell-bottomnav-pad, 34px);
 }
 
 html.standalone-pwa.app-shell .app-shell-chrome:not(:has(*)) ~ * {
@@ -375,9 +373,7 @@ html.standalone-pwa.app-shell .app-shell-chrome {
   }
 
   html.app-shell .app-shell-bottomnav {
-    padding-bottom: 34px;
-    padding-bottom: max(34px, var(--safe-area-bottom));
-    padding-bottom: var(--app-shell-bottomnav-pad);
+    padding-bottom: var(--app-shell-bottomnav-pad, 34px);
   }
 
   html.app-shell .app-shell-chrome:not(:has(*)) ~ * {

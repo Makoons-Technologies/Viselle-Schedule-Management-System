@@ -50,15 +50,18 @@ async function emulateIosStandalonePwa(page: Page) {
 function collectStyleRules(page: Page) {
   return page.evaluate(() => {
     const texts: string[] = [];
-    for (const sheet of document.styleSheets) {
-      let rules: CSSRuleList;
-      try {
-        rules = sheet.cssRules;
-      } catch {
-        continue;
-      }
+    const walk = (rules: CSSRuleList) => {
       for (const rule of rules) {
         texts.push(rule.cssText);
+        const nested = (rule as CSSGroupingRule).cssRules;
+        if (nested) walk(nested);
+      }
+    };
+    for (const sheet of document.styleSheets) {
+      try {
+        walk(sheet.cssRules);
+      } catch {
+        // Cross-origin sheets are not readable.
       }
     }
     return texts;
@@ -149,12 +152,16 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     expect(bottom.navBottom).toBeLessThanOrEqual(bottom.viewportHeight + 0.5);
 
     const rules = await collectStyleRules(page);
-    const bottomNavRules = rules.filter((text) => text.includes('app-shell-bottomnav'));
-    expect(bottomNavRules.some((text) => /padding-bottom:\s*34px/.test(text))).toBe(true);
+    const joined = rules.join('\n');
+    expect(joined.includes('--app-shell-bottomnav-pad: 34px') || joined.includes('--app-shell-bottomnav-pad:34px')).toBe(
+      true,
+    );
+    expect(joined).toMatch(/var\(--app-shell-bottomnav-pad,\s*34px\)/);
 
     // The PR 46 pattern WebKit dropped on Joseph's iPhone.
-    const maxWithEnv = bottomNavRules.some(
+    const maxWithEnv = rules.some(
       (text) =>
+        text.includes('app-shell-bottomnav') &&
         text.includes('max(') &&
         text.includes('safe-area-inset-bottom') &&
         text.includes('padding-bottom'),
@@ -171,12 +178,13 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     expect(closedPad).toBeGreaterThanOrEqual(34);
 
     await page.getByRole('button', { name: 'Open menu' }).click();
-    await expect(page.getByText('Powered by Makoons Technologies')).toBeVisible();
+    const drawerFooter = page.getByLabel('Navigation menu').getByText('Powered by Makoons Technologies');
+    await expect(drawerFooter).toBeVisible();
 
     const openPad = await nav.evaluate((el) => parseFloat(getComputedStyle(el).paddingBottom));
     expect(openPad).toBeGreaterThanOrEqual(34);
 
-    const footerPad = await page.getByText('Powered by Makoons Technologies').evaluate((el) => {
+    const footerPad = await drawerFooter.evaluate((el) => {
       const footer = el.closest('div');
       return footer ? parseFloat(getComputedStyle(footer).paddingBottom) : 0;
     });
