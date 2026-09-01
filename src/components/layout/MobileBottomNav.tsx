@@ -18,6 +18,7 @@ import { getPlatformOrgBase, isPlatformOrgAdminPath } from '@/components/layout/
 import { cn } from '@/lib/utils';
 import { useOrgOwnerTour } from '@/context/OrgOwnerTourContext';
 import { orgTourTargetFromTo } from '@/lib/org-owner-tour';
+import { APP_SHELL_BOTTOMNAV_PAD_STYLE } from '@/lib/app-shell-viewport';
 
 interface BottomNavItem {
   key: string;
@@ -28,7 +29,19 @@ interface BottomNavItem {
 }
 
 const bottomNavClassName =
-  'app-shell-bottomnav shrink-0 border-t border-stone-200 px-safe-or-2 pb-safe-or-2 pt-1 dark:border-stone-800 desktop-shell:hidden';
+  'app-shell-bottomnav shrink-0 border-t border-stone-200 px-safe-or-2 pt-1 dark:border-stone-800 desktop-shell:hidden';
+
+/** Same expression as MobileSidebar footer — no env() inside max() (BEA-83 / PR 46). */
+const bottomNavStyle = { paddingBottom: APP_SHELL_BOTTOMNAV_PAD_STYLE };
+
+function bottomNavProps() {
+  return {
+    className: bottomNavClassName,
+    style: bottomNavStyle,
+    'aria-label': 'Primary navigation' as const,
+    'data-testid': 'app-shell-bottomnav',
+  };
+}
 
 function BottomNavLink({ item, active }: { item: BottomNavItem; active: boolean }) {
   const { isActive: tourActive, currentTarget } = useOrgOwnerTour();
@@ -80,7 +93,7 @@ export function MobileBottomNav() {
       ];
 
       return (
-        <nav className={bottomNavClassName} aria-label="Primary navigation" data-testid="app-shell-bottomnav">
+        <nav {...bottomNavProps()}>
           <div className="mx-auto flex max-w-lg items-stretch justify-center gap-1">
             {items.map((item) => (
               <BottomNavLink key={item.key} item={item} active={item.match(location.pathname, orgBase)} />
@@ -122,7 +135,7 @@ export function MobileBottomNav() {
     ];
 
     return (
-      <nav className={bottomNavClassName} aria-label="Primary navigation" data-testid="app-shell-bottomnav">
+      <nav {...bottomNavProps()}>
         <div className="mx-auto flex max-w-lg items-stretch justify-between gap-1">
           {items.map((item) => (
             <BottomNavLink key={item.key} item={item} active={item.match(location.pathname, '')} />
@@ -155,7 +168,7 @@ export function MobileBottomNav() {
     ];
 
     return (
-      <nav className={bottomNavClassName} aria-label="Primary navigation" data-testid="app-shell-bottomnav">
+      <nav {...bottomNavProps()}>
         <div className="mx-auto flex max-w-lg items-stretch justify-center gap-1">
           {items.map((item) => (
             <BottomNavLink key={item.key} item={item} active={item.match(location.pathname, platformOrgBase)} />
@@ -191,7 +204,7 @@ export function MobileBottomNav() {
     ];
 
     return (
-      <nav className={bottomNavClassName} aria-label="Primary navigation" data-testid="app-shell-bottomnav">
+      <nav {...bottomNavProps()}>
         <div className="mx-auto flex max-w-lg items-stretch justify-center gap-1">
           {items.map((item) => (
             <BottomNavLink key={item.key} item={item} active={item.match(location.pathname, '')} />
@@ -257,7 +270,7 @@ export function MobileBottomNav() {
         ];
 
   return (
-    <nav className={bottomNavClassName} aria-label="Primary navigation" data-testid="app-shell-bottomnav">
+    <nav {...bottomNavProps()}>
       <div className="mx-auto flex max-w-lg items-stretch justify-between gap-1">
         {items.map((item) => (
           <BottomNavLink

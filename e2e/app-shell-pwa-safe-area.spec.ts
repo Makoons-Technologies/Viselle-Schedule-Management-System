@@ -9,14 +9,14 @@ import {
 const IPHONE_UA =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
 
-async function openPlatformOrganizations(page: Page) {
+async function openPlatformDashboard(page: Page) {
   await page.addInitScript(() => {
     sessionStorage.setItem('viselle.a2hs-banner.dismissed', '1');
   });
   await mockAuthMe(page, platformOwnerUser);
   await mockPlatformDashboardApis(page);
   await seedStoredToken(page);
-  await page.goto('/platform/organizations');
+  await page.goto('/platform/dashboard');
   await expect(page.getByTestId('app-shell-title')).toHaveText('Viselle Platform');
 }
 
@@ -47,6 +47,24 @@ async function emulateIosStandalonePwa(page: Page) {
   });
 }
 
+function collectStyleRules(page: Page) {
+  return page.evaluate(() => {
+    const texts: string[] = [];
+    for (const sheet of document.styleSheets) {
+      let rules: CSSRuleList;
+      try {
+        rules = sheet.cssRules;
+      } catch {
+        continue;
+      }
+      for (const rule of rules) {
+        texts.push(rule.cssText);
+      }
+    }
+    return texts;
+  });
+}
+
 test.describe('BEA-83 PWA safe-area chrome', () => {
   test.use({
     viewport: { width: 390, height: 844 },
@@ -56,9 +74,11 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     userAgent: IPHONE_UA,
   });
 
-  test('standalone: no extra top pad; bottom nav uses safe-area inset', async ({ page }) => {
+  test('standalone: no extra top pad; bottom nav uses drawer-style pad, not max+env', async ({
+    page,
+  }) => {
     await emulateIosStandalonePwa(page);
-    await openPlatformOrganizations(page);
+    await openPlatformDashboard(page);
 
     await expect(page.locator('html')).toHaveClass(/standalone-pwa/);
     await expect(page.locator('html')).toHaveClass(/app-shell/);
@@ -98,45 +118,73 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     const bottom = await nav.evaluate((el) => {
       const style = getComputedStyle(el);
       const icon = el.querySelector('svg');
+      const label = el.querySelector('span');
       const iconBox = icon?.getBoundingClientRect();
+      const labelBox = label?.getBoundingClientRect();
       const navBox = el.getBoundingClientRect();
       return {
         paddingBottom: style.paddingBottom,
-        safeAreaBottom: getComputedStyle(document.documentElement).getPropertyValue('--safe-area-bottom').trim(),
+        inlinePad: (el as HTMLElement).style.paddingBottom,
+        safeAreaBottom: getComputedStyle(document.documentElement)
+          .getPropertyValue('--safe-area-bottom')
+          .trim(),
+        navPadVar: getComputedStyle(document.documentElement)
+          .getPropertyValue('--app-shell-bottomnav-pad')
+          .trim(),
         iconBottom: iconBox?.bottom ?? 0,
+        labelBottom: labelBox?.bottom ?? 0,
         navBottom: navBox.bottom,
         viewportHeight: window.innerHeight,
       };
     });
 
-    // iOS standalone fallback when env() is 0 (Chromium here; real iPhone when env lies).
+    // Resolved pixel floor — not env() inside max() (PR 46).
     expect(parseFloat(bottom.paddingBottom)).toBeGreaterThanOrEqual(34);
     expect(bottom.safeAreaBottom).toBe('34px');
+    expect(bottom.navPadVar).toBe('34px');
+    expect(bottom.inlinePad).toContain('var(--safe-area-bottom)');
+    expect(bottom.inlinePad).not.toContain('safe-area-inset-bottom');
     expect(bottom.iconBottom).toBeLessThanOrEqual(bottom.navBottom - 34 + 0.5);
+    expect(bottom.labelBottom).toBeLessThanOrEqual(bottom.navBottom - 34 + 0.5);
     expect(bottom.navBottom).toBeLessThanOrEqual(bottom.viewportHeight + 0.5);
 
-    const cssUsesEnv = await page.evaluate(() => {
-      const sheets = [...document.styleSheets];
-      for (const sheet of sheets) {
-        let rules: CSSRuleList;
-        try {
-          rules = sheet.cssRules;
-        } catch {
-          continue;
-        }
-        for (const rule of rules) {
-          if (rule.cssText.includes('app-shell-bottomnav') && rule.cssText.includes('safe-area-inset-bottom')) {
-            return true;
-          }
-        }
-      }
-      return false;
+    const rules = await collectStyleRules(page);
+    const bottomNavRules = rules.filter((text) => text.includes('app-shell-bottomnav'));
+    expect(bottomNavRules.some((text) => /padding-bottom:\s*34px/.test(text))).toBe(true);
+
+    // The PR 46 pattern WebKit dropped on Joseph's iPhone.
+    const maxWithEnv = bottomNavRules.some(
+      (text) =>
+        text.includes('max(') &&
+        text.includes('safe-area-inset-bottom') &&
+        text.includes('padding-bottom'),
+    );
+    expect(maxWithEnv).toBe(false);
+  });
+
+  test('standalone: drawer open must not be required for tab padding', async ({ page }) => {
+    await emulateIosStandalonePwa(page);
+    await openPlatformDashboard(page);
+
+    const nav = page.getByTestId('app-shell-bottomnav');
+    const closedPad = await nav.evaluate((el) => parseFloat(getComputedStyle(el).paddingBottom));
+    expect(closedPad).toBeGreaterThanOrEqual(34);
+
+    await page.getByRole('button', { name: 'Open menu' }).click();
+    await expect(page.getByText('Powered by Makoons Technologies')).toBeVisible();
+
+    const openPad = await nav.evaluate((el) => parseFloat(getComputedStyle(el).paddingBottom));
+    expect(openPad).toBeGreaterThanOrEqual(34);
+
+    const footerPad = await page.getByText('Powered by Makoons Technologies').evaluate((el) => {
+      const footer = el.closest('div');
+      return footer ? parseFloat(getComputedStyle(footer).paddingBottom) : 0;
     });
-    expect(cssUsesEnv).toBe(true);
+    expect(footerPad).toBeGreaterThanOrEqual(12);
   });
 
   test('Safari in-tab: topbar can still take notch pad; title paint unchanged', async ({ page }) => {
-    await openPlatformOrganizations(page);
+    await openPlatformDashboard(page);
 
     await expect(page.locator('html')).not.toHaveClass(/standalone-pwa/);
 
@@ -161,8 +209,10 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     expect(top.titleFilter).toMatch(/^(none)?$/);
     expect(top.titleTransform).toBe('none');
 
-    const navPad = await page.getByTestId('app-shell-bottomnav').evaluate((el) => getComputedStyle(el).paddingBottom);
-    // Non-PWA: no 34px iOS fallback; utility floor is 0.5rem.
+    const navPad = await page
+      .getByTestId('app-shell-bottomnav')
+      .evaluate((el) => getComputedStyle(el).paddingBottom);
+    // Non-PWA: no 34px iOS fallback; utility/content floor is 0.5rem.
     expect(parseFloat(navPad)).toBe(8);
   });
 });

@@ -10,6 +10,16 @@ export const STANDALONE_PWA_CLASS = 'standalone-pwa';
 /** Portrait iPhone home-indicator height when `env(safe-area-inset-bottom)` reports 0 under 100vh. */
 export const IOS_STANDALONE_HOME_INDICATOR_FALLBACK_PX = 34;
 
+/** 0.5rem floor matching the old `pb-safe-or-2` content inset. */
+export const APP_SHELL_BOTTOMNAV_CONTENT_PAD_PX = 8;
+
+/**
+ * Drawer-footer pattern. WebKit drops `max()` when `env(safe-area-inset-bottom)`
+ * is an argument (PR 46 FAIL on Joseph's iPhone). A var that JS sets to `34px`
+ * is safe — same expression the open drawer already uses.
+ */
+export const APP_SHELL_BOTTOMNAV_PAD_STYLE = 'max(0.5rem, var(--safe-area-bottom))';
+
 const FIRST_SHELL_SESSION_KEY = 'viselle-pwa-first-shell-viewport';
 
 /** Largest keyboard-closed height seen this orientation. Survives iOS shrinking 100vh after the keyboard. */
@@ -117,11 +127,19 @@ export function measureCssEnvInset(edge: 'top' | 'right' | 'bottom' | 'left'): n
   return px;
 }
 
+/** iOS standalone always keeps at least the home-indicator floor, even if env() is a lie > 0. */
+export function resolveSafeAreaBottomPx(measuredPx: number): number {
+  if (isIosStandaloneWebApp()) {
+    return Math.max(measuredPx, IOS_STANDALONE_HOME_INDICATOR_FALLBACK_PX);
+  }
+  return measuredPx;
+}
+
 export function setSafeAreaCSSProperties(root: HTMLElement = document.documentElement): void {
-  const bottom = measureCssEnvInset('bottom');
-  const bottomPx =
-    isIosStandaloneWebApp() && bottom <= 0 ? IOS_STANDALONE_HOME_INDICATOR_FALLBACK_PX : bottom;
+  const bottomPx = resolveSafeAreaBottomPx(measureCssEnvInset('bottom'));
+  const navPadPx = Math.max(APP_SHELL_BOTTOMNAV_CONTENT_PAD_PX, bottomPx);
   root.style.setProperty('--safe-area-bottom', `${bottomPx}px`);
+  root.style.setProperty('--app-shell-bottomnav-pad', `${navPadPx}px`);
 }
 
 /**

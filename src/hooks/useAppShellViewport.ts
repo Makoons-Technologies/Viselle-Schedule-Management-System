@@ -128,6 +128,7 @@ export function useAppShellViewport() {
       document.documentElement.classList.remove('app-shell');
       document.documentElement.style.removeProperty('--app-height');
       document.documentElement.style.removeProperty('--safe-area-bottom');
+      document.documentElement.style.removeProperty('--app-shell-bottomnav-pad');
       if (themeMeta && previousTheme) themeMeta.setAttribute('content', previousTheme);
       if (statusBarMeta && previousStatusBarStyle) {
         statusBarMeta.setAttribute('content', previousStatusBarStyle);
