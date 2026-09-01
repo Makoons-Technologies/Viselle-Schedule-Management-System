@@ -328,21 +328,34 @@
 }
 
 /*
- * BEA-83 — installed PWA safe areas (unlayered so these beat @utility padding).
+ * BEA-83 restage — PR 46 FAIL on Joseph's iPhone PWA.
  *
- * Bottom: .app-shell-bottomnav used pb-safe-or-2 → var(--safe-area-bottom).
- * On iOS standalone that token is often 0px while 100vh still paints under the
- * home indicator, so icons sit on the bar. Use env() at the point of use.
+ * WebKit drops a padding-bottom declaration when `max()` includes
+ * `env(safe-area-inset-bottom)` (3-arg max + env). Chromium accepts it, so
+ * Playwright passed while the real PWA still sat on the home indicator.
  *
- * Top: opaque apple-mobile-web-app-status-bar-style=black already insets the
- * webview. BEA-78's --app-shell-topbar-pad-top: var(--safe-area-top) then adds
- * a second empty/frosted band under the clock. Keep the 56px title row and do
- * not add filter/transform (title smear).
+ * The open drawer looked fine because its footer uses
+ * `max(0.75rem, var(--safe-area-bottom))` — no env() in max(). Match that,
+ * and keep a literal 34px floor on standalone so we do not depend on env()
+ * or on React having run.
  *
- * html.standalone-pwa covers navigator.standalone when the media query does not.
+ * Top: unchanged from PR 46. Opaque status-bar style already insets the
+ * webview — do not add BEA-78 notch pad (title smear / leftover chrome).
  */
 html.app-shell .app-shell-bottomnav {
-  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px), var(--safe-area-bottom));
+  box-sizing: border-box;
+  /* Drawer-footer pattern. Do not put env() inside this max() — WebKit drops it. */
+  padding-bottom: max(0.5rem, var(--safe-area-bottom));
+}
+
+html.standalone-pwa.app-shell {
+  --safe-area-bottom: 34px;
+  --app-shell-bottomnav-pad: 34px;
+}
+
+html.standalone-pwa.app-shell .app-shell-bottomnav {
+  /* Fallback 34px is a literal so a minifier cannot drop the home-indicator floor. */
+  padding-bottom: var(--app-shell-bottomnav-pad, 34px);
 }
 
 html.standalone-pwa.app-shell .app-shell-chrome:not(:has(*)) ~ * {
@@ -354,8 +367,13 @@ html.standalone-pwa.app-shell .app-shell-chrome {
 }
 
 @media (display-mode: standalone) {
+  html.app-shell {
+    --safe-area-bottom: 34px;
+    --app-shell-bottomnav-pad: 34px;
+  }
+
   html.app-shell .app-shell-bottomnav {
-    padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px), var(--safe-area-bottom));
+    padding-bottom: var(--app-shell-bottomnav-pad, 34px);
   }
 
   html.app-shell .app-shell-chrome:not(:has(*)) ~ * {

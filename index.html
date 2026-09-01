@@ -212,6 +212,11 @@
 
         if (isIosStandaloneWebApp()) {
           document.documentElement.style.setProperty('--app-height', '100vh');
+          // PR 46 set this only after React mounted, and CSS max()+env() was
+          // dropped by WebKit — tabs sat on the home indicator. Pin the floor
+          // before first paint so the drawer-style pad has a real pixel value.
+          document.documentElement.style.setProperty('--safe-area-bottom', '34px');
+          document.documentElement.style.setProperty('--app-shell-bottomnav-pad', '34px');
         }
 
         onViewportSettle();
