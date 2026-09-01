@@ -3,6 +3,7 @@ import {
   FIRST_SHELL_SETTLE_DELAYS_MS,
   KEYBOARD_CLOSE_DELAYS_MS,
   SETTLE_DELAYS_MS,
+  applyStandalonePwaClass,
   isKeyboardOpen,
   nudgeStandaloneViewportRecalc,
   resetRememberedAppHeight,
@@ -19,6 +20,7 @@ function isEditableFocusTarget(target: EventTarget | null): target is HTMLElemen
 export function useAppShellViewport() {
   useEffect(() => {
     document.documentElement.classList.add('app-shell');
+    applyStandalonePwaClass();
 
     const themeMeta = document.querySelector('meta[name="theme-color"]');
     const previousTheme = themeMeta?.getAttribute('content');
@@ -125,6 +127,7 @@ export function useAppShellViewport() {
     return () => {
       document.documentElement.classList.remove('app-shell');
       document.documentElement.style.removeProperty('--app-height');
+      document.documentElement.style.removeProperty('--safe-area-bottom');
       if (themeMeta && previousTheme) themeMeta.setAttribute('content', previousTheme);
       if (statusBarMeta && previousStatusBarStyle) {
         statusBarMeta.setAttribute('content', previousStatusBarStyle);

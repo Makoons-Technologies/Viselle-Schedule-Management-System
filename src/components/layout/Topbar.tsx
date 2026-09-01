@@ -130,7 +130,10 @@ export function Topbar() {
 
   return (
     <>
-    <header className="app-shell-topbar shrink-0 border-b border-stone-200 pt-[var(--app-shell-topbar-pad-top,0px)]">
+    <header
+      data-testid="app-shell-topbar"
+      className="app-shell-topbar shrink-0 border-b border-stone-200 pt-[var(--app-shell-topbar-pad-top,0px)]"
+    >
       {/*
         Notch padding is on the header; this row is a whole-pixel 56/64px flex
         box. Centering the title in calc(3.5rem + safe-area) put glyphs on a

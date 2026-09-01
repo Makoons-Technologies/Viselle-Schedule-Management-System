@@ -28,12 +28,13 @@ function AppLayoutContent() {
     <div className="flex h-full min-h-0 flex-col overflow-hidden overscroll-none bg-stone-50 dark:bg-stone-900">
       {/*
         Banners (when present) live in a solid slab with pt-safe. When they
-        are absent the slab is display:none and Topbar owns the notch padding.
-        Title paint is a separate WebKit issue (system font / no compositor
-        props on .app-shell-title) — see index.css BEA-78.
+        are absent the slab is display:none and Topbar owns the notch padding
+        in Safari-in-tab. Installed PWA (BEA-83) zeros that extra top pad —
+        the opaque status bar already insets — so we do not get a second
+        empty band. Title paint stays BEA-78 (system font / no compositor).
       */}
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="app-shell-chrome shrink-0 pt-safe">
+        <div className="app-shell-chrome shrink-0 pt-safe" data-testid="app-shell-chrome">
           <ImpersonationBanner />
           <OrgTrialBanner />
           <AddToHomeScreenBanner />

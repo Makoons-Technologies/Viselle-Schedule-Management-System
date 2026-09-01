@@ -69,56 +69,56 @@
 }
 
 @utility pt-safe {
-  padding-top: var(--safe-area-top);
+  padding-top: env(safe-area-inset-top, 0px);
 }
 @utility pr-safe {
-  padding-right: var(--safe-area-right);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 @utility pb-safe {
-  padding-bottom: var(--safe-area-bottom);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 @utility pl-safe {
-  padding-left: var(--safe-area-left);
+  padding-left: env(safe-area-inset-left, 0px);
 }
 @utility px-safe {
-  padding-left: var(--safe-area-left);
-  padding-right: var(--safe-area-right);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 @utility px-safe-or-2 {
-  padding-left: max(0.5rem, var(--safe-area-left));
-  padding-right: max(0.5rem, var(--safe-area-right));
+  padding-left: max(0.5rem, env(safe-area-inset-left, 0px), var(--safe-area-left));
+  padding-right: max(0.5rem, env(safe-area-inset-right, 0px), var(--safe-area-right));
 }
 @utility px-safe-or-3 {
-  padding-left: max(0.75rem, var(--safe-area-left));
-  padding-right: max(0.75rem, var(--safe-area-right));
+  padding-left: max(0.75rem, env(safe-area-inset-left, 0px), var(--safe-area-left));
+  padding-right: max(0.75rem, env(safe-area-inset-right, 0px), var(--safe-area-right));
 }
 @utility px-safe-or-6 {
-  padding-left: max(1.5rem, var(--safe-area-left));
-  padding-right: max(1.5rem, var(--safe-area-right));
+  padding-left: max(1.5rem, env(safe-area-inset-left, 0px), var(--safe-area-left));
+  padding-right: max(1.5rem, env(safe-area-inset-right, 0px), var(--safe-area-right));
 }
 @utility pb-safe-or-2 {
-  padding-bottom: max(0.5rem, var(--safe-area-bottom));
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px), var(--safe-area-bottom));
 }
 @utility pb-safe-or-3 {
-  padding-bottom: max(0.75rem, var(--safe-area-bottom));
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px), var(--safe-area-bottom));
 }
 @utility pt-safe-add-4 {
-  padding-top: calc(1rem + var(--safe-area-top));
+  padding-top: calc(1rem + env(safe-area-inset-top, 0px));
 }
 @utility pt-safe-add-6 {
-  padding-top: calc(1.5rem + var(--safe-area-top));
+  padding-top: calc(1.5rem + env(safe-area-inset-top, 0px));
 }
 @utility pb-safe-add-4 {
-  padding-bottom: calc(1rem + var(--safe-area-bottom));
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
 }
 @utility pb-safe-add-6 {
-  padding-bottom: calc(1.5rem + var(--safe-area-bottom));
+  padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
 }
 @utility p-safe-or-4 {
-  padding-top: max(1rem, var(--safe-area-top));
-  padding-right: max(1rem, var(--safe-area-right));
-  padding-bottom: max(1rem, var(--safe-area-bottom));
-  padding-left: max(1rem, var(--safe-area-left));
+  padding-top: max(1rem, env(safe-area-inset-top, 0px), var(--safe-area-top));
+  padding-right: max(1rem, env(safe-area-inset-right, 0px), var(--safe-area-right));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px), var(--safe-area-bottom));
+  padding-left: max(1rem, env(safe-area-inset-left, 0px), var(--safe-area-left));
 }
 
 @layer base {
@@ -324,5 +324,45 @@
 
   html[data-booking-ui='light'] {
     color-scheme: light;
+  }
+}
+
+/*
+ * BEA-83 — installed PWA safe areas (unlayered so these beat @utility padding).
+ *
+ * Bottom: .app-shell-bottomnav used pb-safe-or-2 → var(--safe-area-bottom).
+ * On iOS standalone that token is often 0px while 100vh still paints under the
+ * home indicator, so icons sit on the bar. Use env() at the point of use.
+ *
+ * Top: opaque apple-mobile-web-app-status-bar-style=black already insets the
+ * webview. BEA-78's --app-shell-topbar-pad-top: var(--safe-area-top) then adds
+ * a second empty/frosted band under the clock. Keep the 56px title row and do
+ * not add filter/transform (title smear).
+ *
+ * html.standalone-pwa covers navigator.standalone when the media query does not.
+ */
+html.app-shell .app-shell-bottomnav {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px), var(--safe-area-bottom));
+}
+
+html.standalone-pwa.app-shell .app-shell-chrome:not(:has(*)) ~ * {
+  --app-shell-topbar-pad-top: 0px;
+}
+
+html.standalone-pwa.app-shell .app-shell-chrome {
+  padding-top: 0px;
+}
+
+@media (display-mode: standalone) {
+  html.app-shell .app-shell-bottomnav {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px), var(--safe-area-bottom));
+  }
+
+  html.app-shell .app-shell-chrome:not(:has(*)) ~ * {
+    --app-shell-topbar-pad-top: 0px;
+  }
+
+  html.app-shell .app-shell-chrome {
+    padding-top: 0px;
   }
 }
