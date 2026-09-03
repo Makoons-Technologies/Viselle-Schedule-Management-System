@@ -7,6 +7,7 @@ import {
   Sparkles,
   UserCircle,
 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useOrg } from '@/context/OrgContext';
@@ -18,7 +19,11 @@ import { getPlatformOrgBase, isPlatformOrgAdminPath } from '@/components/layout/
 import { cn } from '@/lib/utils';
 import { useOrgOwnerTour } from '@/context/OrgOwnerTourContext';
 import { orgTourTargetFromTo } from '@/lib/org-owner-tour';
-import { APP_SHELL_BOTTOMNAV_PAD_STYLE } from '@/lib/app-shell-viewport';
+import {
+  APP_SHELL_BOTTOMNAV_PAD_STYLE,
+  getStandaloneBottomNavPadCSSValue,
+  isStandaloneWebApp,
+} from '@/lib/app-shell-viewport';
 
 interface BottomNavItem {
   key: string;
@@ -31,16 +36,36 @@ interface BottomNavItem {
 const bottomNavClassName =
   'app-shell-bottomnav shrink-0 border-t border-stone-200 px-safe-or-2 pt-1 dark:border-stone-800 desktop-shell:hidden';
 
-/** Same expression as MobileSidebar footer — no env() inside max() (BEA-83 / PR 46). */
-const bottomNavStyle = { paddingBottom: APP_SHELL_BOTTOMNAV_PAD_STYLE };
+function bottomNavPadStyle(): { paddingBottom: string } {
+  // Standalone: literal `34px` inline. WebKit dropped max()+env() (PR 46) and
+  // a 34px CSS pad still sat off-screen while the shell was 100vh-too-tall
+  // (PR 47). A pixel string cannot be dropped, and the bar is position:fixed.
+  if (typeof window !== 'undefined' && isStandaloneWebApp()) {
+    return { paddingBottom: getStandaloneBottomNavPadCSSValue() };
+  }
+  return { paddingBottom: APP_SHELL_BOTTOMNAV_PAD_STYLE };
+}
 
 function bottomNavProps() {
   return {
     className: bottomNavClassName,
-    style: bottomNavStyle,
+    style: bottomNavPadStyle(),
     'aria-label': 'Primary navigation' as const,
     'data-testid': 'app-shell-bottomnav',
   };
+}
+
+function BottomNavFrame({ children }: { children: ReactNode }) {
+  return (
+    <>
+      <div
+        className="app-shell-bottomnav-spacer desktop-shell:hidden"
+        aria-hidden
+        data-testid="app-shell-bottomnav-spacer"
+      />
+      <nav {...bottomNavProps()}>{children}</nav>
+    </>
+  );
 }
 
 function BottomNavLink({ item, active }: { item: BottomNavItem; active: boolean }) {
@@ -93,13 +118,13 @@ export function MobileBottomNav() {
       ];
 
       return (
-        <nav {...bottomNavProps()}>
+        <BottomNavFrame>
           <div className="mx-auto flex max-w-lg items-stretch justify-center gap-1">
             {items.map((item) => (
               <BottomNavLink key={item.key} item={item} active={item.match(location.pathname, orgBase)} />
             ))}
           </div>
-        </nav>
+        </BottomNavFrame>
       );
     }
 
@@ -135,13 +160,13 @@ export function MobileBottomNav() {
     ];
 
     return (
-      <nav {...bottomNavProps()}>
+      <BottomNavFrame>
         <div className="mx-auto flex max-w-lg items-stretch justify-between gap-1">
           {items.map((item) => (
             <BottomNavLink key={item.key} item={item} active={item.match(location.pathname, '')} />
           ))}
         </div>
-      </nav>
+      </BottomNavFrame>
     );
   }
 
@@ -168,13 +193,13 @@ export function MobileBottomNav() {
     ];
 
     return (
-      <nav {...bottomNavProps()}>
+      <BottomNavFrame>
         <div className="mx-auto flex max-w-lg items-stretch justify-center gap-1">
           {items.map((item) => (
             <BottomNavLink key={item.key} item={item} active={item.match(location.pathname, platformOrgBase)} />
           ))}
         </div>
-      </nav>
+      </BottomNavFrame>
     );
   }
 
@@ -204,13 +229,13 @@ export function MobileBottomNav() {
     ];
 
     return (
-      <nav {...bottomNavProps()}>
+      <BottomNavFrame>
         <div className="mx-auto flex max-w-lg items-stretch justify-center gap-1">
           {items.map((item) => (
             <BottomNavLink key={item.key} item={item} active={item.match(location.pathname, '')} />
           ))}
         </div>
-      </nav>
+      </BottomNavFrame>
     );
   }
 
@@ -270,7 +295,7 @@ export function MobileBottomNav() {
         ];
 
   return (
-    <nav {...bottomNavProps()}>
+    <BottomNavFrame>
       <div className="mx-auto flex max-w-lg items-stretch justify-between gap-1">
         {items.map((item) => (
           <BottomNavLink
@@ -285,6 +310,6 @@ export function MobileBottomNav() {
           />
         ))}
       </div>
-    </nav>
+    </BottomNavFrame>
   );
 }

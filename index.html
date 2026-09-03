@@ -5,7 +5,7 @@
     <link rel="icon" type="image/svg+xml" href="/viselle-logo.svg?v=20260811a" />
     <link rel="icon" type="image/png" href="/favicon.png?v=20260811a" sizes="48x48" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260811a" />
-    <link rel="manifest" href="/manifest.webmanifest?v=20260819a" />
+    <link rel="manifest" href="/manifest.webmanifest?v=20260903a" />
     <meta name="theme-color" content="#2a0f1e" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -173,13 +173,36 @@
           return h;
         }
 
+        // Layout viewport (webview). Do not use 100vh — that is the SCREEN and
+        // overflows by the opaque status bar on iOS standalone (BEA-83).
+        function measureLayoutViewportHeight() {
+          var client = (document.documentElement && document.documentElement.clientHeight) || 0;
+          var parent = document.body || document.documentElement;
+          if (!parent) return client;
+          var el = document.createElement('div');
+          el.setAttribute('aria-hidden', 'true');
+          el.style.cssText = 'position:fixed;inset:0;visibility:hidden;pointer-events:none;';
+          parent.appendChild(el);
+          var probe = Math.round(el.getBoundingClientRect().height);
+          el.remove();
+          return Math.max(client, probe);
+        }
+
         function getAppHeightCSSValue() {
-          if (isIosStandaloneWebApp() && !isKeyboardOpen()) return '100vh';
+          if (isKeyboardOpen()) return measureBrowserAppHeight() + 'px';
+          if (isIosStandaloneWebApp()) {
+            var h = Math.max(measureBrowserAppHeight(), measureLayoutViewportHeight());
+            if (h >= 400) return h + 'px';
+            return '-webkit-fill-available';
+          }
           return measureBrowserAppHeight() + 'px';
         }
 
         function setAppHeight() {
           document.documentElement.style.setProperty('--app-height', getAppHeightCSSValue());
+          if (isIosStandaloneWebApp() && !isKeyboardOpen()) {
+            document.documentElement.style.setProperty('--app-shell-keyboard-inset', '0px');
+          }
         }
 
         // This script runs in <head> before <body>. Reading document.body.scrollTop
@@ -235,12 +258,12 @@
         }
 
         if (isIosStandaloneWebApp()) {
-          document.documentElement.style.setProperty('--app-height', '100vh');
-          // PR 46 set this only after React mounted, and CSS max()+env() was
-          // dropped by WebKit — tabs sat on the home indicator. Pin the floor
-          // before first paint so the drawer-style pad has a real pixel value.
+          // Never 100vh (screen, not webview). Fill-available is the webview
+          // until the layout probe returns a pixel height.
+          document.documentElement.style.setProperty('--app-height', '-webkit-fill-available');
           document.documentElement.style.setProperty('--safe-area-bottom', '34px');
           document.documentElement.style.setProperty('--app-shell-bottomnav-pad', '34px');
+          document.documentElement.style.setProperty('--app-shell-keyboard-inset', '0px');
         }
 
         onViewportSettle();

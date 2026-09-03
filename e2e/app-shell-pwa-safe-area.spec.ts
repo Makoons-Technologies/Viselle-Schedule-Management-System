@@ -68,6 +68,7 @@ function collectStyleRules(page: Page) {
   });
 }
 
+// Chromium is a regression guard only. Joseph's iPhone PWA is the PASS criterion.
 test.describe('BEA-83 PWA safe-area chrome', () => {
   test.use({
     viewport: { width: 390, height: 844 },
@@ -77,7 +78,7 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     userAgent: IPHONE_UA,
   });
 
-  test('standalone: no extra top pad; bottom nav uses drawer-style pad, not max+env', async ({
+  test('standalone: webview-sized shell, fixed tab bar, literal 34px pad, no 100vh', async ({
     page,
   }) => {
     await emulateIosStandalonePwa(page);
@@ -94,6 +95,13 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
       const row = el.querySelector(':scope > div');
       const title = el.querySelector('[data-testid="app-shell-title"]');
       const titleStyle = title ? getComputedStyle(title) : null;
+      const ancestorBackdrop: string[] = [];
+      let node: HTMLElement | null = el;
+      while (node) {
+        const cs = getComputedStyle(node);
+        ancestorBackdrop.push(cs.backdropFilter || cs.getPropertyValue('backdrop-filter'));
+        node = node.parentElement;
+      }
       return {
         paddingTop: style.paddingTop,
         rowHeight: row?.getBoundingClientRect().height ?? 0,
@@ -102,6 +110,8 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
         titleFilter: titleStyle?.filter ?? '',
         titleTransform: titleStyle?.transform ?? '',
         titleBackdrop: titleStyle?.backdropFilter ?? '',
+        headerBackdrop: style.backdropFilter,
+        ancestorBackdrop,
       };
     });
 
@@ -114,6 +124,8 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     expect(top.titleFilter).toMatch(/^(none)?$/);
     expect(top.titleTransform).toBe('none');
     expect(top.titleBackdrop === 'none' || top.titleBackdrop === '').toBeTruthy();
+    expect(top.headerBackdrop === 'none' || top.headerBackdrop === '').toBeTruthy();
+    expect(top.ancestorBackdrop.every((value) => value === 'none' || value === '')).toBeTruthy();
 
     const nav = page.getByTestId('app-shell-bottomnav');
     await expect(nav).toBeVisible();
@@ -125,31 +137,55 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
       const iconBox = icon?.getBoundingClientRect();
       const labelBox = label?.getBoundingClientRect();
       const navBox = el.getBoundingClientRect();
+      const probe = document.createElement('div');
+      probe.style.cssText = 'position:fixed;inset:0;visibility:hidden;pointer-events:none;';
+      document.body.appendChild(probe);
+      const layoutH = Math.round(probe.getBoundingClientRect().height);
+      probe.remove();
       return {
         paddingBottom: style.paddingBottom,
         inlinePad: (el as HTMLElement).style.paddingBottom,
+        position: style.position,
+        bottom: style.bottom,
         safeAreaBottom: getComputedStyle(document.documentElement)
           .getPropertyValue('--safe-area-bottom')
           .trim(),
         navPadVar: getComputedStyle(document.documentElement)
           .getPropertyValue('--app-shell-bottomnav-pad')
           .trim(),
+        appHeight: getComputedStyle(document.documentElement).getPropertyValue('--app-height').trim(),
         iconBottom: iconBox?.bottom ?? 0,
         labelBottom: labelBox?.bottom ?? 0,
         navBottom: navBox.bottom,
         viewportHeight: window.innerHeight,
+        layoutHeight: layoutH,
+        rootHeight: document.getElementById('root')?.getBoundingClientRect().height ?? 0,
       };
     });
 
-    // Resolved pixel floor — not env() inside max() (PR 46).
+    // PRs 46/47: 34px pad sat off-screen because --app-height was 100vh (screen).
+    expect(bottom.appHeight).not.toBe('100vh');
+    expect(bottom.appHeight.includes('100vh')).toBe(false);
+    expect(bottom.appHeight === '-webkit-fill-available' || parseFloat(bottom.appHeight) > 0).toBeTruthy();
+    expect(bottom.rootHeight).toBeLessThanOrEqual(bottom.layoutHeight + 0.5);
+    expect(bottom.position).toBe('fixed');
+    expect(bottom.bottom).toBe('0px');
+
+    // Literal pixel pad — not env() inside max() (PR 46) and not a var-only hope.
     expect(parseFloat(bottom.paddingBottom)).toBeGreaterThanOrEqual(34);
     expect(bottom.safeAreaBottom).toBe('34px');
     expect(bottom.navPadVar).toBe('34px');
-    expect(bottom.inlinePad).toContain('var(--safe-area-bottom)');
+    expect(bottom.inlinePad).toBe('34px');
     expect(bottom.inlinePad).not.toContain('safe-area-inset-bottom');
+    expect(bottom.inlinePad).not.toContain('max(');
     expect(bottom.iconBottom).toBeLessThanOrEqual(bottom.navBottom - 34 + 0.5);
     expect(bottom.labelBottom).toBeLessThanOrEqual(bottom.navBottom - 34 + 0.5);
-    expect(bottom.navBottom).toBeLessThanOrEqual(bottom.viewportHeight + 0.5);
+    expect(bottom.navBottom).toBeLessThanOrEqual(Math.min(bottom.viewportHeight, bottom.layoutHeight) + 0.5);
+
+    const spacer = page.getByTestId('app-shell-bottomnav-spacer');
+    await expect(spacer).toBeAttached();
+    const spacerH = await spacer.evaluate((el) => el.getBoundingClientRect().height);
+    expect(spacerH).toBeGreaterThanOrEqual(52 + 34);
 
     const rules = await collectStyleRules(page);
     const joined = rules.join('\n');
@@ -157,6 +193,8 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
       true,
     );
     expect(joined).toMatch(/var\(--app-shell-bottomnav-pad,\s*34px\)/);
+    expect(joined).toContain('-webkit-fill-available');
+    expect(rules.some((text) => /height:\s*var\(--app-height,\s*100vh\)/.test(text))).toBe(false);
 
     // The PR 46 pattern WebKit dropped on Joseph's iPhone.
     const maxWithEnv = rules.some(
@@ -167,6 +205,14 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
         text.includes('padding-bottom'),
     );
     expect(maxWithEnv).toBe(false);
+
+    // Do not reintroduce backdrop-filter on chrome (even `none` composites).
+    const chromeBackdrop = rules.some(
+      (text) =>
+        (text.includes('app-shell-chrome') || text.includes('app-shell-topbar') || text.includes('app-shell-title')) &&
+        text.includes('backdrop-filter'),
+    );
+    expect(chromeBackdrop).toBe(false);
   });
 
   test('standalone: drawer open must not be required for tab padding', async ({ page }) => {

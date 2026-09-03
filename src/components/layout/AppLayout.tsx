@@ -29,9 +29,10 @@ function AppLayoutContent() {
       {/*
         Banners (when present) live in a solid slab with pt-safe. When they
         are absent the slab is display:none and Topbar owns the notch padding
-        in Safari-in-tab. Installed PWA (BEA-83) zeros that extra top pad —
-        the opaque status bar already insets — so we do not get a second
-        empty band. Title paint stays BEA-78 (system font / no compositor).
+        in Safari-in-tab. Installed PWA zeros that extra top pad — the opaque
+        status bar already insets. Title paint is BEA-78 (system font, no
+        backdrop-filter on this stack). Bottom nav is BEA-83 (webview height
+        + fixed bar + literal 34px pad, not 100vh).
       */}
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="app-shell-chrome shrink-0 pt-safe" data-testid="app-shell-chrome">

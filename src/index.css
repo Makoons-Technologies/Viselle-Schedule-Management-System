@@ -153,14 +153,14 @@
     text-size-adjust: 100%;
   }
 
-  /* iOS standalone: 100dvh/innerHeight lie on cold start (WebKit #254868). After the
-   * keyboard, 100vh can shrink and leave a lip; JS sets --app-height to max(100vh, remembered). */
+  /* iOS standalone: never fall back to 100vh (that is the SCREEN, not the
+   * webview, and overflows by the opaque status-bar — BEA-83). */
   @media (display-mode: standalone) {
     html.app-shell,
     html.app-shell body,
     html.app-shell #root {
-      height: var(--app-height, 100vh);
-      max-height: var(--app-height, 100vh);
+      height: var(--app-height, -webkit-fill-available);
+      max-height: var(--app-height, -webkit-fill-available);
     }
   }
 
@@ -174,17 +174,16 @@
 
   /*
    * App-shell chrome: opaque slab, no glass.
-   * Do not set filter/transform/isolation even to "none" — WebKit treats those
-   * properties as a compositing layer and rasterizes in-flow glyphs at 1x
-   * (icons stay vector-sharp; "Viselle Platform" looks like a scaled bitmap).
-   * PRs 38–40 already removed backdrop-filter / isolate / truncate. BEA-78
-   * remaining issue is title text paint, not a frost overlay.
+   * Do not set filter / backdrop-filter / transform / isolation / will-change
+   * even to "none" — WebKit promotes the box to a compositing layer and
+   * rasterizes in-flow glyphs at 1x (icons stay vector-sharp; "Viselle
+   * Platform" looks like a scaled bitmap). PRs 38–41 already removed frost;
+   * the leftover `backdrop-filter: none !important` on this stack was still
+   * a compositor trigger (BEA-78 restage 2026-09-03).
    */
   html.app-shell .app-shell-chrome,
   html.app-shell .app-shell-topbar,
   html.app-shell .app-shell-bottomnav {
-    -webkit-backdrop-filter: none !important;
-    backdrop-filter: none !important;
     overflow: visible;
     background-color: #ffffff;
   }
@@ -206,17 +205,13 @@
   }
 
   /*
-   * Title must paint like the page heading, not like chrome.
-   * Body uses Inter + antialiased (grayscale AA). On iOS that combo at 14px/600
-   * inside a flex+calc header snapshots as a smear; SF Pro at 16px with the
-   * default smoother matches the hamburger's crisp edges.
+   * Title: system font at 16px (PR 41, Joseph-confirmed) in a whole-pixel
+   * line box. No font-smoothing / text-rendering / -webkit-text-fill overrides
+   * — those create a different paint path from the sharp body heading.
+   * font-synthesis:none avoids a synthetic bold smear if 600 is missing.
    */
   html.app-shell .app-shell-title {
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
-      system-ui, sans-serif;
-    -webkit-font-smoothing: auto;
-    -moz-osx-font-smoothing: auto;
-    text-rendering: geometricPrecision;
+    font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     font-synthesis: none;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
@@ -328,34 +323,58 @@
 }
 
 /*
- * BEA-83 restage — PR 46 FAIL on Joseph's iPhone PWA.
+ * BEA-83 restage 2026-09-03.
  *
- * WebKit drops a padding-bottom declaration when `max()` includes
- * `env(safe-area-inset-bottom)` (3-arg max + env). Chromium accepts it, so
- * Playwright passed while the real PWA still sat on the home indicator.
+ * PRs 46/47 put a 34px pad on the tab bar, but `--app-height: 100vh` made the
+ * flex column taller than the iOS webview. The pad sat in the clipped overflow
+ * so only the top of the icons showed under the home indicator.
  *
- * The open drawer looked fine because its footer uses
- * `max(0.75rem, var(--safe-area-bottom))` — no env() in max(). Match that,
- * and keep a literal 34px floor on standalone so we do not depend on env()
- * or on React having run.
- *
- * Top: unchanged from PR 46. Opaque status-bar style already insets the
- * webview — do not add BEA-78 notch pad (title smear / leftover chrome).
+ * 1. Size the shell to the webview (`-webkit-fill-available` / JS layout probe),
+ *    never 100vh.
+ * 2. Pin the tab bar with `position: fixed; bottom: 0` so it tracks the
+ *    layout viewport even if height is still wrong. Keyboard uses
+ *    `--app-shell-keyboard-inset`.
+ * 3. Literal 34px pad — no `max(env())`. WebKit drops that (PR 46).
+ * 4. In-flow spacer so main content is not hidden behind the fixed bar.
  */
 html.app-shell .app-shell-bottomnav {
   box-sizing: border-box;
-  /* Drawer-footer pattern. Do not put env() inside this max() — WebKit drops it. */
+  /* Safari-in-tab. Do not put env() inside this max() — WebKit drops it. */
   padding-bottom: max(0.5rem, var(--safe-area-bottom));
+}
+
+html.app-shell .app-shell-bottomnav-spacer {
+  display: none;
 }
 
 html.standalone-pwa.app-shell {
   --safe-area-bottom: 34px;
   --app-shell-bottomnav-pad: 34px;
+  --app-shell-keyboard-inset: 0px;
+}
+
+html.standalone-pwa.app-shell,
+html.standalone-pwa.app-shell body,
+html.standalone-pwa.app-shell #root {
+  height: var(--app-height, -webkit-fill-available);
+  max-height: var(--app-height, -webkit-fill-available);
 }
 
 html.standalone-pwa.app-shell .app-shell-bottomnav {
-  /* Fallback 34px is a literal so a minifier cannot drop the home-indicator floor. */
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: var(--app-shell-keyboard-inset, 0px);
+  z-index: 30;
+  /* Literal 34px fallback — do not wrap env() in max(). */
+  padding-bottom: 34px;
   padding-bottom: var(--app-shell-bottomnav-pad, 34px);
+}
+
+html.standalone-pwa.app-shell .app-shell-bottomnav-spacer {
+  display: block;
+  flex-shrink: 0;
+  height: calc(3.25rem + var(--app-shell-bottomnav-pad, 34px));
 }
 
 html.standalone-pwa.app-shell .app-shell-chrome:not(:has(*)) ~ * {
@@ -366,14 +385,39 @@ html.standalone-pwa.app-shell .app-shell-chrome {
   padding-top: 0px;
 }
 
+@media (min-width: 1024px), ((min-width: 768px) and (min-height: 768px)) {
+  html.standalone-pwa.app-shell .app-shell-bottomnav-spacer {
+    display: none;
+  }
+}
+
 @media (display-mode: standalone) {
+  html.app-shell,
+  html.app-shell body,
+  html.app-shell #root {
+    height: var(--app-height, -webkit-fill-available);
+    max-height: var(--app-height, -webkit-fill-available);
+  }
+
   html.app-shell {
     --safe-area-bottom: 34px;
     --app-shell-bottomnav-pad: 34px;
   }
 
   html.app-shell .app-shell-bottomnav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: var(--app-shell-keyboard-inset, 0px);
+    z-index: 30;
+    padding-bottom: 34px;
     padding-bottom: var(--app-shell-bottomnav-pad, 34px);
+  }
+
+  html.app-shell .app-shell-bottomnav-spacer {
+    display: block;
+    flex-shrink: 0;
+    height: calc(3.25rem + var(--app-shell-bottomnav-pad, 34px));
   }
 
   html.app-shell .app-shell-chrome:not(:has(*)) ~ * {
@@ -382,5 +426,11 @@ html.standalone-pwa.app-shell .app-shell-chrome {
 
   html.app-shell .app-shell-chrome {
     padding-top: 0px;
+  }
+
+  @media (min-width: 1024px), ((min-width: 768px) and (min-height: 768px)) {
+    html.app-shell .app-shell-bottomnav-spacer {
+      display: none;
+    }
   }
 }

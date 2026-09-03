@@ -181,17 +181,17 @@ export function Topbar() {
             <div className="min-w-0 overflow-visible">
               <p
                 data-testid="app-shell-title"
-                className="app-shell-title text-base font-semibold leading-5 text-stone-900 dark:text-stone-100"
+                className="app-shell-title h-5 text-base font-semibold leading-5 text-stone-900 dark:text-stone-100"
               >
                 {businessName ?? 'Viselle'}
               </p>
               {selectedOrgFromContext && (
-                <p className="app-shell-title text-xs leading-4 text-stone-500 dark:text-stone-400">
+                <p className="app-shell-title h-4 text-xs leading-4 text-stone-500 dark:text-stone-400">
                   /{selectedOrgFromContext.slug}
                 </p>
               )}
               {!selectedOrgFromContext && (
-                <p className="app-shell-title text-xs capitalize leading-4 text-stone-500 dark:text-stone-400 desktop-shell:hidden">
+                <p className="app-shell-title h-4 text-xs capitalize leading-4 text-stone-500 dark:text-stone-400 desktop-shell:hidden">
                   {user?.role?.replace('_', ' ')}
                 </p>
               )}

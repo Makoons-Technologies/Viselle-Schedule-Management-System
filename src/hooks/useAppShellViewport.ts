@@ -129,6 +129,7 @@ export function useAppShellViewport() {
       document.documentElement.style.removeProperty('--app-height');
       document.documentElement.style.removeProperty('--safe-area-bottom');
       document.documentElement.style.removeProperty('--app-shell-bottomnav-pad');
+      document.documentElement.style.removeProperty('--app-shell-keyboard-inset');
       if (themeMeta && previousTheme) themeMeta.setAttribute('content', previousTheme);
       if (statusBarMeta && previousStatusBarStyle) {
         statusBarMeta.setAttribute('content', previousStatusBarStyle);
