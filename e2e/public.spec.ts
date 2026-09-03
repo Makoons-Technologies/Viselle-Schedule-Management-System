@@ -11,6 +11,7 @@ test.describe('public marketing', () => {
     await expect(
       page.getByRole('heading', { name: /The shops Viselle is built for/i }),
     ).toBeVisible();
+    await page.getByRole('button', { name: 'Sources' }).click();
     await expect(page.getByRole('link', { name: 'bls.gov/cew' })).toHaveAttribute(
       'href',
       'https://www.bls.gov/cew/',
@@ -56,7 +57,7 @@ test.describe('public marketing', () => {
     await page.goto('/docs');
     await expect(page.getByRole('heading', { name: 'Docs' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Public booking API' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'llms.txt' })).toBeVisible();
+    await expect(page.getByRole('main').getByRole('link', { name: 'llms.txt' })).toBeVisible();
   });
 
   test('blog and versus switcher pages render logged out', async ({ page }) => {
@@ -66,7 +67,7 @@ test.describe('public marketing', () => {
 
     await page.goto('/versus/glossgenius');
     await expect(page.getByRole('heading', { name: 'Viselle vs GlossGenius' })).toBeVisible();
-    await expect(page.getByRole('link', { name: /vs Square/i })).toBeVisible();
+    await expect(page.getByLabel('Compare Viselle').getByRole('link', { name: 'vs Square' })).toBeVisible();
 
     await page.goto('/versus/square');
     await expect(page.getByRole('heading', { name: 'Viselle vs Square Appointments' })).toBeVisible();
