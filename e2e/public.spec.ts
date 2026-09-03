@@ -8,6 +8,8 @@ test.describe('public marketing', () => {
     ).toBeVisible();
     await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible();
     await expect(page.locator('header').getByRole('link', { name: 'Contact' })).toBeVisible();
+    await expect(page.locator('header').getByRole('link', { name: 'Viselle on Instagram' })).toBeVisible();
+    await expect(page.locator('header').getByRole('link', { name: 'Viselle on TikTok' })).toBeVisible();
     await expect(
       page.getByRole('heading', { name: /The shops Viselle is built for/i }),
     ).toBeVisible();
@@ -16,6 +18,37 @@ test.describe('public marketing', () => {
       'href',
       'https://www.bls.gov/cew/',
     );
+
+    const footer = page.locator('footer');
+    await expect(footer.getByRole('link', { name: 'Viselle on Instagram' })).toHaveAttribute(
+      'href',
+      'https://www.instagram.com/getviselle',
+    );
+    await expect(footer.getByRole('link', { name: 'Viselle on TikTok' })).toHaveAttribute(
+      'href',
+      'https://www.tiktok.com/@getviselle',
+    );
+    await expect(footer.getByRole('link', { name: 'Viselle on Facebook' })).toHaveAttribute(
+      'href',
+      'https://www.facebook.com/people/Viselle/61593664348103/',
+    );
+    await expect(footer.getByRole('link', { name: 'Viselle on LinkedIn' })).toHaveAttribute(
+      'href',
+      'https://www.linkedin.com/company/viselle/',
+    );
+
+    const jsonLdRaw = await page.locator('script#page-jsonld').textContent();
+    expect(jsonLdRaw).toBeTruthy();
+    const jsonLd = JSON.parse(jsonLdRaw ?? '[]') as Array<{ '@type'?: string; sameAs?: string[] }>;
+    const org = jsonLd.find((node) => node['@type'] === 'Organization');
+    const app = jsonLd.find((node) => node['@type'] === 'SoftwareApplication');
+    expect(org?.sameAs).toEqual([
+      'https://www.instagram.com/getviselle',
+      'https://www.tiktok.com/@getviselle',
+      'https://www.facebook.com/people/Viselle/61593664348103/',
+      'https://www.linkedin.com/company/viselle/',
+    ]);
+    expect(app?.sameAs).toEqual(org?.sameAs);
   });
 
   test('mobile header does not overlay Contact on the wordmark (BEA-82)', async ({ page }) => {
@@ -44,6 +77,8 @@ test.describe('public marketing', () => {
     }
 
     await expect(page.locator('footer').getByRole('link', { name: /Contact/i })).toBeVisible();
+    await expect(header.getByRole('link', { name: 'Viselle on Instagram' })).toHaveCount(0);
+    await expect(page.locator('footer').getByRole('link', { name: 'Viselle on Instagram' })).toBeVisible();
   });
 
   test('pricing and docs routes render logged out', async ({ page }) => {
@@ -58,6 +93,14 @@ test.describe('public marketing', () => {
     await expect(page.getByRole('heading', { name: 'Docs' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Public booking API' })).toBeVisible();
     await expect(page.getByRole('main').getByRole('link', { name: 'llms.txt' })).toBeVisible();
+
+    const llms = await page.request.get('/llms.txt');
+    expect(llms.ok()).toBeTruthy();
+    const llmsText = await llms.text();
+    expect(llmsText).toContain('https://www.instagram.com/getviselle');
+    expect(llmsText).toContain('https://www.tiktok.com/@getviselle');
+    expect(llmsText).toContain('https://www.facebook.com/people/Viselle/61593664348103/');
+    expect(llmsText).toContain('https://www.linkedin.com/company/viselle/');
   });
 
   test('blog and versus switcher pages render logged out', async ({ page }) => {

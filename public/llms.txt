@@ -40,6 +40,15 @@ Beauty and wellness businesses — hair salons, spas, nail studios, estheticians
 
 Salon booking pages are available at `https://viselle.net/book/{slug}` and, when enabled, on hosted subdomains like `https://yourspa.viselle.net`.
 
+## Social
+
+Official Viselle profiles. Instagram and TikTok use @getviselle.
+
+- Instagram: https://www.instagram.com/getviselle
+- TikTok: https://www.tiktok.com/@getviselle
+- Facebook: https://www.facebook.com/people/Viselle/61593664348103/
+- LinkedIn: https://www.linkedin.com/company/viselle/
+
 ## Contact
 
 hello@viselle.net

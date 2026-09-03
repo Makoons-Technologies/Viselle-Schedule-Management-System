@@ -3,6 +3,7 @@ import {
   industryStats,
   softwareApplicationIndustryProperties,
 } from '@/lib/industry-stats';
+import { VISELLE_SOCIAL_SAME_AS } from '@/content/social';
 import { absoluteUrl, SITE_NAME, SITE_ORIGIN } from '@/lib/seo';
 
 export interface MarketingSeoConfig {
@@ -25,6 +26,7 @@ const organizationJsonLd = {
   description:
     'Viselle is scheduling software for salons, spas, and beauty studios — online booking, staff schedules, and client reminders.',
   email: 'hello@viselle.net',
+  sameAs: [...VISELLE_SOCIAL_SAME_AS],
 };
 
 const softwareJsonLd = {
@@ -36,6 +38,7 @@ const softwareJsonLd = {
   url: SITE_ORIGIN,
   description:
     'Appointment scheduling and online booking for beauty and wellness businesses. Manage staff, services, reminders, and a public booking page.',
+  sameAs: [...VISELLE_SOCIAL_SAME_AS],
   offers: {
     '@type': 'Offer',
     url: absoluteUrl('/pricing'),
