@@ -222,7 +222,7 @@ test.describe('BEA-78 app-shell title paint', () => {
 
     const sonnerToastRules = rules.filter((text) => text.includes('data-sonner-toast'));
     expect(sonnerToastRules.some((text) => /transform:\s*none/i.test(text))).toBe(true);
-    expect(sonnerToastRules.some((text) => /animation:\s*none/i.test(text))).toBe(true);
+    expect(sonnerToastRules.some((text) => /transition:\s*none/i.test(text))).toBe(true);
 
     const chromeBackdrop = rules.filter((text) => {
       const sel = text.slice(0, text.indexOf('{') === -1 ? text.length : text.indexOf('{'));
