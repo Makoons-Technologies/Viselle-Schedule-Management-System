@@ -207,12 +207,35 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     expect(maxWithEnv).toBe(false);
 
     // Do not reintroduce backdrop-filter on chrome (even `none` composites).
-    const chromeBackdrop = rules.some(
-      (text) =>
-        (text.includes('app-shell-chrome') || text.includes('app-shell-topbar') || text.includes('app-shell-title')) &&
-        text.includes('backdrop-filter'),
-    );
-    expect(chromeBackdrop).toBe(false);
+    const chromeBackdrop = await page.evaluate(() => {
+      const hits: string[] = [];
+      const walk = (list: CSSRuleList) => {
+        for (const rule of list) {
+          if (rule instanceof CSSStyleRule) {
+            const sel = rule.selectorText || '';
+            if (
+              (sel.includes('app-shell-chrome') ||
+                sel.includes('app-shell-topbar') ||
+                sel.includes('app-shell-title')) &&
+              (rule.style.backdropFilter || rule.style.getPropertyValue('backdrop-filter'))
+            ) {
+              hits.push(rule.cssText);
+            }
+          }
+          const nested = (rule as CSSGroupingRule).cssRules;
+          if (nested) walk(nested);
+        }
+      };
+      for (const sheet of document.styleSheets) {
+        try {
+          walk(sheet.cssRules);
+        } catch {
+          // Cross-origin sheets are not readable.
+        }
+      }
+      return hits;
+    });
+    expect(chromeBackdrop).toEqual([]);
   });
 
   test('standalone: drawer open must not be required for tab padding', async ({ page }) => {
