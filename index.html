@@ -178,10 +178,18 @@
           return measureBrowserAppHeight() + 'px';
         }
 
+        function setAppHeight() {
+          document.documentElement.style.setProperty('--app-height', getAppHeightCSSValue());
+        }
+
+        // This script runs in <head> before <body>. Reading document.body.scrollTop
+        // throws (QA leftover after #26/#27). Window scroller only — assigning
+        // documentElement/body.scrollTop also cancels nested overflow-x fling.
         function resetWindowScroll() {
-          if (window.scrollX || window.scrollY) window.scrollTo(0, 0);
-          if (document.documentElement.scrollTop) document.documentElement.scrollTop = 0;
-          if (document.body.scrollTop) document.body.scrollTop = 0;
+          try {
+            if ((window.scrollX || 0) === 0 && (window.scrollY || 0) === 0) return;
+            window.scrollTo(0, 0);
+          } catch (e) {}
         }
 
         function scheduleSettle(delays) {
@@ -193,6 +201,7 @@
         function onViewportSettle() {
           if (isKeyboardOpen()) {
             keyboardWasOpen = true;
+            setAppHeight();
             return;
           }
           if (keyboardWasOpen) {
@@ -200,7 +209,22 @@
             scheduleSettle(KEYBOARD_CLOSE_DELAYS);
           }
           resetWindowScroll();
-          document.documentElement.style.setProperty('--app-height', getAppHeightCSSValue());
+          setAppHeight();
+        }
+
+        function onVisualViewportResize() {
+          if (isKeyboardOpen()) {
+            keyboardWasOpen = true;
+            setAppHeight();
+            return;
+          }
+          if (keyboardWasOpen) {
+            keyboardWasOpen = false;
+            scheduleSettle(KEYBOARD_CLOSE_DELAYS);
+            return;
+          }
+          // Height only. resetWindowScroll here snaps calendar overflow-x mid-flick.
+          setAppHeight();
         }
 
         function onFocusOut(event) {
@@ -227,8 +251,7 @@
         window.addEventListener('pageshow', onViewportSettle);
         window.addEventListener('focusout', onFocusOut);
         if (window.visualViewport) {
-          window.visualViewport.addEventListener('resize', onViewportSettle);
-          window.visualViewport.addEventListener('scroll', onViewportSettle);
+          window.visualViewport.addEventListener('resize', onVisualViewportResize);
         }
       })();
     </script>
