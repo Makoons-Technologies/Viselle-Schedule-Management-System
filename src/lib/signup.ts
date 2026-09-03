@@ -173,6 +173,14 @@ export function calculateSignupCart(input: {
   };
 }
 
+/**
+ * 14-day `free_no_card` code that matches the live homepage offer.
+ * Start-free-trial CTAs pass this so get-started can still apply a real campaign
+ * when `GET /signup/trials/homepage` is null (staging after BEA-23 had no homepage row).
+ * Checkout still validates the code — this is not a paid-plan bypass.
+ */
+export const HOMEPAGE_TRIAL_FALLBACK_CODE = 'HOMEPAGE14';
+
 export function getStartedPath(params?: {
   plan?: SignupTierId;
   subdomain?: boolean;
@@ -188,6 +196,11 @@ export function getStartedPath(params?: {
   if (params?.trial) search.set('trial', '1');
   const query = search.toString();
   return query ? `/get-started?${query}` : '/get-started';
+}
+
+/** Hero / marketing “Start free trial” — homepage campaign flag plus 14-day fallback code. */
+export function homepageTrialStartPath() {
+  return getStartedPath({ trial: true, code: HOMEPAGE_TRIAL_FALLBACK_CODE });
 }
 
 export async function fetchSignupCatalog() {

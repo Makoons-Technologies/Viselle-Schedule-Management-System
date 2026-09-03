@@ -4,7 +4,7 @@
  */
 
 import { PLAN_TIERS, priceMonthlyDollars } from '@/lib/plan-features';
-import { getStartedPath } from '@/lib/signup';
+import { homepageTrialStartPath } from '@/lib/signup';
 
 /** Live marketing + production homepage campaign duration. */
 export const DEFAULT_TRIAL_DAYS = 14;
@@ -181,4 +181,4 @@ export const BLOG_POSTS: BlogPostMeta[] = [
   },
 ];
 
-export const trialStartPath = getStartedPath({ trial: true });
+export const trialStartPath = homepageTrialStartPath();

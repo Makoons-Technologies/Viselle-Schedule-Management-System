@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { marketingSeo } from '@/content/marketing-seo';
 import { ApiError } from '@/lib/api';
 import { bookDemo, demoDayKey, fetchDemoSlots, formatDemoDayLabel, formatDemoTime } from '@/lib/demo';
-import { getStartedPath } from '@/lib/signup';
+import { trialStartPath } from '@/content/marketing-landing';
 import { MARKETING_SHELL_CLASS } from '@/lib/marketing-theme';
 import { cn } from '@/lib/utils';
 import type { DemoBooking, DemoSlot } from '@/types/api';
@@ -96,7 +96,7 @@ export function RequestDemoPage() {
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Button asChild>
-                <Link to={getStartedPath()}>Start a trial now</Link>
+                <Link to={trialStartPath}>Start a trial now</Link>
               </Button>
               <Button asChild variant="outline" className="border-white/30 bg-white/5 text-white hover:bg-white/15 hover:text-white">
                 <Link to="/">Back to home</Link>

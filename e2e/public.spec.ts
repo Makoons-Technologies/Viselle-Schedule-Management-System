@@ -76,7 +76,12 @@ test.describe('public marketing', () => {
 
   test('homepage trial CTA, steps, FAQ, and vertical chips', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('link', { name: 'Start free trial' }).first()).toBeVisible();
+    const trialCta = page.getByRole('link', { name: 'Start free trial' }).first();
+    await expect(trialCta).toBeVisible();
+    await expect(trialCta).toHaveAttribute('href', /\/get-started\?/);
+    const trialHref = await trialCta.getAttribute('href');
+    expect(trialHref).toContain('trial=1');
+    expect(trialHref).toContain('code=HOMEPAGE14');
     await expect(page.getByRole('link', { name: 'Request a demo' }).first()).toBeVisible();
     await expect(page.getByRole('heading', { name: /Live booking page today/i })).toBeVisible();
     await expect(page.getByRole('heading', { name: /Questions owners actually ask/i })).toBeVisible();

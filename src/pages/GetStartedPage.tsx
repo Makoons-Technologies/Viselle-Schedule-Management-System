@@ -34,6 +34,7 @@ import {
   fetchLiveHomepageTrial,
   fetchSignupCatalog,
   formatCents,
+  HOMEPAGE_TRIAL_FALLBACK_CODE,
   previewSignupCart,
   slugifyBusinessName,
   validateTrialCode,
@@ -436,6 +437,7 @@ export function GetStartedPage() {
   const [trialOffer, setTrialOffer] = useState<ResolvedTrialOffer | null>(null);
   const [committedTrialCode, setCommittedTrialCode] = useState('');
   const [homepageTrial, setHomepageTrial] = useState<TrialCampaign | null>(null);
+  const [homepageTrialResolved, setHomepageTrialResolved] = useState(!trialParam);
   const [provisionedResult, setProvisionedResult] = useState<{
     organizationId: string;
     slug: string;
@@ -476,12 +478,22 @@ export function GetStartedPage() {
 
   useEffect(() => {
     if (!trialParam) return;
+    let cancelled = false;
     fetchLiveHomepageTrial()
-      .then((campaign) => setHomepageTrial(campaign))
-      .catch(() => setHomepageTrial(null));
-    // Only needs to run once on mount for the homepage-CTA entry path.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+      .then((campaign) => {
+        if (cancelled) return;
+        setHomepageTrial(campaign);
+        setHomepageTrialResolved(true);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setHomepageTrial(null);
+        setHomepageTrialResolved(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [trialParam]);
 
   const commitTrialCode = useCallback(async (rawCode: string) => {
     const trimmed = rawCode.trim().toUpperCase();
@@ -518,12 +530,21 @@ export function GetStartedPage() {
     }
   }, []);
 
-  // Validate ?code= from the URL once on mount (skipped when homepage trial is selected).
+  // Paid get-started (`?code=` only): validate the URL code once on mount.
   useEffect(() => {
-    if (!initialCode.trim() || trialParam) return;
+    if (trialParam || !initialCode.trim()) return;
     void commitTrialCode(initialCode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Homepage CTA (`?trial=1`): prefer the live homepage campaign. If staging (or any
+  // env) has no homepage row, apply ?code= or the 14-day HOMEPAGE14 fallback so the
+  // cart still shows the free trial. Never invent a $0 path without a valid API offer.
+  useEffect(() => {
+    if (!trialParam || !homepageTrialResolved || homepageTrial) return;
+    const fallback = initialCode.trim() || HOMEPAGE_TRIAL_FALLBACK_CODE;
+    void commitTrialCode(fallback);
+  }, [trialParam, homepageTrialResolved, homepageTrial, initialCode, commitTrialCode]);
 
   const handleTrialCodeChange = useCallback((next: string) => {
     trialValidateSeq.current += 1;
