@@ -63,15 +63,15 @@ export const GET_STARTED_STEPS = [
 export const OWNER_STORY_CARDS = [
   {
     setting: 'A booth renter in Springfield',
-    body: 'Phone tag between color appointments is the whole afternoon. A booking page that shows real openings means the next client picks a time while you are still at the bowl.',
+    body: 'The phone rings while both hands are in the color bowl. You miss it, call back at the rinse, and they already booked somewhere else. A booking page that shows real openings means the next client picks a time while you are still at the bowl.',
   },
   {
     setting: 'A two-chair salon in Greene County',
-    body: 'Most hair, nail, and skin care shops have fewer than five people on payroll. Two calendars in one place — without a spreadsheet — is the actual job.',
+    body: 'Two paper books on the desk, plus Instagram DMs that never make it into either one. Saturday gets double-booked; Tuesday sits empty. One shared calendar for both chairs — clients pick a time instead of sliding into the DMs.',
   },
   {
-    setting: 'A spa booker who still texts no-shows',
-    body: 'Email reminders go out before the visit so you are not the reminder system. Texts are a Professional and Business feature; outbound texts on viselle.net wait on carrier review.',
+    setting: 'A nail studio that still books by phone',
+    body: 'A walk-in found you on maps, then the phone on the counter with no book button. They left. A booking page plus an email before the visit means you are not chasing every fill the night before. Texts are a Professional and Business feature; outbound texts on viselle.net wait on carrier review.',
   },
 ] as const;
 
