@@ -15,7 +15,7 @@ export function OwnerStoriesSection() {
           </h2>
           <p className="mt-3 text-white/70">
             Composite sketches — no shop names, no invented testimonials.{' '}
-            {shopCountQuote()} {greeneCountyLine()}
+            {shopCountQuote()} {greeneCountyLine()} The day on the floor looks more like this.
           </p>
         </div>
         <div className="mt-12 grid gap-6 md:grid-cols-3">
