@@ -229,6 +229,45 @@
   }
 
   /*
+   * BEA-78 follow-up (Joseph 2026-09-03): dismissing the green
+   * "Welcome back!" toast re-smears "Viselle Platform".
+   *
+   * Sonner 2 pins a full-width toast at the top on phones
+   * (`@media (max-width: 600px)`), with `transform: var(--y)` and a
+   * 400ms translateY leave. That fixed+transform layer sits on the
+   * title; when it unmounts WebKit leaves the header on a 1× bitmap
+   * (same compositor path as the leftover `backdrop-filter: none` from
+   * PR 48). Instant show/hide. Do not add filter / transform /
+   * backdrop-filter / will-change to the chrome stack itself.
+   */
+  html.standalone-pwa [data-sonner-toaster],
+  html.app-shell [data-sonner-toaster] {
+    transition: none;
+  }
+
+  html.standalone-pwa [data-sonner-toaster][data-x-position='center'],
+  html.app-shell [data-sonner-toaster][data-x-position='center'] {
+    transform: none;
+  }
+
+  html.standalone-pwa [data-sonner-toast],
+  html.standalone-pwa [data-sonner-toast][data-mounted='true'],
+  html.standalone-pwa [data-sonner-toast][data-removed='true'],
+  html.standalone-pwa [data-sonner-toast][data-swiping='true'],
+  html.standalone-pwa [data-sonner-toast][data-swipe-out='true'],
+  html.app-shell [data-sonner-toast],
+  html.app-shell [data-sonner-toast][data-mounted='true'],
+  html.app-shell [data-sonner-toast][data-removed='true'],
+  html.app-shell [data-sonner-toast][data-swiping='true'],
+  html.app-shell [data-sonner-toast][data-swipe-out='true'] {
+    --y: translateY(0);
+    transform: none !important;
+    animation: none !important;
+    transition: none !important;
+    will-change: auto;
+  }
+
+  /*
    * Installed PWA marketing pages: keep the status-bar / overscroll region dark.
    * The app shell overrides this so the tab bar is not sitting on maroon.
    */
