@@ -3,7 +3,11 @@ User-agent: *
 Allow: /
 Allow: /contact
 Allow: /get-started
+Allow: /pricing
+Allow: /docs
 Allow: /docs/api
+Allow: /blog
+Allow: /versus/
 Allow: /releases
 Allow: /book/
 Allow: /llms.txt

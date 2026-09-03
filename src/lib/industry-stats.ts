@@ -5,6 +5,7 @@
  * Do not invent no-show rates or third-party estimates. Numbers come from QCEW
  * (payroll establishments, private ownership) or the verified fallback below.
  */
+import { marketingFaqEntities } from '../content/marketing-faq-items';
 import { industryStatsSnapshot } from '../generated/industry-stats.snapshot';
 
 export const BLS_QCEW_HOME = 'https://www.bls.gov/cew/';
@@ -247,6 +248,7 @@ export function buildIndustryFaqPage(stats: IndustryStats = industryStats): Reco
           text: `${greeneCountyLine(stats)} ${formatCount(stats.greeneCounty.beautySalons.establishments)} beauty, ${formatCount(stats.greeneCounty.nailSalons.establishments)} nail, ${formatCount(stats.greeneCounty.barberShops.establishments)} barber. Missouri has ${formatCount(stats.missouri.hairNailSkin.establishments)} shops. Source: BLS QCEW, ${period}.`,
         },
       },
+      ...marketingFaqEntities(),
     ],
   };
 }
