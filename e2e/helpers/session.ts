@@ -48,6 +48,16 @@ export async function mockAuthMe(page: Page, user: object, options?: { delayMs?:
   });
 }
 
+export async function mockPlatformLogin(page: Page, user: object = platformOwnerUser, token = 'e2e-session-token') {
+  await page.route('**/auth/login', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ token, user, memberships: [] }),
+    });
+  });
+}
+
 export async function mockPlatformDashboardApis(page: Page) {
   await page.route('**/owner/organizations', async (route) => {
     await route.fulfill({
