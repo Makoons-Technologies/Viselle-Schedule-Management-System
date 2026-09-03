@@ -7,18 +7,31 @@ export const FIRST_SHELL_SETTLE_DELAYS_MS = [0, 16, 32, 64, 128, 250, 500, 1000]
 /** Matches CSS (`html.standalone-pwa`). `navigator.standalone` can be true when the media query is not. */
 export const STANDALONE_PWA_CLASS = 'standalone-pwa';
 
-/** Portrait iPhone home-indicator height when `env(safe-area-inset-bottom)` reports 0 under 100vh. */
+/** Portrait iPhone home-indicator height when `env(safe-area-inset-bottom)` reports 0. */
 export const IOS_STANDALONE_HOME_INDICATOR_FALLBACK_PX = 34;
 
 /** 0.5rem floor matching the old `pb-safe-or-2` content inset. */
 export const APP_SHELL_BOTTOMNAV_CONTENT_PAD_PX = 8;
 
 /**
- * Drawer-footer pattern. WebKit drops `max()` when `env(safe-area-inset-bottom)`
- * is an argument (PR 46 FAIL on Joseph's iPhone). A var that JS sets to `34px`
- * is safe — same expression the open drawer already uses.
+ * pt-1 (4px) + min-h-12 tab links (48px). Used with the home-indicator pad
+ * for the in-flow spacer under a `position:fixed` standalone tab bar.
+ */
+export const APP_SHELL_BOTTOMNAV_CONTENT_HEIGHT_PX = 52;
+
+/**
+ * Safari-in-tab only. WebKit drops `max()` when `env(safe-area-inset-bottom)`
+ * is an argument (PR 46 FAIL). Standalone uses a literal pixel string instead.
  */
 export const APP_SHELL_BOTTOMNAV_PAD_STYLE = 'max(0.5rem, var(--safe-area-bottom))';
+
+/**
+ * CSS fallback for --app-height on iOS standalone. `100vh` is the SCREEN
+ * (status bar + webview) while `black` status-bar-style already places the
+ * webview below the status bar — so 100vh overflows by ~47–59px and clips
+ * the tab bar (BEA-83, PRs 46/47). `-webkit-fill-available` is the webview.
+ */
+export const APP_SHELL_STANDALONE_HEIGHT_FALLBACK = '-webkit-fill-available';
 
 const FIRST_SHELL_SESSION_KEY = 'viselle-pwa-first-shell-viewport';
 
@@ -57,7 +70,7 @@ export function measureBrowserAppHeight(): number {
   return Math.max(inner, Math.round(vv.height + vv.offsetTop));
 }
 
-/** Live CSS 100vh in pixels. Can shrink after the iOS keyboard even when the screen did not. */
+/** Live CSS 100vh in pixels. Do not use this to size the iOS standalone shell. */
 export function measureCss100vh(): number {
   if (typeof document === 'undefined' || !document.body) return 0;
   if (!vhProbe) {
@@ -68,6 +81,57 @@ export function measureCss100vh(): number {
     document.body.appendChild(vhProbe);
   }
   return vhProbe.offsetHeight;
+}
+
+/**
+ * Layout viewport — the webview box `position:fixed;inset:0` actually gets.
+ * On iOS standalone + opaque status bar this is shorter than `100vh` (the
+ * screen) and more honest than cold-start `innerHeight` (WebKit #254868).
+ */
+export function measureLayoutViewportHeight(): number {
+  if (typeof document === 'undefined') return 0;
+  const client = document.documentElement?.clientHeight || 0;
+  const parent = document.body || document.documentElement;
+  if (!parent) return client;
+  const el = document.createElement('div');
+  el.setAttribute('aria-hidden', 'true');
+  el.style.cssText = 'position:fixed;inset:0;visibility:hidden;pointer-events:none;';
+  parent.appendChild(el);
+  const probe = Math.round(el.getBoundingClientRect().height);
+  el.remove();
+  return Math.max(client, probe);
+}
+
+/** CSS `-webkit-fill-available` in pixels (the webview, not the device screen). */
+export function measureCssFillAvailable(): number {
+  if (typeof document === 'undefined') return 0;
+  const parent = document.body || document.documentElement;
+  if (!parent) return 0;
+  const el = document.createElement('div');
+  el.setAttribute('aria-hidden', 'true');
+  el.style.cssText =
+    'position:fixed;top:0;left:0;width:0;height:-webkit-fill-available;visibility:hidden;pointer-events:none;';
+  parent.appendChild(el);
+  const px = el.offsetHeight || 0;
+  el.remove();
+  return px;
+}
+
+/** Literal pixel pad for the tab bar. Never `max()`+`env()` — WebKit drops that. */
+export function resolveBottomNavPadPx(): number {
+  return Math.max(APP_SHELL_BOTTOMNAV_CONTENT_PAD_PX, resolveSafeAreaBottomPx(measureCssEnvInset('bottom')));
+}
+
+export function getStandaloneBottomNavPadCSSValue(): string {
+  return `${IOS_STANDALONE_HOME_INDICATOR_FALLBACK_PX}px`;
+}
+
+export function getKeyboardInsetPx(): number {
+  if (!isKeyboardOpen()) return 0;
+  const vv = window.visualViewport;
+  const layout = measureLayoutViewportHeight();
+  const visual = vv ? Math.round(vv.height + vv.offsetTop) : measureBrowserAppHeight();
+  return Math.max(0, layout - visual);
 }
 
 export function resetRememberedAppHeight(): void {
@@ -84,7 +148,16 @@ function observeClosedHeight(px: number): void {
   }
 }
 
-/** CSS value for --app-height. iOS standalone keeps the pre-keyboard floor so the tab bar does not lift. */
+/**
+ * CSS value for --app-height.
+ *
+ * iOS standalone must NOT use `100vh`. With `apple-mobile-web-app-status-bar-style:
+ * black`, the webview is already below the status bar, but `100vh` is still the
+ * full device height. The shell overflows by the status-bar (~47–59px), the
+ * 34px home-indicator pad lands in the clipped overflow, and only the top of
+ * the tab icons show (BEA-83, Joseph 2026-09-03). Size to the layout viewport
+ * / `-webkit-fill-available` instead.
+ */
 export function getAppHeightCSSValue(): string {
   const measured = measureBrowserAppHeight();
   const keyboard = isKeyboardOpen();
@@ -93,22 +166,27 @@ export function getAppHeightCSSValue(): string {
     return `${measured}px`;
   }
 
-  const cssVh = measureCss100vh();
-  observeClosedHeight(Math.max(measured, cssVh));
-
   if (isIosStandaloneWebApp()) {
-    if (rememberedClosedHeightPx > 0) {
-      return `max(100vh, ${rememberedClosedHeightPx}px)`;
+    const layout = measureLayoutViewportHeight();
+    const fill = measureCssFillAvailable();
+    const h = Math.max(measured, layout, fill);
+    if (h >= 400) {
+      observeClosedHeight(h);
     }
-    return '100vh';
+    if (rememberedClosedHeightPx > 0) {
+      return `${rememberedClosedHeightPx}px`;
+    }
+    return h >= 400 ? `${h}px` : APP_SHELL_STANDALONE_HEIGHT_FALLBACK;
   }
 
+  observeClosedHeight(measured);
   return `${measured}px`;
 }
 
 export function setAppHeightCSSProperty(root: HTMLElement = document.documentElement): void {
   root.style.setProperty('--app-height', getAppHeightCSSValue());
   setSafeAreaCSSProperties(root);
+  root.style.setProperty('--app-shell-keyboard-inset', `${getKeyboardInsetPx()}px`);
 }
 
 /**
