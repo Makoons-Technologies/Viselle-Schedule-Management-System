@@ -436,6 +436,7 @@ export function GetStartedPage() {
   const [trialOffer, setTrialOffer] = useState<ResolvedTrialOffer | null>(null);
   const [committedTrialCode, setCommittedTrialCode] = useState('');
   const [homepageTrial, setHomepageTrial] = useState<TrialCampaign | null>(null);
+  const [homepageTrialResolved, setHomepageTrialResolved] = useState(!trialParam);
   const [provisionedResult, setProvisionedResult] = useState<{
     organizationId: string;
     slug: string;
@@ -476,12 +477,22 @@ export function GetStartedPage() {
 
   useEffect(() => {
     if (!trialParam) return;
+    let cancelled = false;
     fetchLiveHomepageTrial()
-      .then((campaign) => setHomepageTrial(campaign))
-      .catch(() => setHomepageTrial(null));
-    // Only needs to run once on mount for the homepage-CTA entry path.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+      .then((campaign) => {
+        if (cancelled) return;
+        setHomepageTrial(campaign);
+        setHomepageTrialResolved(true);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setHomepageTrial(null);
+        setHomepageTrialResolved(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [trialParam]);
 
   const commitTrialCode = useCallback(async (rawCode: string) => {
     const trimmed = rawCode.trim().toUpperCase();
@@ -518,12 +529,20 @@ export function GetStartedPage() {
     }
   }, []);
 
-  // Validate ?code= from the URL once on mount (skipped when homepage trial is selected).
+  // Paid get-started (`?code=` only): validate the URL code once on mount.
   useEffect(() => {
-    if (!initialCode.trim() || trialParam) return;
+    if (trialParam || !initialCode.trim()) return;
     void commitTrialCode(initialCode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Homepage CTA (`?trial=1`): apply GET /signup/trials/homepage when a live campaign
+  // exists. If that endpoint is still empty, apply a caller-supplied ?code= after
+  // API validation — never a hardcoded bypass code.
+  useEffect(() => {
+    if (!trialParam || !homepageTrialResolved || homepageTrial || !initialCode.trim()) return;
+    void commitTrialCode(initialCode);
+  }, [trialParam, homepageTrialResolved, homepageTrial, initialCode, commitTrialCode]);
 
   const handleTrialCodeChange = useCallback((next: string) => {
     trialValidateSeq.current += 1;

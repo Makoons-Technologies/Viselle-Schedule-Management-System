@@ -190,6 +190,11 @@ export function getStartedPath(params?: {
   return query ? `/get-started?${query}` : '/get-started';
 }
 
+/** Hero / marketing “Start free trial” — live homepage campaign via GET /signup/trials/homepage. */
+export function homepageTrialStartPath() {
+  return getStartedPath({ trial: true });
+}
+
 export async function fetchSignupCatalog() {
   const { data } = await signupClient.get<{
     catalog: {

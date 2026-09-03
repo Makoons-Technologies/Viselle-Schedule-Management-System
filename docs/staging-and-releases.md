@@ -43,6 +43,12 @@ Phases: alpha → beta (3-month trials) → GA (`1.0.0+`).
    - Stripe publishable key = **test** mode preferred
 5. After changing `VITE_*`, redeploy (Vite embeds them at build time).
 
+### Homepage “Start free trial” campaign
+
+The hero CTA goes to `/get-started?trial=1`. Get-started loads `GET /signup/trials/homepage` and, when a live campaign is returned, applies it (`useHomepageCampaign` at checkout). There is no frontend hardcoded trial code.
+
+Staging must have an enabled **homepage** row in `trial_campaigns` matching production (14-day `free_no_card`, `code` null, `locked_tier` professional — “Homepage Beta Period”). Seed that from the API/backend; do not invent a client-side $0 cart. Paid `/get-started` without `trial=1` is unchanged.
+
 ### CORS / login failures on staging
 
 If Network shows `login` as **CORS error** / preflight `(failed)`, the usual cause is **not** missing app CORS allowlist — the API uses open CORS. Check that the **staging API** Vercel project (`staging-api.viselle.net`) has **Deployment Protection disabled**. With Vercel Authentication on, `OPTIONS` redirects to SSO and the browser reports CORS. Details: Beauty-Backend-API `docs/staging-and-releases.md` (section “disable Vercel Deployment Protection”).
