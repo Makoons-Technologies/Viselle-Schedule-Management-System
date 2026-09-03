@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { PoweredByMakoons } from '@/components/common/PoweredByMakoons';
 import { ViselleLogo } from '@/components/common/ViselleLogo';
+import { MarketingSocialLinks } from '@/components/marketing/MarketingSocialLinks';
 import { cn } from '@/lib/utils';
 
 const navLinkClassName =
@@ -29,6 +30,7 @@ export function MarketingHeader() {
             <Link to="/request-demo" className={navLinkClassName}>
               Request a demo
             </Link>
+            <MarketingSocialLinks className="hidden lg:flex" size="sm" />
           </div>
           <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
             <Button asChild size="sm" variant="outline" className="border-white/30 bg-white/5 px-2 text-white hover:bg-white/15 hover:text-white sm:hidden sm:px-3">
@@ -60,6 +62,9 @@ export function MarketingFooter() {
           <ViselleLogo size={28} />
           <p className="text-sm">© {new Date().getFullYear()} Viselle. Built for beauty businesses.</p>
         </div>
+        <MarketingSocialLinks />
+      </div>
+      <div className="mx-auto mt-4 max-w-6xl px-4 sm:px-6">
         <p className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm">
           <Link to="/pricing" className="text-brand-300 hover:text-brand-200">
             Pricing
