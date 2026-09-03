@@ -11,6 +11,10 @@ import { ContactPage } from '@/pages/public/ContactPage';
 import { PrivacyPage } from '@/pages/public/PrivacyPage';
 import { TermsPage } from '@/pages/public/TermsPage';
 import { PublicApiDocsPage } from '@/pages/public/PublicApiDocsPage';
+import { DocsHubPage } from '@/pages/public/DocsHubPage';
+import { PricingPage } from '@/pages/public/PricingPage';
+import { BlogIndexPage } from '@/pages/public/BlogIndexPage';
+import { VersusPage } from '@/pages/public/VersusPage';
 import { ReleasesPage } from '@/pages/public/ReleasesPage';
 import { BusinessCardPage } from '@/pages/public/BusinessCardPage';
 import { SocialSharePage } from '@/pages/public/SocialSharePage';
@@ -102,7 +106,12 @@ export const appRoutes = [
   { path: '/privacy', element: <PrivacyPage /> },
   { path: '/terms', element: <TermsPage /> },
   { path: '/terms-and-conditions', element: <Navigate to="/terms" replace /> },
+  { path: '/pricing', element: <PricingPage /> },
+  { path: '/docs', element: <DocsHubPage /> },
   { path: '/docs/api', element: <PublicApiDocsPage /> },
+  { path: '/blog', element: <BlogIndexPage /> },
+  { path: '/versus/:slug', element: <VersusPage /> },
+  { path: '/versus', element: <Navigate to="/blog" replace /> },
   { path: '/releases', element: <ReleasesPage /> },
   { path: '/business-card', element: <BusinessCardPage /> },
   { path: '/social', element: <SocialSharePage /> },

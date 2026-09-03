@@ -50,8 +50,13 @@ Public (no login):
 
 | Path | Description |
 |------|-------------|
+| `/pricing` | Plans & pricing |
+| `/docs` | Docs hub (API, llms.txt, releases) |
 | `/docs/api` | Public Booking API developer docs |
 | `/developers` | Redirects to `/docs/api` |
+| `/blog` | Resources index |
+| `/versus/glossgenius` | Viselle vs GlossGenius |
+| `/versus/square` | Viselle vs Square Appointments |
 
 Source markdown for the docs page: `src/content/public-booking-api.md` (keep in sync with
 `Beauty-Backend-API/docs/public-booking-api.md`).
