@@ -38,7 +38,7 @@ const softwareJsonLd = {
     'Appointment scheduling and online booking for beauty and wellness businesses. Manage staff, services, reminders, and a public booking page.',
   offers: {
     '@type': 'Offer',
-    url: absoluteUrl('/#pricing'),
+    url: absoluteUrl('/pricing'),
     priceCurrency: 'USD',
     availability: 'https://schema.org/InStock',
   },
@@ -64,6 +64,42 @@ export const marketingSeo = {
     description:
       'See Viselle plans for salons, spas, and beauty studios. Online booking, staff scheduling, and reminders — choose the tier that fits your business.',
     path: '/#pricing',
+    image: defaultOgImage,
+  },
+  pricingPage: {
+    title: 'Plans & pricing',
+    description:
+      'Viselle plans: Starter $20, Professional $49, Business $99 per month. Every plan includes scheduling and a free online booking page. 14-day free trial.',
+    path: '/pricing',
+    image: defaultOgImage,
+    jsonLd: [organizationJsonLd, softwareJsonLd],
+  },
+  docs: {
+    title: 'Docs',
+    description:
+      'Viselle public docs — booking API, llms.txt, and release notes for salon scheduling and online booking.',
+    path: '/docs',
+    image: defaultOgImage,
+  },
+  blog: {
+    title: 'Resources',
+    description:
+      'Viselle resources for salon owners — honest comparisons with GlossGenius and Square, plus links to pricing and docs.',
+    path: '/blog',
+    image: defaultOgImage,
+  },
+  versusGlossgenius: {
+    title: 'Viselle vs GlossGenius',
+    description:
+      'An honest look at Viselle and GlossGenius for salon, spa, and beauty-studio owners who need scheduling and online booking.',
+    path: '/versus/glossgenius',
+    image: defaultOgImage,
+  },
+  versusSquare: {
+    title: 'Viselle vs Square Appointments',
+    description:
+      'An honest look at Viselle and Square Appointments for salon and spa owners comparing beauty-first scheduling with a general payments platform.',
+    path: '/versus/square',
     image: defaultOgImage,
   },
   websites: {

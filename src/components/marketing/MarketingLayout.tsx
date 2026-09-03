@@ -20,9 +20,9 @@ export function MarketingHeader() {
             <a href="/#websites" className={navLinkClassName}>
               Booking pages
             </a>
-            <a href="/#pricing" className={navLinkClassName}>
+            <Link to="/pricing" className={navLinkClassName}>
               Pricing
-            </a>
+            </Link>
             <Link to="/contact" className={cn(navLinkClassName, 'hidden md:inline')}>
               Contact
             </Link>
@@ -61,6 +61,21 @@ export function MarketingFooter() {
           <p className="text-sm">© {new Date().getFullYear()} Viselle. Built for beauty businesses.</p>
         </div>
         <p className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm">
+          <Link to="/pricing" className="text-brand-300 hover:text-brand-200">
+            Pricing
+          </Link>
+          <Link to="/docs" className="text-brand-300 hover:text-brand-200">
+            Docs
+          </Link>
+          <Link to="/blog" className="text-brand-300 hover:text-brand-200">
+            Resources
+          </Link>
+          <Link to="/versus/glossgenius" className="text-brand-300 hover:text-brand-200">
+            vs GlossGenius
+          </Link>
+          <Link to="/versus/square" className="text-brand-300 hover:text-brand-200">
+            vs Square
+          </Link>
           <Link to="/docs/api" className="text-brand-300 hover:text-brand-200">
             API docs
           </Link>

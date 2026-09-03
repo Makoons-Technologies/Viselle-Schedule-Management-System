@@ -75,7 +75,7 @@ export function PricingSection() {
           <p className="mt-4 text-lg text-white/70">
             Pick the features your team needs. Every plan includes scheduling plus a free online booking
             page — see{' '}
-            <a href="#websites" className="font-medium text-[#fdeb83] hover:underline">
+            <a href="/#websites" className="font-medium text-[#fdeb83] hover:underline">
               booking page options
             </a>{' '}
             above.

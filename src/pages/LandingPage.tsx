@@ -4,7 +4,10 @@ import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { ViselleLogo } from '@/components/common/ViselleLogo';
 import { MarketingFooter, MarketingHeader } from '@/components/marketing/MarketingLayout';
+import { GetStartedStepsSection } from '@/components/marketing/GetStartedStepsSection';
 import { IndustryStatsSection } from '@/components/marketing/IndustryStatsSection';
+import { MarketingFaqSection } from '@/components/marketing/MarketingFaqSection';
+import { OwnerStoriesSection } from '@/components/marketing/OwnerStoriesSection';
 import { PricingSection } from '@/components/marketing/PricingSection';
 import { WebsiteOptionsSection } from '@/components/marketing/WebsiteOptionsSection';
 import { PageSeo } from '@/components/seo/PageSeo';
@@ -13,6 +16,7 @@ import { marketingSeo } from '@/content/marketing-seo';
 import { useAutoMotionPermission } from '@/hooks/useFoilTilt';
 import { signedInHomePath } from '@/lib/auth-redirect';
 import { MARKETING_SHELL_CLASS } from '@/lib/marketing-theme';
+import { DEFAULT_TRIAL_DAYS, trialStartPath } from '@/content/marketing-landing';
 import { fetchLiveHomepageTrial, getStartedPath } from '@/lib/signup';
 import type { TrialCampaign } from '@/types/api';
 
@@ -39,7 +43,7 @@ const INDUSTRY_FEATURES = [
     icon: MessageSquare,
     title: 'Fewer no-shows',
     description:
-      'Automatic email and text reminders so clients remember their color, facial, or cut — without you chasing them down.',
+      'Automatic email reminders so clients remember their color, facial, or cut — without you chasing them down. Texts are a later Professional/Business option, not a live campaign tool.',
   },
   {
     icon: Users,
@@ -128,7 +132,10 @@ export function LandingPage() {
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Button asChild size="lg">
-              <Link to={getStartedPath()}>Get started</Link>
+              <Link to={trialStartPath}>
+                <Sparkles className="h-4 w-4" />
+                Start free trial
+              </Link>
             </Button>
             <Button
               asChild
@@ -139,16 +146,15 @@ export function LandingPage() {
               <Link to="/request-demo">Request a demo</Link>
             </Button>
           </div>
-          {homepageTrial && (
-            <div className="mt-4 flex justify-center">
-              <Button asChild variant="ghost" size="lg" className="text-[#fdeb83] hover:bg-white/10 hover:text-[#fdeb83]">
-                <Link to={getStartedPath({ trial: true })}>
-                  <Sparkles className="h-4 w-4" />
-                  Start a {homepageTrial.durationDays}-day free trial — no commitment
-                </Link>
-              </Button>
-            </div>
-          )}
+          <p className="mt-4 text-sm text-white/70">
+            {homepageTrial?.durationDays ?? DEFAULT_TRIAL_DAYS}-day free trial
+            {homepageTrial?.paymentMode === 'free_no_card' ? ' · no credit card required' : ''}.
+            Prefer to pick a plan first?{' '}
+            <Link to={getStartedPath()} className="font-medium text-[#fdeb83] hover:underline">
+              Get started
+            </Link>
+            .
+          </p>
         </div>
       </section>
 
@@ -179,9 +185,12 @@ export function LandingPage() {
         </div>
       </section>
 
+      <GetStartedStepsSection />
       <IndustryStatsSection />
+      <OwnerStoriesSection />
       <WebsiteOptionsSection />
       <PricingSection />
+      <MarketingFaqSection />
       <MarketingFooter />
     </div>
   );
