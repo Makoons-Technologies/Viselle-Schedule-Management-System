@@ -45,16 +45,9 @@ Phases: alpha → beta (3-month trials) → GA (`1.0.0+`).
 
 ### Homepage “Start free trial” campaign
 
-The hero CTA goes to `/get-started?trial=1&code=HOMEPAGE14`. Get-started prefers a live **homepage** campaign from `GET /signup/trials/homepage`. If that returns `null`, it applies `HOMEPAGE14` (a 14-day `free_no_card` code campaign) after the API validates it.
+The hero CTA goes to `/get-started?trial=1`. Get-started loads `GET /signup/trials/homepage` and, when a live campaign is returned, applies it (`useHomepageCampaign` at checkout). There is no frontend hardcoded trial code.
 
-Staging must have both rows in `trial_campaigns` (seeded 2026-09-03 for BEA-86; recreate if the staging DB is reset):
-
-| type | name | code | duration | payment_mode | enabled |
-|---|---|---|---|---|---|
-| `homepage` | Homepage Beta Period | *(null)* | 14 | `free_no_card` | true |
-| `code` | Homepage 14-day fallback | `HOMEPAGE14` | 14 | `free_no_card` | true |
-
-Do not invent a client-side $0 cart without a redeemable campaign. Paid `/get-started` without `trial=1` is unchanged.
+Staging must have an enabled **homepage** row in `trial_campaigns` matching production (14-day `free_no_card`, `code` null, `locked_tier` professional — “Homepage Beta Period”). Seed that from the API/backend; do not invent a client-side $0 cart. Paid `/get-started` without `trial=1` is unchanged.
 
 ### CORS / login failures on staging
 

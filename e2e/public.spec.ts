@@ -81,7 +81,7 @@ test.describe('public marketing', () => {
     await expect(trialCta).toHaveAttribute('href', /\/get-started\?/);
     const trialHref = await trialCta.getAttribute('href');
     expect(trialHref).toContain('trial=1');
-    expect(trialHref).toContain('code=HOMEPAGE14');
+    expect(trialHref).not.toContain('code=');
     await expect(page.getByRole('link', { name: 'Request a demo' }).first()).toBeVisible();
     await expect(page.getByRole('heading', { name: /Live booking page today/i })).toBeVisible();
     await expect(page.getByRole('heading', { name: /Questions owners actually ask/i })).toBeVisible();
