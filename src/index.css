@@ -66,6 +66,10 @@
   padding-left: max(0.5rem, var(--safe-area-left));
   padding-right: max(0.5rem, var(--safe-area-right));
 }
+@utility px-safe-or-3 {
+  padding-left: max(0.75rem, var(--safe-area-left));
+  padding-right: max(0.75rem, var(--safe-area-right));
+}
 @utility pb-safe-or-2 {
   padding-bottom: max(0.5rem, var(--safe-area-bottom));
 }
@@ -125,6 +129,26 @@
   }
 
   html.dark.app-shell body {
+    background-color: #1c1917;
+  }
+
+  /*
+   * App-shell top/bottom chrome must be a solid slab. iOS frosts empty
+   * padded gaps and leftover backdrop-filter into a top frosted band that
+   * stays while scrolling and disappears under a dialog overlay (BEA-78).
+   */
+  html.app-shell .app-shell-chrome,
+  html.app-shell .app-shell-topbar,
+  html.app-shell .app-shell-bottomnav {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    isolation: isolate;
+    background-color: #ffffff;
+  }
+
+  html.dark.app-shell .app-shell-chrome,
+  html.dark.app-shell .app-shell-topbar,
+  html.dark.app-shell .app-shell-bottomnav {
     background-color: #1c1917;
   }
 

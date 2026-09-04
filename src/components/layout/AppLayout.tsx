@@ -24,12 +24,18 @@ function AppLayoutContent() {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden overscroll-none bg-stone-50 dark:bg-stone-900">
-      {/* Dark band under translucent iOS status bar so icons stay readable */}
-      <div className="shrink-0 bg-[#0f172a] pt-safe" aria-hidden />
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <ImpersonationBanner />
-        <OrgTrialBanner />
-        <AddToHomeScreenBanner />
+      {/*
+        Opaque top slab owns safe-area padding. Do not put pt-safe on an
+        overflow-hidden ancestor — WebKit clips that padded region into a
+        frosted smudge over the header (BEA-78). Logout dialog covers the
+        artifact because its overlay paints over the bad compositing layer.
+      */}
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="app-shell-chrome shrink-0 pt-safe">
+          <ImpersonationBanner />
+          <OrgTrialBanner />
+          <AddToHomeScreenBanner />
+        </div>
         <div className="flex min-h-0 flex-1 overflow-hidden">
           <Sidebar />
           <MobileSidebar />
