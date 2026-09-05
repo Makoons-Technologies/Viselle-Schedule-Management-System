@@ -136,7 +136,9 @@ export function useAppShellViewport(impersonating = false) {
       document.documentElement.classList.remove(APP_SHELL_IMPERSONATING_CLASS);
       document.documentElement.style.removeProperty('--app-height');
       document.documentElement.style.removeProperty('--safe-area-top');
-      document.documentElement.style.removeProperty('--app-shell-safe-pad-top');
+      // Keep --app-shell-safe-pad-top across AppLayout remounts (login →
+      // dashboard). Removing it for a frame zeros #root pad and looks like
+      // the PR 59 gap. The selector is gated on html.app-shell.
       document.documentElement.style.removeProperty('--safe-area-bottom');
       document.documentElement.style.removeProperty('--app-shell-bottomnav-pad');
       document.documentElement.style.removeProperty('--app-shell-keyboard-inset');

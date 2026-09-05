@@ -170,17 +170,21 @@ test.describe('BEA-78 app-shell title paint', () => {
     await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#ffffff');
     await expect(page.getByTestId('app-shell-status-slab')).toHaveCount(0);
 
-    const rootPad = await page.evaluate(() => {
-      const root = document.getElementById('root');
-      return {
-        pad: root ? parseFloat(getComputedStyle(root).paddingTop) || 0 : 0,
-        safePad: getComputedStyle(document.documentElement)
-          .getPropertyValue('--app-shell-safe-pad-top')
-          .trim(),
-      };
-    });
-    expect(rootPad.pad).toBeGreaterThanOrEqual(47);
-    expect(parseFloat(rootPad.safePad)).toBeGreaterThanOrEqual(47);
+    await expect
+      .poll(async () => {
+        return page.evaluate(() => {
+          const root = document.getElementById('root');
+          const pad = root ? parseFloat(getComputedStyle(root).paddingTop) || 0 : 0;
+          const safePad =
+            parseFloat(
+              getComputedStyle(document.documentElement)
+                .getPropertyValue('--app-shell-safe-pad-top')
+                .trim(),
+            ) || 0;
+          return Math.min(pad, safePad);
+        });
+      })
+      .toBeGreaterThanOrEqual(47);
 
     // BEA-85 restage: Sonner position:fixed is the compositor trigger. Kill it.
     await expect(page.locator('[data-sonner-toast]')).toHaveCount(0);
