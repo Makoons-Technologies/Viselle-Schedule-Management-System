@@ -90,6 +90,39 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     const chrome = page.getByTestId('app-shell-chrome');
     await expect(chrome).toBeHidden();
 
+    const statusBar = page.locator('meta[name="apple-mobile-web-app-status-bar-style"]');
+    await expect(statusBar).toHaveAttribute('content', 'black');
+    const themeColor = page.locator('meta[name="theme-color"]');
+    await expect(themeColor).toHaveAttribute('content', '#ffffff');
+
+    const slab = await page.getByTestId('app-shell-status-slab').evaluate((el) => {
+      const style = getComputedStyle(el);
+      return {
+        height: el.getBoundingClientRect().height,
+        top: el.getBoundingClientRect().top,
+        filter: style.filter,
+        transform: style.transform,
+        backdrop: style.backdropFilter,
+        isolation: style.isolation,
+        willChange: style.willChange,
+        background: style.backgroundColor,
+        slabVar: getComputedStyle(document.documentElement)
+          .getPropertyValue('--app-shell-status-slab')
+          .trim(),
+      };
+    });
+
+    // Chromium standalone: webview == screen, so JS applies the 47px fallback
+    // that keeps the title out of the iOS status-bar material (BEA-78).
+    expect(slab.height).toBe(47);
+    expect(slab.top).toBe(0);
+    expect(slab.slabVar).toBe('47px');
+    expect(slab.filter).toMatch(/^(none)?$/);
+    expect(slab.transform).toBe('none');
+    expect(slab.backdrop === 'none' || slab.backdrop === '').toBeTruthy();
+    expect(slab.isolation).toMatch(/^(auto)?$/);
+    expect(slab.willChange).toMatch(/^(auto)?$/);
+
     const top = await page.getByTestId('app-shell-topbar').evaluate((el) => {
       const style = getComputedStyle(el);
       const row = el.querySelector(':scope > div');
@@ -106,6 +139,7 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
         paddingTop: style.paddingTop,
         rowHeight: row?.getBoundingClientRect().height ?? 0,
         headerTop: el.getBoundingClientRect().top,
+        titleTop: title?.getBoundingClientRect().top ?? 0,
         titleFont: titleStyle?.fontFamily ?? '',
         titleFilter: titleStyle?.filter ?? '',
         titleTransform: titleStyle?.transform ?? '',
@@ -115,9 +149,10 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
       };
     });
 
-    // Opaque status bar already insets; extra BEA-78 notch pad is the leftover strip.
+    // Notch lives on the sibling slab — never as padding on the title header.
     expect(top.paddingTop).toBe('0px');
-    expect(top.headerTop).toBe(0);
+    expect(top.headerTop).toBe(47);
+    expect(top.titleTop).toBeGreaterThanOrEqual(47);
     expect(top.rowHeight).toBe(56);
     expect(top.titleFont.toLowerCase()).toMatch(/-apple-system|blinkmacsystemfont|sf pro|system-ui/);
     expect(top.titleFont.toLowerCase()).not.toContain('inter');
@@ -216,6 +251,7 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
             if (
               (sel.includes('app-shell-chrome') ||
                 sel.includes('app-shell-topbar') ||
+                sel.includes('app-shell-status-slab') ||
                 sel.includes('app-shell-title')) &&
               (rule.style.backdropFilter || rule.style.getPropertyValue('backdrop-filter'))
             ) {
@@ -236,6 +272,17 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
       return hits;
     });
     expect(chromeBackdrop).toEqual([]);
+
+    // BEA-83 leftover-chrome fix must not come back as a standalone 0-pad.
+    expect(joined.includes('--app-shell-topbar-pad-top')).toBe(false);
+    expect(
+      rules.some(
+        (text) =>
+          text.includes('app-shell-status-slab') &&
+          /--app-shell-status-slab:\s*0px/.test(text) &&
+          text.includes('standalone'),
+      ),
+    ).toBe(false);
   });
 
   test('standalone: drawer open must not be required for tab padding', async ({ page }) => {
@@ -260,10 +307,16 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     expect(footerPad).toBeGreaterThanOrEqual(12);
   });
 
-  test('Safari in-tab: topbar can still take notch pad; title paint unchanged', async ({ page }) => {
+  test('Safari in-tab: status slab owns notch; title paint unchanged', async ({ page }) => {
     await openPlatformDashboard(page);
 
     await expect(page.locator('html')).not.toHaveClass(/standalone-pwa/);
+
+    const slabH = await page
+      .getByTestId('app-shell-status-slab')
+      .evaluate((el) => el.getBoundingClientRect().height);
+    // Chromium reports env() as 0 and is not iOS standalone — no 47px fallback.
+    expect(slabH).toBe(0);
 
     const top = await page.getByTestId('app-shell-topbar').evaluate((el) => {
       const style = getComputedStyle(el);
@@ -272,6 +325,7 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
       const titleStyle = title ? getComputedStyle(title) : null;
       return {
         paddingTop: style.paddingTop,
+        headerTop: el.getBoundingClientRect().top,
         rowHeight: row?.getBoundingClientRect().height ?? 0,
         titleFont: titleStyle?.fontFamily ?? '',
         titleFilter: titleStyle?.filter ?? '',
@@ -279,8 +333,9 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
       };
     });
 
-    // Chromium reports env() as 0 — pad stays 0. Title row must remain 56px (BEA-78).
+    // Notch pad is never on the title header. Title row must remain 56px (BEA-78).
     expect(top.paddingTop).toBe('0px');
+    expect(top.headerTop).toBe(0);
     expect(top.rowHeight).toBe(56);
     expect(top.titleFont.toLowerCase()).toMatch(/-apple-system|blinkmacsystemfont|sf pro|system-ui/);
     expect(top.titleFilter).toMatch(/^(none)?$/);

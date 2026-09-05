@@ -132,12 +132,12 @@ export function Topbar() {
     <>
     <header
       data-testid="app-shell-topbar"
-      className="app-shell-topbar shrink-0 border-b border-stone-200 pt-[var(--app-shell-topbar-pad-top,0px)]"
+      className="app-shell-topbar shrink-0 border-b border-stone-200"
     >
       {/*
-        Notch padding is on the header; this row is a whole-pixel 56/64px flex
-        box. Centering the title in calc(3.5rem + safe-area) put glyphs on a
-        fractional Y and WebKit smeared only the text (BEA-78).
+        Notch clearance is the sibling .app-shell-status-slab — not padding on
+        this header. A 56/64px whole-pixel row keeps glyphs off a fractional Y
+        (BEA-78). Do not add filter / transform / isolation / z-index here.
       */}
       <div className="flex h-14 items-center justify-between gap-2 px-safe-or-3 sm:h-16 sm:px-safe-or-6">
         <div className="flex min-w-0 flex-1 items-center gap-2 overflow-visible sm:gap-4">
@@ -199,7 +199,7 @@ export function Topbar() {
           )}
         </div>
 
-        <div className="app-shell-topbar-actions relative z-[1] flex shrink-0 items-center gap-1 sm:gap-3">
+        <div className="app-shell-topbar-actions flex shrink-0 items-center gap-1 sm:gap-3">
           <Button
             variant="ghost"
             size="icon"

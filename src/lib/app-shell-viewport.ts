@@ -10,6 +10,17 @@ export const STANDALONE_PWA_CLASS = 'standalone-pwa';
 /** Portrait iPhone home-indicator height when `env(safe-area-inset-bottom)` reports 0. */
 export const IOS_STANDALONE_HOME_INDICATOR_FALLBACK_PX = 34;
 
+/**
+ * Notch / Dynamic Island height used when `env(safe-area-inset-top)` is 0 but
+ * the webview is still edge-to-edge (`viewport-fit=cover`). Matches the PR 41
+ * Joseph PASS (title at y=57 below a 47px slab). Do not invent a larger band.
+ */
+export const IOS_STANDALONE_STATUS_BAR_FALLBACK_PX = 47;
+
+/** Opaque app-shell chrome / theme-color. Marketing splash stays `#2a0f1e`. */
+export const APP_SHELL_THEME_COLOR_LIGHT = '#ffffff';
+export const APP_SHELL_THEME_COLOR_DARK = '#1c1917';
+
 /** 0.5rem floor matching the old `pb-safe-or-2` content inset. */
 export const APP_SHELL_BOTTOMNAV_CONTENT_PAD_PX = 8;
 
@@ -213,9 +224,46 @@ export function resolveSafeAreaBottomPx(measuredPx: number): number {
   return measuredPx;
 }
 
+/**
+ * True when `100vh` (device screen) is taller than the layout webview by a
+ * status-bar. That means `apple-mobile-web-app-status-bar-style: black`
+ * already inset the webview — an extra top slab is the BEA-83 leftover gap.
+ */
+export function isStandaloneWebviewInsetBelowStatusBar(): boolean {
+  if (!isIosStandaloneWebApp()) return false;
+  const screenH = measureCss100vh();
+  const layoutH = measureLayoutViewportHeight();
+  if (screenH < 400 || layoutH < 400) return false;
+  return screenH - layoutH >= 40;
+}
+
+/**
+ * Top safe-area for the opaque status slab (not padding on `.app-shell-topbar`).
+ *
+ * BEA-49 added `viewport-fit=cover` so content could clear the notch. iOS then
+ * paints a frosted status-bar material over the top of the webview. BEA-83
+ * unconditionally zeroed `--app-shell-topbar-pad-top` on standalone ("opaque
+ * bar already insets") and put "Viselle Platform" back under that material.
+ *
+ * - Webview already inset → 0 (do not stack a second band).
+ * - Edge-to-edge webview → live `env(safe-area-inset-top)`, or 47px when env lies.
+ */
+export function resolveSafeAreaTopPx(measuredPx: number): number {
+  if (!isIosStandaloneWebApp()) {
+    return measuredPx;
+  }
+  if (isStandaloneWebviewInsetBelowStatusBar()) {
+    return 0;
+  }
+  return Math.max(measuredPx, IOS_STANDALONE_STATUS_BAR_FALLBACK_PX);
+}
+
 export function setSafeAreaCSSProperties(root: HTMLElement = document.documentElement): void {
+  const topPx = resolveSafeAreaTopPx(measureCssEnvInset('top'));
   const bottomPx = resolveSafeAreaBottomPx(measureCssEnvInset('bottom'));
   const navPadPx = Math.max(APP_SHELL_BOTTOMNAV_CONTENT_PAD_PX, bottomPx);
+  root.style.setProperty('--safe-area-top', `${topPx}px`);
+  root.style.setProperty('--app-shell-status-slab', `${topPx}px`);
   root.style.setProperty('--safe-area-bottom', `${bottomPx}px`);
   root.style.setProperty('--app-shell-bottomnav-pad', `${navPadPx}px`);
 }

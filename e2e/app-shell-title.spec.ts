@@ -73,6 +73,11 @@ function readTitlePaint(page: Page) {
       headerTransform: headerStyle?.transform ?? '',
       rowHeight: row?.getBoundingClientRect().height ?? 0,
       titleTop: el.getBoundingClientRect().top,
+      headerTop: header?.getBoundingClientRect().top ?? 0,
+      headerPaddingTop: headerStyle?.paddingTop ?? '',
+      slabHeight:
+        document.querySelector('[data-testid="app-shell-status-slab"]')?.getBoundingClientRect()
+          .height ?? 0,
       ancestorFlags,
     };
   });
@@ -102,6 +107,9 @@ function expectCrispTitlePaint(paint: Awaited<ReturnType<typeof readTitlePaint>>
     ),
   ).toBeTruthy();
   expect(paint.rowHeight).toBe(56);
+  expect(paint.headerPaddingTop).toBe('0px');
+  expect(paint.titleTop).toBeGreaterThanOrEqual(paint.headerTop);
+  expect(paint.titleTop).toBeGreaterThanOrEqual(paint.slabHeight);
   expect(paint.titleTop % 1).toBe(0);
 }
 
@@ -147,6 +155,15 @@ test.describe('BEA-78 app-shell title paint', () => {
     await expect(page.getByTestId('app-shell-title')).toHaveText('Viselle Platform');
     await expect(page.locator('html')).toHaveClass(/standalone-pwa/);
     await expect(page.locator('html')).toHaveClass(/app-shell/);
+    await expect(page.locator('meta[name="apple-mobile-web-app-status-bar-style"]')).toHaveAttribute(
+      'content',
+      'black',
+    );
+    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#ffffff');
+    const slabH = await page
+      .getByTestId('app-shell-status-slab')
+      .evaluate((el) => el.getBoundingClientRect().height);
+    expect(slabH).toBe(47);
 
     // BEA-85 restage: Sonner position:fixed is the compositor trigger. Kill it.
     await expect(page.locator('[data-sonner-toast]')).toHaveCount(0);
@@ -255,7 +272,10 @@ test.describe('BEA-78 app-shell title paint', () => {
     const chromeBackdrop = rules.filter((text) => {
       const sel = text.slice(0, text.indexOf('{') === -1 ? text.length : text.indexOf('{'));
       return (
-        (sel.includes('app-shell-chrome') || sel.includes('app-shell-topbar') || sel.includes('app-shell-title')) &&
+        (sel.includes('app-shell-chrome') ||
+          sel.includes('app-shell-topbar') ||
+          sel.includes('app-shell-status-slab') ||
+          sel.includes('app-shell-title')) &&
         /backdrop-filter/i.test(text)
       );
     });
