@@ -31,26 +31,29 @@ export function MobileSidebar() {
         <SheetContent
           ref={panelRef}
           side="left"
+          data-testid="app-shell-drawer"
           forceMount={forceMount || undefined}
-          overlayClassName={
-            forceMount
-              ? 'data-[state=closed]:!opacity-100 !animate-none'
-              : undefined
-          }
+          overlayClassName={cn(
+            'app-shell-drawer-overlay',
+            forceMount && 'data-[state=closed]:!opacity-100 !animate-none',
+          )}
           style={{
             ...panelStyle,
-            // Pin to the measured app viewport (landscape-safe); inline styles beat sheet h-full/inset-y-0.
-            top: 0,
-            bottom: 'auto',
-            height: 'var(--app-height, 100dvh)',
-            maxHeight: 'var(--app-height, 100dvh)',
-            // Full-bleed panel; top inset only — footer owns the bottom safe area so
-            // Powered-by can sit lower without leaving a maroon gap under the sheet.
-            paddingTop: 'var(--safe-area-top)',
+            // Crisp top edge below the orange frost — not top:0 into the
+            // status-bar bleed (PR 61 drawer-soft-edge). Footer owns bottom inset.
+            top: 'var(--app-shell-content-inset-top, env(safe-area-inset-top, 0px))',
+            bottom: 0,
+            height: 'auto',
+            maxHeight: 'none',
+            paddingTop: 0,
           }}
-          overlayStyle={overlayStyle}
+          overlayStyle={{
+            ...overlayStyle,
+            top: 'var(--app-shell-content-inset-top, env(safe-area-inset-top, 0px))',
+          }}
+          closeClassName="!top-4"
           className={cn(
-            'flex w-[min(100vw-1rem,18rem)] max-w-xs flex-col gap-0 overflow-hidden p-0 sm:p-0',
+            'app-shell-drawer flex w-[min(100vw-1rem,18rem)] max-w-xs flex-col gap-0 overflow-hidden rounded-none p-0 sm:p-0',
             panelClassName,
           )}
         >

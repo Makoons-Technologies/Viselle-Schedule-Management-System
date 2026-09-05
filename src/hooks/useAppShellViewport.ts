@@ -40,9 +40,8 @@ export function useAppShellViewport(impersonating = false) {
       );
     };
     syncThemeColor();
-    // `default` = opaque OS status bar; webview y=0 is already below the
-    // clock. iOS caches this at PWA install — Joseph must delete+reinstall.
-    // Do not force `black` and then paint a 47px #root band (PR 60 gap).
+    // `default` + theme-color. Do not force `black` and paint a 47px #root
+    // band (PR 60 gap). Meta is cached at install — no change this restage.
     statusBarMeta?.setAttribute('content', APP_SHELL_STATUS_BAR_STYLE);
 
     let keyboardWasOpen = false;
@@ -138,8 +137,8 @@ export function useAppShellViewport(impersonating = false) {
       document.documentElement.classList.remove(APP_SHELL_IMPERSONATING_CLASS);
       document.documentElement.style.removeProperty('--app-height');
       document.documentElement.style.removeProperty('--safe-area-top');
-      // Keep --app-shell-safe-pad-top across AppLayout remounts (login →
-      // dashboard). The selector is gated on html.app-shell.
+      // Keep --app-shell-safe-pad-top and --app-shell-content-inset-top
+      // across AppLayout remounts (login → dashboard).
       document.documentElement.style.removeProperty('--safe-area-bottom');
       document.documentElement.style.removeProperty('--app-shell-bottomnav-pad');
       document.documentElement.style.removeProperty('--app-shell-keyboard-inset');

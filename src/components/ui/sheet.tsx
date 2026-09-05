@@ -32,12 +32,16 @@ type SheetContentProps = ComponentPropsWithoutRef<typeof DialogPrimitive.Content
   VariantProps<typeof sheetVariants> & {
     overlayClassName?: string;
     overlayStyle?: CSSProperties;
+    closeClassName?: string;
     /** Keep the portal mounted while closed (interactive swipe-to-open peek). */
     forceMount?: boolean;
   };
 
 export const SheetContent = forwardRef<HTMLDivElement, SheetContentProps>(
-  ({ side, className, children, overlayClassName, overlayStyle, forceMount, ...props }, ref) => (
+  (
+    { side, className, children, overlayClassName, overlayStyle, closeClassName, forceMount, ...props },
+    ref,
+  ) => (
     <DialogPrimitive.Portal forceMount={forceMount || undefined}>
       <DialogPrimitive.Overlay
         forceMount={forceMount || undefined}
@@ -61,7 +65,12 @@ export const SheetContent = forwardRef<HTMLDivElement, SheetContentProps>(
         {...props}
       >
         {children}
-        <DialogPrimitive.Close className="absolute right-4 top-[calc(1rem+var(--safe-area-top))] rounded-md p-1 text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800">
+        <DialogPrimitive.Close
+          className={cn(
+            'absolute right-4 top-[calc(1rem+var(--safe-area-top))] rounded-md p-1 text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800',
+            closeClassName,
+          )}
+        >
           <X className="h-4 w-4" />
         </DialogPrimitive.Close>
       </DialogPrimitive.Content>
