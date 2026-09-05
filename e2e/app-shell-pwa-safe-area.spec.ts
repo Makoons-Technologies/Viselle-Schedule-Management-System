@@ -47,6 +47,49 @@ async function emulateIosStandalonePwa(page: Page) {
   });
 }
 
+/**
+ * Joseph's iPhone: 100vh (screen) is ~47px taller than the layout webview.
+ * PR 56 treated that as "already inset" and set --app-shell-status-slab to 0.
+ */
+async function emulateStandaloneWebviewInsetBelowStatusBar(page: Page) {
+  await page.addInitScript(() => {
+    const SCREEN = 844;
+    const LAYOUT = 797;
+    const offsetDesc = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetHeight');
+    Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
+      configurable: true,
+      get: function () {
+        if (this instanceof HTMLElement && this.style.height === '100vh') {
+          return SCREEN;
+        }
+        return offsetDesc?.get ? offsetDesc.get.call(this) : 0;
+      },
+    });
+    const origRect = Element.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = function () {
+      const rect = origRect.call(this);
+      if (
+        this instanceof HTMLElement &&
+        this.style.position === 'fixed' &&
+        (this.style.inset === '0px' || this.style.inset === '0') &&
+        this.style.visibility === 'hidden'
+      ) {
+        return new DOMRect(rect.x, rect.y, rect.width, LAYOUT);
+      }
+      return rect;
+    };
+    const applyClientHeight = () => {
+      if (!document.documentElement) return;
+      Object.defineProperty(document.documentElement, 'clientHeight', {
+        configurable: true,
+        get: () => LAYOUT,
+      });
+    };
+    applyClientHeight();
+    document.addEventListener('DOMContentLoaded', applyClientHeight);
+  });
+}
+
 function collectStyleRules(page: Page) {
   return page.evaluate(() => {
     const texts: string[] = [];
@@ -112,10 +155,12 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
       };
     });
 
-    // Chromium standalone: webview == screen, so JS applies the 47px fallback
-    // that keeps the title out of the iOS status-bar material (BEA-78).
+    // Standalone must keep a non-zero frost slab (PR 41 Joseph PASS = 47px).
+    // Chromium env() is 0; JS/CSS floor to 47. Never accept 0 after PR 56.
+    expect(slab.height).toBeGreaterThan(0);
     expect(slab.height).toBe(47);
     expect(slab.top).toBe(0);
+    expect(slab.slabVar).not.toBe('0px');
     expect(slab.slabVar).toBe('47px');
     expect(slab.filter).toMatch(/^(none)?$/);
     expect(slab.transform).toBe('none');
@@ -283,6 +328,58 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
           text.includes('standalone'),
       ),
     ).toBe(false);
+    expect(joined).toMatch(/--app-shell-status-slab:\s*47px/);
+    expect(
+      rules.some((text) => text.includes('app-shell-status-slab') && /min-height:\s*47px/.test(text)),
+    ).toBe(true);
+  });
+
+  test('standalone: slab stays non-zero when 100vh looks inset (PR 56 zero-path)', async ({
+    page,
+  }) => {
+    await emulateIosStandalonePwa(page);
+    await emulateStandaloneWebviewInsetBelowStatusBar(page);
+    await openPlatformDashboard(page);
+
+    const geometry = await page.evaluate(() => {
+      const vh = document.createElement('div');
+      vh.setAttribute('aria-hidden', 'true');
+      vh.style.cssText =
+        'position:fixed;top:0;left:0;width:0;height:100vh;visibility:hidden;pointer-events:none;';
+      document.body.appendChild(vh);
+      const screenH = vh.offsetHeight;
+      vh.remove();
+      const layout = document.createElement('div');
+      layout.setAttribute('aria-hidden', 'true');
+      layout.style.cssText = 'position:fixed;inset:0;visibility:hidden;pointer-events:none;';
+      document.body.appendChild(layout);
+      const layoutH = Math.round(layout.getBoundingClientRect().height);
+      layout.remove();
+      const slab = document.querySelector('[data-testid="app-shell-status-slab"]');
+      const title = document.querySelector('[data-testid="app-shell-title"]');
+      return {
+        screenH,
+        layoutH,
+        clientH: document.documentElement.clientHeight,
+        slabVar: getComputedStyle(document.documentElement)
+          .getPropertyValue('--app-shell-status-slab')
+          .trim(),
+        slabHeight: slab?.getBoundingClientRect().height ?? 0,
+        titleTop: title?.getBoundingClientRect().top ?? 0,
+        headerPad: document.querySelector('[data-testid="app-shell-topbar"]')
+          ? getComputedStyle(document.querySelector('[data-testid="app-shell-topbar"]') as Element)
+              .paddingTop
+          : '',
+      };
+    });
+
+    // This is the Joseph / PR 56 heuristic. Slab must still be the 47px floor.
+    expect(geometry.screenH - geometry.layoutH).toBeGreaterThanOrEqual(40);
+    expect(geometry.slabVar).not.toBe('0px');
+    expect(parseFloat(geometry.slabVar)).toBeGreaterThanOrEqual(47);
+    expect(geometry.slabHeight).toBeGreaterThanOrEqual(47);
+    expect(geometry.titleTop).toBeGreaterThanOrEqual(47);
+    expect(geometry.headerPad).toBe('0px');
   });
 
   test('standalone: drawer open must not be required for tab padding', async ({ page }) => {

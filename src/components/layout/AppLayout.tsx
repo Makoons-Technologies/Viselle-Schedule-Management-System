@@ -31,9 +31,10 @@ function AppLayoutContent() {
         Status slab (not topbar padding) owns the notch. BEA-49 viewport-fit=cover
         lets iOS frost whatever sits in env(safe-area-inset-top). Putting that
         pad on .app-shell-topbar rasterized "Viselle Platform"; zeroing it on
-        standalone (BEA-83 leftover-chrome) put the glyphs under the frost.
-        Solid sibling slab above a 56px title row. Bottom nav is BEA-83
-        (webview height + fixed bar + literal 34px pad, not 100vh).
+        standalone (BEA-83 leftover-chrome, then PR 56 inset→0) put the glyphs
+        under the frost. Standalone slab stays max(env, 47px). Title row is an
+        unpadded 56px sibling. Bottom nav is BEA-83 (webview height + fixed
+        bar + literal 34px pad, not 100vh).
       */}
       <div
         className="app-shell-status-slab"
