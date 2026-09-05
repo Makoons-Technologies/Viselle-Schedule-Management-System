@@ -403,8 +403,20 @@ html.standalone-pwa.app-shell {
   --safe-area-bottom: 34px;
   --app-shell-bottomnav-pad: 34px;
   --app-shell-keyboard-inset: 0px;
-  /* Do NOT zero --app-shell-status-slab here. BEA-83 did that and put
-   * "Viselle Platform" under the iOS status-bar material (BEA-78 FAIL). */
+  /* Floor the frost slab. PR 56 JS zeroed this when 100vh − layout ≥ 40
+   * and Joseph's title stayed under the status-bar material. Do not set 0. */
+  --app-shell-status-slab: 47px;
+}
+
+/*
+ * Standalone slab: painted band must stay non-zero even if the JS token is
+ * late or wrongly 0. Literal 47px floor — do not wrap env() in max()
+ * (WebKit drops that; PR 46). Title row stays an unpadded 56px sibling.
+ */
+html.standalone-pwa.app-shell .app-shell-status-slab {
+  min-height: 47px;
+  height: env(safe-area-inset-top, 47px);
+  height: var(--app-shell-status-slab, 47px);
 }
 
 html.standalone-pwa.app-shell,

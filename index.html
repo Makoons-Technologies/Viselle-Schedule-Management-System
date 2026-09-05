@@ -298,11 +298,9 @@
           document.documentElement.style.setProperty('--safe-area-bottom', '34px');
           document.documentElement.style.setProperty('--app-shell-bottomnav-pad', '34px');
           document.documentElement.style.setProperty('--app-shell-keyboard-inset', '0px');
-          // env() until JS measures. Do not force 0 — that is the BEA-78 frost.
-          document.documentElement.style.setProperty(
-            '--app-shell-status-slab',
-            'env(safe-area-inset-top, 0px)'
-          );
+          // PR 41 Joseph-PASS 47px floor until React measures max(env, 47).
+          // Do not set 0 — PR 56 zeroed this when the webview "looked inset".
+          document.documentElement.style.setProperty('--app-shell-status-slab', '47px');
         }
 
         onViewportSettle();

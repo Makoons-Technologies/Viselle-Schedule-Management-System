@@ -160,10 +160,16 @@ test.describe('BEA-78 app-shell title paint', () => {
       'black',
     );
     await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#ffffff');
-    const slabH = await page
-      .getByTestId('app-shell-status-slab')
-      .evaluate((el) => el.getBoundingClientRect().height);
-    expect(slabH).toBe(47);
+    const slab = await page.getByTestId('app-shell-status-slab').evaluate((el) => ({
+      height: el.getBoundingClientRect().height,
+      slabVar: getComputedStyle(document.documentElement)
+        .getPropertyValue('--app-shell-status-slab')
+        .trim(),
+    }));
+    expect(slab.height).toBeGreaterThan(0);
+    expect(slab.height).toBe(47);
+    expect(slab.slabVar).not.toBe('0px');
+    expect(slab.slabVar).toBe('47px');
 
     // BEA-85 restage: Sonner position:fixed is the compositor trigger. Kill it.
     await expect(page.locator('[data-sonner-toast]')).toHaveCount(0);
