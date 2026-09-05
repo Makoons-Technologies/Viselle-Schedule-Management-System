@@ -222,36 +222,15 @@
           return Math.max(client, probe);
         }
 
-        function measureCss100vh() {
-          if (!document.body) return 0;
-          var el = document.createElement('div');
-          el.setAttribute('aria-hidden', 'true');
-          el.style.cssText =
-            'position:fixed;top:0;left:0;width:0;height:100vh;visibility:hidden;pointer-events:none;';
-          document.body.appendChild(el);
-          var px = el.offsetHeight || 0;
-          el.remove();
-          return px;
-        }
-
-        function isStandaloneWebviewInsetBelowStatusBar() {
-          if (!isIosStandaloneWebApp()) return false;
-          var screenH = measureCss100vh();
-          var layoutH = measureLayoutViewportHeight();
-          if (screenH < 400 || layoutH < 400) return false;
-          return screenH - layoutH >= 40;
-        }
-
-        function setStatusSlab() {
+        function setChromePad() {
           if (!isIosStandaloneWebApp()) return;
-          if (isStandaloneWebviewInsetBelowStatusBar()) {
-            document.documentElement.style.setProperty('--app-shell-status-slab', '0px');
-            return;
-          }
-          // Edge-to-edge: env() until React floors to max(env, 47).
-          // Do not wrap env() in max() — WebKit drops that (PR 46).
+          // Empty white slab stays collapsed (PR 57 gap). Lead chrome pads
+          // with env() until React floors to max(env, 47). Do not wrap env()
+          // in max() (PR 46). Do not zero the pad when the webview “looks
+          // inset” — that frosted ImpersonationBanner after PR 58.
+          document.documentElement.style.setProperty('--app-shell-status-slab', '0px');
           document.documentElement.style.setProperty(
-            '--app-shell-status-slab',
+            '--app-shell-chrome-pad-top',
             'env(safe-area-inset-top, 0px)'
           );
         }
@@ -271,7 +250,7 @@
           if (isIosStandaloneWebApp() && !isKeyboardOpen()) {
             document.documentElement.style.setProperty('--app-shell-keyboard-inset', '0px');
           }
-          setStatusSlab();
+          setChromePad();
         }
 
         // This script runs in <head> before <body>. Reading document.body.scrollTop
@@ -333,10 +312,9 @@
           document.documentElement.style.setProperty('--safe-area-bottom', '34px');
           document.documentElement.style.setProperty('--app-shell-bottomnav-pad', '34px');
           document.documentElement.style.setProperty('--app-shell-keyboard-inset', '0px');
-          // env() until JS measures. Do not hardcode 47px — inset webviews
-          // already sit below the opaque bar (Joseph 2026-09-05 gap).
+          document.documentElement.style.setProperty('--app-shell-status-slab', '0px');
           document.documentElement.style.setProperty(
-            '--app-shell-status-slab',
+            '--app-shell-chrome-pad-top',
             'env(safe-area-inset-top, 0px)'
           );
         }

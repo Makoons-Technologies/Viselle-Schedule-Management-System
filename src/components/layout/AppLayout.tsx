@@ -28,14 +28,13 @@ function AppLayoutContent() {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden overscroll-none bg-stone-50 dark:bg-stone-900">
       {/*
-        Status slab (not topbar padding) owns the notch. BEA-49 viewport-fit=cover
-        lets iOS frost whatever sits in env(safe-area-inset-top). Putting that
-        pad on .app-shell-topbar rasterized "Viselle Platform"; zeroing it on
-        standalone (BEA-83 leftover-chrome, then PR 56 inset→0) put the glyphs
-        under the frost. Inset webviews (opaque black bar already below the
-        clock) get slab 0 — do not stack a second 47px band. Edge-to-edge
-        stays max(env, 47px). Title row is an unpadded 56px sibling. Bottom
-        nav is BEA-83 (webview height + fixed bar + literal 34px pad).
+        Empty sibling slab is collapsed (height 0). PR 57's 47px white slab
+        was the gap under the clock when ImpersonationBanner is next; PR 58
+        zeroing it frosted the banner text. Lead chrome (banner, else Topbar)
+        paints full-bleed under the status bar and pads glyphs with
+        --app-shell-chrome-pad-top (max(env, 47) on iOS standalone). Title
+        row stays a whole-pixel 56px box below that pad. Bottom nav is
+        BEA-83 (webview height + fixed bar + literal 34px pad).
       */}
       <div
         className="app-shell-status-slab"

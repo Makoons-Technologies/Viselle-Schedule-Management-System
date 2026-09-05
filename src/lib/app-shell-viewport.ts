@@ -226,10 +226,9 @@ export function resolveSafeAreaBottomPx(measuredPx: number): number {
 
 /**
  * True when `100vh` (device screen) is taller than the layout webview by a
- * status-bar. Opaque `black` status-bar-style already insets the webview —
- * stacking a second 47px slab is the Joseph 2026-09-05 empty white gap
- * (PR 57). Title stays crisp because it is still a sibling of the slab,
- * not padded into the frost layer.
+ * status-bar. Kept as a probe for tests; it must NOT zero lead-chrome pad.
+ * PR 56/58 used this to collapse the empty slab and put the first glyphs
+ * (title, then ImpersonationBanner) under iOS frost on Joseph's PWA.
  */
 export function isStandaloneWebviewInsetBelowStatusBar(): boolean {
   if (!isIosStandaloneWebApp()) return false;
@@ -240,23 +239,20 @@ export function isStandaloneWebviewInsetBelowStatusBar(): boolean {
 }
 
 /**
- * Top safe-area for the opaque status slab (not padding on `.app-shell-topbar`).
+ * Top safe-area **padding** for the first chrome surface (ImpersonationBanner
+ * when present, otherwise Topbar). Background of that surface paints through
+ * the pad (full-bleed under the status bar). Glyphs start below the frost.
  *
- * BEA-49 added `viewport-fit=cover` so content could clear the notch. iOS then
- * paints a frosted status-bar material over the top of the webview. BEA-83
- * unconditionally zeroed `--app-shell-topbar-pad-top` on standalone ("opaque
- * bar already insets") and put "Viselle Platform" back under that material.
+ * Do not put this value on an empty white `.app-shell-status-slab` — that is
+ * the Joseph 2026-09-05 gap (PR 57) when the next sibling is orange.
+ * Do not zero it when the webview “looks inset” (PR 56/58) — Joseph's PWA
+ * still frosts y=0 of the webview after delete+reinstall.
  *
- * - Webview already inset (100vh − layout ≥ 40) → 0. Do not stack a second
- *   band (Joseph 2026-09-05: title crisp after PR 57; only the gap was wrong).
- * - Edge-to-edge → max(env, 47) so frost never returns (PR 41 PASS).
+ * iOS standalone: max(env, 47). Safari-in-tab / desktop: live env() only.
  */
 export function resolveSafeAreaTopPx(measuredPx: number): number {
   if (!isIosStandaloneWebApp()) {
     return measuredPx;
-  }
-  if (isStandaloneWebviewInsetBelowStatusBar()) {
-    return 0;
   }
   return Math.max(measuredPx, IOS_STANDALONE_STATUS_BAR_FALLBACK_PX);
 }
@@ -266,7 +262,9 @@ export function setSafeAreaCSSProperties(root: HTMLElement = document.documentEl
   const bottomPx = resolveSafeAreaBottomPx(measureCssEnvInset('bottom'));
   const navPadPx = Math.max(APP_SHELL_BOTTOMNAV_CONTENT_PAD_PX, bottomPx);
   root.style.setProperty('--safe-area-top', `${topPx}px`);
-  root.style.setProperty('--app-shell-status-slab', `${topPx}px`);
+  root.style.setProperty('--app-shell-chrome-pad-top', `${topPx}px`);
+  // Empty sibling slab stays collapsed. Lead chrome owns paint + pad.
+  root.style.setProperty('--app-shell-status-slab', '0px');
   root.style.setProperty('--safe-area-bottom', `${bottomPx}px`);
   root.style.setProperty('--app-shell-bottomnav-pad', `${navPadPx}px`);
 }
