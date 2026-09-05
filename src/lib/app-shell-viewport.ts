@@ -11,11 +11,16 @@ export const STANDALONE_PWA_CLASS = 'standalone-pwa';
 export const IOS_STANDALONE_HOME_INDICATOR_FALLBACK_PX = 34;
 
 /**
- * Notch / Dynamic Island height used when `env(safe-area-inset-top)` is 0 but
- * the webview is still edge-to-edge (`viewport-fit=cover`). Matches the PR 41
- * Joseph PASS (title at y=57 below a 47px slab). Do not invent a larger band.
+ * Observed iPhone status-bar / Dynamic Island height. PR 60 used this as a
+ * `#root` pad *floor* (`max(env, 47)`). That reserved amber/white strip is
+ * Joseph's 2026-09-05 5:35 CT gap. Do **not** apply it as padding. The OS
+ * status bar owns that region after `apple-mobile-web-app-status-bar-style:
+ * default` (cached at PWA install — delete+reinstall required).
  */
 export const IOS_STANDALONE_STATUS_BAR_FALLBACK_PX = 47;
+
+/** Opaque OS status bar; webview y=0 starts below the clock. Cached at install. */
+export const APP_SHELL_STATUS_BAR_STYLE = 'default';
 
 /** Opaque app-shell chrome / theme-color. Marketing splash stays `#2a0f1e`. */
 export const APP_SHELL_THEME_COLOR_LIGHT = '#ffffff';
@@ -44,9 +49,10 @@ export const APP_SHELL_BOTTOMNAV_PAD_STYLE = 'max(0.5rem, var(--safe-area-bottom
 
 /**
  * CSS fallback for --app-height on iOS standalone. `100vh` is the SCREEN
- * (status bar + webview) while `black` status-bar-style already places the
- * webview below the status bar — so 100vh overflows by ~47–59px and clips
- * the tab bar (BEA-83, PRs 46/47). `-webkit-fill-available` is the webview.
+ * (status bar + webview) while an opaque status-bar-style (`default`) already
+ * places the webview below the status bar — so 100vh overflows by ~47–59px
+ * and clips the tab bar (BEA-83, PRs 46/47). `-webkit-fill-available` is
+ * the webview.
  */
 export const APP_SHELL_STANDALONE_HEIGHT_FALLBACK = '-webkit-fill-available';
 
@@ -168,12 +174,12 @@ function observeClosedHeight(px: number): void {
 /**
  * CSS value for --app-height.
  *
- * iOS standalone must NOT use `100vh`. With `apple-mobile-web-app-status-bar-style:
- * black`, the webview is already below the status bar, but `100vh` is still the
- * full device height. The shell overflows by the status-bar (~47–59px), the
- * 34px home-indicator pad lands in the clipped overflow, and only the top of
- * the tab icons show (BEA-83, Joseph 2026-09-03). Size to the layout viewport
- * / `-webkit-fill-available` instead.
+ * iOS standalone must NOT use `100vh`. With an opaque status-bar-style
+ * (`default`), the webview is already below the status bar, but `100vh` is
+ * still the full device height. The shell overflows by the status-bar
+ * (~47–59px), the 34px home-indicator pad lands in the clipped overflow, and
+ * only the top of the tab icons show (BEA-83, Joseph 2026-09-03). Size to
+ * the layout viewport / `-webkit-fill-available` instead.
  */
 export function getAppHeightCSSValue(): string {
   const measured = measureBrowserAppHeight();
@@ -232,9 +238,8 @@ export function resolveSafeAreaBottomPx(measuredPx: number): number {
 
 /**
  * True when `100vh` (device screen) is taller than the layout webview by a
- * status-bar. Probe only — do not use it to zero `--app-shell-safe-pad-top`.
- * PR 56/58 collapsed the pad when this fired and Joseph's PWA still frosted
- * y=0 of the webview (ImpersonationBanner / title under the clock).
+ * status-bar. That means the OS already owns the clock region — do **not**
+ * also reserve `--app-shell-safe-pad-top` (PR 60 orange/white gap).
  */
 export function isStandaloneWebviewInsetBelowStatusBar(): boolean {
   if (!isIosStandaloneWebApp()) return false;
@@ -245,19 +250,24 @@ export function isStandaloneWebviewInsetBelowStatusBar(): boolean {
 }
 
 /**
- * Top safe-area reserved on `#root` (not a sibling slab, not the banner/title
- * box). iOS standalone: max(env, 47). Safari-in-tab / desktop: live env() only.
+ * Top safe-area on `#root`. Prefer the OS inset: if the webview is already
+ * below the clock, pad is **0** (no double pad / no painted gap strip).
  *
- * Do not put this on an empty white `.app-shell-status-slab` (PR 57 gap).
- * Do not pad ImpersonationBanner / Topbar themselves (PR 59): extending those
- * boxes under the status-bar frost lets WebKit smear the in-flow glyphs.
- * Do not zero this when the webview “looks inset” (PR 56/58).
+ * If `env(safe-area-inset-top)` is still non-zero (content still under frost
+ * after the meta change), use that live value only — never a 47px floor
+ * (PR 60 FAIL). Safari-in-tab / desktop: live env() only.
+ *
+ * Do not put this on an empty `.app-shell-status-slab` (PR 57).
+ * Do not pad ImpersonationBanner / Topbar boxes into the frost (PR 59 smear).
  */
 export function resolveSafeAreaTopPx(measuredPx: number): number {
   if (!isIosStandaloneWebApp()) {
     return measuredPx;
   }
-  return Math.max(measuredPx, IOS_STANDALONE_STATUS_BAR_FALLBACK_PX);
+  if (isStandaloneWebviewInsetBelowStatusBar()) {
+    return 0;
+  }
+  return measuredPx;
 }
 
 export function applyAppShellImpersonatingClass(

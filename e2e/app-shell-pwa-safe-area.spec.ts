@@ -69,7 +69,7 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     await expect(chrome).toBeHidden();
 
     const statusBar = page.locator('meta[name="apple-mobile-web-app-status-bar-style"]');
-    await expect(statusBar).toHaveAttribute('content', 'black');
+    await expect(statusBar).toHaveAttribute('content', 'default');
     const themeColor = page.locator('meta[name="theme-color"]');
     await expect(themeColor).toHaveAttribute('content', '#ffffff');
 
@@ -87,8 +87,9 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
       };
     });
 
-    expect(root.pad).toBeGreaterThanOrEqual(47);
-    expect(parseFloat(root.safePad)).toBeGreaterThanOrEqual(47);
+    // No reserved safe-pad band (PR 60 empty strip under the clock).
+    expect(root.pad).toBe(0);
+    expect(parseFloat(root.safePad) || 0).toBe(0);
     expect(root.background.toLowerCase()).toMatch(/rgb\(\s*255,\s*255,\s*255|#fff/);
 
     const top = await page.getByTestId('app-shell-topbar').evaluate((el) => {
@@ -117,10 +118,10 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
       };
     });
 
-    // Topbar box starts below frost (#root pad). Title is not in the frost zone.
+    // Topbar starts flush at webview y=0 — OS status bar owns the clock region.
     expect(parseFloat(top.paddingTop) || 0).toBe(0);
-    expect(top.headerTop).toBeGreaterThanOrEqual(47);
-    expect(top.titleTop).toBeGreaterThanOrEqual(47);
+    expect(top.headerTop).toBeLessThan(2);
+    expect(top.titleTop).toBeLessThan(24);
     expect(top.rowHeight).toBe(56);
     expect(top.titleFont.toLowerCase()).toMatch(/-apple-system|blinkmacsystemfont|sf pro|system-ui/);
     expect(top.titleFont.toLowerCase()).not.toContain('inter');
@@ -251,7 +252,7 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     expect(joined).toMatch(/--app-shell-safe-pad-top:\s*env\(safe-area-inset-top/);
   });
 
-  test('standalone: inset webview keeps #root pad; title box stays below frost', async ({
+  test('standalone: inset webview does not double-pad; title starts flush', async ({
     page,
   }) => {
     await emulateIosStandalonePwa(page);
@@ -302,15 +303,14 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
       };
     });
 
-    // Inset heuristic still fires, but it must not create a white slab gap
-    // and must not put title glyphs in the frost band (PR 56/58).
+    // Inset = OS already owns the clock. Pad must be 0 (PR 60 double-pad gap).
     expect(geometry.screenH - geometry.layoutH).toBeGreaterThanOrEqual(40);
     expect(geometry.slabNode).toBe(false);
-    expect(parseFloat(geometry.safePad)).toBeGreaterThanOrEqual(47);
-    expect(geometry.rootPad).toBeGreaterThanOrEqual(47);
+    expect(parseFloat(geometry.safePad) || 0).toBe(0);
+    expect(geometry.rootPad).toBe(0);
     expect(parseFloat(geometry.headerPad) || 0).toBe(0);
-    expect(geometry.headerTop).toBeGreaterThanOrEqual(47);
-    expect(geometry.titleTop).toBeGreaterThanOrEqual(47);
+    expect(geometry.headerTop).toBeLessThan(2);
+    expect(geometry.titleTop).toBeLessThan(24);
     expect(geometry.rowHeight).toBe(56);
     expect(geometry.titleFont.toLowerCase()).toMatch(/-apple-system|blinkmacsystemfont|sf pro|system-ui/);
     expect(geometry.titleFilter).toMatch(/^(none)?$/);
@@ -385,7 +385,7 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     expect(parseFloat(navPad)).toBe(8);
   });
 
-  test('standalone: ImpersonationBanner starts below frost; page bg is amber not a white gap', async ({
+  test('standalone: ImpersonationBanner starts flush; no reserved orange pad', async ({
     page,
   }) => {
     await emulateIosStandalonePwa(page);
@@ -444,12 +444,12 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     });
 
     expect(geometry.slabNode).toBe(false);
-    expect(parseFloat(geometry.safePad)).toBeGreaterThanOrEqual(47);
-    expect(geometry.rootPad).toBeGreaterThanOrEqual(47);
-    // Banner box itself is below frost — page bg fills 0..47 (not a white slab).
-    expect(geometry.bannerTop).toBeGreaterThanOrEqual(47);
+    expect(parseFloat(geometry.safePad) || 0).toBe(0);
+    expect(geometry.rootPad).toBe(0);
+    // Banner flush at webview y=0 with compact py-2 — not under a 47px orange strip.
+    expect(geometry.bannerTop).toBeLessThan(2);
     expect(parseFloat(geometry.bannerPad) || 0).toBeLessThan(24);
-    expect(geometry.textTop).toBeGreaterThanOrEqual(47);
+    expect(geometry.textTop).toBeLessThan(24);
     expect(geometry.rootBg).toMatch(AMBER_500);
     expect(geometry.bodyBg).toMatch(AMBER_500);
     expect(geometry.bannerBg).toMatch(AMBER_500);
@@ -466,7 +466,7 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     expect(geometry.rowHeight).toBe(56);
   });
 
-  test('standalone inset + ImpersonationBanner: no slab; amber page bg; text below frost', async ({
+  test('standalone inset + ImpersonationBanner: no slab; no double pad; banner flush', async ({
     page,
   }) => {
     await emulateIosStandalonePwa(page);
@@ -501,11 +501,11 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     });
 
     expect(geometry.slabNode).toBe(false);
-    expect(parseFloat(geometry.safePad)).toBeGreaterThanOrEqual(47);
-    expect(geometry.rootPad).toBeGreaterThanOrEqual(47);
-    expect(geometry.bannerTop).toBeGreaterThanOrEqual(47);
+    expect(parseFloat(geometry.safePad) || 0).toBe(0);
+    expect(geometry.rootPad).toBe(0);
+    expect(geometry.bannerTop).toBeLessThan(2);
     expect(parseFloat(geometry.bannerPad) || 0).toBeLessThan(24);
-    expect(geometry.textTop).toBeGreaterThanOrEqual(47);
+    expect(geometry.textTop).toBeLessThan(24);
     expect(geometry.rootBg).toMatch(AMBER_500);
   });
 });

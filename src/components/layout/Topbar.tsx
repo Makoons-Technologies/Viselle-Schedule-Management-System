@@ -135,10 +135,10 @@ export function Topbar() {
       className="app-shell-topbar shrink-0 border-b border-stone-200"
     >
       {/*
-        Title row is a whole-pixel 56px box. Standalone frost clearance is
-        `#root` padding (--app-shell-safe-pad-top), not padding on this
-        header — extending the topbar box under the status bar smears glyphs
-        (PR 59). Do not add filter / transform / isolation / z-index here.
+        Title row is a whole-pixel 56px box flush at the top of the webview.
+        Do not pad this header into the status-bar frost (PR 59 smear) and
+        do not sit it under a reserved #root band (PR 60 gap). Do not add
+        filter / transform / isolation / z-index here.
       */}
       <div className="flex h-14 items-center justify-between gap-2 px-safe-or-3 sm:h-16 sm:px-safe-or-6">
         <div className="flex min-w-0 flex-1 items-center gap-2 overflow-visible sm:gap-4">

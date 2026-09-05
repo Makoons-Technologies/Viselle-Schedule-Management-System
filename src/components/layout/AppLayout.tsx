@@ -30,12 +30,11 @@ function AppLayoutContent() {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden overscroll-none bg-stone-50 dark:bg-stone-900">
       {/*
-        No status-slab node (Joseph 2026-09-05: remove the blur div and the
-        gap). `#root` owns --app-shell-safe-pad-top so banner/title boxes
-        start below iOS frost; page background fills the reserved band
-        (amber while impersonating, white otherwise) instead of a white
-        sibling strip. Bottom nav is BEA-83 (webview height + fixed bar +
-        literal 34px pad). Welcome back stays in-flow (BEA-85).
+        No status-slab node. No reserved #root safe-pad band (PR 60 orange
+        gap under the clock). OS status bar owns that region; ImpersonationBanner
+        / Topbar start flush at webview y=0 with compact padding. Bottom nav
+        is BEA-83 (webview height + fixed bar + literal 34px pad). Welcome
+        back stays in-flow (BEA-85).
       */}
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="app-shell-chrome shrink-0" data-testid="app-shell-chrome">
