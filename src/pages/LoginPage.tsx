@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { useAuth } from '@/context/AuthContext';
 import { getLoginErrorMessage } from '@/lib/api';
 import { signedInHomePath } from '@/lib/auth-redirect';
+import { announceSignedInWelcome } from '@/lib/login-welcome';
 import { withoutReactFormReset } from '@/lib/form-submit';
 import { LoadingState } from '@/components/common/LoadingState';
 import { PoweredByMakoons } from '@/components/common/PoweredByMakoons';
@@ -50,7 +51,7 @@ export function LoginPage() {
     setAuthError(null);
     try {
       const nextUser = await login(data.email, data.password);
-      toast.success('Welcome back!');
+      announceSignedInWelcome();
       navigate(signedInHomePath(nextUser));
     } catch (err) {
       const message = getLoginErrorMessage(err);

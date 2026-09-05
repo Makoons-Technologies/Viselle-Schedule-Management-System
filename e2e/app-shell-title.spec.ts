@@ -129,7 +129,7 @@ test.describe('BEA-78 app-shell title paint', () => {
     expectCrispTitlePaint(await readTitlePaint(page));
   });
 
-  test('login-success toast dismiss does not put transform/filter on the title', async ({ page }) => {
+  test('standalone login welcome is in-flow and never mounts a Sonner toast', async ({ page }) => {
     await emulateIosStandalonePwa(page);
     await page.addInitScript(() => {
       sessionStorage.setItem('viselle.a2hs-banner.dismissed', '1');
@@ -148,36 +148,45 @@ test.describe('BEA-78 app-shell title paint', () => {
     await expect(page.locator('html')).toHaveClass(/standalone-pwa/);
     await expect(page.locator('html')).toHaveClass(/app-shell/);
 
-    const toast = page.locator('[data-sonner-toast]').filter({ hasText: 'Welcome back!' });
-    await expect(toast).toBeVisible();
+    // BEA-85 restage: Sonner position:fixed is the compositor trigger. Kill it.
+    await expect(page.locator('[data-sonner-toast]')).toHaveCount(0);
+    const banner = page.getByTestId('login-welcome-banner');
+    await expect(banner).toHaveText('Welcome back!');
 
-    const toastPaint = await toast.evaluate((el) => {
+    const bannerPaint = await banner.evaluate((el) => {
       const style = getComputedStyle(el);
-      const toaster = el.closest('[data-sonner-toaster]');
-      const toasterStyle = toaster ? getComputedStyle(toaster) : null;
+      const title = document.querySelector('[data-testid="app-shell-title"]');
+      const titleBox = title?.getBoundingClientRect();
       return {
+        position: style.position,
         transform: style.transform,
         filter: style.filter,
+        backdropFilter: style.backdropFilter,
+        isolation: style.isolation,
         willChange: style.willChange,
         animationName: style.animationName,
-        toasterY: toaster?.getAttribute('data-y-position') ?? '',
-        toasterTransform: toasterStyle?.transform ?? '',
-        toastTop: el.getBoundingClientRect().top,
-        titleTop: document.querySelector('[data-testid="app-shell-title"]')?.getBoundingClientRect().top ?? 0,
-        titleBottom: document.querySelector('[data-testid="app-shell-title"]')?.getBoundingClientRect().bottom ?? 0,
+        bannerTop: el.getBoundingClientRect().top,
+        titleBottom: titleBox?.bottom ?? 0,
+        inMain: Boolean(el.closest('main')),
       };
     });
 
-    expect(toastPaint.transform).toBe('none');
-    expect(toastPaint.filter).toMatch(/^(none)?$/);
-    expect(toastPaint.willChange).toMatch(/^(auto)?$/);
-    expect(toastPaint.animationName === 'none' || toastPaint.animationName === '').toBeTruthy();
-    expect(toastPaint.toasterY).toBe('bottom');
-    expect(toastPaint.toasterTransform).toBe('none');
-    // Must not sit on the title row (Joseph: smear when the top banner leaves).
-    expect(toastPaint.toastTop).toBeGreaterThan(toastPaint.titleBottom + 8);
+    expect(bannerPaint.position).not.toBe('fixed');
+    expect(bannerPaint.position).not.toBe('absolute');
+    expect(bannerPaint.position).not.toBe('sticky');
+    expect(bannerPaint.transform).toBe('none');
+    expect(bannerPaint.filter).toMatch(/^(none)?$/);
+    expect(bannerPaint.backdropFilter === 'none' || bannerPaint.backdropFilter === '').toBeTruthy();
+    expect(bannerPaint.isolation).toMatch(/^(auto)?$/);
+    expect(bannerPaint.willChange).toMatch(/^(auto)?$/);
+    expect(bannerPaint.animationName === 'none' || bannerPaint.animationName === '').toBeTruthy();
+    expect(bannerPaint.inMain).toBe(true);
+    expect(bannerPaint.bannerTop).toBeGreaterThan(bannerPaint.titleBottom + 8);
 
-    await expect(toast).toHaveCount(0, { timeout: 8_000 });
+    expectCrispTitlePaint(await readTitlePaint(page));
+
+    await expect(banner).toHaveCount(0, { timeout: 8_000 });
+    await expect(page.locator('[data-sonner-toast]')).toHaveCount(0);
 
     expectCrispTitlePaint(await readTitlePaint(page));
 
@@ -189,6 +198,25 @@ test.describe('BEA-78 app-shell title paint', () => {
     }));
     expect(navPad.position).toBe('fixed');
     expect(navPad.paddingBottom).toBe('34px');
+  });
+
+  test('browser login still uses Sonner Welcome back (not the PWA in-flow banner)', async ({ page }) => {
+    await page.addInitScript(() => {
+      sessionStorage.setItem('viselle.a2hs-banner.dismissed', '1');
+    });
+    await mockPlatformLogin(page, platformOwnerUser);
+    await mockAuthMe(page, platformOwnerUser);
+    await mockPlatformDashboardApis(page);
+
+    await page.goto('/login');
+    await page.getByLabel('Email').fill('platform-e2e@viselle.test');
+    await page.getByLabel('Password', { exact: true }).fill('password123');
+    await page.getByRole('button', { name: 'Sign in' }).click();
+
+    await expect(page).toHaveURL(/\/platform\/dashboard/);
+    await expect(page.locator('html')).not.toHaveClass(/standalone-pwa/);
+    await expect(page.getByTestId('login-welcome-banner')).toHaveCount(0);
+    await expect(page.locator('[data-sonner-toast]').filter({ hasText: 'Welcome back!' })).toBeVisible();
   });
 
   test('styles neutralize sonner toast transform without touching chrome backdrop-filter', async ({ page }) => {

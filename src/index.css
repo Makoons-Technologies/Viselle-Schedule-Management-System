@@ -229,16 +229,19 @@
   }
 
   /*
-   * BEA-78 follow-up (Joseph 2026-09-03): dismissing the green
-   * "Welcome back!" toast re-smears "Viselle Platform".
+   * BEA-78 / BEA-85 (Joseph 2026-09-03 and restage FAIL 2026-09-04).
    *
-   * Sonner 2 pins a full-width toast at the top on phones
-   * (`@media (max-width: 600px)`), with `transform: var(--y)` and a
-   * 400ms translateY leave. That fixed+transform layer sits on the
-   * title; when it unmounts WebKit leaves the header on a 1× bitmap
-   * (same compositor path as the leftover `backdrop-filter: none` from
-   * PR 48). Instant show/hide. Do not add filter / transform /
-   * backdrop-filter / will-change to the chrome stack itself.
+   * Sonner 2 still mounts a `position:fixed` toaster (CSS vars `--y`,
+   * `--front-toast-height`, enter/leave even when we force
+   * `transform:none`). On iOS standalone that overlay — top or bottom —
+   * promotes a layer while the app shell first paints; WebKit leaves
+   * "Viselle Platform" as a 1× bitmap. PR 50 neutralized transform and
+   * moved the toast off the title; Joseph's login path still smeared.
+   *
+   * Login-success in standalone PWA no longer uses Sonner (in-flow
+   * banner in `<main>`). These rules stay for other toasts. Do not add
+   * filter / transform / backdrop-filter / isolation / will-change to
+   * the chrome stack itself — even `none` is a compositor trigger.
    */
   html.standalone-pwa [data-sonner-toaster],
   html.app-shell [data-sonner-toaster] {
