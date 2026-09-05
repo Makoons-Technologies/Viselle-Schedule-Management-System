@@ -389,9 +389,9 @@ html.standalone-pwa.app-shell {
   --safe-area-bottom: 34px;
   --app-shell-bottomnav-pad: 34px;
   --app-shell-keyboard-inset: 0px;
-  /* Reserved on #root, not a sibling slab / not the banner box.
-   * env() until JS floors to max(env, 47). Do not wrap env() in max()
-   * (PR 46). Do not hardcode 47px here. */
+  /* Live env only — no 47px floor (PR 60 empty band). JS zeros this
+   * when the webview is already inset below the OS status bar. Do not
+   * wrap env() in max() (PR 46). */
   --app-shell-safe-pad-top: env(safe-area-inset-top, 0px);
 }
 
@@ -471,20 +471,18 @@ html.standalone-pwa.app-shell .app-shell-chrome {
 }
 
 /*
- * BEA-78 after PR 59 FAIL (Joseph 2026-09-05 ~5:25pm CT).
+ * BEA-78 after PR 60 FAIL (Joseph 2026-09-05 5:35 CT).
  *
- * Delete the status-slab node. Do not extend ImpersonationBanner / Topbar
- * under the status bar (that composites the whole box and frosts glyphs).
- * Pad #root so the first chrome *element* starts below the frost. The
- * reserved band is page background — white matching Topbar, or amber
- * matching ImpersonationBanner — not a distinct white rectangle.
+ * Do not reserve a painted #root / chrome safe-pad band (that IS the empty
+ * orange/white strip under the clock). OS status bar owns that region
+ * (`apple-mobile-web-app-status-bar-style: default` + theme-color;
+ * cached at PWA install — delete+reinstall). If env(safe-area-inset-top)
+ * is still non-zero, pad by that live value only — never a 47px floor.
+ * If the webview is already inset, the token is 0 (no double pad).
  *
- * apple-mobile-web-app-status-bar-style stays `black` (iOS caches this at
- * PWA install). Joseph's webview still paints under the clock; theme-color
- * + #root bg fill that band so it does not read as a gap strip.
- *
- * Do not add filter / backdrop-filter / transform / isolation / will-change
- * on chrome / banner / title — even `none` is a compositor trigger.
+ * Do not reintroduce .app-shell-status-slab. Do not extend banner/title
+ * boxes under the frost (PR 59 smear). Do not add filter / backdrop-filter
+ * / transform / isolation / will-change on chrome — even `none`.
  */
 html.standalone-pwa.app-shell #root {
   box-sizing: border-box;

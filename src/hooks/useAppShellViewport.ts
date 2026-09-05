@@ -4,6 +4,7 @@ import {
   FIRST_SHELL_SETTLE_DELAYS_MS,
   KEYBOARD_CLOSE_DELAYS_MS,
   SETTLE_DELAYS_MS,
+  APP_SHELL_STATUS_BAR_STYLE,
   applyAppShellImpersonatingClass,
   applyStandalonePwaClass,
   isKeyboardOpen,
@@ -39,9 +40,10 @@ export function useAppShellViewport(impersonating = false) {
       );
     };
     syncThemeColor();
-    // Keep `black` (cached at PWA install). Joseph's webview still paints
-    // under the clock; we reserve that band on `#root` instead of a slab.
-    statusBarMeta?.setAttribute('content', 'black');
+    // `default` = opaque OS status bar; webview y=0 is already below the
+    // clock. iOS caches this at PWA install — Joseph must delete+reinstall.
+    // Do not force `black` and then paint a 47px #root band (PR 60 gap).
+    statusBarMeta?.setAttribute('content', APP_SHELL_STATUS_BAR_STYLE);
 
     let keyboardWasOpen = false;
     const settleTimers: number[] = [];
@@ -137,8 +139,7 @@ export function useAppShellViewport(impersonating = false) {
       document.documentElement.style.removeProperty('--app-height');
       document.documentElement.style.removeProperty('--safe-area-top');
       // Keep --app-shell-safe-pad-top across AppLayout remounts (login →
-      // dashboard). Removing it for a frame zeros #root pad and looks like
-      // the PR 59 gap. The selector is gated on html.app-shell.
+      // dashboard). The selector is gated on html.app-shell.
       document.documentElement.style.removeProperty('--safe-area-bottom');
       document.documentElement.style.removeProperty('--app-shell-bottomnav-pad');
       document.documentElement.style.removeProperty('--app-shell-keyboard-inset');

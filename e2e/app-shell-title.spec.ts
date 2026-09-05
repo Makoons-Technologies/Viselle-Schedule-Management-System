@@ -119,7 +119,7 @@ test.describe('BEA-78 app-shell title paint', () => {
     expectCrispTitlePaint(await readTitlePaint(page));
   });
 
-  test('standalone inset webview: no slab node; #root pad keeps title below frost', async ({
+  test('standalone inset webview: no slab node; no reserved #root pad band', async ({
     page,
   }) => {
     await emulateIosStandalonePwa(page);
@@ -138,10 +138,10 @@ test.describe('BEA-78 app-shell title paint', () => {
     const paint = await readTitlePaint(page);
     expectCrispTitlePaint(paint);
     expect(paint.headerPaddingTopPx).toBe(0);
-    expect(paint.rootPadPx).toBeGreaterThanOrEqual(47);
-    expect(paint.safePadPx).toBeGreaterThanOrEqual(47);
-    expect(paint.headerTop).toBeGreaterThanOrEqual(47);
-    expect(paint.titleTop).toBeGreaterThanOrEqual(47);
+    expect(paint.rootPadPx).toBe(0);
+    expect(paint.safePadPx).toBe(0);
+    expect(paint.headerTop).toBeLessThan(2);
+    expect(paint.titleTop).toBeLessThan(24);
     expect(paint.rowHeight).toBe(56);
   });
 
@@ -165,7 +165,7 @@ test.describe('BEA-78 app-shell title paint', () => {
     await expect(page.locator('html')).toHaveClass(/app-shell/);
     await expect(page.locator('meta[name="apple-mobile-web-app-status-bar-style"]')).toHaveAttribute(
       'content',
-      'black',
+      'default',
     );
     await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#ffffff');
     await expect(page.getByTestId('app-shell-status-slab')).toHaveCount(0);
@@ -184,7 +184,7 @@ test.describe('BEA-78 app-shell title paint', () => {
           return Math.min(pad, safePad);
         });
       })
-      .toBeGreaterThanOrEqual(47);
+      .toBe(0);
 
     // BEA-85 restage: Sonner position:fixed is the compositor trigger. Kill it.
     await expect(page.locator('[data-sonner-toast]')).toHaveCount(0);

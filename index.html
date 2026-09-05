@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#2a0f1e" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Viselle" />
     <meta
       name="viewport"
@@ -222,11 +222,37 @@
           return Math.max(client, probe);
         }
 
+        function measureCss100vh() {
+          var parent = document.body || document.documentElement;
+          if (!parent) return 0;
+          var el = document.createElement('div');
+          el.setAttribute('aria-hidden', 'true');
+          el.style.cssText =
+            'position:fixed;top:0;left:0;width:0;height:100vh;visibility:hidden;pointer-events:none;';
+          parent.appendChild(el);
+          var px = el.offsetHeight || 0;
+          el.remove();
+          return px;
+        }
+
+        // OS already owns the clock region — do not also reserve a #root band
+        // (PR 60 orange/white gap).
+        function isStandaloneWebviewInsetBelowStatusBar() {
+          if (!isIosStandaloneWebApp()) return false;
+          var screenH = measureCss100vh();
+          var layoutH = measureLayoutViewportHeight();
+          if (screenH < 400 || layoutH < 400) return false;
+          return screenH - layoutH >= 40;
+        }
+
         function setSafePad() {
           if (!isIosStandaloneWebApp()) return;
-          // Reserve frost on #root (no sibling slab, no banner-box pad).
-          // env() until React floors to max(env, 47). Do not wrap env() in
-          // max() (PR 46). Do not zero when the webview “looks inset”.
+          // Live env only. Zero when the webview is already below the clock.
+          // Never floor to 47px (PR 60 empty band). Do not wrap env() in max().
+          if (isStandaloneWebviewInsetBelowStatusBar()) {
+            document.documentElement.style.setProperty('--app-shell-safe-pad-top', '0px');
+            return;
+          }
           document.documentElement.style.setProperty(
             '--app-shell-safe-pad-top',
             'env(safe-area-inset-top, 0px)'
@@ -310,10 +336,7 @@
           document.documentElement.style.setProperty('--safe-area-bottom', '34px');
           document.documentElement.style.setProperty('--app-shell-bottomnav-pad', '34px');
           document.documentElement.style.setProperty('--app-shell-keyboard-inset', '0px');
-          document.documentElement.style.setProperty(
-            '--app-shell-safe-pad-top',
-            'env(safe-area-inset-top, 0px)'
-          );
+          setSafePad();
         }
 
         onViewportSettle();
