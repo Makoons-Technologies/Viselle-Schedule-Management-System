@@ -49,6 +49,13 @@ function readTitlePaint(page: Page) {
       titleTop: el.getBoundingClientRect().top,
       headerTop: header?.getBoundingClientRect().top ?? 0,
       headerPaddingTop: headerStyle?.paddingTop ?? '',
+      headerPaddingTopPx: headerStyle ? parseFloat(headerStyle.paddingTop) || 0 : 0,
+      chromePadPx:
+        parseFloat(
+          getComputedStyle(document.documentElement)
+            .getPropertyValue('--app-shell-chrome-pad-top')
+            .trim(),
+        ) || 0,
       slabHeight:
         document.querySelector('[data-testid="app-shell-status-slab"]')?.getBoundingClientRect()
           .height ?? 0,
@@ -81,9 +88,8 @@ function expectCrispTitlePaint(paint: Awaited<ReturnType<typeof readTitlePaint>>
     ),
   ).toBeTruthy();
   expect(paint.rowHeight).toBe(56);
-  expect(paint.headerPaddingTop).toBe('0px');
-  expect(paint.titleTop).toBeGreaterThanOrEqual(paint.headerTop);
-  expect(paint.titleTop).toBeGreaterThanOrEqual(paint.slabHeight);
+  expect(paint.slabHeight).toBe(0);
+  expect(paint.titleTop).toBeGreaterThanOrEqual(paint.headerTop + paint.headerPaddingTopPx);
   expect(paint.titleTop % 1).toBe(0);
 }
 
@@ -111,7 +117,9 @@ test.describe('BEA-78 app-shell title paint', () => {
     expectCrispTitlePaint(await readTitlePaint(page));
   });
 
-  test('standalone inset webview: slab is 0 and title paint stays crisp', async ({ page }) => {
+  test('standalone inset webview: empty slab stays 0; topbar pads title below frost', async ({
+    page,
+  }) => {
     await emulateIosStandalonePwa(page);
     await emulateStandaloneWebviewInsetBelowStatusBar(page);
     await page.addInitScript(() => {
@@ -128,7 +136,9 @@ test.describe('BEA-78 app-shell title paint', () => {
     expectCrispTitlePaint(paint);
     expect(paint.slabHeight).toBe(0);
     expect(paint.headerTop).toBe(0);
-    expect(paint.headerPaddingTop).toBe('0px');
+    expect(paint.headerPaddingTopPx).toBeGreaterThanOrEqual(47);
+    expect(paint.chromePadPx).toBeGreaterThanOrEqual(47);
+    expect(paint.titleTop).toBeGreaterThanOrEqual(47);
     expect(paint.rowHeight).toBe(56);
 
     const slabVar = await page.evaluate(() =>
@@ -165,12 +175,14 @@ test.describe('BEA-78 app-shell title paint', () => {
       slabVar: getComputedStyle(document.documentElement)
         .getPropertyValue('--app-shell-status-slab')
         .trim(),
+      chromePad: getComputedStyle(document.documentElement)
+        .getPropertyValue('--app-shell-chrome-pad-top')
+        .trim(),
     }));
-    // Edge-to-edge Chromium (env 0, not inset) → 47px frost floor.
-    expect(slab.height).toBeGreaterThan(0);
-    expect(slab.height).toBeGreaterThanOrEqual(47);
-    expect(slab.slabVar).not.toBe('0px');
-    expect(parseFloat(slab.slabVar)).toBeGreaterThanOrEqual(47);
+    // Empty slab collapsed (no white gap). Lead topbar owns the 47px frost pad.
+    expect(slab.height).toBe(0);
+    expect(slab.slabVar).toBe('0px');
+    expect(parseFloat(slab.chromePad)).toBeGreaterThanOrEqual(47);
 
     // BEA-85 restage: Sonner position:fixed is the compositor trigger. Kill it.
     await expect(page.locator('[data-sonner-toast]')).toHaveCount(0);
@@ -282,6 +294,7 @@ test.describe('BEA-78 app-shell title paint', () => {
         (sel.includes('app-shell-chrome') ||
           sel.includes('app-shell-topbar') ||
           sel.includes('app-shell-status-slab') ||
+          sel.includes('app-shell-impersonation-banner') ||
           sel.includes('app-shell-title')) &&
         /backdrop-filter/i.test(text)
       );

@@ -130,6 +130,7 @@ export function useAppShellViewport() {
       document.documentElement.classList.remove('app-shell');
       document.documentElement.style.removeProperty('--app-height');
       document.documentElement.style.removeProperty('--safe-area-top');
+      document.documentElement.style.removeProperty('--app-shell-chrome-pad-top');
       document.documentElement.style.removeProperty('--app-shell-status-slab');
       document.documentElement.style.removeProperty('--safe-area-bottom');
       document.documentElement.style.removeProperty('--app-shell-bottomnav-pad');

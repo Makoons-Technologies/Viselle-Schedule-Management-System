@@ -20,8 +20,11 @@ export function ImpersonationBanner() {
   };
 
   return (
-    <div className="flex shrink-0 flex-wrap items-center justify-center gap-x-3 gap-y-1.5 bg-amber-500 px-4 py-2 text-center text-sm font-medium text-amber-950 sm:flex-nowrap sm:justify-between sm:text-left">
-      <span className="flex items-center gap-2">
+    <div
+      data-testid="impersonation-banner"
+      className="app-shell-impersonation-banner flex shrink-0 flex-wrap items-center justify-center gap-x-3 gap-y-1.5 bg-amber-500 px-4 py-2 text-center text-sm font-medium text-amber-950 sm:flex-nowrap sm:justify-between sm:text-left"
+    >
+      <span data-testid="impersonation-banner-text" className="flex items-center gap-2">
         <UserCog className="h-4 w-4 shrink-0" aria-hidden="true" />
         Viewing as {user?.email} (org owner)
       </span>

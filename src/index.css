@@ -66,6 +66,7 @@
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-left: env(safe-area-inset-left, 0px);
   --app-shell-status-slab: 0px;
+  --app-shell-chrome-pad-top: 0px;
 }
 
 @utility pt-safe {
@@ -197,16 +198,15 @@
   }
 
   /*
-   * Solid notch slab — sibling above the 56px title row. Height is a pixel
-   * token (JS) with env() fallback. Never pad .app-shell-topbar with this
-   * value: that stacked the title onto the same layer iOS frosts after
-   * viewport-fit=cover (BEA-49 / BEA-78).
+   * Empty sibling slab stays collapsed. Lead chrome (banner or topbar)
+   * paints under the status bar and pads its own glyphs (BEA-78 after PR 58).
    */
   html.app-shell .app-shell-status-slab {
     flex-shrink: 0;
     box-sizing: border-box;
-    height: env(safe-area-inset-top, 0px);
-    height: var(--app-shell-status-slab, env(safe-area-inset-top, 0px));
+    height: 0;
+    overflow: hidden;
+    pointer-events: none;
   }
 
   /* No empty padded band above the title — hide chrome when banners are absent. */
@@ -403,19 +403,19 @@ html.standalone-pwa.app-shell {
   --safe-area-bottom: 34px;
   --app-shell-bottomnav-pad: 34px;
   --app-shell-keyboard-inset: 0px;
-  /* env() until JS measures. Never force 47px — that double-pads inset
-   * webviews (Joseph 2026-09-05 gap). JS sets 0 when 100vh − layout ≥ 40,
-   * or max(env, 47) when edge-to-edge. Do not wrap env() in max() (PR 46). */
-  --app-shell-status-slab: env(safe-area-inset-top, 0px);
+  /* Empty white slab stays 0 (PR 57 gap). Lead chrome pads with env()
+   * until JS floors to max(env, 47). Do not wrap env() in max() (PR 46).
+   * Do not hardcode 47px here. */
+  --app-shell-status-slab: 0px;
+  --app-shell-chrome-pad-top: env(safe-area-inset-top, 0px);
 }
 
 /*
- * Standalone slab: no min-height floor. Token 0 must collapse to 0 on
- * inset webviews. Title row stays an unpadded 56px sibling (BEA-78 crisp).
+ * Collapsed empty slab on standalone too. Never min-height:47px — that
+ * is the visible white gap above an orange ImpersonationBanner.
  */
 html.standalone-pwa.app-shell .app-shell-status-slab {
-  height: env(safe-area-inset-top, 0px);
-  height: var(--app-shell-status-slab, env(safe-area-inset-top, 0px));
+  height: 0;
 }
 
 html.standalone-pwa.app-shell,
@@ -463,6 +463,8 @@ html.standalone-pwa.app-shell .app-shell-chrome {
   html.app-shell {
     --safe-area-bottom: 34px;
     --app-shell-bottomnav-pad: 34px;
+    --app-shell-status-slab: 0px;
+    --app-shell-chrome-pad-top: env(safe-area-inset-top, 0px);
   }
 
   html.app-shell .app-shell-bottomnav {
@@ -490,4 +492,22 @@ html.standalone-pwa.app-shell .app-shell-chrome {
       display: none;
     }
   }
+}
+
+/*
+ * BEA-78 after PR 58 (Joseph 2026-09-05 ~5:02pm CT).
+ *
+ * Classic iOS: chrome background extends under the status bar; text sits
+ * below the frost. Unlayered so they beat Tailwind py-2 on the lead banner.
+ * Do not add filter / backdrop-filter / transform / isolation — even `none`
+ * is a compositor trigger.
+ */
+html.app-shell .app-shell-chrome > :first-child {
+  padding-top: calc(var(--app-shell-chrome-pad-top, 0px) + 0.5rem);
+  box-sizing: border-box;
+}
+
+html.app-shell:not(:has(.app-shell-chrome > *)) .app-shell-topbar {
+  padding-top: var(--app-shell-chrome-pad-top, 0px);
+  box-sizing: border-box;
 }
