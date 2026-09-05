@@ -29,10 +29,19 @@ export async function emulateIosStandalonePwa(page: Page) {
 }
 
 /**
+ * Force the live content-inset token (Joseph iPhone frost height) without
+ * a `#root` band. Uses !important so viewport settle cannot stamp 0px.
+ */
+export async function forceContentInsetTop(page: Page, px: number) {
+  await page.addStyleTag({
+    content: `:root, html { --app-shell-content-inset-top: ${px}px !important; --safe-area-top: ${px}px !important; }`,
+  });
+}
+
+/**
  * Joseph's iPhone: 100vh (screen) is ~47px taller than the layout webview.
- * That means the OS already owns the clock region. `--app-shell-safe-pad-top`
- * must be 0 here (no double pad / PR 60 orange gap). Do not put a sibling
- * slab (PR 57) or pad the banner/title box into frost (PR 59).
+ * `#root` / `--app-shell-safe-pad-top` stay 0 (PR 60 gap). Do not zero
+ * `--app-shell-content-inset-top` (PR 61 frosted banner text).
  */
 export async function emulateStandaloneWebviewInsetBelowStatusBar(page: Page) {
   await page.addInitScript(() => {

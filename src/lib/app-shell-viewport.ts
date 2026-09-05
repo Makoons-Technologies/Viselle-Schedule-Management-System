@@ -13,13 +13,23 @@ export const IOS_STANDALONE_HOME_INDICATOR_FALLBACK_PX = 34;
 /**
  * Observed iPhone status-bar / Dynamic Island height. PR 60 used this as a
  * `#root` pad *floor* (`max(env, 47)`). That reserved amber/white strip is
- * Joseph's 2026-09-05 5:35 CT gap. Do **not** apply it as padding. The OS
- * status bar owns that region after `apple-mobile-web-app-status-bar-style:
- * default` (cached at PWA install — delete+reinstall required).
+ * Joseph's 2026-09-05 5:35 CT gap. Do **not** apply it as `#root` / slab
+ * padding. Lead chrome may use live `env(safe-area-inset-top)` to keep
+ * *glyphs* below frost — never this constant as a floor.
  */
 export const IOS_STANDALONE_STATUS_BAR_FALLBACK_PX = 47;
 
-/** Opaque OS status bar; webview y=0 starts below the clock. Cached at install. */
+/**
+ * Live inset for TEXT inside painted chrome. Never write `0px` over this
+ * when a probe is still 0 (PR 61 frosted “Viewing as…”). Never put this on
+ * `#root` (PR 60 empty band).
+ */
+export const APP_SHELL_CONTENT_INSET_TOP_CSS = 'env(safe-area-inset-top, 0px)';
+
+/** `#root` must not reserve a painted band under the clock. */
+export const APP_SHELL_ROOT_SAFE_PAD_TOP_CSS = '0px';
+
+/** Opaque OS status bar + theme-color. Cached at PWA install. */
 export const APP_SHELL_STATUS_BAR_STYLE = 'default';
 
 /** Opaque app-shell chrome / theme-color. Marketing splash stays `#2a0f1e`. */
@@ -238,8 +248,9 @@ export function resolveSafeAreaBottomPx(measuredPx: number): number {
 
 /**
  * True when `100vh` (device screen) is taller than the layout webview by a
- * status-bar. That means the OS already owns the clock region — do **not**
- * also reserve `--app-shell-safe-pad-top` (PR 60 orange/white gap).
+ * status-bar. That must **not** zero `--app-shell-content-inset-top`
+ * (PR 61: Joseph’s banner text still sat in the frost). It only means
+ * `#root` must stay at pad 0 (PR 60 gap).
  */
 export function isStandaloneWebviewInsetBelowStatusBar(): boolean {
   if (!isIosStandaloneWebApp()) return false;
@@ -250,24 +261,16 @@ export function isStandaloneWebviewInsetBelowStatusBar(): boolean {
 }
 
 /**
- * Top safe-area on `#root`. Prefer the OS inset: if the webview is already
- * below the clock, pad is **0** (no double pad / no painted gap strip).
- *
- * If `env(safe-area-inset-top)` is still non-zero (content still under frost
- * after the meta change), use that live value only — never a 47px floor
- * (PR 60 FAIL). Safari-in-tab / desktop: live env() only.
- *
- * Do not put this on an empty `.app-shell-status-slab` (PR 57).
- * Do not pad ImpersonationBanner / Topbar boxes into the frost (PR 59 smear).
+ * Live top inset for chrome *text*. Never a 47px floor. Never 0 just because
+ * the webview looks inset (PR 61 frosted glyphs). `#root` pad is always 0.
  */
 export function resolveSafeAreaTopPx(measuredPx: number): number {
-  if (!isIosStandaloneWebApp()) {
-    return measuredPx;
-  }
-  if (isStandaloneWebviewInsetBelowStatusBar()) {
-    return 0;
-  }
   return measuredPx;
+}
+
+/** `#root` / reserved-band pad — always 0. */
+export function resolveRootSafePadTopPx(): number {
+  return 0;
 }
 
 export function applyAppShellImpersonatingClass(
@@ -289,8 +292,16 @@ export function setSafeAreaCSSProperties(root: HTMLElement = document.documentEl
   const topPx = resolveSafeAreaTopPx(measureCssEnvInset('top'));
   const bottomPx = resolveSafeAreaBottomPx(measureCssEnvInset('bottom'));
   const navPadPx = Math.max(APP_SHELL_BOTTOMNAV_CONTENT_PAD_PX, bottomPx);
-  root.style.setProperty('--safe-area-top', `${topPx}px`);
-  root.style.setProperty('--app-shell-safe-pad-top', `${topPx}px`);
+  // Never a painted #root band (PR 60).
+  root.style.setProperty('--app-shell-safe-pad-top', APP_SHELL_ROOT_SAFE_PAD_TOP_CSS);
+  if (topPx > 0) {
+    root.style.setProperty('--safe-area-top', `${topPx}px`);
+    root.style.setProperty('--app-shell-content-inset-top', `${topPx}px`);
+  } else {
+    // Keep stylesheet `env()` — do not stamp 0px over a live inset (PR 61).
+    root.style.removeProperty('--safe-area-top');
+    root.style.removeProperty('--app-shell-content-inset-top');
+  }
   root.style.setProperty('--safe-area-bottom', `${bottomPx}px`);
   root.style.setProperty('--app-shell-bottomnav-pad', `${navPadPx}px`);
 }
