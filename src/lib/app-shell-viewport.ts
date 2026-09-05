@@ -226,13 +226,10 @@ export function resolveSafeAreaBottomPx(measuredPx: number): number {
 
 /**
  * True when `100vh` (device screen) is taller than the layout webview by a
- * status-bar. PR 56 used this to zero `--app-shell-status-slab` ("opaque
- * `black` bar already insets — do not stack a second band").
- *
- * Joseph 2026-09-05 FAIL after DE6Fm7BD: that path left "Viselle Platform"
- * flush under iOS status-bar / Dynamic Island material. `100vh − layout ≥ 40`
- * does not prove the title sits below the frost. Do not use this to size
- * the slab.
+ * status-bar. Opaque `black` status-bar-style already insets the webview —
+ * stacking a second 47px slab is the Joseph 2026-09-05 empty white gap
+ * (PR 57). Title stays crisp because it is still a sibling of the slab,
+ * not padded into the frost layer.
  */
 export function isStandaloneWebviewInsetBelowStatusBar(): boolean {
   if (!isIosStandaloneWebApp()) return false;
@@ -250,14 +247,16 @@ export function isStandaloneWebviewInsetBelowStatusBar(): boolean {
  * unconditionally zeroed `--app-shell-topbar-pad-top` on standalone ("opaque
  * bar already insets") and put "Viselle Platform" back under that material.
  *
- * Always clear the frost band on iOS standalone: live `env(safe-area-inset-top)`,
- * or the PR 41 Joseph-PASS 47px floor when env is 0 / a lie. Never return 0
- * because the webview "looks inset" (PR 56 FAIL). A slightly taller solid
- * white/dark slab is better than a frosted title.
+ * - Webview already inset (100vh − layout ≥ 40) → 0. Do not stack a second
+ *   band (Joseph 2026-09-05: title crisp after PR 57; only the gap was wrong).
+ * - Edge-to-edge → max(env, 47) so frost never returns (PR 41 PASS).
  */
 export function resolveSafeAreaTopPx(measuredPx: number): number {
   if (!isIosStandaloneWebApp()) {
     return measuredPx;
+  }
+  if (isStandaloneWebviewInsetBelowStatusBar()) {
+    return 0;
   }
   return Math.max(measuredPx, IOS_STANDALONE_STATUS_BAR_FALLBACK_PX);
 }
