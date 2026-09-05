@@ -65,7 +65,7 @@
   --safe-area-right: env(safe-area-inset-right, 0px);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-left: env(safe-area-inset-left, 0px);
-  --app-shell-topbar-pad-top: 0px;
+  --app-shell-status-slab: 0px;
 }
 
 @utility pt-safe {
@@ -183,6 +183,7 @@
    */
   html.app-shell .app-shell-chrome,
   html.app-shell .app-shell-topbar,
+  html.app-shell .app-shell-status-slab,
   html.app-shell .app-shell-bottomnav {
     overflow: visible;
     background-color: #ffffff;
@@ -190,18 +191,27 @@
 
   html.dark.app-shell .app-shell-chrome,
   html.dark.app-shell .app-shell-topbar,
+  html.dark.app-shell .app-shell-status-slab,
   html.dark.app-shell .app-shell-bottomnav {
     background-color: #1c1917;
+  }
+
+  /*
+   * Solid notch slab — sibling above the 56px title row. Height is a pixel
+   * token (JS) with env() fallback. Never pad .app-shell-topbar with this
+   * value: that stacked the title onto the same layer iOS frosts after
+   * viewport-fit=cover (BEA-49 / BEA-78).
+   */
+  html.app-shell .app-shell-status-slab {
+    flex-shrink: 0;
+    box-sizing: border-box;
+    height: env(safe-area-inset-top, 0px);
+    height: var(--app-shell-status-slab, env(safe-area-inset-top, 0px));
   }
 
   /* No empty padded band above the title — hide chrome when banners are absent. */
   html.app-shell .app-shell-chrome:not(:has(*)) {
     display: none;
-  }
-
-  /* Notch padding lives on the header; the title row below it is a fixed 56/64px box. */
-  html.app-shell .app-shell-chrome:not(:has(*)) ~ * {
-    --app-shell-topbar-pad-top: var(--safe-area-top);
   }
 
   /*
@@ -393,6 +403,8 @@ html.standalone-pwa.app-shell {
   --safe-area-bottom: 34px;
   --app-shell-bottomnav-pad: 34px;
   --app-shell-keyboard-inset: 0px;
+  /* Do NOT zero --app-shell-status-slab here. BEA-83 did that and put
+   * "Viselle Platform" under the iOS status-bar material (BEA-78 FAIL). */
 }
 
 html.standalone-pwa.app-shell,
@@ -417,10 +429,6 @@ html.standalone-pwa.app-shell .app-shell-bottomnav-spacer {
   display: block;
   flex-shrink: 0;
   height: calc(3.25rem + var(--app-shell-bottomnav-pad, 34px));
-}
-
-html.standalone-pwa.app-shell .app-shell-chrome:not(:has(*)) ~ * {
-  --app-shell-topbar-pad-top: 0px;
 }
 
 html.standalone-pwa.app-shell .app-shell-chrome {
@@ -460,10 +468,6 @@ html.standalone-pwa.app-shell .app-shell-chrome {
     display: block;
     flex-shrink: 0;
     height: calc(3.25rem + var(--app-shell-bottomnav-pad, 34px));
-  }
-
-  html.app-shell .app-shell-chrome:not(:has(*)) ~ * {
-    --app-shell-topbar-pad-top: 0px;
   }
 
   html.app-shell .app-shell-chrome {

@@ -5,7 +5,7 @@
     <link rel="icon" type="image/svg+xml" href="/viselle-logo.svg?v=20260811a" />
     <link rel="icon" type="image/png" href="/favicon.png?v=20260811a" sizes="48x48" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260811a" />
-    <link rel="manifest" href="/manifest.webmanifest?v=20260903a" />
+    <link rel="manifest" href="/manifest.webmanifest?v=20260905a" />
     <meta name="theme-color" content="#2a0f1e" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -166,6 +166,28 @@
           document.documentElement.classList.add('standalone-pwa');
         }
 
+        // Logged-in PWA launch: paint a white/dark theme-color before React.
+        // Maroon `#2a0f1e` + viewport-fit=cover is the frosted band over the title.
+        function applyLoggedInShellThemeColor() {
+          var host = (location.hostname || '').toLowerCase();
+          var path = location.pathname || '';
+          var bookingPath = path === '/book' || path.indexOf('/book/') === 0;
+          var bookingHost = false;
+          if (host.length > 'viselle.net'.length + 1 && host.slice(-12) === '.viselle.net') {
+            var label = host.slice(0, -12);
+            bookingHost = !!label && label.indexOf('.') === -1;
+          }
+          if (bookingPath || bookingHost) return;
+          var token = null;
+          try { token = localStorage.getItem('viselle_auth_token'); } catch (e) {}
+          if (!token) return;
+          var themeMeta = document.querySelector('meta[name="theme-color"]');
+          if (!themeMeta) return;
+          var dark = document.documentElement.classList.contains('dark');
+          themeMeta.setAttribute('content', dark ? '#1c1917' : '#ffffff');
+        }
+        applyLoggedInShellThemeColor();
+
         function isIosStandaloneWebApp() {
           if (!isStandaloneWebApp()) return false;
           var ua = navigator.userAgent || '';
@@ -276,6 +298,11 @@
           document.documentElement.style.setProperty('--safe-area-bottom', '34px');
           document.documentElement.style.setProperty('--app-shell-bottomnav-pad', '34px');
           document.documentElement.style.setProperty('--app-shell-keyboard-inset', '0px');
+          // env() until JS measures. Do not force 0 — that is the BEA-78 frost.
+          document.documentElement.style.setProperty(
+            '--app-shell-status-slab',
+            'env(safe-area-inset-top, 0px)'
+          );
         }
 
         onViewportSettle();

@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
 import {
+  APP_SHELL_THEME_COLOR_DARK,
+  APP_SHELL_THEME_COLOR_LIGHT,
   FIRST_SHELL_SETTLE_DELAYS_MS,
   KEYBOARD_CLOSE_DELAYS_MS,
   SETTLE_DELAYS_MS,
@@ -29,7 +31,7 @@ export function useAppShellViewport() {
     const syncThemeColor = () => {
       if (!themeMeta) return;
       const dark = document.documentElement.classList.contains('dark');
-      themeMeta.setAttribute('content', dark ? '#1c1917' : '#ffffff');
+      themeMeta.setAttribute('content', dark ? APP_SHELL_THEME_COLOR_DARK : APP_SHELL_THEME_COLOR_LIGHT);
     };
     syncThemeColor();
     // Opaque status bar. index.html must also default to `black` — iOS reads
@@ -127,6 +129,8 @@ export function useAppShellViewport() {
     return () => {
       document.documentElement.classList.remove('app-shell');
       document.documentElement.style.removeProperty('--app-height');
+      document.documentElement.style.removeProperty('--safe-area-top');
+      document.documentElement.style.removeProperty('--app-shell-status-slab');
       document.documentElement.style.removeProperty('--safe-area-bottom');
       document.documentElement.style.removeProperty('--app-shell-bottomnav-pad');
       document.documentElement.style.removeProperty('--app-shell-keyboard-inset');

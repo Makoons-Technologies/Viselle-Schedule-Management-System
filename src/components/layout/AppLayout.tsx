@@ -28,15 +28,20 @@ function AppLayoutContent() {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden overscroll-none bg-stone-50 dark:bg-stone-900">
       {/*
-        Banners (when present) live in a solid slab with pt-safe. When they
-        are absent the slab is display:none and Topbar owns the notch padding
-        in Safari-in-tab. Installed PWA zeros that extra top pad — the opaque
-        status bar already insets. Title paint is BEA-78 (system font, no
-        backdrop-filter on this stack). Bottom nav is BEA-83 (webview height
-        + fixed bar + literal 34px pad, not 100vh).
+        Status slab (not topbar padding) owns the notch. BEA-49 viewport-fit=cover
+        lets iOS frost whatever sits in env(safe-area-inset-top). Putting that
+        pad on .app-shell-topbar rasterized "Viselle Platform"; zeroing it on
+        standalone (BEA-83 leftover-chrome) put the glyphs under the frost.
+        Solid sibling slab above a 56px title row. Bottom nav is BEA-83
+        (webview height + fixed bar + literal 34px pad, not 100vh).
       */}
+      <div
+        className="app-shell-status-slab"
+        data-testid="app-shell-status-slab"
+        aria-hidden
+      />
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="app-shell-chrome shrink-0 pt-safe" data-testid="app-shell-chrome">
+        <div className="app-shell-chrome shrink-0" data-testid="app-shell-chrome">
           <ImpersonationBanner />
           <OrgTrialBanner />
           <AddToHomeScreenBanner />
