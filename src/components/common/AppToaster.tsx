@@ -12,8 +12,9 @@ const TOAST_OFFSET = {
 } as const;
 
 /**
- * Installed PWA: keep toasts off the title row. Bottom pad clears the
- * BEA-83 tab bar (3.25rem icons+labels + literal 34px home-indicator).
+ * Installed PWA: keep remaining Sonner toasts off the title row (BEA-83
+ * tab pad). Login-success does not use Sonner in standalone — see
+ * announceSignedInWelcome (BEA-85 restage).
  */
 const STANDALONE_TOAST_OFFSET = {
   top: '12px',

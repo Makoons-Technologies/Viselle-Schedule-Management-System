@@ -9,6 +9,7 @@ import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
 import { MobileSidebar } from '@/components/layout/MobileSidebar';
 import { OrgTrialBanner } from '@/components/layout/OrgTrialBanner';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { LoginWelcomeBanner } from '@/components/layout/LoginWelcomeBanner';
 import { Topbar } from '@/components/layout/Topbar';
 import { OrgOwnerTourPanel } from '@/components/onboarding/OrgOwnerTourPanel';
 import { useAppShellViewport } from '@/hooks/useAppShellViewport';
@@ -56,6 +57,7 @@ function AppLayoutContent() {
                   : 'p-4 sm:px-6 sm:pt-6 desktop-shell:pb-6',
               )}
             >
+              <LoginWelcomeBanner />
               <Outlet />
             </main>
           </div>
