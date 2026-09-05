@@ -17,6 +17,8 @@ function readTitlePaint(page: Page) {
     const header = el.closest('header');
     const row = header?.querySelector(':scope > div');
     const headerStyle = header ? getComputedStyle(header) : null;
+    const root = document.getElementById('root');
+    const rootStyle = root ? getComputedStyle(root) : null;
     const ancestorFlags: Array<{ tag: string; backdrop: string; filter: string; transform: string; opacity: string }> =
       [];
     let node: HTMLElement | null = el;
@@ -50,15 +52,14 @@ function readTitlePaint(page: Page) {
       headerTop: header?.getBoundingClientRect().top ?? 0,
       headerPaddingTop: headerStyle?.paddingTop ?? '',
       headerPaddingTopPx: headerStyle ? parseFloat(headerStyle.paddingTop) || 0 : 0,
-      chromePadPx:
+      rootPadPx: rootStyle ? parseFloat(rootStyle.paddingTop) || 0 : 0,
+      safePadPx:
         parseFloat(
           getComputedStyle(document.documentElement)
-            .getPropertyValue('--app-shell-chrome-pad-top')
+            .getPropertyValue('--app-shell-safe-pad-top')
             .trim(),
         ) || 0,
-      slabHeight:
-        document.querySelector('[data-testid="app-shell-status-slab"]')?.getBoundingClientRect()
-          .height ?? 0,
+      slabNode: Boolean(document.querySelector('[data-testid="app-shell-status-slab"]')),
       ancestorFlags,
     };
   });
@@ -88,7 +89,7 @@ function expectCrispTitlePaint(paint: Awaited<ReturnType<typeof readTitlePaint>>
     ),
   ).toBeTruthy();
   expect(paint.rowHeight).toBe(56);
-  expect(paint.slabHeight).toBe(0);
+  expect(paint.slabNode).toBe(false);
   expect(paint.titleTop).toBeGreaterThanOrEqual(paint.headerTop + paint.headerPaddingTopPx);
   expect(paint.titleTop % 1).toBe(0);
 }
@@ -113,11 +114,12 @@ test.describe('BEA-78 app-shell title paint', () => {
 
     await page.goto('/platform/dashboard');
     await expect(page.getByTestId('app-shell-title')).toHaveText('Viselle Platform');
+    await expect(page.getByTestId('app-shell-status-slab')).toHaveCount(0);
 
     expectCrispTitlePaint(await readTitlePaint(page));
   });
 
-  test('standalone inset webview: empty slab stays 0; topbar pads title below frost', async ({
+  test('standalone inset webview: no slab node; #root pad keeps title below frost', async ({
     page,
   }) => {
     await emulateIosStandalonePwa(page);
@@ -131,20 +133,16 @@ test.describe('BEA-78 app-shell title paint', () => {
 
     await page.goto('/platform/dashboard');
     await expect(page.getByTestId('app-shell-title')).toHaveText('Viselle Platform');
+    await expect(page.getByTestId('app-shell-status-slab')).toHaveCount(0);
 
     const paint = await readTitlePaint(page);
     expectCrispTitlePaint(paint);
-    expect(paint.slabHeight).toBe(0);
-    expect(paint.headerTop).toBe(0);
-    expect(paint.headerPaddingTopPx).toBeGreaterThanOrEqual(47);
-    expect(paint.chromePadPx).toBeGreaterThanOrEqual(47);
+    expect(paint.headerPaddingTopPx).toBe(0);
+    expect(paint.rootPadPx).toBeGreaterThanOrEqual(47);
+    expect(paint.safePadPx).toBeGreaterThanOrEqual(47);
+    expect(paint.headerTop).toBeGreaterThanOrEqual(47);
     expect(paint.titleTop).toBeGreaterThanOrEqual(47);
     expect(paint.rowHeight).toBe(56);
-
-    const slabVar = await page.evaluate(() =>
-      getComputedStyle(document.documentElement).getPropertyValue('--app-shell-status-slab').trim(),
-    );
-    expect(slabVar).toBe('0px');
   });
 
   test('standalone login welcome is in-flow and never mounts a Sonner toast', async ({ page }) => {
@@ -170,19 +168,23 @@ test.describe('BEA-78 app-shell title paint', () => {
       'black',
     );
     await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#ffffff');
-    const slab = await page.getByTestId('app-shell-status-slab').evaluate((el) => ({
-      height: el.getBoundingClientRect().height,
-      slabVar: getComputedStyle(document.documentElement)
-        .getPropertyValue('--app-shell-status-slab')
-        .trim(),
-      chromePad: getComputedStyle(document.documentElement)
-        .getPropertyValue('--app-shell-chrome-pad-top')
-        .trim(),
-    }));
-    // Empty slab collapsed (no white gap). Lead topbar owns the 47px frost pad.
-    expect(slab.height).toBe(0);
-    expect(slab.slabVar).toBe('0px');
-    expect(parseFloat(slab.chromePad)).toBeGreaterThanOrEqual(47);
+    await expect(page.getByTestId('app-shell-status-slab')).toHaveCount(0);
+
+    await expect
+      .poll(async () => {
+        return page.evaluate(() => {
+          const root = document.getElementById('root');
+          const pad = root ? parseFloat(getComputedStyle(root).paddingTop) || 0 : 0;
+          const safePad =
+            parseFloat(
+              getComputedStyle(document.documentElement)
+                .getPropertyValue('--app-shell-safe-pad-top')
+                .trim(),
+            ) || 0;
+          return Math.min(pad, safePad);
+        });
+      })
+      .toBeGreaterThanOrEqual(47);
 
     // BEA-85 restage: Sonner position:fixed is the compositor trigger. Kill it.
     await expect(page.locator('[data-sonner-toast]')).toHaveCount(0);
@@ -300,5 +302,6 @@ test.describe('BEA-78 app-shell title paint', () => {
       );
     });
     expect(chromeBackdrop).toEqual([]);
+    expect(rules.some((text) => text.includes('app-shell-status-slab'))).toBe(false);
   });
 });

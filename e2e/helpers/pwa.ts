@@ -29,9 +29,10 @@ export async function emulateIosStandalonePwa(page: Page) {
 }
 
 /**
- * Joseph's iPhone: 100vh (screen) is ~47px taller than the layout webview
- * because `black` status-bar-style already insets the webview. A second 47px
- * slab stacks as the empty white gap above chrome.
+ * Joseph's iPhone: 100vh (screen) is ~47px taller than the layout webview.
+ * This heuristic must not collapse `--app-shell-safe-pad-top` — PR 56/58
+ * zeroed the reserved band and frosted y=0 glyphs. The pad lives on `#root`,
+ * not a white sibling slab (PR 57 gap) and not the banner box (PR 59 blur).
  */
 export async function emulateStandaloneWebviewInsetBelowStatusBar(page: Page) {
   await page.addInitScript(() => {

@@ -12,13 +12,15 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { LoginWelcomeBanner } from '@/components/layout/LoginWelcomeBanner';
 import { Topbar } from '@/components/layout/Topbar';
 import { OrgOwnerTourPanel } from '@/components/onboarding/OrgOwnerTourPanel';
+import { useAuth } from '@/context/AuthContext';
 import { useAppShellViewport } from '@/hooks/useAppShellViewport';
 import { cn } from '@/lib/utils';
 
 function AppLayoutContent() {
   const location = useLocation();
   const { close } = useMobileNav();
-  useAppShellViewport();
+  const { isImpersonating } = useAuth();
+  useAppShellViewport(isImpersonating);
   const isCalendarRoute = /\/calendar\/?$/.test(location.pathname);
 
   useEffect(() => {
@@ -28,19 +30,13 @@ function AppLayoutContent() {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden overscroll-none bg-stone-50 dark:bg-stone-900">
       {/*
-        Empty sibling slab is collapsed (height 0). PR 57's 47px white slab
-        was the gap under the clock when ImpersonationBanner is next; PR 58
-        zeroing it frosted the banner text. Lead chrome (banner, else Topbar)
-        paints full-bleed under the status bar and pads glyphs with
-        --app-shell-chrome-pad-top (max(env, 47) on iOS standalone). Title
-        row stays a whole-pixel 56px box below that pad. Bottom nav is
-        BEA-83 (webview height + fixed bar + literal 34px pad).
+        No status-slab node (Joseph 2026-09-05: remove the blur div and the
+        gap). `#root` owns --app-shell-safe-pad-top so banner/title boxes
+        start below iOS frost; page background fills the reserved band
+        (amber while impersonating, white otherwise) instead of a white
+        sibling strip. Bottom nav is BEA-83 (webview height + fixed bar +
+        literal 34px pad). Welcome back stays in-flow (BEA-85).
       */}
-      <div
-        className="app-shell-status-slab"
-        data-testid="app-shell-status-slab"
-        aria-hidden
-      />
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="app-shell-chrome shrink-0" data-testid="app-shell-chrome">
           <ImpersonationBanner />

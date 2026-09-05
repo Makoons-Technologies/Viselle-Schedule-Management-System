@@ -65,8 +65,7 @@
   --safe-area-right: env(safe-area-inset-right, 0px);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-left: env(safe-area-inset-left, 0px);
-  --app-shell-status-slab: 0px;
-  --app-shell-chrome-pad-top: 0px;
+  --app-shell-safe-pad-top: 0px;
 }
 
 @utility pt-safe {
@@ -146,6 +145,7 @@
   html.app-shell,
   html.app-shell body,
   html.app-shell #root {
+    box-sizing: border-box;
     height: var(--app-height, 100dvh);
     max-height: var(--app-height, 100dvh);
     overflow: hidden;
@@ -184,7 +184,6 @@
    */
   html.app-shell .app-shell-chrome,
   html.app-shell .app-shell-topbar,
-  html.app-shell .app-shell-status-slab,
   html.app-shell .app-shell-bottomnav {
     overflow: visible;
     background-color: #ffffff;
@@ -192,21 +191,8 @@
 
   html.dark.app-shell .app-shell-chrome,
   html.dark.app-shell .app-shell-topbar,
-  html.dark.app-shell .app-shell-status-slab,
   html.dark.app-shell .app-shell-bottomnav {
     background-color: #1c1917;
-  }
-
-  /*
-   * Empty sibling slab stays collapsed. Lead chrome (banner or topbar)
-   * paints under the status bar and pads its own glyphs (BEA-78 after PR 58).
-   */
-  html.app-shell .app-shell-status-slab {
-    flex-shrink: 0;
-    box-sizing: border-box;
-    height: 0;
-    overflow: hidden;
-    pointer-events: none;
   }
 
   /* No empty padded band above the title — hide chrome when banners are absent. */
@@ -403,19 +389,10 @@ html.standalone-pwa.app-shell {
   --safe-area-bottom: 34px;
   --app-shell-bottomnav-pad: 34px;
   --app-shell-keyboard-inset: 0px;
-  /* Empty white slab stays 0 (PR 57 gap). Lead chrome pads with env()
-   * until JS floors to max(env, 47). Do not wrap env() in max() (PR 46).
-   * Do not hardcode 47px here. */
-  --app-shell-status-slab: 0px;
-  --app-shell-chrome-pad-top: env(safe-area-inset-top, 0px);
-}
-
-/*
- * Collapsed empty slab on standalone too. Never min-height:47px — that
- * is the visible white gap above an orange ImpersonationBanner.
- */
-html.standalone-pwa.app-shell .app-shell-status-slab {
-  height: 0;
+  /* Reserved on #root, not a sibling slab / not the banner box.
+   * env() until JS floors to max(env, 47). Do not wrap env() in max()
+   * (PR 46). Do not hardcode 47px here. */
+  --app-shell-safe-pad-top: env(safe-area-inset-top, 0px);
 }
 
 html.standalone-pwa.app-shell,
@@ -463,8 +440,7 @@ html.standalone-pwa.app-shell .app-shell-chrome {
   html.app-shell {
     --safe-area-bottom: 34px;
     --app-shell-bottomnav-pad: 34px;
-    --app-shell-status-slab: 0px;
-    --app-shell-chrome-pad-top: env(safe-area-inset-top, 0px);
+    --app-shell-safe-pad-top: env(safe-area-inset-top, 0px);
   }
 
   html.app-shell .app-shell-bottomnav {
@@ -495,19 +471,55 @@ html.standalone-pwa.app-shell .app-shell-chrome {
 }
 
 /*
- * BEA-78 after PR 58 (Joseph 2026-09-05 ~5:02pm CT).
+ * BEA-78 after PR 59 FAIL (Joseph 2026-09-05 ~5:25pm CT).
  *
- * Classic iOS: chrome background extends under the status bar; text sits
- * below the frost. Unlayered so they beat Tailwind py-2 on the lead banner.
- * Do not add filter / backdrop-filter / transform / isolation — even `none`
- * is a compositor trigger.
+ * Delete the status-slab node. Do not extend ImpersonationBanner / Topbar
+ * under the status bar (that composites the whole box and frosts glyphs).
+ * Pad #root so the first chrome *element* starts below the frost. The
+ * reserved band is page background — white matching Topbar, or amber
+ * matching ImpersonationBanner — not a distinct white rectangle.
+ *
+ * apple-mobile-web-app-status-bar-style stays `black` (iOS caches this at
+ * PWA install). Joseph's webview still paints under the clock; theme-color
+ * + #root bg fill that band so it does not read as a gap strip.
+ *
+ * Do not add filter / backdrop-filter / transform / isolation / will-change
+ * on chrome / banner / title — even `none` is a compositor trigger.
  */
-html.app-shell .app-shell-chrome > :first-child {
-  padding-top: calc(var(--app-shell-chrome-pad-top, 0px) + 0.5rem);
+html.standalone-pwa.app-shell #root {
   box-sizing: border-box;
+  padding-top: var(--app-shell-safe-pad-top, 0px);
+  background-color: #ffffff;
 }
 
-html.app-shell:not(:has(.app-shell-chrome > *)) .app-shell-topbar {
-  padding-top: var(--app-shell-chrome-pad-top, 0px);
-  box-sizing: border-box;
+html.dark.standalone-pwa.app-shell #root {
+  background-color: #1c1917;
+}
+
+@media (display-mode: standalone) {
+  html.app-shell #root {
+    box-sizing: border-box;
+    padding-top: var(--app-shell-safe-pad-top, 0px);
+    background-color: #ffffff;
+  }
+
+  html.dark.app-shell #root {
+    background-color: #1c1917;
+  }
+}
+
+/* After standalone #root white so amber wins while impersonating. */
+html.app-shell.app-shell-impersonating,
+html.app-shell.app-shell-impersonating body,
+html.app-shell.app-shell-impersonating #root,
+html.standalone-pwa.app-shell.app-shell-impersonating #root,
+html.app-shell.app-shell-impersonating .app-shell-chrome {
+  background-color: #f59e0b;
+}
+
+@media (display-mode: standalone) {
+  html.app-shell.app-shell-impersonating #root,
+  html.app-shell.app-shell-impersonating .app-shell-chrome {
+    background-color: #f59e0b;
+  }
 }
