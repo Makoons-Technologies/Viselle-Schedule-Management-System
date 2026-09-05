@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { emulateIosStandalonePwa, emulateStandaloneWebviewInsetBelowStatusBar } from './helpers/pwa';
 import {
   mockAuthMe,
   mockPlatformDashboardApis,
@@ -18,76 +19,6 @@ async function openPlatformDashboard(page: Page) {
   await seedStoredToken(page);
   await page.goto('/platform/dashboard');
   await expect(page.getByTestId('app-shell-title')).toHaveText('Viselle Platform');
-}
-
-async function emulateIosStandalonePwa(page: Page) {
-  await page.addInitScript(() => {
-    Object.defineProperty(navigator, 'standalone', {
-      configurable: true,
-      get: () => true,
-    });
-    const original = window.matchMedia.bind(window);
-    window.matchMedia = ((query: string) => {
-      if (query.includes('display-mode: standalone')) {
-        return {
-          matches: true,
-          media: query,
-          onchange: null,
-          addListener() {},
-          removeListener() {},
-          addEventListener() {},
-          removeEventListener() {},
-          dispatchEvent() {
-            return false;
-          },
-        } as MediaQueryList;
-      }
-      return original(query);
-    }) as typeof window.matchMedia;
-  });
-}
-
-/**
- * Joseph's iPhone: 100vh (screen) is ~47px taller than the layout webview.
- * PR 56 treated that as "already inset" and set --app-shell-status-slab to 0.
- */
-async function emulateStandaloneWebviewInsetBelowStatusBar(page: Page) {
-  await page.addInitScript(() => {
-    const SCREEN = 844;
-    const LAYOUT = 797;
-    const offsetDesc = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetHeight');
-    Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
-      configurable: true,
-      get: function () {
-        if (this instanceof HTMLElement && this.style.height === '100vh') {
-          return SCREEN;
-        }
-        return offsetDesc?.get ? offsetDesc.get.call(this) : 0;
-      },
-    });
-    const origRect = Element.prototype.getBoundingClientRect;
-    Element.prototype.getBoundingClientRect = function () {
-      const rect = origRect.call(this);
-      if (
-        this instanceof HTMLElement &&
-        this.style.position === 'fixed' &&
-        (this.style.inset === '0px' || this.style.inset === '0') &&
-        this.style.visibility === 'hidden'
-      ) {
-        return new DOMRect(rect.x, rect.y, rect.width, LAYOUT);
-      }
-      return rect;
-    };
-    const applyClientHeight = () => {
-      if (!document.documentElement) return;
-      Object.defineProperty(document.documentElement, 'clientHeight', {
-        configurable: true,
-        get: () => LAYOUT,
-      });
-    };
-    applyClientHeight();
-    document.addEventListener('DOMContentLoaded', applyClientHeight);
-  });
 }
 
 function collectStyleRules(page: Page) {
@@ -155,13 +86,13 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
       };
     });
 
-    // Standalone must keep a non-zero frost slab (PR 41 Joseph PASS = 47px).
-    // Chromium env() is 0; JS/CSS floor to 47. Never accept 0 after PR 56.
+    // Edge-to-edge Chromium: env() is 0, webview is not inset → JS floors to 47.
+    // Inset phones (Joseph) are the other spec — do not force 47 there.
     expect(slab.height).toBeGreaterThan(0);
-    expect(slab.height).toBe(47);
+    expect(slab.height).toBeGreaterThanOrEqual(47);
     expect(slab.top).toBe(0);
     expect(slab.slabVar).not.toBe('0px');
-    expect(slab.slabVar).toBe('47px');
+    expect(parseFloat(slab.slabVar)).toBeGreaterThanOrEqual(47);
     expect(slab.filter).toMatch(/^(none)?$/);
     expect(slab.transform).toBe('none');
     expect(slab.backdrop === 'none' || slab.backdrop === '').toBeTruthy();
@@ -328,13 +259,14 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
           text.includes('standalone'),
       ),
     ).toBe(false);
-    expect(joined).toMatch(/--app-shell-status-slab:\s*47px/);
+    // PR 57 forced a 47px floor even on inset webviews. That is the gap.
+    expect(joined).not.toMatch(/html\.standalone-pwa\.app-shell\s*\{[^}]*--app-shell-status-slab:\s*47px/);
     expect(
       rules.some((text) => text.includes('app-shell-status-slab') && /min-height:\s*47px/.test(text)),
-    ).toBe(true);
+    ).toBe(false);
   });
 
-  test('standalone: slab stays non-zero when 100vh looks inset (PR 56 zero-path)', async ({
+  test('standalone: inset webview zeros the slab (Joseph gap) and title stays crisp', async ({
     page,
   }) => {
     await emulateIosStandalonePwa(page);
@@ -357,6 +289,10 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
       layout.remove();
       const slab = document.querySelector('[data-testid="app-shell-status-slab"]');
       const title = document.querySelector('[data-testid="app-shell-title"]');
+      const header = document.querySelector('[data-testid="app-shell-topbar"]');
+      const titleStyle = title ? getComputedStyle(title) : null;
+      const headerStyle = header ? getComputedStyle(header) : null;
+      const row = header?.querySelector(':scope > div');
       return {
         screenH,
         layoutH,
@@ -365,21 +301,38 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
           .getPropertyValue('--app-shell-status-slab')
           .trim(),
         slabHeight: slab?.getBoundingClientRect().height ?? 0,
+        slabMinHeight: slab ? getComputedStyle(slab).minHeight : '',
         titleTop: title?.getBoundingClientRect().top ?? 0,
-        headerPad: document.querySelector('[data-testid="app-shell-topbar"]')
-          ? getComputedStyle(document.querySelector('[data-testid="app-shell-topbar"]') as Element)
-              .paddingTop
-          : '',
+        headerTop: header?.getBoundingClientRect().top ?? 0,
+        headerPad: headerStyle?.paddingTop ?? '',
+        rowHeight: row?.getBoundingClientRect().height ?? 0,
+        titleFilter: titleStyle?.filter ?? '',
+        titleTransform: titleStyle?.transform ?? '',
+        titleBackdrop: titleStyle?.backdropFilter ?? '',
+        headerFilter: headerStyle?.filter ?? '',
+        headerTransform: headerStyle?.transform ?? '',
+        headerBackdrop: headerStyle?.backdropFilter ?? '',
+        titleFont: titleStyle?.fontFamily ?? '',
       };
     });
 
-    // This is the Joseph / PR 56 heuristic. Slab must still be the 47px floor.
+    // Joseph's phone: opaque bar already insets. A second 47px slab is the gap.
     expect(geometry.screenH - geometry.layoutH).toBeGreaterThanOrEqual(40);
-    expect(geometry.slabVar).not.toBe('0px');
-    expect(parseFloat(geometry.slabVar)).toBeGreaterThanOrEqual(47);
-    expect(geometry.slabHeight).toBeGreaterThanOrEqual(47);
-    expect(geometry.titleTop).toBeGreaterThanOrEqual(47);
+    expect(geometry.slabVar).toBe('0px');
+    expect(geometry.slabHeight).toBe(0);
+    expect(geometry.slabMinHeight === '0px' || geometry.slabMinHeight === 'auto').toBeTruthy();
     expect(geometry.headerPad).toBe('0px');
+    expect(geometry.headerTop).toBe(0);
+    expect(geometry.titleTop).toBeGreaterThanOrEqual(0);
+    expect(geometry.titleTop).toBeLessThan(40);
+    expect(geometry.rowHeight).toBe(56);
+    expect(geometry.titleFont.toLowerCase()).toMatch(/-apple-system|blinkmacsystemfont|sf pro|system-ui/);
+    expect(geometry.titleFilter).toMatch(/^(none)?$/);
+    expect(geometry.titleTransform).toBe('none');
+    expect(geometry.titleBackdrop === 'none' || geometry.titleBackdrop === '').toBeTruthy();
+    expect(geometry.headerFilter).toMatch(/^(none)?$/);
+    expect(geometry.headerTransform).toBe('none');
+    expect(geometry.headerBackdrop === 'none' || geometry.headerBackdrop === '').toBeTruthy();
   });
 
   test('standalone: drawer open must not be required for tab padding', async ({ page }) => {

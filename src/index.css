@@ -403,20 +403,19 @@ html.standalone-pwa.app-shell {
   --safe-area-bottom: 34px;
   --app-shell-bottomnav-pad: 34px;
   --app-shell-keyboard-inset: 0px;
-  /* Floor the frost slab. PR 56 JS zeroed this when 100vh − layout ≥ 40
-   * and Joseph's title stayed under the status-bar material. Do not set 0. */
-  --app-shell-status-slab: 47px;
+  /* env() until JS measures. Never force 47px — that double-pads inset
+   * webviews (Joseph 2026-09-05 gap). JS sets 0 when 100vh − layout ≥ 40,
+   * or max(env, 47) when edge-to-edge. Do not wrap env() in max() (PR 46). */
+  --app-shell-status-slab: env(safe-area-inset-top, 0px);
 }
 
 /*
- * Standalone slab: painted band must stay non-zero even if the JS token is
- * late or wrongly 0. Literal 47px floor — do not wrap env() in max()
- * (WebKit drops that; PR 46). Title row stays an unpadded 56px sibling.
+ * Standalone slab: no min-height floor. Token 0 must collapse to 0 on
+ * inset webviews. Title row stays an unpadded 56px sibling (BEA-78 crisp).
  */
 html.standalone-pwa.app-shell .app-shell-status-slab {
-  min-height: 47px;
-  height: env(safe-area-inset-top, 47px);
-  height: var(--app-shell-status-slab, 47px);
+  height: env(safe-area-inset-top, 0px);
+  height: var(--app-shell-status-slab, env(safe-area-inset-top, 0px));
 }
 
 html.standalone-pwa.app-shell,

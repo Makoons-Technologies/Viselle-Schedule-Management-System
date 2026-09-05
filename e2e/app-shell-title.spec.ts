@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { emulateIosStandalonePwa, emulateStandaloneWebviewInsetBelowStatusBar } from './helpers/pwa';
 import {
   mockAuthMe,
   mockPlatformDashboardApis,
@@ -9,33 +10,6 @@ import {
 
 const IPHONE_UA =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
-
-async function emulateIosStandalonePwa(page: Page) {
-  await page.addInitScript(() => {
-    Object.defineProperty(navigator, 'standalone', {
-      configurable: true,
-      get: () => true,
-    });
-    const original = window.matchMedia.bind(window);
-    window.matchMedia = ((query: string) => {
-      if (query.includes('display-mode: standalone')) {
-        return {
-          matches: true,
-          media: query,
-          onchange: null,
-          addListener() {},
-          removeListener() {},
-          addEventListener() {},
-          removeEventListener() {},
-          dispatchEvent() {
-            return false;
-          },
-        } as MediaQueryList;
-      }
-      return original(query);
-    }) as typeof window.matchMedia;
-  });
-}
 
 function readTitlePaint(page: Page) {
   return page.getByTestId('app-shell-title').evaluate((el) => {
@@ -137,6 +111,32 @@ test.describe('BEA-78 app-shell title paint', () => {
     expectCrispTitlePaint(await readTitlePaint(page));
   });
 
+  test('standalone inset webview: slab is 0 and title paint stays crisp', async ({ page }) => {
+    await emulateIosStandalonePwa(page);
+    await emulateStandaloneWebviewInsetBelowStatusBar(page);
+    await page.addInitScript(() => {
+      sessionStorage.setItem('viselle.a2hs-banner.dismissed', '1');
+    });
+    await mockAuthMe(page, platformOwnerUser);
+    await mockPlatformDashboardApis(page);
+    await seedStoredToken(page);
+
+    await page.goto('/platform/dashboard');
+    await expect(page.getByTestId('app-shell-title')).toHaveText('Viselle Platform');
+
+    const paint = await readTitlePaint(page);
+    expectCrispTitlePaint(paint);
+    expect(paint.slabHeight).toBe(0);
+    expect(paint.headerTop).toBe(0);
+    expect(paint.headerPaddingTop).toBe('0px');
+    expect(paint.rowHeight).toBe(56);
+
+    const slabVar = await page.evaluate(() =>
+      getComputedStyle(document.documentElement).getPropertyValue('--app-shell-status-slab').trim(),
+    );
+    expect(slabVar).toBe('0px');
+  });
+
   test('standalone login welcome is in-flow and never mounts a Sonner toast', async ({ page }) => {
     await emulateIosStandalonePwa(page);
     await page.addInitScript(() => {
@@ -166,10 +166,11 @@ test.describe('BEA-78 app-shell title paint', () => {
         .getPropertyValue('--app-shell-status-slab')
         .trim(),
     }));
+    // Edge-to-edge Chromium (env 0, not inset) → 47px frost floor.
     expect(slab.height).toBeGreaterThan(0);
-    expect(slab.height).toBe(47);
+    expect(slab.height).toBeGreaterThanOrEqual(47);
     expect(slab.slabVar).not.toBe('0px');
-    expect(slab.slabVar).toBe('47px');
+    expect(parseFloat(slab.slabVar)).toBeGreaterThanOrEqual(47);
 
     // BEA-85 restage: Sonner position:fixed is the compositor trigger. Kill it.
     await expect(page.locator('[data-sonner-toast]')).toHaveCount(0);

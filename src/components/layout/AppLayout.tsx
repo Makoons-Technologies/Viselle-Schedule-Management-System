@@ -32,9 +32,10 @@ function AppLayoutContent() {
         lets iOS frost whatever sits in env(safe-area-inset-top). Putting that
         pad on .app-shell-topbar rasterized "Viselle Platform"; zeroing it on
         standalone (BEA-83 leftover-chrome, then PR 56 inset→0) put the glyphs
-        under the frost. Standalone slab stays max(env, 47px). Title row is an
-        unpadded 56px sibling. Bottom nav is BEA-83 (webview height + fixed
-        bar + literal 34px pad, not 100vh).
+        under the frost. Inset webviews (opaque black bar already below the
+        clock) get slab 0 — do not stack a second 47px band. Edge-to-edge
+        stays max(env, 47px). Title row is an unpadded 56px sibling. Bottom
+        nav is BEA-83 (webview height + fixed bar + literal 34px pad).
       */}
       <div
         className="app-shell-status-slab"
