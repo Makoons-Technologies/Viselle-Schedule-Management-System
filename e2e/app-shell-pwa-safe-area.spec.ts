@@ -12,6 +12,8 @@ import {
 const IPHONE_UA =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
 
+const AMBER_500 = /rgb\(\s*245,\s*158,\s*11\s*\)|#f59e0b/i;
+
 async function openPlatformDashboard(page: Page) {
   await page.addInitScript(() => {
     sessionStorage.setItem('viselle.a2hs-banner.dismissed', '1');
@@ -71,36 +73,23 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     const themeColor = page.locator('meta[name="theme-color"]');
     await expect(themeColor).toHaveAttribute('content', '#ffffff');
 
-    const slab = await page.getByTestId('app-shell-status-slab').evaluate((el) => {
-      const style = getComputedStyle(el);
+    await expect(page.getByTestId('app-shell-status-slab')).toHaveCount(0);
+
+    const root = await page.evaluate(() => {
+      const el = document.getElementById('root');
+      const style = el ? getComputedStyle(el) : null;
       return {
-        height: el.getBoundingClientRect().height,
-        top: el.getBoundingClientRect().top,
-        filter: style.filter,
-        transform: style.transform,
-        backdrop: style.backdropFilter,
-        isolation: style.isolation,
-        willChange: style.willChange,
-        background: style.backgroundColor,
-        slabVar: getComputedStyle(document.documentElement)
-          .getPropertyValue('--app-shell-status-slab')
-          .trim(),
-        chromePad: getComputedStyle(document.documentElement)
-          .getPropertyValue('--app-shell-chrome-pad-top')
+        pad: style ? parseFloat(style.paddingTop) || 0 : 0,
+        background: style?.backgroundColor ?? '',
+        safePad: getComputedStyle(document.documentElement)
+          .getPropertyValue('--app-shell-safe-pad-top')
           .trim(),
       };
     });
 
-    // Empty white slab collapsed (PR 57 gap). Lead topbar owns max(env, 47) pad.
-    expect(slab.height).toBe(0);
-    expect(slab.top).toBe(0);
-    expect(slab.slabVar).toBe('0px');
-    expect(parseFloat(slab.chromePad)).toBeGreaterThanOrEqual(47);
-    expect(slab.filter).toMatch(/^(none)?$/);
-    expect(slab.transform).toBe('none');
-    expect(slab.backdrop === 'none' || slab.backdrop === '').toBeTruthy();
-    expect(slab.isolation).toMatch(/^(auto)?$/);
-    expect(slab.willChange).toMatch(/^(auto)?$/);
+    expect(root.pad).toBeGreaterThanOrEqual(47);
+    expect(parseFloat(root.safePad)).toBeGreaterThanOrEqual(47);
+    expect(root.background.toLowerCase()).toMatch(/rgb\(\s*255,\s*255,\s*255|#fff/);
 
     const top = await page.getByTestId('app-shell-topbar').evaluate((el) => {
       const style = getComputedStyle(el);
@@ -128,9 +117,9 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
       };
     });
 
-    // Topbar is lead chrome: background at y=0, title row 56px below frost.
-    expect(parseFloat(top.paddingTop)).toBeGreaterThanOrEqual(47);
-    expect(top.headerTop).toBe(0);
+    // Topbar box starts below frost (#root pad). Title is not in the frost zone.
+    expect(parseFloat(top.paddingTop) || 0).toBe(0);
+    expect(top.headerTop).toBeGreaterThanOrEqual(47);
     expect(top.titleTop).toBeGreaterThanOrEqual(47);
     expect(top.rowHeight).toBe(56);
     expect(top.titleFont.toLowerCase()).toMatch(/-apple-system|blinkmacsystemfont|sf pro|system-ui/);
@@ -255,16 +244,14 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
 
     // BEA-83 leftover-chrome fix must not come back as a standalone 0-pad on the title.
     expect(joined.includes('--app-shell-topbar-pad-top')).toBe(false);
-    // Empty slab is collapsed in CSS. Do not reintroduce a 47px white floor.
-    expect(joined).not.toMatch(/html\.standalone-pwa\.app-shell\s*\{[^}]*--app-shell-status-slab:\s*47px/);
-    expect(joined).not.toMatch(/--app-shell-chrome-pad-top:\s*47px/);
-    expect(
-      rules.some((text) => text.includes('app-shell-status-slab') && /min-height:\s*47px/.test(text)),
-    ).toBe(false);
-    expect(joined).toMatch(/--app-shell-chrome-pad-top:\s*env\(safe-area-inset-top/);
+    // No decorative slab and no 47px hardcoded chrome-pad (PR 57/59).
+    expect(joined).not.toMatch(/app-shell-status-slab/);
+    expect(joined).not.toMatch(/--app-shell-chrome-pad-top/);
+    expect(joined).not.toMatch(/--app-shell-safe-pad-top:\s*47px/);
+    expect(joined).toMatch(/--app-shell-safe-pad-top:\s*env\(safe-area-inset-top/);
   });
 
-  test('standalone: inset webview keeps empty slab at 0; topbar still pads below frost', async ({
+  test('standalone: inset webview keeps #root pad; title box stays below frost', async ({
     page,
   }) => {
     await emulateIosStandalonePwa(page);
@@ -285,24 +272,22 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
       document.body.appendChild(layout);
       const layoutH = Math.round(layout.getBoundingClientRect().height);
       layout.remove();
-      const slab = document.querySelector('[data-testid="app-shell-status-slab"]');
       const title = document.querySelector('[data-testid="app-shell-title"]');
       const header = document.querySelector('[data-testid="app-shell-topbar"]');
       const titleStyle = title ? getComputedStyle(title) : null;
       const headerStyle = header ? getComputedStyle(header) : null;
       const row = header?.querySelector(':scope > div');
+      const root = document.getElementById('root');
+      const rootStyle = root ? getComputedStyle(root) : null;
       return {
         screenH,
         layoutH,
         clientH: document.documentElement.clientHeight,
-        slabVar: getComputedStyle(document.documentElement)
-          .getPropertyValue('--app-shell-status-slab')
+        safePad: getComputedStyle(document.documentElement)
+          .getPropertyValue('--app-shell-safe-pad-top')
           .trim(),
-        chromePad: getComputedStyle(document.documentElement)
-          .getPropertyValue('--app-shell-chrome-pad-top')
-          .trim(),
-        slabHeight: slab?.getBoundingClientRect().height ?? 0,
-        slabMinHeight: slab ? getComputedStyle(slab).minHeight : '',
+        slabNode: Boolean(document.querySelector('[data-testid="app-shell-status-slab"]')),
+        rootPad: rootStyle ? parseFloat(rootStyle.paddingTop) || 0 : 0,
         titleTop: title?.getBoundingClientRect().top ?? 0,
         headerTop: header?.getBoundingClientRect().top ?? 0,
         headerPad: headerStyle?.paddingTop ?? '',
@@ -320,12 +305,11 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     // Inset heuristic still fires, but it must not create a white slab gap
     // and must not put title glyphs in the frost band (PR 56/58).
     expect(geometry.screenH - geometry.layoutH).toBeGreaterThanOrEqual(40);
-    expect(geometry.slabVar).toBe('0px');
-    expect(geometry.slabHeight).toBe(0);
-    expect(geometry.slabMinHeight === '0px' || geometry.slabMinHeight === 'auto').toBeTruthy();
-    expect(parseFloat(geometry.chromePad)).toBeGreaterThanOrEqual(47);
-    expect(parseFloat(geometry.headerPad)).toBeGreaterThanOrEqual(47);
-    expect(geometry.headerTop).toBe(0);
+    expect(geometry.slabNode).toBe(false);
+    expect(parseFloat(geometry.safePad)).toBeGreaterThanOrEqual(47);
+    expect(geometry.rootPad).toBeGreaterThanOrEqual(47);
+    expect(parseFloat(geometry.headerPad) || 0).toBe(0);
+    expect(geometry.headerTop).toBeGreaterThanOrEqual(47);
     expect(geometry.titleTop).toBeGreaterThanOrEqual(47);
     expect(geometry.rowHeight).toBe(56);
     expect(geometry.titleFont.toLowerCase()).toMatch(/-apple-system|blinkmacsystemfont|sf pro|system-ui/);
@@ -359,22 +343,18 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     expect(footerPad).toBeGreaterThanOrEqual(12);
   });
 
-  test('Safari in-tab: empty slab; title row 56px; no standalone 47 floor', async ({ page }) => {
+  test('Safari in-tab: no slab node; title row 56px; no standalone 47 floor', async ({ page }) => {
     await openPlatformDashboard(page);
 
     await expect(page.locator('html')).not.toHaveClass(/standalone-pwa/);
-
-    const slabH = await page
-      .getByTestId('app-shell-status-slab')
-      .evaluate((el) => el.getBoundingClientRect().height);
-    // Chromium reports env() as 0 and is not iOS standalone — no 47px fallback.
-    expect(slabH).toBe(0);
+    await expect(page.getByTestId('app-shell-status-slab')).toHaveCount(0);
 
     const top = await page.getByTestId('app-shell-topbar').evaluate((el) => {
       const style = getComputedStyle(el);
       const row = el.querySelector(':scope > div');
       const title = el.querySelector('[data-testid="app-shell-title"]');
       const titleStyle = title ? getComputedStyle(title) : null;
+      const root = document.getElementById('root');
       return {
         paddingTop: style.paddingTop,
         headerTop: el.getBoundingClientRect().top,
@@ -382,8 +362,9 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
         titleFont: titleStyle?.fontFamily ?? '',
         titleFilter: titleStyle?.filter ?? '',
         titleTransform: titleStyle?.transform ?? '',
-        chromePad: getComputedStyle(document.documentElement)
-          .getPropertyValue('--app-shell-chrome-pad-top')
+        rootPad: root ? parseFloat(getComputedStyle(root).paddingTop) || 0 : 0,
+        safePad: getComputedStyle(document.documentElement)
+          .getPropertyValue('--app-shell-safe-pad-top')
           .trim(),
       };
     });
@@ -391,7 +372,8 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     expect(parseFloat(top.paddingTop) || 0).toBe(0);
     expect(top.headerTop).toBe(0);
     expect(top.rowHeight).toBe(56);
-    expect(parseFloat(top.chromePad) || 0).toBe(0);
+    expect(top.rootPad).toBe(0);
+    expect(parseFloat(top.safePad) || 0).toBe(0);
     expect(top.titleFont.toLowerCase()).toMatch(/-apple-system|blinkmacsystemfont|sf pro|system-ui/);
     expect(top.titleFilter).toMatch(/^(none)?$/);
     expect(top.titleTransform).toBe('none');
@@ -403,7 +385,7 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     expect(parseFloat(navPad)).toBe(8);
   });
 
-  test('standalone: ImpersonationBanner paints under status bar; text stays below frost', async ({
+  test('standalone: ImpersonationBanner starts below frost; page bg is amber not a white gap', async ({
     page,
   }) => {
     await emulateIosStandalonePwa(page);
@@ -420,25 +402,30 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     await expect(page.getByTestId('impersonation-banner-text')).toContainText(
       'Viewing as grokbot-subdomain-owner@viselle.test',
     );
+    await expect(page.locator('html')).toHaveClass(/app-shell-impersonating/);
+    await expect(page.getByTestId('app-shell-status-slab')).toHaveCount(0);
+    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#f59e0b');
 
     const geometry = await page.evaluate(() => {
       const bannerEl = document.querySelector('[data-testid="impersonation-banner"]');
       const textEl = document.querySelector('[data-testid="impersonation-banner-text"]');
       const header = document.querySelector('[data-testid="app-shell-topbar"]');
       const title = document.querySelector('[data-testid="app-shell-title"]');
-      const slab = document.querySelector('[data-testid="app-shell-status-slab"]');
       const bannerStyle = bannerEl ? getComputedStyle(bannerEl) : null;
       const textStyle = textEl ? getComputedStyle(textEl) : null;
       const headerStyle = header ? getComputedStyle(header) : null;
       const row = header?.querySelector(':scope > div');
+      const root = document.getElementById('root');
+      const rootStyle = root ? getComputedStyle(root) : null;
+      const htmlStyle = getComputedStyle(document.documentElement);
+      const bodyStyle = getComputedStyle(document.body);
       return {
-        slabHeight: slab?.getBoundingClientRect().height ?? 0,
-        slabVar: getComputedStyle(document.documentElement)
-          .getPropertyValue('--app-shell-status-slab')
-          .trim(),
-        chromePad: getComputedStyle(document.documentElement)
-          .getPropertyValue('--app-shell-chrome-pad-top')
-          .trim(),
+        slabNode: Boolean(document.querySelector('[data-testid="app-shell-status-slab"]')),
+        safePad: htmlStyle.getPropertyValue('--app-shell-safe-pad-top').trim(),
+        rootPad: rootStyle ? parseFloat(rootStyle.paddingTop) || 0 : 0,
+        rootBg: rootStyle?.backgroundColor ?? '',
+        htmlBg: htmlStyle.backgroundColor,
+        bodyBg: bodyStyle.backgroundColor,
         bannerTop: bannerEl?.getBoundingClientRect().top ?? -1,
         bannerPad: bannerStyle?.paddingTop ?? '',
         textTop: textEl?.getBoundingClientRect().top ?? -1,
@@ -456,13 +443,17 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
       };
     });
 
-    expect(geometry.slabHeight).toBe(0);
-    expect(geometry.slabVar).toBe('0px');
-    expect(parseFloat(geometry.chromePad)).toBeGreaterThanOrEqual(47);
-    expect(geometry.bannerTop).toBe(0);
-    expect(parseFloat(geometry.bannerPad)).toBeGreaterThanOrEqual(47);
+    expect(geometry.slabNode).toBe(false);
+    expect(parseFloat(geometry.safePad)).toBeGreaterThanOrEqual(47);
+    expect(geometry.rootPad).toBeGreaterThanOrEqual(47);
+    // Banner box itself is below frost — page bg fills 0..47 (not a white slab).
+    expect(geometry.bannerTop).toBeGreaterThanOrEqual(47);
+    expect(parseFloat(geometry.bannerPad) || 0).toBeLessThan(24);
     expect(geometry.textTop).toBeGreaterThanOrEqual(47);
-    expect(geometry.bannerBg.toLowerCase()).not.toMatch(/rgba?\(255,\s*255,\s*255|#fff/);
+    expect(geometry.rootBg).toMatch(AMBER_500);
+    expect(geometry.bodyBg).toMatch(AMBER_500);
+    expect(geometry.bannerBg).toMatch(AMBER_500);
+    expect(geometry.rootBg.toLowerCase()).not.toMatch(/rgba?\(255,\s*255,\s*255|#fff/);
     expect(geometry.bannerFilter).toMatch(/^(none)?$/);
     expect(geometry.bannerTransform).toBe('none');
     expect(geometry.bannerBackdrop === 'none' || geometry.bannerBackdrop === '').toBeTruthy();
@@ -475,7 +466,7 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     expect(geometry.rowHeight).toBe(56);
   });
 
-  test('standalone inset + ImpersonationBanner: no white slab gap; banner text below frost', async ({
+  test('standalone inset + ImpersonationBanner: no slab; amber page bg; text below frost', async ({
     page,
   }) => {
     await emulateIosStandalonePwa(page);
@@ -489,30 +480,32 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     await page.goto('/orgs/org-e2e-1/dashboard');
 
     await expect(page.getByTestId('impersonation-banner')).toBeVisible();
+    await expect(page.getByTestId('app-shell-status-slab')).toHaveCount(0);
 
     const geometry = await page.evaluate(() => {
       const bannerEl = document.querySelector('[data-testid="impersonation-banner"]');
       const textEl = document.querySelector('[data-testid="impersonation-banner-text"]');
-      const slab = document.querySelector('[data-testid="app-shell-status-slab"]');
+      const root = document.getElementById('root');
+      const rootStyle = root ? getComputedStyle(root) : null;
       return {
-        slabHeight: slab?.getBoundingClientRect().height ?? 0,
-        slabVar: getComputedStyle(document.documentElement)
-          .getPropertyValue('--app-shell-status-slab')
+        slabNode: Boolean(document.querySelector('[data-testid="app-shell-status-slab"]')),
+        safePad: getComputedStyle(document.documentElement)
+          .getPropertyValue('--app-shell-safe-pad-top')
           .trim(),
-        chromePad: getComputedStyle(document.documentElement)
-          .getPropertyValue('--app-shell-chrome-pad-top')
-          .trim(),
+        rootPad: rootStyle ? parseFloat(rootStyle.paddingTop) || 0 : 0,
+        rootBg: rootStyle?.backgroundColor ?? '',
         bannerTop: bannerEl?.getBoundingClientRect().top ?? -1,
         bannerPad: bannerEl ? getComputedStyle(bannerEl).paddingTop : '',
         textTop: textEl?.getBoundingClientRect().top ?? -1,
       };
     });
 
-    expect(geometry.slabHeight).toBe(0);
-    expect(geometry.slabVar).toBe('0px');
-    expect(parseFloat(geometry.chromePad)).toBeGreaterThanOrEqual(47);
-    expect(geometry.bannerTop).toBe(0);
-    expect(parseFloat(geometry.bannerPad)).toBeGreaterThanOrEqual(47);
+    expect(geometry.slabNode).toBe(false);
+    expect(parseFloat(geometry.safePad)).toBeGreaterThanOrEqual(47);
+    expect(geometry.rootPad).toBeGreaterThanOrEqual(47);
+    expect(geometry.bannerTop).toBeGreaterThanOrEqual(47);
+    expect(parseFloat(geometry.bannerPad) || 0).toBeLessThan(24);
     expect(geometry.textTop).toBeGreaterThanOrEqual(47);
+    expect(geometry.rootBg).toMatch(AMBER_500);
   });
 });

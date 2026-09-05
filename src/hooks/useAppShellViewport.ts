@@ -1,15 +1,16 @@
 import { useEffect } from 'react';
 import {
-  APP_SHELL_THEME_COLOR_DARK,
-  APP_SHELL_THEME_COLOR_LIGHT,
+  APP_SHELL_IMPERSONATING_CLASS,
   FIRST_SHELL_SETTLE_DELAYS_MS,
   KEYBOARD_CLOSE_DELAYS_MS,
   SETTLE_DELAYS_MS,
+  applyAppShellImpersonatingClass,
   applyStandalonePwaClass,
   isKeyboardOpen,
   nudgeStandaloneViewportRecalc,
   resetRememberedAppHeight,
   resetWindowScroll,
+  resolveAppShellThemeColor,
   setAppHeightCSSProperty,
   shouldRunFirstShellViewportBurst,
 } from '@/lib/app-shell-viewport';
@@ -19,10 +20,11 @@ function isEditableFocusTarget(target: EventTarget | null): target is HTMLElemen
 }
 
 /** Size the app shell to the visible viewport and keep document scroll at 0. */
-export function useAppShellViewport() {
+export function useAppShellViewport(impersonating = false) {
   useEffect(() => {
     document.documentElement.classList.add('app-shell');
     applyStandalonePwaClass();
+    applyAppShellImpersonatingClass(impersonating);
 
     const themeMeta = document.querySelector('meta[name="theme-color"]');
     const previousTheme = themeMeta?.getAttribute('content');
@@ -31,11 +33,14 @@ export function useAppShellViewport() {
     const syncThemeColor = () => {
       if (!themeMeta) return;
       const dark = document.documentElement.classList.contains('dark');
-      themeMeta.setAttribute('content', dark ? APP_SHELL_THEME_COLOR_DARK : APP_SHELL_THEME_COLOR_LIGHT);
+      themeMeta.setAttribute(
+        'content',
+        resolveAppShellThemeColor({ dark, impersonating }),
+      );
     };
     syncThemeColor();
-    // Opaque status bar. index.html must also default to `black` — iOS reads
-    // this at PWA launch and often ignores runtime changes (BEA-78).
+    // Keep `black` (cached at PWA install). Joseph's webview still paints
+    // under the clock; we reserve that band on `#root` instead of a slab.
     statusBarMeta?.setAttribute('content', 'black');
 
     let keyboardWasOpen = false;
@@ -128,10 +133,10 @@ export function useAppShellViewport() {
 
     return () => {
       document.documentElement.classList.remove('app-shell');
+      document.documentElement.classList.remove(APP_SHELL_IMPERSONATING_CLASS);
       document.documentElement.style.removeProperty('--app-height');
       document.documentElement.style.removeProperty('--safe-area-top');
-      document.documentElement.style.removeProperty('--app-shell-chrome-pad-top');
-      document.documentElement.style.removeProperty('--app-shell-status-slab');
+      document.documentElement.style.removeProperty('--app-shell-safe-pad-top');
       document.documentElement.style.removeProperty('--safe-area-bottom');
       document.documentElement.style.removeProperty('--app-shell-bottomnav-pad');
       document.documentElement.style.removeProperty('--app-shell-keyboard-inset');
@@ -147,5 +152,5 @@ export function useAppShellViewport() {
       window.removeEventListener('pageshow', onViewportSettle);
       window.removeEventListener('focusout', onFocusOut);
     };
-  }, []);
+  }, [impersonating]);
 }

@@ -21,6 +21,12 @@ export const IOS_STANDALONE_STATUS_BAR_FALLBACK_PX = 47;
 export const APP_SHELL_THEME_COLOR_LIGHT = '#ffffff';
 export const APP_SHELL_THEME_COLOR_DARK = '#1c1917';
 
+/** Matches Tailwind `bg-amber-500` on ImpersonationBanner — not a white gap strip. */
+export const APP_SHELL_THEME_COLOR_IMPERSONATING = '#f59e0b';
+
+/** html class so page/root background matches the orange banner (no white slab). */
+export const APP_SHELL_IMPERSONATING_CLASS = 'app-shell-impersonating';
+
 /** 0.5rem floor matching the old `pb-safe-or-2` content inset. */
 export const APP_SHELL_BOTTOMNAV_CONTENT_PAD_PX = 8;
 
@@ -226,9 +232,9 @@ export function resolveSafeAreaBottomPx(measuredPx: number): number {
 
 /**
  * True when `100vh` (device screen) is taller than the layout webview by a
- * status-bar. Kept as a probe for tests; it must NOT zero lead-chrome pad.
- * PR 56/58 used this to collapse the empty slab and put the first glyphs
- * (title, then ImpersonationBanner) under iOS frost on Joseph's PWA.
+ * status-bar. Probe only — do not use it to zero `--app-shell-safe-pad-top`.
+ * PR 56/58 collapsed the pad when this fired and Joseph's PWA still frosted
+ * y=0 of the webview (ImpersonationBanner / title under the clock).
  */
 export function isStandaloneWebviewInsetBelowStatusBar(): boolean {
   if (!isIosStandaloneWebApp()) return false;
@@ -239,16 +245,13 @@ export function isStandaloneWebviewInsetBelowStatusBar(): boolean {
 }
 
 /**
- * Top safe-area **padding** for the first chrome surface (ImpersonationBanner
- * when present, otherwise Topbar). Background of that surface paints through
- * the pad (full-bleed under the status bar). Glyphs start below the frost.
+ * Top safe-area reserved on `#root` (not a sibling slab, not the banner/title
+ * box). iOS standalone: max(env, 47). Safari-in-tab / desktop: live env() only.
  *
- * Do not put this value on an empty white `.app-shell-status-slab` — that is
- * the Joseph 2026-09-05 gap (PR 57) when the next sibling is orange.
- * Do not zero it when the webview “looks inset” (PR 56/58) — Joseph's PWA
- * still frosts y=0 of the webview after delete+reinstall.
- *
- * iOS standalone: max(env, 47). Safari-in-tab / desktop: live env() only.
+ * Do not put this on an empty white `.app-shell-status-slab` (PR 57 gap).
+ * Do not pad ImpersonationBanner / Topbar themselves (PR 59): extending those
+ * boxes under the status-bar frost lets WebKit smear the in-flow glyphs.
+ * Do not zero this when the webview “looks inset” (PR 56/58).
  */
 export function resolveSafeAreaTopPx(measuredPx: number): number {
   if (!isIosStandaloneWebApp()) {
@@ -257,14 +260,27 @@ export function resolveSafeAreaTopPx(measuredPx: number): number {
   return Math.max(measuredPx, IOS_STANDALONE_STATUS_BAR_FALLBACK_PX);
 }
 
+export function applyAppShellImpersonatingClass(
+  impersonating: boolean,
+  root: HTMLElement = document.documentElement,
+): void {
+  root.classList.toggle(APP_SHELL_IMPERSONATING_CLASS, impersonating);
+}
+
+export function resolveAppShellThemeColor(options: {
+  dark: boolean;
+  impersonating: boolean;
+}): string {
+  if (options.impersonating) return APP_SHELL_THEME_COLOR_IMPERSONATING;
+  return options.dark ? APP_SHELL_THEME_COLOR_DARK : APP_SHELL_THEME_COLOR_LIGHT;
+}
+
 export function setSafeAreaCSSProperties(root: HTMLElement = document.documentElement): void {
   const topPx = resolveSafeAreaTopPx(measureCssEnvInset('top'));
   const bottomPx = resolveSafeAreaBottomPx(measureCssEnvInset('bottom'));
   const navPadPx = Math.max(APP_SHELL_BOTTOMNAV_CONTENT_PAD_PX, bottomPx);
   root.style.setProperty('--safe-area-top', `${topPx}px`);
-  root.style.setProperty('--app-shell-chrome-pad-top', `${topPx}px`);
-  // Empty sibling slab stays collapsed. Lead chrome owns paint + pad.
-  root.style.setProperty('--app-shell-status-slab', '0px');
+  root.style.setProperty('--app-shell-safe-pad-top', `${topPx}px`);
   root.style.setProperty('--safe-area-bottom', `${bottomPx}px`);
   root.style.setProperty('--app-shell-bottomnav-pad', `${navPadPx}px`);
 }
