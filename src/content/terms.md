@@ -1,7 +1,7 @@
 # Terms & Conditions
 
 **Effective date:** August 13, 2026  
-**Last updated:** August 13, 2026
+**Last updated:** September 8, 2026
 
 These Terms & Conditions (“Terms”) are an agreement between you and **Makoons Technologies** (“Makoons,” “we,” “us,” or “our”) for use of **Viselle** (viselle.net, www.viselle.net, hosted booking subdomains, and related software and APIs).
 
@@ -9,7 +9,7 @@ By creating an account, visiting our site, or booking an appointment through a V
 
 ## 1. What Viselle is
 
-Viselle is scheduling software for beauty and wellness businesses. Businesses use Viselle to manage calendars, staff, services, and client reminders, and to offer an online booking page.
+Viselle is scheduling software for beauty and wellness businesses. Businesses use Viselle to manage calendars, staff, services, and client reminders (email today; text when SMS sending is enabled), and to offer an online booking page.
 
 Viselle is the **platform**. The salon, spa, or studio you book with (the “Business”) is responsible for the services you receive, pricing, cancellations, no-show policies, and the professional relationship with you.
 
@@ -21,7 +21,9 @@ We may suspend or terminate access if you violate these Terms, fail to pay, or i
 
 ## 3. Plans, trials, and billing
 
-Paid features are offered under the plan you select. Fees, trial length, and included features are described at signup and in the product. Subscription billing is handled by Stripe. Unless stated otherwise, fees are non-refundable except where required by law.
+Paid features are offered under the plan you select. Published monthly prices are **Starter $20**, **Professional $49**, and **Business $99**. Fees, trial length, and included features are described at signup and on the [pricing page](https://www.viselle.net/pricing). Subscription billing is handled by Stripe. Unless stated otherwise, fees are non-refundable except where required by law.
+
+Promotional trials, when offered, may require a trial code such as **`BETA`**. Trial length and whether a card is required are shown at signup.
 
 We may change plans or prices with notice to Business users. Continued use after a change takes effect constitutes acceptance.
 
@@ -39,7 +41,7 @@ Makoons does not provide beauty or wellness services and is not a party to your 
 
 ### Email
 
-We and the Business may send transactional email about your booking (confirmations, reminders, cancellations, and account messages for Business users).
+We and the Business may send transactional email about your booking (confirmations, reminders, cancellations, and account messages for Business users). Email reminders are the current production reminder path.
 
 ### SMS (text messages)
 
@@ -47,7 +49,9 @@ Appointment texts are sent **only if you opt in** and provide a phone number. Th
 
 By checking the box, you agree to receive appointment reminders and booking texts from the **Business named on the booking page**. Message frequency varies. Message and data rates may apply. Reply **HELP** for help and **STOP** to opt out.
 
-SMS is delivered via **ClickSend**. Texts are transactional (appointment-related), not unrelated advertising from Viselle. The Business is the sending brand for appointment messages; Viselle operates the software that sends them.
+SMS is delivered via **ClickSend** when texts are actually sent. Texts are transactional (appointment-related), not unrelated advertising from Viselle. The Business is the sending brand for appointment messages; Viselle operates the software that sends them.
+
+Production SMS (including A2P / toll-free registration) is not fully available yet. Staging may send appointment texts for testing. These Terms do not promise that appointment texts are live, guaranteed, or available to every shop on viselle.net.
 
 If you do not check the box, leave the phone field blank, or reply STOP, we will not send you appointment SMS.
 
@@ -102,4 +106,5 @@ Makoons Technologies
 Viselle scheduling software  
 Email: [hello@viselle.net](mailto:hello@viselle.net)  
 Web: [https://www.viselle.net](https://www.viselle.net)  
+Company: [https://makoonstech.com/](https://makoonstech.com/)  
 Privacy Policy: [https://www.viselle.net/privacy](https://www.viselle.net/privacy)

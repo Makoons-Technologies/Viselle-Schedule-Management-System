@@ -24,7 +24,7 @@ const organizationJsonLd = {
   url: SITE_ORIGIN,
   logo: absoluteUrl(defaultOgImage),
   description:
-    'Viselle is scheduling software for salons, spas, and beauty studios — online booking, staff schedules, and client reminders.',
+    'Viselle is scheduling software for salons, spas, and beauty studios — online booking, staff schedules, and email reminders.',
   email: 'hello@viselle.net',
   sameAs: [...VISELLE_SOCIAL_SAME_AS],
 };
@@ -57,7 +57,7 @@ export const marketingSeo = {
   home: {
     title: 'Viselle',
     description:
-      'Viselle helps beauty and wellness businesses manage appointments, staff schedules, and client reminders — with an online booking page clients can use anytime.',
+      'Viselle helps beauty and wellness businesses manage appointments, staff schedules, and email reminders — with an online booking page clients can use anytime.',
     path: '/',
     image: defaultOgImage,
     jsonLd: [organizationJsonLd, softwareJsonLd, industryFaqJsonLd],
@@ -122,14 +122,14 @@ export const marketingSeo = {
   privacy: {
     title: 'Privacy Policy',
     description:
-      'How Viselle and Makoons Technologies collect, use, and share information for salon scheduling, online booking, and appointment SMS reminders.',
+      'How Viselle and Makoons Technologies collect, use, and share information for salon scheduling, online booking, payments, and optional SMS opt-in.',
     path: '/privacy',
     image: defaultOgImage,
   },
   terms: {
     title: 'Terms & Conditions',
     description:
-      'Terms for using Viselle scheduling software, public booking pages, and appointment reminder texts, including SMS opt-in, HELP, and STOP.',
+      'Terms for using Viselle scheduling software and public booking pages, including plans, trials, email reminders, and optional SMS opt-in.',
     path: '/terms',
     image: defaultOgImage,
   },

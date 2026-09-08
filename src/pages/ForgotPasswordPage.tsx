@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { authApi } from '@/lib/api';
 import { withoutReactFormReset } from '@/lib/form-submit';
 import { ViselleLogo } from '@/components/common/ViselleLogo';
+import { MarketingLegalLinks } from '@/components/marketing/MarketingLayout';
 import { PageSeo } from '@/components/seo/PageSeo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,7 +44,7 @@ export function ForgotPasswordPage() {
   };
 
   return (
-    <div className={cn(MARKETING_SHELL_CLASS, 'flex items-center justify-center p-safe-or-4')}>
+    <div className={cn(MARKETING_SHELL_CLASS, 'flex flex-col items-center justify-center gap-4 p-safe-or-4')}>
       <PageSeo {...marketingSeo.forgotPassword} />
       <Card className="w-full max-w-md border-white/15 bg-white/95 shadow-2xl">
         <CardHeader className="text-center">
@@ -85,6 +86,7 @@ export function ForgotPasswordPage() {
           )}
         </CardContent>
       </Card>
+      <MarketingLegalLinks />
     </div>
   );
 }

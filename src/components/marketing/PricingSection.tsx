@@ -89,6 +89,10 @@ export function PricingSection() {
         </div>
 
         <p className="mt-10 text-center text-sm text-white/55">
+          Email reminders send today on every plan. Text reminders are on Professional and Business;
+          outbound texts on viselle.net wait on carrier (A2P) review.
+        </p>
+        <p className="mt-3 text-center text-sm text-white/55">
           Not sure which plan fits?{' '}
           <Link to="/contact" className="font-medium text-[#fdeb83] hover:underline">
             Contact us

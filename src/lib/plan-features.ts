@@ -63,7 +63,8 @@ export const PLAN_FEATURES: PlanFeature[] = [
   {
     id: 'sms_reminders',
     name: 'Text (SMS) reminders',
-    description: 'Send appointment reminders by text message in addition to email.',
+    description:
+      'Appointment texts in addition to email, when SMS sending is enabled. Outbound texts on viselle.net wait on carrier (A2P) review.',
     tiers: ['professional', 'business'],
   },
   {

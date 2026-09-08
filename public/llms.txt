@@ -1,13 +1,13 @@
 # Viselle
 
-> Viselle is web-based scheduling software for salons, spas, and beauty studios. Businesses use it to manage appointments, staff schedules, services, and client reminders, and to offer an online booking page clients can use without calling.
+> Viselle is web-based scheduling software for salons, spas, and beauty studios. Businesses use it to manage appointments, staff schedules, services, and email reminders, and to offer an online booking page clients can use without calling.
 
 ## Product
 
 - Online booking pages (path links and optional hosted subdomains)
 - Staff calendars and availability
 - Services and pricing
-- Email and text appointment reminders
+- Email appointment reminders (live on every plan). Text reminders are on Professional and Business; outbound texts on viselle.net wait on carrier (A2P) review.
 - Recurring appointments
 - Multi-staff / team schedules
 - Public booking API for custom websites

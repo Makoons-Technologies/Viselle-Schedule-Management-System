@@ -12,6 +12,7 @@ import { withoutReactFormReset } from '@/lib/form-submit';
 import { LoadingState } from '@/components/common/LoadingState';
 import { PoweredByMakoons } from '@/components/common/PoweredByMakoons';
 import { ViselleLogo } from '@/components/common/ViselleLogo';
+import { MarketingLegalLinks } from '@/components/marketing/MarketingLayout';
 import { PageSeo } from '@/components/seo/PageSeo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -107,6 +108,7 @@ export function LoginPage() {
           </form>
         </CardContent>
       </Card>
+      <MarketingLegalLinks />
       <PoweredByMakoons className="text-white/40" />
     </div>
   );

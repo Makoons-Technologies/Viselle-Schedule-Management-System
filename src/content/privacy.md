@@ -1,13 +1,13 @@
 # Privacy Policy
 
 **Effective date:** August 13, 2026  
-**Last updated:** August 13, 2026
+**Last updated:** September 8, 2026
 
 This Privacy Policy describes how **Makoons Technologies** (“Makoons,” “we,” “us,” or “our”) collects, uses, and shares information when you use **Viselle**, our scheduling and online booking software for salons, spas, and other beauty businesses (the “Service”), including viselle.net, www.viselle.net, hosted booking pages such as `yourspa.viselle.net`, and related apps and APIs.
 
-Viselle is the platform. The salon, spa, or studio you book with (the “Business”) is the business providing your appointment. Appointment reminder texts are sent on behalf of that Business.
+Viselle is the platform. The salon, spa, or studio you book with (the “Business”) is the business providing your appointment. When appointment reminder texts are sent, they are sent on behalf of that Business.
 
-If you have questions, contact us at [hello@viselle.net](mailto:hello@viselle.net).
+If you have questions, contact us at [hello@viselle.net](mailto:hello@viselle.net). Company site: [https://makoonstech.com/](https://makoonstech.com/).
 
 ## 1. Who this policy covers
 
@@ -19,10 +19,12 @@ If you have questions, contact us at [hello@viselle.net](mailto:hello@viselle.ne
 
 ### Information you or a Business provide
 
-- **Booking details:** first name, last name, email address, phone number, appointment notes, service, provider, date and time.
+- **Booking details:** first name, last name, email address, optional phone number, appointment notes, service, provider, date and time.
 - **Account details:** name, email, password (stored as a hash), business name, address, city, phone, staff and service information, and similar settings.
 - **Support:** messages you send to hello@viselle.net or through in-app support tickets, including attachments you choose to upload.
-- **Payments (Businesses):** billing and subscription information processed by our payment provider (Stripe). We do not store full card numbers on Viselle servers.
+- **Payments (Businesses):** billing and subscription information processed by our payment provider (**Stripe**). We do not store full card numbers on Viselle servers.
+
+Phone number is optional. We use it for appointment texts only if you **opt in** (see SMS below).
 
 ### Information collected automatically
 
@@ -31,16 +33,18 @@ If you have questions, contact us at [hello@viselle.net](mailto:hello@viselle.ne
 
 ### SMS and messaging
 
-If you provide a phone number and **opt in** to texts, we (and the Business you booked with) may use that number to send appointment reminders, booking confirmations, reschedule or cancellation notices, and related transactional messages. Message frequency varies. Message and data rates may apply. Reply **HELP** for help and **STOP** to opt out.
+If you provide a phone number and **opt in** to texts, we (and the Business you booked with) may use that number to send appointment reminders, booking confirmations, reschedule or cancellation notices, and related transactional messages — only when SMS sending is enabled for that environment. Message frequency varies. Message and data rates may apply. Reply **HELP** for help and **STOP** to opt out.
 
-We use **ClickSend** (a Sinch company) as a processor to deliver SMS. We do not sell your phone number.
+We use **ClickSend** (a Sinch company) as a processor to deliver SMS when texts are actually sent. We do not sell your phone number.
+
+Production SMS (including A2P / toll-free registration) is not fully available yet. Transactional **email** reminders are the current production reminder path. Staging may send appointment texts for testing. This policy does not guarantee that texts are live for every Business on viselle.net.
 
 ## 3. How we use information
 
 We use information to:
 
 - Provide, operate, and improve Viselle (scheduling, booking pages, reminders, account administration).
-- Send transactional email and, **only if you have opted in**, SMS about your appointments.
+- Send transactional email and, **only if you have opted in and SMS sending is enabled**, SMS about your appointments.
 - Authenticate users, prevent fraud and abuse, and keep the Service secure.
 - Communicate with Businesses about their accounts, billing, and product updates.
 - Comply with law and enforce our Terms.
@@ -52,7 +56,7 @@ We do **not** use client booking phone numbers for third-party marketing or adve
 We share information with:
 
 - **The Business you booked with.** Your booking name, contact details, appointment, and notes are available to that Business and its staff so they can serve you.
-- **Service providers** that help us run Viselle, including hosting, databases, email delivery, **ClickSend** for SMS, Stripe for Business billing, and error/analytics tools. They may process data only to provide their services to us.
+- **Service providers** that help us run Viselle, including hosting, databases, email delivery, **ClickSend** for SMS when texts are sent, and **Stripe** for Business billing. They may process data only to provide their services to us.
 - **Legal and safety.** If required by law, or to protect rights, safety, and the integrity of the Service.
 
 We do not sell personal information.
@@ -67,7 +71,11 @@ Leaving the phone field blank means we will not send you SMS.
 
 ## 6. Cookies
 
-We use cookies and similar storage to keep you signed in, protect accounts, and remember display preferences. Marketing pages may use limited analytics cookies. You can control cookies in your browser; some features (such as staying signed in) will not work without them.
+We use cookies and similar storage to keep you signed in, protect accounts, and remember display preferences. These are needed for the Service to work.
+
+We do **not** currently load advertising, retargeting, or analytics cookies — including Google Analytics, gtag, Google Tag Manager, Segment, PostHog, or Meta Pixel — and we do not load a cookie-consent manager. Marketing pages load web fonts from Google Fonts so typefaces display consistently; that is a font request, not an analytics or advertising tracker we control. Stripe may set cookies only when you use in-app or checkout payment flows.
+
+If we add non-essential tracking later, we will update this section and add consent where required. You can control cookies in your browser; some features (such as staying signed in) will not work without them.
 
 ## 7. Retention
 
@@ -103,4 +111,5 @@ We may update this policy from time to time. The “Last updated” date will ch
 Makoons Technologies  
 Viselle scheduling software  
 Email: [hello@viselle.net](mailto:hello@viselle.net)  
-Web: [https://www.viselle.net](https://www.viselle.net)
+Web: [https://www.viselle.net](https://www.viselle.net)  
+Company: [https://makoonstech.com/](https://makoonstech.com/)
