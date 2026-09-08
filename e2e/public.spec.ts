@@ -177,10 +177,10 @@ test.describe('public marketing', () => {
     await expect(page.getByRole('note', { name: 'Draft notice' })).toContainText(/not legal advice/i);
     await expect(page.getByText('Starter $20')).toBeVisible();
     await expect(page.getByText('BETA').first()).toBeVisible();
-    await expect(page.getByText(/not fully complete/i).first()).toBeVisible();
+    await expect(page.getByText(/not fully available yet/i).first()).toBeVisible();
     await expect(page.getByRole('article').getByRole('link', { name: 'Privacy Policy' }).first()).toHaveAttribute(
       'href',
-      '/privacy',
+      'https://www.viselle.net/privacy',
     );
   });
 });
