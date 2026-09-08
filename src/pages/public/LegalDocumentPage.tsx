@@ -7,6 +7,13 @@ import { PageSeo } from '@/components/seo/PageSeo';
 import type { MarketingSeoConfig } from '@/content/marketing-seo';
 import { MARKETING_SHELL_CLASS } from '@/lib/marketing-theme';
 
+const proseLinkClassName =
+  'font-medium text-brand-700 underline-offset-2 hover:text-brand-800 hover:underline focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700';
+
+function isInternalPath(href?: string) {
+  return Boolean(href?.startsWith('/') && !href.startsWith('//'));
+}
+
 /**
  * Light-card prose only — no dark: variants. Matches ReleasesPage so legal
  * copy stays readable on the dark marketing shell.
@@ -26,16 +33,26 @@ const markdownComponents = {
   p: ({ children }: { children?: ReactNode }) => (
     <p className="mt-4 text-[15px] leading-7 text-stone-700">{children}</p>
   ),
-  a: ({ href, children }: { href?: string; children?: ReactNode }) => (
-    <a
-      href={href}
-      className="font-medium text-brand-700 underline-offset-2 hover:text-brand-800 hover:underline"
-      target={href?.startsWith('http') ? '_blank' : undefined}
-      rel={href?.startsWith('http') ? 'noreferrer' : undefined}
-    >
-      {children}
-    </a>
-  ),
+  a: ({ href, children }: { href?: string; children?: ReactNode }) => {
+    if (href && isInternalPath(href)) {
+      return (
+        <Link to={href} className={proseLinkClassName}>
+          {children}
+        </Link>
+      );
+    }
+
+    return (
+      <a
+        href={href}
+        className={proseLinkClassName}
+        target={href?.startsWith('http') ? '_blank' : undefined}
+        rel={href?.startsWith('http') ? 'noreferrer' : undefined}
+      >
+        {children}
+      </a>
+    );
+  },
   ul: ({ children }: { children?: ReactNode }) => (
     <ul className="mt-4 list-disc space-y-2 pl-6 text-[15px] leading-7 text-stone-700 marker:text-stone-400">
       {children}
@@ -53,6 +70,22 @@ const markdownComponents = {
   hr: () => <hr className="my-8 border-stone-200" />,
 };
 
+function LegalDraftBanner() {
+  return (
+    <aside
+      role="note"
+      aria-label="Draft notice"
+      className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950"
+    >
+      <p>
+        <strong className="font-semibold">Draft for review.</strong> This page is a product-accurate
+        description of how Viselle works today. It is <strong className="font-semibold">not attorney-certified</strong>{' '}
+        and is <strong className="font-semibold">not legal advice</strong>.
+      </p>
+    </aside>
+  );
+}
+
 interface LegalDocumentPageProps {
   seo: MarketingSeoConfig;
   crumb: string;
@@ -65,14 +98,20 @@ export function LegalDocumentPage({ seo, crumb, markdown }: LegalDocumentPagePro
       <PageSeo {...seo} />
       <MarketingHeader />
       <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-        <p className="text-sm text-white/60">
-          <Link to="/" className="hover:text-white">
+        <nav aria-label="Breadcrumb" className="text-sm text-white/75">
+          <Link
+            to="/"
+            className="hover:text-white focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          >
             Home
           </Link>
-          <span className="mx-2">/</span>
-          <span>{crumb}</span>
-        </p>
+          <span className="mx-2 text-white/50" aria-hidden="true">
+            /
+          </span>
+          <span aria-current="page">{crumb}</span>
+        </nav>
         <article className="mt-6 rounded-2xl border border-white/15 bg-white p-8 text-stone-900 shadow-2xl sm:p-10">
+          <LegalDraftBanner />
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
             {markdown}
           </ReactMarkdown>

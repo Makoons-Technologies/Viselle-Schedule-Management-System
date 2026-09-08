@@ -107,6 +107,20 @@ export function LoginPage() {
           </form>
         </CardContent>
       </Card>
+      <nav aria-label="Legal" className="flex items-center gap-4 text-sm text-white/75">
+        <Link
+          to="/privacy"
+          className="hover:text-white focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        >
+          Privacy
+        </Link>
+        <Link
+          to="/terms"
+          className="hover:text-white focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        >
+          Terms
+        </Link>
+      </nav>
       <PoweredByMakoons className="text-white/40" />
     </div>
   );

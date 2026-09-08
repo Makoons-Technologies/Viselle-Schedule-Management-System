@@ -122,14 +122,14 @@ export const marketingSeo = {
   privacy: {
     title: 'Privacy Policy',
     description:
-      'How Viselle and Makoons Technologies collect, use, and share information for salon scheduling, online booking, and appointment SMS reminders.',
+      'How Viselle and Makoons Technologies collect, use, and share information for salon scheduling, online booking, payments, and optional SMS opt-in.',
     path: '/privacy',
     image: defaultOgImage,
   },
   terms: {
     title: 'Terms & Conditions',
     description:
-      'Terms for using Viselle scheduling software, public booking pages, and appointment reminder texts, including SMS opt-in, HELP, and STOP.',
+      'Terms for using Viselle scheduling software and public booking pages, including plans, trials, email reminders, and optional SMS opt-in.',
     path: '/terms',
     image: defaultOgImage,
   },

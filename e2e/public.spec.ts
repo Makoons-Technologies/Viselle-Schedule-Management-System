@@ -36,6 +36,8 @@ test.describe('public marketing', () => {
       'href',
       'https://www.linkedin.com/company/viselle/',
     );
+    await expect(footer.getByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '/privacy');
+    await expect(footer.getByRole('link', { name: 'Terms' })).toHaveAttribute('href', '/terms');
 
     const jsonLdRaw = await page.locator('script#page-jsonld').textContent();
     expect(jsonLdRaw).toBeTruthy();
@@ -77,6 +79,14 @@ test.describe('public marketing', () => {
     }
 
     await expect(page.locator('footer').getByRole('link', { name: /Contact/i })).toBeVisible();
+    await expect(page.locator('footer').getByRole('link', { name: 'Privacy' })).toHaveAttribute(
+      'href',
+      '/privacy',
+    );
+    await expect(page.locator('footer').getByRole('link', { name: 'Terms' })).toHaveAttribute(
+      'href',
+      '/terms',
+    );
     await expect(header.getByRole('link', { name: 'Viselle on Instagram' })).toHaveCount(0);
     await expect(page.locator('footer').getByRole('link', { name: 'Viselle on Instagram' })).toBeVisible();
   });
@@ -141,5 +151,36 @@ test.describe('public marketing', () => {
     await expect(page.getByLabel('Email')).toBeVisible();
     await expect(page.getByLabel('Password', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Legal' }).getByRole('link', { name: 'Privacy' })).toHaveAttribute(
+      'href',
+      '/privacy',
+    );
+    await expect(page.getByRole('navigation', { name: 'Legal' }).getByRole('link', { name: 'Terms' })).toHaveAttribute(
+      'href',
+      '/terms',
+    );
+  });
+
+  test('privacy and terms pages render policy body (BEA-87)', async ({ page }) => {
+    await page.goto('/privacy');
+    await expect(page).toHaveTitle(/Privacy Policy/);
+    await expect(page.getByRole('heading', { name: 'Privacy Policy', level: 1 })).toBeVisible();
+    await expect(page.getByRole('note', { name: 'Draft notice' })).toContainText(/not attorney-certified/i);
+    await expect(page.getByText('hello@viselle.net').first()).toBeVisible();
+    await expect(page.getByRole('link', { name: 'https://makoonstech.com/' })).toBeVisible();
+    await expect(page.getByText(/optional phone/i).first()).toBeVisible();
+    await expect(page.locator('footer').getByRole('link', { name: 'Terms' })).toBeVisible();
+
+    await page.goto('/terms');
+    await expect(page).toHaveTitle(/Terms/);
+    await expect(page.getByRole('heading', { name: 'Terms & Conditions', level: 1 })).toBeVisible();
+    await expect(page.getByRole('note', { name: 'Draft notice' })).toContainText(/not legal advice/i);
+    await expect(page.getByText('Starter $20')).toBeVisible();
+    await expect(page.getByText('BETA').first()).toBeVisible();
+    await expect(page.getByText(/not fully complete/i).first()).toBeVisible();
+    await expect(page.getByRole('article').getByRole('link', { name: 'Privacy Policy' }).first()).toHaveAttribute(
+      'href',
+      '/privacy',
+    );
   });
 });

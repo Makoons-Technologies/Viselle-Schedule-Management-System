@@ -6,7 +6,10 @@ import { MarketingSocialLinks } from '@/components/marketing/MarketingSocialLink
 import { cn } from '@/lib/utils';
 
 const navLinkClassName =
-  'text-sm font-medium text-white/75 transition-colors hover:text-white';
+  'text-sm font-medium text-white/75 transition-colors hover:text-white focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white';
+
+const footerLinkClassName =
+  'text-brand-300 hover:text-brand-200 focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-200';
 
 export function MarketingHeader() {
   return (
@@ -64,43 +67,43 @@ export function MarketingFooter() {
         </div>
         <MarketingSocialLinks />
       </div>
-      <div className="mx-auto mt-4 max-w-6xl px-4 sm:px-6">
+      <nav aria-label="Footer" className="mx-auto mt-4 max-w-6xl px-4 sm:px-6">
         <p className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm">
-          <Link to="/pricing" className="text-brand-300 hover:text-brand-200">
+          <Link to="/pricing" className={footerLinkClassName}>
             Pricing
           </Link>
-          <Link to="/docs" className="text-brand-300 hover:text-brand-200">
+          <Link to="/docs" className={footerLinkClassName}>
             Docs
           </Link>
-          <Link to="/blog" className="text-brand-300 hover:text-brand-200">
+          <Link to="/blog" className={footerLinkClassName}>
             Resources
           </Link>
-          <Link to="/versus/glossgenius" className="text-brand-300 hover:text-brand-200">
+          <Link to="/versus/glossgenius" className={footerLinkClassName}>
             vs GlossGenius
           </Link>
-          <Link to="/versus/square" className="text-brand-300 hover:text-brand-200">
+          <Link to="/versus/square" className={footerLinkClassName}>
             vs Square
           </Link>
-          <Link to="/docs/api" className="text-brand-300 hover:text-brand-200">
+          <Link to="/docs/api" className={footerLinkClassName}>
             API docs
           </Link>
-          <Link to="/releases" className="text-brand-300 hover:text-brand-200">
+          <Link to="/releases" className={footerLinkClassName}>
             Release notes
           </Link>
-          <Link to="/privacy" className="text-brand-300 hover:text-brand-200">
+          <Link to="/privacy" className={footerLinkClassName}>
             Privacy
           </Link>
-          <Link to="/terms" className="text-brand-300 hover:text-brand-200">
+          <Link to="/terms" className={footerLinkClassName}>
             Terms
           </Link>
-          <Link to="/contact" className="text-brand-300 hover:text-brand-200">
+          <Link to="/contact" className={footerLinkClassName}>
             Contact us
           </Link>
-          <a href="/llms.txt" className="text-brand-300 hover:text-brand-200">
+          <a href="/llms.txt" className={footerLinkClassName}>
             llms.txt
           </a>
         </p>
-      </div>
+      </nav>
       <div className="mx-auto mt-4 max-w-6xl px-4 sm:px-6">
         <PoweredByMakoons className="text-white/35" />
       </div>

@@ -1,11 +1,11 @@
 # Terms & Conditions
 
 **Effective date:** August 13, 2026  
-**Last updated:** August 13, 2026
+**Last updated:** September 8, 2026
 
 These Terms & Conditions (“Terms”) are an agreement between you and **Makoons Technologies** (“Makoons,” “we,” “us,” or “our”) for use of **Viselle** (viselle.net, www.viselle.net, hosted booking subdomains, and related software and APIs).
 
-By creating an account, visiting our site, or booking an appointment through a Viselle booking page, you agree to these Terms and our [Privacy Policy](https://www.viselle.net/privacy). If you do not agree, do not use Viselle.
+By creating an account, visiting our site, or booking an appointment through a Viselle booking page, you agree to these Terms and our [Privacy Policy](/privacy). If you do not agree, do not use Viselle.
 
 ## 1. What Viselle is
 
@@ -21,7 +21,11 @@ We may suspend or terminate access if you violate these Terms, fail to pay, or i
 
 ## 3. Plans, trials, and billing
 
-Paid features are offered under the plan you select. Fees, trial length, and included features are described at signup and in the product. Subscription billing is handled by Stripe. Unless stated otherwise, fees are non-refundable except where required by law.
+Published monthly prices are **Starter $20**, **Professional $49**, and **Business $99**. Current prices, staff limits, and included features are shown on the [pricing page](/pricing) and at signup. Do not rely on older quotes if the product page differs.
+
+Promotional trials, when offered, may require a trial code such as **`BETA`**. Trial length and whether a card is required are shown at signup.
+
+Paid features are billed under the plan you select. Subscription billing is handled by **Stripe**. Unless stated otherwise, fees are non-refundable except where required by law.
 
 We may change plans or prices with notice to Business users. Continued use after a change takes effect constitutes acceptance.
 
@@ -35,19 +39,25 @@ When you book online:
 
 Makoons does not provide beauty or wellness services and is not a party to your appointment.
 
-## 5. SMS and email communications
+## 5. Email and SMS communications
 
 ### Email
 
-We and the Business may send transactional email about your booking (confirmations, reminders, cancellations, and account messages for Business users).
+We and the Business may send transactional email about your booking (confirmations, reminders, cancellations, and account messages for Business users). Email reminders are the current production reminder path on every plan.
 
 ### SMS (text messages)
 
-Appointment texts are sent **only if you opt in** and provide a phone number. The opt-in checkbox on booking forms is **not** pre-checked.
+Appointment texts are sent **only if all of the following are true**:
 
-By checking the box, you agree to receive appointment reminders and booking texts from the **Business named on the booking page**. Message frequency varies. Message and data rates may apply. Reply **HELP** for help and **STOP** to opt out.
+- You provide a phone number.
+- You **opt in** (the checkbox on booking forms is **not** pre-checked).
+- SMS sending is actually enabled for that Business and environment.
 
-SMS is delivered via **ClickSend**. Texts are transactional (appointment-related), not unrelated advertising from Viselle. The Business is the sending brand for appointment messages; Viselle operates the software that sends them.
+**Honesty about delivery today:** production SMS / A2P / toll-free registration is **not fully complete**. Staging may send texts for testing. These Terms do **not** promise that appointment texts are live, guaranteed, or available to every shop on viselle.net. Email remains the reliable transactional reminder channel today.
+
+When SMS is sent, it is delivered via **ClickSend**. Texts are transactional (appointment-related), not unrelated advertising from Viselle. The Business is the sending brand for appointment messages; Viselle operates the software that sends them.
+
+Message frequency varies. Message and data rates may apply. Reply **HELP** for help and **STOP** to opt out.
 
 If you do not check the box, leave the phone field blank, or reply STOP, we will not send you appointment SMS.
 
@@ -68,11 +78,11 @@ Viselle, including its software, design, and trademarks, is owned by Makoons Tec
 
 ## 8. Privacy
 
-Our [Privacy Policy](https://www.viselle.net/privacy) explains how we collect and use information. By using Viselle you consent to that collection and use as described there.
+Our [Privacy Policy](/privacy) explains how we collect and use information. By using Viselle you consent to that collection and use as described there.
 
 ## 9. Disclaimers
 
-THE SERVICE IS PROVIDED “AS IS” AND “AS AVAILABLE.” TO THE FULLEST EXTENT PERMITTED BY LAW, MAKOONS DISCLAIMS WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. We do not warrant that booking pages, reminders, or SMS will be uninterrupted, timely, or error-free. Carrier networks, email providers, and third-party processors (including ClickSend and Stripe) are outside our full control.
+THE SERVICE IS PROVIDED “AS IS” AND “AS AVAILABLE.” TO THE FULLEST EXTENT PERMITTED BY LAW, MAKOONS DISCLAIMS WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. We do not warrant that booking pages, reminders, or SMS will be uninterrupted, timely, available in every environment, or error-free. Carrier networks, email providers, and third-party processors (including ClickSend and Stripe) are outside our full control.
 
 ## 10. Limitation of liability
 
@@ -88,13 +98,13 @@ If you use Viselle as a Business, you will defend and indemnify Makoons against 
 
 ## 12. Changes and termination
 
-We may update these Terms by posting a new version at [https://www.viselle.net/terms](https://www.viselle.net/terms). The “Last updated” date will change. Material changes for Business users may also be communicated by email or in-product notice.
+We may update these Terms by posting a new version at [/terms](/terms). The “Last updated” date will change. Material changes for Business users may also be communicated by email or in-product notice.
 
 You may stop using Viselle at any time. Provisions that by their nature should survive (including intellectual property, disclaimers, liability limits, and indemnity) will survive.
 
 ## 13. Governing law
 
-These Terms are governed by the laws of the United States, without regard to conflict-of-law rules, unless mandatory consumer-protection law in your jurisdiction says otherwise.
+These Terms are governed by the laws of the United States, without regard to conflict-of-law rules, unless mandatory consumer-protection law in your jurisdiction says otherwise. (State-specific drafting is reserved for counsel.)
 
 ## 14. Contact
 
@@ -102,4 +112,5 @@ Makoons Technologies
 Viselle scheduling software  
 Email: [hello@viselle.net](mailto:hello@viselle.net)  
 Web: [https://www.viselle.net](https://www.viselle.net)  
-Privacy Policy: [https://www.viselle.net/privacy](https://www.viselle.net/privacy)
+Company: [https://makoonstech.com/](https://makoonstech.com/)  
+Privacy Policy: [/privacy](/privacy)
