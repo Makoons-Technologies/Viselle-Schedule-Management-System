@@ -127,7 +127,7 @@ export function LandingPage() {
           </h1>
           <p className="mt-6 text-lg leading-relaxed text-white/75">
             Viselle helps beauty and wellness businesses manage appointments, staff schedules, and
-            client reminders — without spreadsheets or sticky notes. Run your chair, room, or booth
+            email reminders — without spreadsheets or sticky notes. Run your chair, room, or booth
             with tools made for this industry.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">

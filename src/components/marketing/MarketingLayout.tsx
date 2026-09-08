@@ -11,6 +11,19 @@ const navLinkClassName =
 const footerLinkClassName =
   'text-brand-300 hover:text-brand-200 focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-200';
 
+export function MarketingLegalLinks({ className }: { className?: string }) {
+  return (
+    <nav aria-label="Legal" className={cn('flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm', className)}>
+      <Link to="/privacy" className={footerLinkClassName}>
+        Privacy
+      </Link>
+      <Link to="/terms" className={footerLinkClassName}>
+        Terms
+      </Link>
+    </nav>
+  );
+}
+
 export function MarketingHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0f172a] px-safe pt-safe">
@@ -90,12 +103,6 @@ export function MarketingFooter() {
           <Link to="/releases" className={footerLinkClassName}>
             Release notes
           </Link>
-          <Link to="/privacy" className={footerLinkClassName}>
-            Privacy
-          </Link>
-          <Link to="/terms" className={footerLinkClassName}>
-            Terms
-          </Link>
           <Link to="/contact" className={footerLinkClassName}>
             Contact us
           </Link>
@@ -104,6 +111,7 @@ export function MarketingFooter() {
           </a>
         </p>
       </nav>
+      <MarketingLegalLinks className="mx-auto mt-3 max-w-6xl px-4 sm:px-6" />
       <div className="mx-auto mt-4 max-w-6xl px-4 sm:px-6">
         <PoweredByMakoons className="text-white/35" />
       </div>

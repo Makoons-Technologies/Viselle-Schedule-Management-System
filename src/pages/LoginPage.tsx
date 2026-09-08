@@ -12,6 +12,7 @@ import { withoutReactFormReset } from '@/lib/form-submit';
 import { LoadingState } from '@/components/common/LoadingState';
 import { PoweredByMakoons } from '@/components/common/PoweredByMakoons';
 import { ViselleLogo } from '@/components/common/ViselleLogo';
+import { MarketingLegalLinks } from '@/components/marketing/MarketingLayout';
 import { PageSeo } from '@/components/seo/PageSeo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -107,20 +108,7 @@ export function LoginPage() {
           </form>
         </CardContent>
       </Card>
-      <nav aria-label="Legal" className="flex items-center gap-4 text-sm text-white/75">
-        <Link
-          to="/privacy"
-          className="hover:text-white focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-        >
-          Privacy
-        </Link>
-        <Link
-          to="/terms"
-          className="hover:text-white focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-        >
-          Terms
-        </Link>
-      </nav>
+      <MarketingLegalLinks />
       <PoweredByMakoons className="text-white/40" />
     </div>
   );

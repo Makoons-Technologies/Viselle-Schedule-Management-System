@@ -16,6 +16,7 @@ function RedirectToLiveLegal({ href }: { href: string }) {
 function subdomainRoutes(slug: string) {
   return [
     { path: '/privacy', element: <RedirectToLiveLegal href={VISELLE_PRIVACY_URL} /> },
+    { path: '/privacy-policy', element: <RedirectToLiveLegal href={VISELLE_PRIVACY_URL} /> },
     { path: '/terms', element: <RedirectToLiveLegal href={VISELLE_TERMS_URL} /> },
     { path: '/terms-and-conditions', element: <RedirectToLiveLegal href={VISELLE_TERMS_URL} /> },
     { path: '/manage/:token', element: <ManageBookingPage slugOverride={slug} /> },

@@ -71,7 +71,11 @@ Leaving the phone field blank means we will not send you SMS.
 
 ## 6. Cookies
 
-We use cookies and similar storage to keep you signed in, protect accounts, and remember display preferences. We do not currently load advertising or analytics cookies on marketing pages. You can control cookies in your browser; some features (such as staying signed in) will not work without them.
+We use cookies and similar storage to keep you signed in, protect accounts, and remember display preferences. These are needed for the Service to work.
+
+We do **not** currently load advertising, retargeting, or analytics cookies — including Google Analytics, gtag, Google Tag Manager, Segment, PostHog, or Meta Pixel — and we do not load a cookie-consent manager. Marketing pages load web fonts from Google Fonts so typefaces display consistently; that is a font request, not an analytics or advertising tracker we control. Stripe may set cookies only when you use in-app or checkout payment flows.
+
+If we add non-essential tracking later, we will update this section and add consent where required. You can control cookies in your browser; some features (such as staying signed in) will not work without them.
 
 ## 7. Retention
 

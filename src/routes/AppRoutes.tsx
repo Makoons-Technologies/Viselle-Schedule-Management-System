@@ -104,6 +104,7 @@ export const appRoutes = [
   { path: '/', element: <LandingPage /> },
   { path: '/contact', element: <ContactPage /> },
   { path: '/privacy', element: <PrivacyPage /> },
+  { path: '/privacy-policy', element: <Navigate to="/privacy" replace /> },
   { path: '/terms', element: <TermsPage /> },
   { path: '/terms-and-conditions', element: <Navigate to="/terms" replace /> },
   { path: '/pricing', element: <PricingPage /> },

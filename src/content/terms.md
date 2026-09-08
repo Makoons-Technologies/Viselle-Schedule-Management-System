@@ -9,7 +9,7 @@ By creating an account, visiting our site, or booking an appointment through a V
 
 ## 1. What Viselle is
 
-Viselle is scheduling software for beauty and wellness businesses. Businesses use Viselle to manage calendars, staff, services, and client reminders, and to offer an online booking page.
+Viselle is scheduling software for beauty and wellness businesses. Businesses use Viselle to manage calendars, staff, services, and client reminders (email today; text when SMS sending is enabled), and to offer an online booking page.
 
 Viselle is the **platform**. The salon, spa, or studio you book with (the “Business”) is responsible for the services you receive, pricing, cancellations, no-show policies, and the professional relationship with you.
 

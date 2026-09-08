@@ -111,6 +111,8 @@ test.describe('public marketing', () => {
     expect(llmsText).toContain('https://www.tiktok.com/@getviselle');
     expect(llmsText).toContain('https://www.facebook.com/people/Viselle/61593664348103/');
     expect(llmsText).toContain('https://www.linkedin.com/company/viselle/');
+    expect(llmsText).toContain('Email appointment reminders (live on every plan)');
+    expect(llmsText).not.toContain('Email and text appointment reminders');
   });
 
   test('blog and versus switcher pages render logged out', async ({ page }) => {
@@ -142,6 +144,11 @@ test.describe('public marketing', () => {
     await page.getByRole('button', { name: 'Nail' }).click();
     await expect(page.getByText(/Nail studios use Viselle/i)).toBeVisible();
     await expect(page.getByText(/How much does Viselle cost/i)).toBeVisible();
+    await expect(page.getByText(/Automatic email reminders/i)).toBeVisible();
+    await expect(page.getByText(/email and text reminders/i)).toHaveCount(0);
+    await expect(
+      page.getByText(/outbound texts on viselle.net wait on carrier \(A2P\) review/i).first(),
+    ).toBeVisible();
   });
 
   test('login page loads', async ({ page }) => {
@@ -169,6 +176,7 @@ test.describe('public marketing', () => {
     await expect(page.getByText('hello@viselle.net').first()).toBeVisible();
     await expect(page.getByRole('link', { name: 'https://makoonstech.com/' })).toBeVisible();
     await expect(page.getByText(/optional phone/i).first()).toBeVisible();
+    await expect(page.getByText(/do not currently load advertising/i)).toBeVisible();
     await expect(page.locator('footer').getByRole('link', { name: 'Terms' })).toBeVisible();
 
     await page.goto('/terms');
