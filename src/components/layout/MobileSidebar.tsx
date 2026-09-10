@@ -39,9 +39,7 @@ export function MobileSidebar() {
           )}
           style={{
             ...panelStyle,
-            // Crisp top edge below the orange frost — not top:0 into the
-            // status-bar bleed (PR 61 drawer-soft-edge). Footer owns bottom inset.
-            top: 'var(--app-shell-content-inset-top, env(safe-area-inset-top, 0px))',
+            top: 0,
             bottom: 0,
             height: 'auto',
             maxHeight: 'none',
@@ -49,7 +47,7 @@ export function MobileSidebar() {
           }}
           overlayStyle={{
             ...overlayStyle,
-            top: 'var(--app-shell-content-inset-top, env(safe-area-inset-top, 0px))',
+            top: 0,
           }}
           closeClassName="!top-4"
           className={cn(

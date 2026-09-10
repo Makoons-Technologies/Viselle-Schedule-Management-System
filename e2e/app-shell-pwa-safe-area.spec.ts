@@ -254,9 +254,9 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     expect(joined).not.toMatch(/--app-shell-chrome-pad-top/);
     expect(joined).not.toMatch(/--app-shell-safe-pad-top:\s*47px/);
     expect(joined).toMatch(/--app-shell-safe-pad-top:\s*0px/);
-    expect(joined).toMatch(/--app-shell-content-inset-top:\s*env\(safe-area-inset-top/);
-    expect(joined).toMatch(/\.app-shell-impersonation-banner/);
-    expect(joined).toMatch(/padding-top:\s*calc\(0\.5rem \+ var\(--app-shell-content-inset-top/);
+    expect(joined).toMatch(/--app-shell-content-inset-top:\s*0px/);
+    expect(joined).not.toMatch(/--app-shell-content-inset-top:\s*env\(safe-area-inset-top/);
+    expect(joined).not.toMatch(/padding-top:\s*calc\(0\.5rem \+ var\(--app-shell-content-inset-top/);
     expect(joined).not.toMatch(/#root[^{]*\{[^}]*padding-top:\s*var\(--app-shell-safe-pad-top/);
   });
 
@@ -455,15 +455,13 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     expect(geometry.slabNode).toBe(false);
     expect(parseFloat(geometry.safePad) || 0).toBe(0);
     expect(geometry.rootPad).toBe(0);
-    expect(geometry.contentInset).toMatch(/env\(safe-area-inset-top|0px|^$/);
-    // Chromium env is 0: banner box at y=0, compact py-2, no 47px #root strip.
+    expect(parseFloat(geometry.contentInset) || 0).toBe(0);
     expect(geometry.bannerTop).toBeLessThan(2);
     expect(parseFloat(geometry.bannerPad) || 0).toBeLessThan(24);
     expect(geometry.textTop).toBeLessThan(24);
-    expect(geometry.rootBg).toMatch(AMBER_500);
-    expect(geometry.bodyBg).toMatch(AMBER_500);
     expect(geometry.bannerBg).toMatch(AMBER_500);
-    expect(geometry.rootBg.toLowerCase()).not.toMatch(/rgba?\(255,\s*255,\s*255|#fff/);
+    expect(geometry.rootBg.toLowerCase()).toMatch(/rgb\(\s*255,\s*255,\s*255|#fff/);
+    expect(geometry.bodyBg.toLowerCase()).not.toMatch(AMBER_500);
     expect(geometry.bannerFilter).toMatch(/^(none)?$/);
     expect(geometry.bannerTransform).toBe('none');
     expect(geometry.bannerBackdrop === 'none' || geometry.bannerBackdrop === '').toBeTruthy();
@@ -516,10 +514,10 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     expect(geometry.bannerTop).toBeLessThan(2);
     expect(parseFloat(geometry.bannerPad) || 0).toBeLessThan(24);
     expect(geometry.textTop).toBeLessThan(24);
-    expect(geometry.rootBg).toMatch(AMBER_500);
+    expect(geometry.rootBg.toLowerCase()).not.toMatch(AMBER_500);
   });
 
-  test('standalone: 47px content inset pads banner text, not a #root gap strip', async ({
+  test('standalone: stamping the old frost token does not pad chrome', async ({
     page,
   }) => {
     await emulateIosStandalonePwa(page);
@@ -557,9 +555,6 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
         safePad: getComputedStyle(document.documentElement)
           .getPropertyValue('--app-shell-safe-pad-top')
           .trim(),
-        contentInset: getComputedStyle(document.documentElement)
-          .getPropertyValue('--app-shell-content-inset-top')
-          .trim(),
         rootPad: rootStyle ? parseFloat(rootStyle.paddingTop) || 0 : 0,
         bannerTop: bannerEl?.getBoundingClientRect().top ?? -1,
         bannerPad: bannerStyle ? parseFloat(bannerStyle.paddingTop) || 0 : 0,
@@ -572,10 +567,9 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     expect(geometry.slabNode).toBe(false);
     expect(parseFloat(geometry.safePad) || 0).toBe(0);
     expect(geometry.rootPad).toBe(0);
-    expect(geometry.contentInset).toBe('47px');
     expect(geometry.bannerTop).toBeLessThan(2);
-    expect(geometry.bannerPad).toBeGreaterThanOrEqual(47);
-    expect(geometry.textTop).toBeGreaterThanOrEqual(47);
+    expect(geometry.bannerPad).toBeLessThan(24);
+    expect(geometry.textTop).toBeLessThan(24);
     expect(geometry.headerPad).toBe(0);
     expect(
       geometry.ancestorFlags.every(
@@ -587,7 +581,7 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     ).toBeTruthy();
   });
 
-  test('standalone: drawer top is crisp below content inset (no status-bar bleed)', async ({
+  test('standalone: drawer starts flush at y=0', async ({
     page,
   }) => {
     await emulateIosStandalonePwa(page);
@@ -624,15 +618,15 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
 
     expect(geometry.slabNode).toBe(false);
     expect(geometry.rootPad).toBe(0);
-    expect(geometry.top).toBeGreaterThanOrEqual(47);
-    expect(geometry.overlayTop).toBeGreaterThanOrEqual(47);
+    expect(geometry.top).toBeLessThan(2);
+    expect(geometry.overlayTop).toBeLessThan(2);
     expect(geometry.paddingTop).toBe(0);
     expect(geometry.radius === '0px' || geometry.radius === '0').toBeTruthy();
     expect(geometry.filter).toMatch(/^(none)?$/);
     expect(geometry.backdrop === 'none' || geometry.backdrop === '').toBeTruthy();
   });
 
-  test('standalone: lead Topbar uses content inset on the header, not a #root band', async ({
+  test('standalone: lead Topbar stays flush when the old frost token is stamped', async ({
     page,
   }) => {
     await emulateIosStandalonePwa(page);
@@ -661,8 +655,8 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     expect(geometry.slabNode).toBe(false);
     expect(geometry.rootPad).toBe(0);
     expect(geometry.headerTop).toBeLessThan(2);
-    expect(geometry.headerPad).toBeGreaterThanOrEqual(47);
-    expect(geometry.titleTop).toBeGreaterThanOrEqual(47);
+    expect(geometry.headerPad).toBe(0);
+    expect(geometry.titleTop).toBeLessThan(24);
     expect(geometry.rowHeight).toBe(56);
     expect(geometry.headerFilter).toMatch(/^(none)?$/);
     expect(geometry.headerBackdrop === 'none' || geometry.headerBackdrop === '').toBeTruthy();

@@ -11,20 +11,13 @@ export const STANDALONE_PWA_CLASS = 'standalone-pwa';
 export const IOS_STANDALONE_HOME_INDICATOR_FALLBACK_PX = 34;
 
 /**
- * Observed iPhone status-bar / Dynamic Island height. PR 60 used this as a
- * `#root` pad *floor* (`max(env, 47)`). That reserved amber/white strip is
- * Joseph's 2026-09-05 5:35 CT gap. Do **not** apply it as `#root` / slab
- * padding. Lead chrome may use live `env(safe-area-inset-top)` to keep
- * *glyphs* below frost — never this constant as a floor.
+ * Observed iPhone status-bar / Dynamic Island height. Never a `#root` pad,
+ * chrome pad, or slab floor — that band is the frost / opaque gap.
  */
 export const IOS_STANDALONE_STATUS_BAR_FALLBACK_PX = 47;
 
-/**
- * Live inset for TEXT inside painted chrome. Never write `0px` over this
- * when a probe is still 0 (PR 61 frosted “Viewing as…”). Never put this on
- * `#root` (PR 60 empty band).
- */
-export const APP_SHELL_CONTENT_INSET_TOP_CSS = 'env(safe-area-inset-top, 0px)';
+/** Always 0. Do not pad chrome or `#root` for the island. */
+export const APP_SHELL_CONTENT_INSET_TOP_CSS = '0px';
 
 /** `#root` must not reserve a painted band under the clock. */
 export const APP_SHELL_ROOT_SAFE_PAD_TOP_CSS = '0px';
@@ -248,9 +241,7 @@ export function resolveSafeAreaBottomPx(measuredPx: number): number {
 
 /**
  * True when `100vh` (device screen) is taller than the layout webview by a
- * status-bar. That must **not** zero `--app-shell-content-inset-top`
- * (PR 61: Joseph’s banner text still sat in the frost). It only means
- * `#root` must stay at pad 0 (PR 60 gap).
+ * status-bar. Used only for height math — never as a reason to pad chrome.
  */
 export function isStandaloneWebviewInsetBelowStatusBar(): boolean {
   if (!isIosStandaloneWebApp()) return false;
@@ -260,10 +251,7 @@ export function isStandaloneWebviewInsetBelowStatusBar(): boolean {
   return screenH - layoutH >= 40;
 }
 
-/**
- * Live top inset for chrome *text*. Never a 47px floor. Never 0 just because
- * the webview looks inset (PR 61 frosted glyphs). `#root` pad is always 0.
- */
+/** Toast / utility token only. Never applied as chrome or `#root` pad. */
 export function resolveSafeAreaTopPx(measuredPx: number): number {
   return measuredPx;
 }
@@ -292,15 +280,12 @@ export function setSafeAreaCSSProperties(root: HTMLElement = document.documentEl
   const topPx = resolveSafeAreaTopPx(measureCssEnvInset('top'));
   const bottomPx = resolveSafeAreaBottomPx(measureCssEnvInset('bottom'));
   const navPadPx = Math.max(APP_SHELL_BOTTOMNAV_CONTENT_PAD_PX, bottomPx);
-  // Never a painted #root band (PR 60).
   root.style.setProperty('--app-shell-safe-pad-top', APP_SHELL_ROOT_SAFE_PAD_TOP_CSS);
+  root.style.setProperty('--app-shell-content-inset-top', APP_SHELL_CONTENT_INSET_TOP_CSS);
   if (topPx > 0) {
     root.style.setProperty('--safe-area-top', `${topPx}px`);
-    root.style.setProperty('--app-shell-content-inset-top', `${topPx}px`);
   } else {
-    // Keep stylesheet `env()` — do not stamp 0px over a live inset (PR 61).
     root.style.removeProperty('--safe-area-top');
-    root.style.removeProperty('--app-shell-content-inset-top');
   }
   root.style.setProperty('--safe-area-bottom', `${bottomPx}px`);
   root.style.setProperty('--app-shell-bottomnav-pad', `${navPadPx}px`);

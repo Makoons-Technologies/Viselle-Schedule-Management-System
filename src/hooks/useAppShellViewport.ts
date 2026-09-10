@@ -137,7 +137,7 @@ export function useAppShellViewport(impersonating = false) {
       document.documentElement.classList.remove(APP_SHELL_IMPERSONATING_CLASS);
       document.documentElement.style.removeProperty('--app-height');
       document.documentElement.style.removeProperty('--safe-area-top');
-      // Keep --app-shell-safe-pad-top and --app-shell-content-inset-top
+      // Keep --app-shell-safe-pad-top and --app-shell-content-inset-top at 0
       // across AppLayout remounts (login → dashboard).
       document.documentElement.style.removeProperty('--safe-area-bottom');
       document.documentElement.style.removeProperty('--app-shell-bottomnav-pad');

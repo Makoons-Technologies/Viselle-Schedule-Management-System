@@ -29,8 +29,7 @@ export async function emulateIosStandalonePwa(page: Page) {
 }
 
 /**
- * Force the live content-inset token (Joseph iPhone frost height) without
- * a `#root` band. Uses !important so viewport settle cannot stamp 0px.
+ * Stamp the old frost token. Chrome must ignore it — no pad, no slab.
  */
 export async function forceContentInsetTop(page: Page, px: number) {
   await page.addStyleTag({
@@ -40,8 +39,7 @@ export async function forceContentInsetTop(page: Page, px: number) {
 
 /**
  * Joseph's iPhone: 100vh (screen) is ~47px taller than the layout webview.
- * `#root` / `--app-shell-safe-pad-top` stay 0 (PR 60 gap). Do not zero
- * `--app-shell-content-inset-top` (PR 61 frosted banner text).
+ * `#root` / content-inset / chrome pad stay 0.
  */
 export async function emulateStandaloneWebviewInsetBelowStatusBar(page: Page) {
   await page.addInitScript(() => {

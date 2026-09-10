@@ -135,9 +135,8 @@ export function Topbar() {
       className="app-shell-topbar shrink-0 border-b border-stone-200"
     >
       {/*
-        Title row is a whole-pixel 56px box. When this header is lead chrome,
-        CSS pads the header (same white paint) with content-inset so glyphs
-        start below frost. No #root band. No filter / transform / isolation.
+        Title row is a whole-pixel 56px box flush at y=0. No island pad,
+        no under-clock paint, no #root band. No filter / transform / isolation.
       */}
       <div className="flex h-14 items-center justify-between gap-2 px-safe-or-3 sm:h-16 sm:px-safe-or-6">
         <div className="flex min-w-0 flex-1 items-center gap-2 overflow-visible sm:gap-4">

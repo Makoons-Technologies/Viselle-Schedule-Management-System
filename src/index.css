@@ -66,7 +66,7 @@
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-left: env(safe-area-inset-left, 0px);
   --app-shell-safe-pad-top: 0px;
-  --app-shell-content-inset-top: env(safe-area-inset-top, 0px);
+  --app-shell-content-inset-top: 0px;
 }
 
 @utility pt-safe {
@@ -390,11 +390,8 @@ html.standalone-pwa.app-shell {
   --safe-area-bottom: 34px;
   --app-shell-bottomnav-pad: 34px;
   --app-shell-keyboard-inset: 0px;
-  /* `#root` band stays 0 (PR 60). Text inset is live env only — never
-   * a 47px floor, never zeroed because the webview “looks inset”
-   * (PR 61 frost). Do not wrap env() in max() (PR 46). */
   --app-shell-safe-pad-top: 0px;
-  --app-shell-content-inset-top: env(safe-area-inset-top, 0px);
+  --app-shell-content-inset-top: 0px;
 }
 
 html.standalone-pwa.app-shell,
@@ -443,7 +440,7 @@ html.standalone-pwa.app-shell .app-shell-chrome {
     --safe-area-bottom: 34px;
     --app-shell-bottomnav-pad: 34px;
     --app-shell-safe-pad-top: 0px;
-    --app-shell-content-inset-top: env(safe-area-inset-top, 0px);
+    --app-shell-content-inset-top: 0px;
   }
 
   html.app-shell .app-shell-bottomnav {
@@ -474,17 +471,10 @@ html.standalone-pwa.app-shell .app-shell-chrome {
 }
 
 /*
- * BEA-78 after PR 61 FAIL (Joseph 2026-09-05, delete+reinstall tip).
- *
- * Joseph: remove the blur div at the top, or make it invisible if it
- * must stay. Solid orange under the clock is OK; frosted TEXT is not.
- *
- * `#root` padding-top stays 0 — that reserved band IS the PR 60 gap.
- * No .app-shell-status-slab. No 47px floor. No filter / backdrop-filter
- * / transform / isolation / will-change on chrome — even `none`.
- *
- * Lead chrome paints under the status bar; glyphs use
- * --app-shell-content-inset-top (live env, never zeroed by inset detect).
+ * BEA-78: no frost, no opaque under-clock paint, no reserved gap slab.
+ * `#root` padding-top stays 0. No .app-shell-status-slab. No 47px floor.
+ * No content-inset pad on chrome. No filter / backdrop-filter / transform
+ * / isolation / will-change on chrome — even `none`.
  */
 html.standalone-pwa.app-shell #root {
   box-sizing: border-box;
@@ -508,52 +498,8 @@ html.dark.standalone-pwa.app-shell #root {
   }
 }
 
-/*
- * ImpersonationBanner: one orange box from y=0. Extra padding-top is the
- * same paint — not a sibling slab — so “Viewing as…” starts below frost.
- */
-html.standalone-pwa.app-shell .app-shell-impersonation-banner {
-  padding-top: calc(0.5rem + var(--app-shell-content-inset-top, env(safe-area-inset-top, 0px)));
-}
-
-/* Trial / A2HS as lead chrome: same inset, their own paint, no extra slab. */
-html.standalone-pwa.app-shell .app-shell-chrome > :first-child:not(.app-shell-impersonation-banner) {
-  padding-top: calc(0.5rem + var(--app-shell-content-inset-top, env(safe-area-inset-top, 0px)));
-}
-
-/* Topbar is lead chrome when no banners. Title row stays 56px below inset. */
-html.standalone-pwa.app-shell .app-shell-topbar {
-  padding-top: var(--app-shell-content-inset-top, env(safe-area-inset-top, 0px));
-}
-
-html.standalone-pwa.app-shell .app-shell-chrome:has(*) ~ * .app-shell-topbar {
-  padding-top: 0px;
-}
-
-@media (display-mode: standalone) {
-  html.app-shell .app-shell-impersonation-banner {
-    padding-top: calc(0.5rem + var(--app-shell-content-inset-top, env(safe-area-inset-top, 0px)));
-  }
-
-  html.app-shell .app-shell-chrome > :first-child:not(.app-shell-impersonation-banner) {
-    padding-top: calc(0.5rem + var(--app-shell-content-inset-top, env(safe-area-inset-top, 0px)));
-  }
-
-  html.app-shell .app-shell-topbar {
-    padding-top: var(--app-shell-content-inset-top, env(safe-area-inset-top, 0px));
-  }
-
-  html.app-shell .app-shell-chrome:has(*) ~ * .app-shell-topbar {
-    padding-top: 0px;
-  }
-}
-
-/*
- * Drawer: white panel starts below the orange frost — crisp top edge,
- * no color-bleed. Overlay matches so the status band stays solid.
- */
 html.standalone-pwa.app-shell .app-shell-drawer {
-  top: var(--app-shell-content-inset-top, env(safe-area-inset-top, 0px));
+  top: 0;
   bottom: 0;
   height: auto;
   max-height: none;
@@ -564,12 +510,12 @@ html.standalone-pwa.app-shell .app-shell-drawer {
 }
 
 html.standalone-pwa.app-shell .app-shell-drawer-overlay {
-  top: var(--app-shell-content-inset-top, env(safe-area-inset-top, 0px));
+  top: 0;
 }
 
 @media (display-mode: standalone) {
   html.app-shell .app-shell-drawer {
-    top: var(--app-shell-content-inset-top, env(safe-area-inset-top, 0px));
+    top: 0;
     bottom: 0;
     height: auto;
     max-height: none;
@@ -580,22 +526,6 @@ html.standalone-pwa.app-shell .app-shell-drawer-overlay {
   }
 
   html.app-shell .app-shell-drawer-overlay {
-    top: var(--app-shell-content-inset-top, env(safe-area-inset-top, 0px));
-  }
-}
-
-/* After standalone #root white so amber wins while impersonating. */
-html.app-shell.app-shell-impersonating,
-html.app-shell.app-shell-impersonating body,
-html.app-shell.app-shell-impersonating #root,
-html.standalone-pwa.app-shell.app-shell-impersonating #root,
-html.app-shell.app-shell-impersonating .app-shell-chrome {
-  background-color: #f59e0b;
-}
-
-@media (display-mode: standalone) {
-  html.app-shell.app-shell-impersonating #root,
-  html.app-shell.app-shell-impersonating .app-shell-chrome {
-    background-color: #f59e0b;
+    top: 0;
   }
 }
