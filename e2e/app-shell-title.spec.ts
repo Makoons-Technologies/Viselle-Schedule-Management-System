@@ -173,6 +173,7 @@ test.describe('BEA-78 app-shell title paint', () => {
       'content',
       /viewport-fit=cover/,
     );
+    await expect(page.locator('meta[name="viewport"]')).toHaveAttribute('data-viselle-fit', 'inset');
     await expect(page.getByTestId('app-shell-status-slab')).toHaveCount(0);
 
     await expect

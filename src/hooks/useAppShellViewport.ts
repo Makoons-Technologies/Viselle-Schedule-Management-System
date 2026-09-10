@@ -8,6 +8,7 @@ import {
   applyAppShellImpersonatingClass,
   applyAppShellViewportFit,
   applyStandalonePwaClass,
+  reloadIosStandaloneIfLegacyCoverHtml,
   isKeyboardOpen,
   nudgeStandaloneViewportRecalc,
   resetRememberedAppHeight,
@@ -31,6 +32,8 @@ export function useAppShellViewport(impersonating = false) {
   }
 
   useEffect(() => {
+    if (reloadIosStandaloneIfLegacyCoverHtml()) return;
+
     document.documentElement.classList.add('app-shell');
     applyStandalonePwaClass();
     applyAppShellViewportFit(false);

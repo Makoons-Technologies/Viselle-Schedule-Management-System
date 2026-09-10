@@ -85,12 +85,46 @@ export function applyStandalonePwaClass(root: HTMLElement = document.documentEle
   root.classList.toggle(STANDALONE_PWA_CLASS, isStandaloneWebApp());
 }
 
-/** iOS standalone cold start under-reports innerHeight/visualViewport (WebKit #254868). */
-export function isIosStandaloneWebApp(): boolean {
-  if (!isStandaloneWebApp() || typeof navigator === 'undefined') return false;
+/** iPhone / iPad WebKit — including Safari-in-tab. */
+export function isIosWebKit(): boolean {
+  if (typeof navigator === 'undefined') return false;
   const ua = navigator.userAgent || '';
   const iPadOs = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
   return /iPhone|iPad|iPod/i.test(ua) || iPadOs;
+}
+
+/** iOS standalone cold start under-reports innerHeight/visualViewport (WebKit #254868). */
+export function isIosStandaloneWebApp(): boolean {
+  return isStandaloneWebApp() && isIosWebKit();
+}
+
+const IOS_INSET_HTML_RELOAD_KEY = 'viselle-ios-inset-html';
+
+/**
+ * iOS locks `viewport-fit` on the first HTML parse and ignores later meta edits.
+ * Old documents parsed with cover keep frosting "Viselle Platform" until reload.
+ */
+export function reloadIosStandaloneIfLegacyCoverHtml(): boolean {
+  if (!isIosStandaloneWebApp() || typeof document === 'undefined') return false;
+  const meta = document.querySelector('meta[name="viewport"]');
+  if (meta?.getAttribute('data-viselle-fit') === 'inset') return false;
+  try {
+    if (sessionStorage.getItem(IOS_INSET_HTML_RELOAD_KEY) === '1') return false;
+    sessionStorage.setItem(IOS_INSET_HTML_RELOAD_KEY, '1');
+  } catch {
+    return false;
+  }
+  window.location.reload();
+  return true;
+}
+
+/** Installed iPhone PWA must load a fresh document so WebKit re-parses viewport. */
+export function goSignedInHome(path: string, navigate: (to: string) => void): void {
+  if (isIosStandaloneWebApp()) {
+    window.location.replace(path);
+    return;
+  }
+  navigate(path);
 }
 
 export function isKeyboardOpen(): boolean {
@@ -252,11 +286,15 @@ export function applyAppShellViewportFit(
   cover: boolean,
   root: HTMLElement = document.documentElement,
 ): void {
+  // iOS ignores runtime viewport changes and will frost the title if cover
+  // was in the first parse. Never turn cover back on for WebKit.
+  const allowCover = cover && !isIosWebKit();
   const meta = document.querySelector('meta[name="viewport"]');
   if (meta) {
-    meta.setAttribute('content', cover ? APP_SHELL_VIEWPORT_COVER : APP_SHELL_VIEWPORT_INSET);
+    meta.setAttribute('content', allowCover ? APP_SHELL_VIEWPORT_COVER : APP_SHELL_VIEWPORT_INSET);
+    if (!allowCover) meta.setAttribute('data-viselle-fit', 'inset');
   }
-  root.classList.toggle(APP_SHELL_FIT_INSET_CLASS, !cover);
+  root.classList.toggle(APP_SHELL_FIT_INSET_CLASS, !allowCover);
 }
 
 /** Home-indicator floor only when the page still uses `viewport-fit=cover`. */

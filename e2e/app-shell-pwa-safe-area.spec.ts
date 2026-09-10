@@ -81,6 +81,7 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
       'content',
       /viewport-fit=cover/,
     );
+    await expect(page.locator('meta[name="viewport"]')).toHaveAttribute('data-viselle-fit', 'inset');
 
     await expect(page.getByTestId('app-shell-status-slab')).toHaveCount(0);
 

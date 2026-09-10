@@ -5,7 +5,7 @@
     <link rel="icon" type="image/svg+xml" href="/viselle-logo.svg?v=20260811a" />
     <link rel="icon" type="image/png" href="/favicon.png?v=20260811a" sizes="48x48" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260811a" />
-    <link rel="manifest" href="/manifest.webmanifest?v=20260905a" />
+    <link rel="manifest" href="/manifest.webmanifest?v=20260910a" />
     <meta name="theme-color" content="#2a0f1e" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -13,7 +13,8 @@
     <meta name="apple-mobile-web-app-title" content="Viselle" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=overlays-content"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, interactive-widget=overlays-content"
+      data-viselle-fit="inset"
     />
     <title>Viselle</title>
     <meta
@@ -192,6 +193,7 @@
               'content',
               'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, interactive-widget=overlays-content'
             );
+            viewport.setAttribute('data-viselle-fit', 'inset');
           }
           document.documentElement.classList.add('app-shell-fit-inset');
         }
