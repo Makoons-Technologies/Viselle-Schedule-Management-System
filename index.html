@@ -166,8 +166,8 @@
           document.documentElement.classList.add('standalone-pwa');
         }
 
-        // Logged-in PWA launch: paint a white/dark theme-color before React.
-        // Maroon `#2a0f1e` + viewport-fit=cover is the frosted band over the title.
+        // Logged-in launch: drop viewport-fit=cover so iOS frost cannot sit on
+        // "Viselle Platform". Maroon `#2a0f1e` + cover is that frosted band.
         function applyLoggedInShellThemeColor() {
           var host = (location.hostname || '').toLowerCase();
           var path = location.pathname || '';
@@ -182,9 +182,18 @@
           try { token = localStorage.getItem('viselle_auth_token'); } catch (e) {}
           if (!token) return;
           var themeMeta = document.querySelector('meta[name="theme-color"]');
-          if (!themeMeta) return;
-          var dark = document.documentElement.classList.contains('dark');
-          themeMeta.setAttribute('content', dark ? '#1c1917' : '#ffffff');
+          if (themeMeta) {
+            var dark = document.documentElement.classList.contains('dark');
+            themeMeta.setAttribute('content', dark ? '#1c1917' : '#ffffff');
+          }
+          var viewport = document.querySelector('meta[name="viewport"]');
+          if (viewport) {
+            viewport.setAttribute(
+              'content',
+              'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, interactive-widget=overlays-content'
+            );
+          }
+          document.documentElement.classList.add('app-shell-fit-inset');
         }
         applyLoggedInShellThemeColor();
 
@@ -302,9 +311,11 @@
         if (isIosStandaloneWebApp()) {
           // Never 100vh (screen, not webview). Fill-available is the webview
           // until the layout probe returns a pixel height.
+          var inset = document.documentElement.classList.contains('app-shell-fit-inset');
+          var bottomPad = inset ? '8px' : '34px';
           document.documentElement.style.setProperty('--app-height', '-webkit-fill-available');
-          document.documentElement.style.setProperty('--safe-area-bottom', '34px');
-          document.documentElement.style.setProperty('--app-shell-bottomnav-pad', '34px');
+          document.documentElement.style.setProperty('--safe-area-bottom', bottomPad);
+          document.documentElement.style.setProperty('--app-shell-bottomnav-pad', bottomPad);
           document.documentElement.style.setProperty('--app-shell-keyboard-inset', '0px');
           setSafePad();
         }

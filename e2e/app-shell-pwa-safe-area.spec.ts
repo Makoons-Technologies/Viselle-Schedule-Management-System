@@ -76,6 +76,11 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     await expect(statusBar).toHaveAttribute('content', 'default');
     const themeColor = page.locator('meta[name="theme-color"]');
     await expect(themeColor).toHaveAttribute('content', '#ffffff');
+    await expect(page.locator('html')).toHaveClass(/app-shell-fit-inset/);
+    await expect(page.locator('meta[name="viewport"]')).not.toHaveAttribute(
+      'content',
+      /viewport-fit=cover/,
+    );
 
     await expect(page.getByTestId('app-shell-status-slab')).toHaveCount(0);
 
@@ -94,7 +99,7 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     // No reserved safe-pad band (PR 60 empty strip under the clock).
     expect(root.pad).toBe(0);
     expect(parseFloat(root.safePad) || 0).toBe(0);
-    expect(root.background.toLowerCase()).toMatch(/rgb\(\s*255,\s*255,\s*255|#fff/);
+    expect(root.background.toLowerCase()).toMatch(/rgb\(\s*250,\s*250,\s*249|#fafaf9/);
 
     const top = await page.getByTestId('app-shell-topbar').evaluate((el) => {
       const style = getComputedStyle(el);
@@ -110,6 +115,7 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
       }
       return {
         paddingTop: style.paddingTop,
+        borderBottomWidth: style.borderBottomWidth,
         rowHeight: row?.getBoundingClientRect().height ?? 0,
         headerTop: el.getBoundingClientRect().top,
         titleTop: title?.getBoundingClientRect().top ?? 0,
@@ -124,6 +130,7 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
 
     // Topbar starts flush at webview y=0 — OS status bar owns the clock region.
     expect(parseFloat(top.paddingTop) || 0).toBe(0);
+    expect(parseFloat(top.borderBottomWidth) || 0).toBe(0);
     expect(top.headerTop).toBeLessThan(2);
     expect(top.titleTop).toBeLessThan(24);
     expect(top.rowHeight).toBe(56);
@@ -180,20 +187,20 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     expect(bottom.bottom).toBe('0px');
 
     // Literal pixel pad — not env() inside max() (PR 46) and not a var-only hope.
-    expect(parseFloat(bottom.paddingBottom)).toBeGreaterThanOrEqual(34);
-    expect(bottom.safeAreaBottom).toBe('34px');
-    expect(bottom.navPadVar).toBe('34px');
-    expect(bottom.inlinePad).toBe('34px');
+    expect(parseFloat(bottom.paddingBottom)).toBeGreaterThanOrEqual(8);
+    expect(parseFloat(bottom.safeAreaBottom) || 0).toBeLessThanOrEqual(8);
+    expect(bottom.navPadVar).toBe('8px');
+    expect(bottom.inlinePad).toBe('8px');
     expect(bottom.inlinePad).not.toContain('safe-area-inset-bottom');
     expect(bottom.inlinePad).not.toContain('max(');
-    expect(bottom.iconBottom).toBeLessThanOrEqual(bottom.navBottom - 34 + 0.5);
-    expect(bottom.labelBottom).toBeLessThanOrEqual(bottom.navBottom - 34 + 0.5);
+    expect(bottom.iconBottom).toBeLessThanOrEqual(bottom.navBottom - 8 + 0.5);
+    expect(bottom.labelBottom).toBeLessThanOrEqual(bottom.navBottom - 8 + 0.5);
     expect(bottom.navBottom).toBeLessThanOrEqual(Math.min(bottom.viewportHeight, bottom.layoutHeight) + 0.5);
 
     const spacer = page.getByTestId('app-shell-bottomnav-spacer');
     await expect(spacer).toBeAttached();
     const spacerH = await spacer.evaluate((el) => el.getBoundingClientRect().height);
-    expect(spacerH).toBeGreaterThanOrEqual(52 + 34);
+    expect(spacerH).toBeGreaterThanOrEqual(52 + 8);
 
     const rules = await collectStyleRules(page);
     const joined = rules.join('\n');
@@ -335,14 +342,14 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
 
     const nav = page.getByTestId('app-shell-bottomnav');
     const closedPad = await nav.evaluate((el) => parseFloat(getComputedStyle(el).paddingBottom));
-    expect(closedPad).toBeGreaterThanOrEqual(34);
+    expect(closedPad).toBeGreaterThanOrEqual(8);
 
     await page.getByRole('button', { name: 'Open menu' }).click();
     const drawerFooter = page.getByLabel('Navigation menu').getByText('Powered by Makoons Technologies');
     await expect(drawerFooter).toBeVisible();
 
     const openPad = await nav.evaluate((el) => parseFloat(getComputedStyle(el).paddingBottom));
-    expect(openPad).toBeGreaterThanOrEqual(34);
+    expect(openPad).toBeGreaterThanOrEqual(8);
 
     const footerPad = await drawerFooter.evaluate((el) => {
       const footer = el.closest('div');
@@ -460,7 +467,7 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     expect(parseFloat(geometry.bannerPad) || 0).toBeLessThan(24);
     expect(geometry.textTop).toBeLessThan(24);
     expect(geometry.bannerBg).toMatch(AMBER_500);
-    expect(geometry.rootBg.toLowerCase()).toMatch(/rgb\(\s*255,\s*255,\s*255|#fff/);
+    expect(geometry.rootBg.toLowerCase()).toMatch(/rgb\(\s*250,\s*250,\s*249|#fafaf9/);
     expect(geometry.bodyBg.toLowerCase()).not.toMatch(AMBER_500);
     expect(geometry.bannerFilter).toMatch(/^(none)?$/);
     expect(geometry.bannerTransform).toBe('none');

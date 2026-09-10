@@ -132,7 +132,7 @@ export function Topbar() {
     <>
     <header
       data-testid="app-shell-topbar"
-      className="app-shell-topbar shrink-0 border-b border-stone-200"
+      className="app-shell-topbar shrink-0"
     >
       {/*
         Title row is a whole-pixel 56px box flush at y=0. No island pad,

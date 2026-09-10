@@ -6,6 +6,7 @@ import {
   SETTLE_DELAYS_MS,
   APP_SHELL_STATUS_BAR_STYLE,
   applyAppShellImpersonatingClass,
+  applyAppShellViewportFit,
   applyStandalonePwaClass,
   isKeyboardOpen,
   nudgeStandaloneViewportRecalc,
@@ -22,9 +23,17 @@ function isEditableFocusTarget(target: EventTarget | null): target is HTMLElemen
 
 /** Size the app shell to the visible viewport and keep document scroll at 0. */
 export function useAppShellViewport(impersonating = false) {
+  if (typeof document !== 'undefined') {
+    document.documentElement.classList.add('app-shell');
+    applyStandalonePwaClass();
+    applyAppShellViewportFit(false);
+    applyAppShellImpersonatingClass(impersonating);
+  }
+
   useEffect(() => {
     document.documentElement.classList.add('app-shell');
     applyStandalonePwaClass();
+    applyAppShellViewportFit(false);
     applyAppShellImpersonatingClass(impersonating);
 
     const themeMeta = document.querySelector('meta[name="theme-color"]');
@@ -40,8 +49,6 @@ export function useAppShellViewport(impersonating = false) {
       );
     };
     syncThemeColor();
-    // `default` + theme-color. Do not force `black` and paint a 47px #root
-    // band (PR 60 gap). Meta is cached at install — no change this restage.
     statusBarMeta?.setAttribute('content', APP_SHELL_STATUS_BAR_STYLE);
 
     let keyboardWasOpen = false;
@@ -135,6 +142,7 @@ export function useAppShellViewport(impersonating = false) {
     return () => {
       document.documentElement.classList.remove('app-shell');
       document.documentElement.classList.remove(APP_SHELL_IMPERSONATING_CLASS);
+      applyAppShellViewportFit(true);
       document.documentElement.style.removeProperty('--app-height');
       document.documentElement.style.removeProperty('--safe-area-top');
       // Keep --app-shell-safe-pad-top and --app-shell-content-inset-top at 0

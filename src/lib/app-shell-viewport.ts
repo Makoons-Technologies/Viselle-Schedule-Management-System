@@ -35,6 +35,15 @@ export const APP_SHELL_THEME_COLOR_IMPERSONATING = '#f59e0b';
 /** html class so page/root background matches the orange banner (no white slab). */
 export const APP_SHELL_IMPERSONATING_CLASS = 'app-shell-impersonating';
 
+/** Webview is already inside the safe area — no `viewport-fit=cover` frost over the title. */
+export const APP_SHELL_FIT_INSET_CLASS = 'app-shell-fit-inset';
+
+export const APP_SHELL_VIEWPORT_COVER =
+  'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=overlays-content';
+
+export const APP_SHELL_VIEWPORT_INSET =
+  'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, interactive-widget=overlays-content';
+
 /** 0.5rem floor matching the old `pb-safe-or-2` content inset. */
 export const APP_SHELL_BOTTOMNAV_CONTENT_PAD_PX = 8;
 
@@ -149,6 +158,9 @@ export function resolveBottomNavPadPx(): number {
 }
 
 export function getStandaloneBottomNavPadCSSValue(): string {
+  if (typeof document !== 'undefined' && isAppShellFitInset()) {
+    return `${APP_SHELL_BOTTOMNAV_CONTENT_PAD_PX}px`;
+  }
   return `${IOS_STANDALONE_HOME_INDICATOR_FALLBACK_PX}px`;
 }
 
@@ -231,9 +243,25 @@ export function measureCssEnvInset(edge: 'top' | 'right' | 'bottom' | 'left'): n
   return px;
 }
 
-/** iOS standalone always keeps at least the home-indicator floor, even if env() is a lie > 0. */
+export function isAppShellFitInset(root: HTMLElement = document.documentElement): boolean {
+  return root.classList.contains(APP_SHELL_FIT_INSET_CLASS);
+}
+
+/** Marketing keeps cover. Logged-in shell drops it so iOS frost cannot sit on the title. */
+export function applyAppShellViewportFit(
+  cover: boolean,
+  root: HTMLElement = document.documentElement,
+): void {
+  const meta = document.querySelector('meta[name="viewport"]');
+  if (meta) {
+    meta.setAttribute('content', cover ? APP_SHELL_VIEWPORT_COVER : APP_SHELL_VIEWPORT_INSET);
+  }
+  root.classList.toggle(APP_SHELL_FIT_INSET_CLASS, !cover);
+}
+
+/** Home-indicator floor only when the page still uses `viewport-fit=cover`. */
 export function resolveSafeAreaBottomPx(measuredPx: number): number {
-  if (isIosStandaloneWebApp()) {
+  if (isIosStandaloneWebApp() && !isAppShellFitInset()) {
     return Math.max(measuredPx, IOS_STANDALONE_HOME_INDICATOR_FALLBACK_PX);
   }
   return measuredPx;

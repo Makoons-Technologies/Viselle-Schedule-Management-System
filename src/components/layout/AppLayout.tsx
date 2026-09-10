@@ -30,9 +30,8 @@ function AppLayoutContent() {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden overscroll-none bg-stone-50 dark:bg-stone-900">
       {/*
-        No frost pad, no opaque under-clock paint, no reserved #root slab.
-        Chrome is flush at webview y=0. Bottom nav is BEA-83. Welcome back
-        is in-flow (BEA-85).
+        Logged-in shell drops viewport-fit=cover so iOS frost cannot sit on
+        the title. No reserved #root slab. Welcome back is in-flow (BEA-85).
       */}
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="app-shell-chrome shrink-0" data-testid="app-shell-chrome">

@@ -167,7 +167,7 @@
   }
 
   html.app-shell body {
-    background-color: #ffffff;
+    background-color: #fafaf9;
   }
 
   html.dark.app-shell body {
@@ -394,6 +394,11 @@ html.standalone-pwa.app-shell {
   --app-shell-content-inset-top: 0px;
 }
 
+html.standalone-pwa.app-shell.app-shell-fit-inset {
+  --safe-area-bottom: 8px;
+  --app-shell-bottomnav-pad: 8px;
+}
+
 html.standalone-pwa.app-shell,
 html.standalone-pwa.app-shell body,
 html.standalone-pwa.app-shell #root {
@@ -443,6 +448,11 @@ html.standalone-pwa.app-shell .app-shell-chrome {
     --app-shell-content-inset-top: 0px;
   }
 
+  html.app-shell.app-shell-fit-inset {
+    --safe-area-bottom: 8px;
+    --app-shell-bottomnav-pad: 8px;
+  }
+
   html.app-shell .app-shell-bottomnav {
     position: fixed;
     left: 0;
@@ -471,15 +481,14 @@ html.standalone-pwa.app-shell .app-shell-chrome {
 }
 
 /*
- * BEA-78: no frost, no opaque under-clock paint, no reserved gap slab.
- * `#root` padding-top stays 0. No .app-shell-status-slab. No 47px floor.
- * No content-inset pad on chrome. No filter / backdrop-filter / transform
- * / isolation / will-change on chrome — even `none`.
+ * BEA-78: logged-in shell drops viewport-fit=cover so iOS frost cannot
+ * sit on the title. No reserved gap slab. No content-inset pad. No filter
+ * / backdrop-filter / transform / isolation / will-change on chrome.
  */
 html.standalone-pwa.app-shell #root {
   box-sizing: border-box;
   padding-top: 0px;
-  background-color: #ffffff;
+  background-color: #fafaf9;
 }
 
 html.dark.standalone-pwa.app-shell #root {
@@ -490,7 +499,7 @@ html.dark.standalone-pwa.app-shell #root {
   html.app-shell #root {
     box-sizing: border-box;
     padding-top: 0px;
-    background-color: #ffffff;
+    background-color: #fafaf9;
   }
 
   html.dark.app-shell #root {

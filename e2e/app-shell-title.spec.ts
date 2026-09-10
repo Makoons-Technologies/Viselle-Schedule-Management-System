@@ -168,6 +168,11 @@ test.describe('BEA-78 app-shell title paint', () => {
       'default',
     );
     await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#ffffff');
+    await expect(page.locator('html')).toHaveClass(/app-shell-fit-inset/);
+    await expect(page.locator('meta[name="viewport"]')).not.toHaveAttribute(
+      'content',
+      /viewport-fit=cover/,
+    );
     await expect(page.getByTestId('app-shell-status-slab')).toHaveCount(0);
 
     await expect
@@ -235,7 +240,7 @@ test.describe('BEA-78 app-shell title paint', () => {
       paddingBottom: (el as HTMLElement).style.paddingBottom,
     }));
     expect(navPad.position).toBe('fixed');
-    expect(navPad.paddingBottom).toBe('34px');
+    expect(navPad.paddingBottom).toBe('8px');
   });
 
   test('browser login still uses Sonner Welcome back (not the PWA in-flow banner)', async ({ page }) => {
