@@ -269,12 +269,23 @@
 
   /*
    * Installed PWA marketing pages: keep the status-bar / overscroll region dark.
-   * The app shell overrides this so the tab bar is not sitting on maroon.
+   * Logged-in launch adds .app-shell-fit-inset in <head> — do not paint maroon
+   * under the clock or iOS frosts that band over the title (BEA-78).
    */
   @media (display-mode: standalone) {
-    html:not(.app-shell),
-    html:not(.app-shell) body {
+    html:not(.app-shell):not(.app-shell-fit-inset),
+    html:not(.app-shell):not(.app-shell-fit-inset) body {
       background-color: #2a0f1e;
+    }
+
+    html.app-shell-fit-inset:not(.app-shell),
+    html.app-shell-fit-inset:not(.app-shell) body {
+      background-color: #fafaf9;
+    }
+
+    html.dark.app-shell-fit-inset:not(.app-shell),
+    html.dark.app-shell-fit-inset:not(.app-shell) body {
+      background-color: #1c1917;
     }
   }
 

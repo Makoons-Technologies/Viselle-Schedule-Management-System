@@ -5,7 +5,7 @@
     <link rel="icon" type="image/svg+xml" href="/viselle-logo.svg?v=20260811a" />
     <link rel="icon" type="image/png" href="/favicon.png?v=20260811a" sizes="48x48" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260811a" />
-    <link rel="manifest" href="/manifest.webmanifest?v=20260910a" />
+    <link rel="manifest" href="/manifest.webmanifest?v=20260910c" />
     <meta name="theme-color" content="#2a0f1e" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -183,10 +183,11 @@
           try { token = localStorage.getItem('viselle_auth_token'); } catch (e) {}
           if (!token) return;
           var themeMeta = document.querySelector('meta[name="theme-color"]');
+          var dark = document.documentElement.classList.contains('dark');
           if (themeMeta) {
-            var dark = document.documentElement.classList.contains('dark');
             themeMeta.setAttribute('content', dark ? '#1c1917' : '#ffffff');
           }
+          document.documentElement.style.backgroundColor = dark ? '#1c1917' : '#fafaf9';
           var viewport = document.querySelector('meta[name="viewport"]');
           if (viewport) {
             viewport.setAttribute(
