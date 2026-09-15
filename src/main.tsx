@@ -7,6 +7,7 @@ import { OrgProvider } from '@/context/OrgContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { AppToaster } from '@/components/common/AppToaster';
 import { AppErrorBoundary } from '@/components/common/AppErrorBoundary';
+import { DebugInspectorRoot } from '@/components/debug/DebugInspector';
 import App from '@/App';
 import { applyPlatformTheme, readStoredThemeId } from '@/lib/themes';
 import { initColorMode } from '@/lib/color-mode';
@@ -44,6 +45,7 @@ createRoot(document.getElementById('root')!).render(
               <OrgProvider>
                 <App />
                 <AppToaster />
+                <DebugInspectorRoot />
               </OrgProvider>
             </ThemeProvider>
           </AuthProvider>

@@ -549,3 +549,9 @@ html.standalone-pwa.app-shell .app-shell-drawer-overlay {
     top: 0;
   }
 }
+
+/* Staging-only inspector pick mode. Harmless if the class is never applied. */
+html.debug-inspector-picking,
+html.debug-inspector-picking * {
+  cursor: crosshair !important;
+}
