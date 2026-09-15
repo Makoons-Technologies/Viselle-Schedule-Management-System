@@ -6,6 +6,7 @@ import {
   isDebugInspectorEnabled,
   isDebugInspectorUi,
   pickElementFromPoint,
+  swallowNextClick,
   type DebugInspectorSnapshot,
 } from '@/lib/debug-inspector';
 import { cn } from '@/lib/utils';
@@ -89,6 +90,8 @@ function DebugInspector() {
         ? Math.hypot(event.clientX - start.x, event.clientY - start.y)
         : 0;
       if (moved > 12) return;
+      // Arm before React tears down pick listeners — the real `click` is next.
+      swallowNextClick();
       blockActivation(event);
       const el = pickElementFromPoint(event.clientX, event.clientY);
       if (el) selectElement(el);

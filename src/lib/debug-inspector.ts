@@ -116,6 +116,21 @@ export function isDebugInspectorUi(node: EventTarget | null): boolean {
   return node instanceof Element && Boolean(node.closest(`[${DEBUG_INSPECTOR_ROOT_ATTR}]`));
 }
 
+/** Keep the leftover `click` after pointerup from following links/buttons. */
+export function swallowNextClick(timeoutMs = 500): void {
+  if (typeof document === 'undefined') return;
+  const guard = (event: Event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (typeof event.stopImmediatePropagation === 'function') {
+      event.stopImmediatePropagation();
+    }
+    document.removeEventListener('click', guard, true);
+  };
+  document.addEventListener('click', guard, true);
+  window.setTimeout(() => document.removeEventListener('click', guard, true), timeoutMs);
+}
+
 export function pickElementFromPoint(clientX: number, clientY: number): Element | null {
   if (typeof document === 'undefined') return null;
   const stack = document.elementsFromPoint(clientX, clientY);

@@ -51,5 +51,12 @@ test.describe('staging debug inspector (session override)', () => {
     await page.getByTestId('debug-inspector-close').click();
     await expect(panel).toHaveCount(0);
     await expect(fab).toHaveAttribute('aria-label', 'Inspect');
+
+    await fab.click();
+    await page.getByRole('link', { name: 'Sign in' }).click();
+    await expect(page).toHaveURL('/');
+    await expect(page.getByTestId('debug-inspector-panel')).toBeVisible();
+    await expect(page.getByTestId('debug-inspector-panel')).toContainText('href');
+    await expect(page.getByTestId('debug-inspector-panel')).toContainText('/login');
   });
 });
