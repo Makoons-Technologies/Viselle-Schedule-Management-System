@@ -33,6 +33,11 @@ import {
   shouldClearDayZoom,
   shouldRevealAllAfterCreate,
 } from '@/components/calendar/calendar-create-visibility';
+import {
+  defaultSelectedStaffIds,
+  resolveMyAccountId,
+  staffAccountsForFilter,
+} from '@/components/calendar/staff-schedule-filter';
 import { CalendarAppointmentChip } from '@/components/calendar/CalendarAppointmentChip';
 import { WeekCalendarNav } from '@/components/calendar/WeekCalendarNav';
 import { LoadingState } from '@/components/common/LoadingState';
@@ -87,7 +92,7 @@ export function CalendarPage() {
   const [walkInOpen, setWalkInOpen] = useState(false);
   const [createDefaultDate, setCreateDefaultDate] = useState<string | undefined>(undefined);
   const [createDefaultMinutes, setCreateDefaultMinutes] = useState<number | undefined>(undefined);
-  /** null = default all staff selected once accounts load (desktop picker). */
+  /** null = implicit first-load default: current user / previewed owner only. */
   const [selectedStaffIds, setSelectedStaffIds] = useState<string[] | null>(null);
   const [selectMode, setSelectMode] = useState(false);
   const [batchSelection, setBatchSelection] = useState<Record<string, BatchCheckoutItem>>({});
@@ -160,25 +165,30 @@ export function CalendarPage() {
   const batchCheckoutEnabled =
     (orgData?.organization.batchCheckoutEnabled ?? true) && permissions.canBatchCheckout;
 
+  const myAccountId = useMemo(
+    () =>
+      resolveMyAccountId({
+        userAccountId: user?.accountId,
+        memberships,
+        orgId,
+        accounts: accountsData?.accounts,
+      }),
+    [user?.accountId, memberships, orgId, accountsData],
+  );
+
   const staffAccounts = useMemo(() => {
-    return (accountsData?.accounts ?? [])
-      .filter((account) => account.status === 'active' && account.isBookable)
+    return staffAccountsForFilter(accountsData?.accounts ?? [], myAccountId)
       .slice()
       .sort((a, b) => {
         const last = a.lastName.localeCompare(b.lastName);
         return last !== 0 ? last : a.firstName.localeCompare(b.firstName);
       });
-  }, [accountsData]);
+  }, [accountsData, myAccountId]);
 
   const resolvedStaffIds = useMemo(() => {
     if (selectedStaffIds !== null) return selectedStaffIds;
-    return staffAccounts.map((account) => account.id);
-  }, [selectedStaffIds, staffAccounts]);
-
-  const myAccountId = useMemo(() => {
-    if (user?.accountId) return user.accountId;
-    return memberships.find((membership) => membership.organizationId === orgId)?.accountId ?? null;
-  }, [user?.accountId, memberships, orgId]);
+    return defaultSelectedStaffIds(myAccountId);
+  }, [selectedStaffIds, myAccountId]);
 
   /**
    * Resolve the mobile schedule scope to a single account id to filter by, or
@@ -355,7 +365,7 @@ export function CalendarPage() {
     const appointment = created[0];
     if (!appointment) return;
 
-    setSelectedStaffIds((prev) => revealStaffAfterCreate(prev, appointment.accountId));
+    setSelectedStaffIds((prev) => revealStaffAfterCreate(prev, appointment.accountId, myAccountId));
     if (
       isMobile &&
       shouldRevealAllAfterCreate({ viewedAccountId, createdAccountId: appointment.accountId })
@@ -464,7 +474,7 @@ export function CalendarPage() {
 
     const raw = data?.appointments.find((appointment) => appointment.id === focusRequest.id);
     if (raw) {
-      setSelectedStaffIds((prev) => revealStaffAfterCreate(prev, raw.accountId));
+      setSelectedStaffIds((prev) => revealStaffAfterCreate(prev, raw.accountId, myAccountId));
       if (
         isMobile &&
         shouldRevealAllAfterCreate({ viewedAccountId, createdAccountId: raw.accountId })
@@ -489,6 +499,7 @@ export function CalendarPage() {
     focusRequest,
     isLoading,
     isMobile,
+    myAccountId,
     viewedAccountId,
     setScheduleView,
     setSearchParams,
@@ -604,6 +615,7 @@ export function CalendarPage() {
               accounts={staffAccounts}
               selectedIds={resolvedStaffIds}
               onSelectedIdsChange={setSelectedStaffIds}
+              meAccountId={myAccountId}
             />
           </div>
           <DropdownMenu>
