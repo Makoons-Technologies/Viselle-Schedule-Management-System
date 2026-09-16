@@ -1,10 +1,38 @@
 import type { FormioComponent, FormioSchema, OrgForm, OrgFormSubmission } from '@/types/api';
 
+const EMPTY_SCHEMA: FormioSchema = { display: 'form', components: [] };
+
+export type FormEditorLoadState = 'loading' | 'error' | 'not_found' | 'ready';
+
+export function formSchemasMatch(left?: FormioSchema | null, right?: FormioSchema | null) {
+  return JSON.stringify(left ?? EMPTY_SCHEMA) === JSON.stringify(right ?? EMPTY_SCHEMA);
+}
+
+export function formEditorIsDirty(
+  name: string,
+  schema: FormioSchema,
+  form?: Pick<OrgForm, 'name' | 'schema'> | null,
+) {
+  if (!form) return false;
+  return name.trim() !== form.name || !formSchemasMatch(schema, form.schema);
+}
+
+export function formEditorLoadState(query: {
+  isPending: boolean;
+  isError: boolean;
+  form?: unknown;
+}): FormEditorLoadState {
+  if (query.isPending) return 'loading';
+  if (query.isError) return 'error';
+  if (!query.form) return 'not_found';
+  return 'ready';
+}
+
 export function liveFormSchema(form: Pick<OrgForm, 'status' | 'schema' | 'publishedSchema'>): FormioSchema {
   if (form.status === 'published') {
-    return form.publishedSchema ?? form.schema ?? { display: 'form', components: [] };
+    return form.publishedSchema ?? form.schema ?? EMPTY_SCHEMA;
   }
-  return form.schema ?? { display: 'form', components: [] };
+  return form.schema ?? EMPTY_SCHEMA;
 }
 
 export function formIsPublic(form: Pick<OrgForm, 'visibility'>) {

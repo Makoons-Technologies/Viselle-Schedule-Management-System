@@ -9,6 +9,7 @@
     "build": "node scripts/fetch-industry-stats.mjs && tsc -b && vite build",
     "fetch-industry-stats": "node scripts/fetch-industry-stats.mjs",
     "lint": "eslint .",
+    "test": "node --experimental-strip-types --test src/lib/forms.test.ts",
     "preview": "vite preview",
     "cut-release": "node scripts/cut-release.mjs",
     "test:e2e": "playwright test",
