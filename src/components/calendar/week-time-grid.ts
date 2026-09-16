@@ -1,3 +1,4 @@
+import { clampBlockToGrid, resolveDisplayEndMinutes, utcWallClockMinutes } from '@/lib/calendar-dnd';
 import { appointmentScheduleFromIso } from '@/lib/utils';
 
 export const SLOT_MINUTES = 30;
@@ -8,9 +9,7 @@ export const DEFAULT_DAY_START = 0;
 export const DEFAULT_DAY_END = 24 * 60;
 
 export function appointmentStartMinutes(iso: string): number {
-  const { time } = appointmentScheduleFromIso(iso);
-  const [hours, minutes] = time.split(':').map(Number);
-  return hours * 60 + minutes;
+  return utcWallClockMinutes(iso);
 }
 
 /** Slot whose start is nearest `targetMinutes` (ties prefer the earlier start). */
@@ -154,10 +153,14 @@ export function appointmentBlockGeometry(
   slotMinutes = SLOT_MINUTES,
   slotHeightRem = SLOT_HEIGHT_REM,
 ): { topRem: number; heightRem: number; startMinutes: number; endMinutes: number } {
-  const startMinutes = appointmentStartMinutes(startTime);
-  const endMinutes = Math.max(startMinutes + 1, appointmentStartMinutes(endTime));
+  const rawStart = appointmentStartMinutes(startTime);
+  const rawEnd = resolveDisplayEndMinutes(startTime, endTime);
+  const { startMinutes, endMinutes } = clampBlockToGrid(rawStart, rawEnd, gridStartMinutes);
   const topRem = minutesToOffsetRem(startMinutes, gridStartMinutes, slotMinutes, slotHeightRem);
-  const heightRem = minutesToOffsetRem(endMinutes, gridStartMinutes, slotMinutes, slotHeightRem) - topRem;
+  const heightRem = Math.max(
+    slotHeightRem / slotMinutes,
+    minutesToOffsetRem(endMinutes, gridStartMinutes, slotMinutes, slotHeightRem) - topRem,
+  );
   return { topRem, heightRem, startMinutes, endMinutes };
 }
 
@@ -176,7 +179,7 @@ export function buildWeekTimeSlots(
   for (const appointment of appointments) {
     const start = appointmentStartMinutes(appointment.startTime);
     const end = appointment.endTime
-      ? appointmentStartMinutes(appointment.endTime)
+      ? resolveDisplayEndMinutes(appointment.startTime, appointment.endTime)
       : start + slotMinutes;
     min = Math.min(min, start);
     max = Math.max(max, end);

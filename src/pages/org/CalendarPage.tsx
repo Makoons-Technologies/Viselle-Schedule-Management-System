@@ -253,7 +253,10 @@ export function CalendarPage() {
       queryClient.invalidateQueries({ queryKey: ['appointments', orgId] });
       queryClient.invalidateQueries({ queryKey: ['recurring', orgId] });
     },
-    onError: (err: Error) => toast.error(err.message || 'Could not reschedule appointment'),
+    onError: (err: Error) => {
+      setPendingScheduleChange(null);
+      toast.error(err.message || 'Could not reschedule appointment');
+    },
   });
 
   const needsRecurringScopePrompt = (appointment: Appointment) =>
