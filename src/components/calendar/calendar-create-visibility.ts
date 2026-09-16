@@ -3,8 +3,14 @@
 export function revealStaffAfterCreate(
   selectedIds: string[] | null,
   createdAccountId: string,
+  meAccountId?: string | null,
 ): string[] | null {
-  if (selectedIds === null) return null;
+  if (selectedIds === null) {
+    // null is the implicit first-load default (me only). Stay implicit when the
+    // new booking is already mine; otherwise materialize me + the created staff.
+    if (!meAccountId || meAccountId === createdAccountId) return null;
+    return [meAccountId, createdAccountId];
+  }
   if (selectedIds.includes(createdAccountId)) return selectedIds;
   return [...selectedIds, createdAccountId];
 }

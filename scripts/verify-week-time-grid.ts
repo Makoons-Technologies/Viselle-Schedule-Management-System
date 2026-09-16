@@ -388,8 +388,12 @@ assert(closestAvailableSlot([], 10 * 60) === undefined, 'no slots → no closest
 function revealStaffAfterCreate(
   selectedIds: string[] | null,
   createdAccountId: string,
+  meAccountId?: string | null,
 ): string[] | null {
-  if (selectedIds === null) return null;
+  if (selectedIds === null) {
+    if (!meAccountId || meAccountId === createdAccountId) return null;
+    return [meAccountId, createdAccountId];
+  }
   if (selectedIds.includes(createdAccountId)) return selectedIds;
   return [...selectedIds, createdAccountId];
 }
@@ -410,7 +414,12 @@ assert(
   JSON.stringify(revealStaffAfterCreate([], 'staff-2')) === JSON.stringify(['staff-2']),
   'empty staff filter must include the staff the new appointment was booked with',
 );
-assert(revealStaffAfterCreate(null, 'staff-2') === null, 'all-staff mode stays all-staff');
+assert(revealStaffAfterCreate(null, 'staff-2') === null, 'implicit default without me stays implicit');
+assert(
+  JSON.stringify(revealStaffAfterCreate(null, 'staff-2', 'staff-1')) === JSON.stringify(['staff-1', 'staff-2']),
+  'implicit me-only default adds the created staff rather than hiding the booking',
+);
+assert(revealStaffAfterCreate(null, 'staff-1', 'staff-1') === null, 'booking myself keeps implicit me-only default');
 assert(
   JSON.stringify(revealStaffAfterCreate(['staff-1'], 'staff-2')) === JSON.stringify(['staff-1', 'staff-2']),
   'partial staff filter adds the created staff rather than hiding the booking',

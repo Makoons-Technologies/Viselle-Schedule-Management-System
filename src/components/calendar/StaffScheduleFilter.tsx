@@ -10,37 +10,27 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import type { Account } from '@/types/api';
+import { staffScheduleLabel, staffScheduleTriggerLabel } from './staff-schedule-filter';
 
 interface StaffScheduleFilterProps {
   accounts: Account[];
   selectedIds: string[];
   onSelectedIdsChange: (ids: string[]) => void;
-}
-
-function accountLabel(account: Account) {
-  return `${account.firstName} ${account.lastName}`.trim() || account.email;
+  /** Signed-in staff (or previewed org owner). Shown with a `(me)` suffix. */
+  meAccountId?: string | null;
 }
 
 export function StaffScheduleFilter({
   accounts,
   selectedIds,
   onSelectedIdsChange,
+  meAccountId,
 }: StaffScheduleFilterProps) {
   const accountIds = useMemo(() => accounts.map((account) => account.id), [accounts]);
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const allSelected = accountIds.length > 0 && accountIds.every((id) => selectedSet.has(id));
-  const noneSelected = selectedIds.length === 0;
 
-  const triggerLabel = (() => {
-    if (accounts.length === 0) return 'Schedules';
-    if (allSelected) return 'All schedules';
-    if (noneSelected) return 'No schedules';
-    if (selectedIds.length === 1) {
-      const only = accounts.find((account) => account.id === selectedIds[0]);
-      return only ? accountLabel(only) : '1 schedule';
-    }
-    return `${selectedIds.length} schedules`;
-  })();
+  const triggerLabel = staffScheduleTriggerLabel({ accounts, selectedIds, meAccountId });
 
   const toggleAll = () => {
     onSelectedIdsChange(allSelected ? [] : accountIds);
@@ -86,7 +76,7 @@ export function StaffScheduleFilter({
             onCheckedChange={(checked) => toggleOne(account.id, checked === true)}
             onSelect={(event) => event.preventDefault()}
           >
-            {accountLabel(account)}
+            {staffScheduleLabel(account, meAccountId)}
           </DropdownMenuCheckboxItem>
         ))}
       </DropdownMenuContent>
