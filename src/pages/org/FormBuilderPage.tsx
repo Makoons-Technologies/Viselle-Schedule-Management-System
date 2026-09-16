@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { History, Settings } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { BlockingProgressDialog, useBlockingProgress } from '@/components/common/BlockingProgressDialog';
@@ -20,14 +20,10 @@ import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
 import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { getApiErrorMessage, isRequestAborted, orgApi } from '@/lib/api';
-import { formVersionLabel } from '@/lib/forms';
+import { formEditorIsDirty, formEditorLoadState, formVersionLabel } from '@/lib/forms';
 import type { FormioSchema } from '@/types/api';
 
 const EMPTY: FormioSchema = { display: 'form', components: [] };
-
-function schemasMatch(left: FormioSchema, right: FormioSchema) {
-  return JSON.stringify(left ?? EMPTY) === JSON.stringify(right ?? EMPTY);
-}
 
 export function FormBuilderPage() {
   const orgId = useOrgId();
@@ -57,6 +53,12 @@ export function FormBuilderPage() {
   });
 
   const form = formQuery.data?.form;
+  const loadState = formEditorLoadState({
+    isPending: formQuery.isPending,
+    isError: formQuery.isError,
+    form,
+  });
+  const dirty = formEditorIsDirty(name, schema, form);
 
   useEffect(() => {
     if (!form) return;
@@ -129,8 +131,20 @@ export function FormBuilderPage() {
     },
   });
 
-  if (formQuery.isLoading) return <LoadingState />;
-  if (!form) {
+  if (loadState === 'loading') return <LoadingState />;
+  if (loadState === 'error') {
+    return (
+      <div className="space-y-3">
+        <Link to={`/orgs/${orgId}/forms`} className="text-sm text-brand-700 hover:underline">
+          ← All forms
+        </Link>
+        <p className="text-sm text-stone-500">
+          {getApiErrorMessage(formQuery.error, 'Could not load this form')}
+        </p>
+      </div>
+    );
+  }
+  if (loadState === 'not_found' || !form) {
     return (
       <div className="space-y-3">
         <Link to={`/orgs/${orgId}/forms`} className="text-sm text-brand-700 hover:underline">
@@ -160,10 +174,6 @@ export function FormBuilderPage() {
   }
 
   const version = formVersionLabel(form);
-  const dirty = useMemo(
-    () => name.trim() !== form.name || !schemasMatch(schema, form.schema ?? EMPTY),
-    [form.name, form.schema, name, schema],
-  );
   const formsListPath = `/orgs/${orgId}/forms`;
 
   const goBack = () => navigate(formsListPath);
