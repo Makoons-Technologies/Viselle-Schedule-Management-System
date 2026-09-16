@@ -139,7 +139,7 @@ export function CalendarAppointmentChip({
           role="separator"
           aria-orientation="horizontal"
           aria-label="Resize appointment"
-          className="absolute inset-x-0 bottom-0 z-10 flex h-2 cursor-ns-resize items-end justify-center pb-0.5"
+          className="absolute inset-x-0 bottom-0 z-10 flex h-2 cursor-ns-resize touch-none items-end justify-center pb-0.5"
           onPointerDown={(event) => {
             event.preventDefault();
             event.stopPropagation();

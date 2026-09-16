@@ -31,8 +31,17 @@ import {
   appointmentDurationMinutes,
   clampMoveStart,
   clampResizeEnd,
+  DAY_END_MINUTES,
+  minutesFromPointerDelta,
   minutesToIsoOnDay,
 } from '@/lib/calendar-dnd';
+import {
+  applyCalendarDragChrome,
+  attachCalendarDragListeners,
+  clearCalendarDragChrome,
+  shouldCommitCalendarDrag,
+  type CalendarDragEndReason,
+} from '@/lib/calendar-drag-session';
 import {
   findVerticalScroller,
   getScrollLeft,
@@ -87,8 +96,6 @@ type DragSession = {
   originStartMinutes: number;
   originEndMinutes: number;
   durationMinutes: number;
-  /** Minutes from block start to the pointer at grab (move only). */
-  grabOffsetMinutes: number;
   startClientX: number;
   startClientY: number;
   dayKey: string;
@@ -223,11 +230,17 @@ export function WeekAppointmentTimeGrid({
   } | null>(null);
   const headerRowRef = useRef<HTMLDivElement | null>(null);
   const appointmentDragRef = useRef<DragSession | null>(null);
+  const detachDragListenersRef = useRef<(() => void) | null>(null);
   const suppressClickRef = useRef(false);
   const [appointmentDrag, setAppointmentDrag] = useState<DragSession | null>(null);
+  const onScheduleChangeRef = useRef(onAppointmentScheduleChange);
 
   const dndActive =
     interactionEnabled && typeof onAppointmentScheduleChange === 'function';
+
+  useEffect(() => {
+    onScheduleChangeRef.current = onAppointmentScheduleChange;
+  }, [onAppointmentScheduleChange]);
 
   useSyncedHorizontalScroll(headerScrollRef, scrollRef);
 
@@ -454,25 +467,25 @@ export function WeekAppointmentTimeGrid({
     return best;
   };
 
-  const minutesFromClientY = (clientY: number, dayKey: string): number | null => {
-    const body = bodyRef.current;
-    if (!body) return null;
-    const columnEl = body.querySelector<HTMLElement>(`[data-day-column="${dayKey}"]`);
-    if (!columnEl) return null;
-    const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-    const rect = columnEl.getBoundingClientRect();
-    const offsetPx = clientY - rect.top;
-    return gridStartMinutes + (offsetPx / rem / SLOT_HEIGHT_REM) * SLOT_MINUTES;
+  const detachDragListeners = () => {
+    detachDragListenersRef.current?.();
+    detachDragListenersRef.current = null;
+  };
+
+  const clearAppointmentDragState = () => {
+    appointmentDragRef.current = null;
+    setAppointmentDrag(null);
+    if (typeof document !== 'undefined') clearCalendarDragChrome(document);
   };
 
   const commitAppointmentDrag = (session: DragSession) => {
-    if (!onAppointmentScheduleChange) return;
+    if (!onScheduleChangeRef.current) return;
     const startChanged =
       session.dayKey !== session.originDayKey ||
       session.startMinutes !== session.originStartMinutes;
     const endChanged = session.endMinutes !== session.originEndMinutes;
     if (!startChanged && !endChanged) return;
-    onAppointmentScheduleChange({
+    onScheduleChangeRef.current({
       appointment: session.appointment,
       startTime: minutesToIsoOnDay(session.dayKey, session.startMinutes),
       endTime: minutesToIsoOnDay(session.dayKey, session.endMinutes),
@@ -484,81 +497,79 @@ export function WeekAppointmentTimeGrid({
     setAppointmentDrag(next);
   };
 
-  const endDragSession = (session: DragSession | null, didMove: boolean) => {
-    appointmentDragRef.current = null;
-    setAppointmentDrag(null);
-    if (didMove && session) {
-      suppressClickRef.current = true;
+  const updateAppointmentDragFromPointer = (event: PointerEvent) => {
+    const session = appointmentDragRef.current;
+    if (!session || session.pointerId !== event.pointerId) return;
+
+    const distance = Math.hypot(
+      event.clientX - session.startClientX,
+      event.clientY - session.startClientY,
+    );
+    const pastThreshold = session.moved || distance >= MOVE_THRESHOLD_PX;
+    if (!pastThreshold) return;
+
+    const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    const deltaMinutes = minutesFromPointerDelta(
+      event.clientY - session.startClientY,
+      rem,
+      SLOT_HEIGHT_REM,
+      SLOT_MINUTES,
+    );
+
+    const dayKey =
+      session.mode === 'move'
+        ? dayColumnKeyFromClientX(event.clientX) ?? session.dayKey
+        : session.dayKey;
+
+    const startMinutes =
+      session.mode === 'move'
+        ? clampMoveStart(session.originStartMinutes + deltaMinutes, session.durationMinutes)
+        : session.originStartMinutes;
+    const endMinutes =
+      session.mode === 'move'
+        ? startMinutes + session.durationMinutes
+        : clampResizeEnd(session.originStartMinutes, session.originEndMinutes + deltaMinutes);
+
+    if (
+      session.moved &&
+      dayKey === session.dayKey &&
+      startMinutes === session.startMinutes &&
+      endMinutes === session.endMinutes
+    ) {
+      return;
+    }
+
+    updateDragSession({
+      ...session,
+      dayKey,
+      startMinutes,
+      endMinutes,
+      moved: true,
+    });
+    event.preventDefault();
+  };
+
+  const finishAppointmentDrag = (reason: CalendarDragEndReason) => {
+    const session = appointmentDragRef.current;
+    detachDragListeners();
+    clearAppointmentDragState();
+    if (!session || !shouldCommitCalendarDrag(reason, session.moved)) return;
+    suppressClickRef.current = true;
+    try {
       commitAppointmentDrag(session);
+    } catch {
+      // Interaction is already cleared so a failed save cannot leave the grid stuck.
     }
   };
 
   useEffect(() => {
-    if (!appointmentDrag) return;
-
-    const onPointerMove = (event: PointerEvent) => {
-      const session = appointmentDragRef.current;
-      if (!session || session.pointerId !== event.pointerId) return;
-
-      const distance = Math.hypot(
-        event.clientX - session.startClientX,
-        event.clientY - session.startClientY,
-      );
-      const pastThreshold = session.moved || distance >= MOVE_THRESHOLD_PX;
-      if (!pastThreshold) return;
-
-      const dayKey =
-        session.mode === 'move'
-          ? dayColumnKeyFromClientX(event.clientX) ?? session.dayKey
-          : session.dayKey;
-      const rawMinutes = minutesFromClientY(event.clientY, dayKey);
-      if (rawMinutes == null) return;
-
-      let startMinutes = session.startMinutes;
-      let endMinutes = session.endMinutes;
-
-      if (session.mode === 'move') {
-        startMinutes = clampMoveStart(rawMinutes - session.grabOffsetMinutes, session.durationMinutes);
-        endMinutes = startMinutes + session.durationMinutes;
-      } else {
-        endMinutes = clampResizeEnd(session.startMinutes, rawMinutes);
-        startMinutes = session.startMinutes;
-      }
-
-      if (
-        session.moved &&
-        dayKey === session.dayKey &&
-        startMinutes === session.startMinutes &&
-        endMinutes === session.endMinutes
-      ) {
-        return;
-      }
-
-      updateDragSession({
-        ...session,
-        dayKey,
-        startMinutes,
-        endMinutes,
-        moved: true,
-      });
-      event.preventDefault();
-    };
-
-    const onPointerUp = (event: PointerEvent) => {
-      const session = appointmentDragRef.current;
-      if (!session || session.pointerId !== event.pointerId) return;
-      endDragSession(session, session.moved);
-    };
-
-    window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('pointerup', onPointerUp);
-    window.addEventListener('pointercancel', onPointerUp);
     return () => {
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
-      window.removeEventListener('pointercancel', onPointerUp);
+      detachDragListenersRef.current?.();
+      detachDragListenersRef.current = null;
+      appointmentDragRef.current = null;
+      if (typeof document !== 'undefined') clearCalendarDragChrome(document);
     };
-  }, [appointmentDrag, gridStartMinutes, onAppointmentScheduleChange]);
+  }, []);
 
   const beginAppointmentDrag = (
     mode: 'move' | 'resize',
@@ -568,14 +579,16 @@ export function WeekAppointmentTimeGrid({
   ) => {
     if (!dndActive || !isDraggableVisit(appointment)) return;
     if (event.button !== 0) return;
-    if (appointmentDragRef.current) return;
+
+    // A leftover session (missed pointerup) must not block the next gesture.
+    if (appointmentDragRef.current) {
+      detachDragListeners();
+      clearAppointmentDragState();
+    }
 
     const startMinutes = appointmentStartMinutes(appointment.startTime);
     const duration = appointmentDurationMinutes(appointment.startTime, appointment.endTime);
-    const endMinutes = startMinutes + duration;
-    const pointerMinutes = minutesFromClientY(event.clientY, dayKey) ?? startMinutes;
-    const grabOffsetMinutes =
-      mode === 'move' ? Math.max(0, Math.min(duration, pointerMinutes - startMinutes)) : 0;
+    const endMinutes = startMinutes + Math.min(duration, DAY_END_MINUTES - startMinutes);
 
     const session: DragSession = {
       mode,
@@ -585,8 +598,7 @@ export function WeekAppointmentTimeGrid({
       originDayKey: dayKey,
       originStartMinutes: startMinutes,
       originEndMinutes: endMinutes,
-      durationMinutes: duration,
-      grabOffsetMinutes,
+      durationMinutes: endMinutes - startMinutes,
       startClientX: event.clientX,
       startClientY: event.clientY,
       dayKey,
@@ -596,6 +608,14 @@ export function WeekAppointmentTimeGrid({
     };
     appointmentDragRef.current = session;
     setAppointmentDrag(session);
+    if (typeof document !== 'undefined') applyCalendarDragChrome(document, mode);
+
+    detachDragListenersRef.current = attachCalendarDragListeners(window, {
+      pointerId: event.pointerId,
+      onMove: updateAppointmentDragFromPointer,
+      onEnd: finishAppointmentDrag,
+    });
+
     // Resize should not also trigger the chip click path.
     if (mode === 'resize') {
       event.preventDefault();
@@ -729,8 +749,13 @@ export function WeekAppointmentTimeGrid({
         'rounded-b-xl border border-t-0 border-stone-200 bg-white shadow-sm dark:border-stone-800 dark:bg-stone-900',
         className,
       )}
+      data-calendar-drag-active={appointmentDrag ? 'true' : undefined}
     >
-      <div ref={bodyRef} className="relative flex" style={{ minWidth: `${gridMinWidthRem}rem` }}>
+      <div
+        ref={bodyRef}
+        className="relative flex overflow-hidden"
+        style={{ minWidth: `${gridMinWidthRem}rem` }}
+      >
           {showNowLine && (
             <div
               className="pointer-events-none absolute inset-x-0 z-20 flex items-center"
@@ -879,7 +904,7 @@ function DayColumn({
     <div
       data-day-column={column.key}
       className={cn(
-        'relative min-w-0 flex-1 border-r border-stone-100 last:border-r-0 dark:border-stone-800',
+        'relative isolate min-w-0 flex-1 overflow-hidden border-r border-stone-100 last:border-r-0 dark:border-stone-800',
         column.isToday && 'bg-brand-50/25 dark:bg-brand-900/20',
       )}
       style={{ height: `${gridHeightRem}rem` }}
@@ -921,14 +946,13 @@ function DayColumn({
         const isFront = stackSize <= 1 || stackIndex === frontIndex;
         const zIndex = isFront ? stackSize + 2 : stackIndex + 1;
         const hasStackControls = stackSize > 1 && isFront && !!stackKey;
-        const isDragging =
+        const isDraggedBlock =
           !!dragPreview &&
           dragPreview.dayKey === column.key &&
-          appointment.id === dragPreview.appointmentId &&
-          appointmentStartMinutes(appointment.startTime) === dragPreview.startMinutes &&
-          appointmentStartMinutes(appointment.endTime) === dragPreview.endMinutes;
+          appointment.id === dragPreview.appointmentId;
+        const isDragging = isDraggedBlock;
         const canDrag = dndActive && isDraggableVisit(appointment);
-        const blockKey = isDragging
+        const blockKey = isDraggedBlock
           ? `dragging-${dragPreview.key}`
           : `${appointment.id}-${appointment.startTime}`;
 
@@ -936,8 +960,9 @@ function DayColumn({
           <div
             key={blockKey}
             data-appointment-block
+            data-calendar-dragging={isDragging ? 'true' : undefined}
             className={cn(
-              'absolute px-0.5 sm:px-1',
+              'absolute max-h-full px-0.5 sm:px-1',
               isDragging && 'z-30 opacity-90 ring-2 ring-brand-400 ring-offset-1 ring-offset-white dark:ring-brand-500 dark:ring-offset-stone-900',
             )}
             style={{

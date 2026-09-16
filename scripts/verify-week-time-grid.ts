@@ -113,11 +113,42 @@ function minutesFromGridOffset(
   return gridStartMinutes + slotIndex * SLOT_MINUTES;
 }
 
-function appointmentBlockGeometry(startTime: string, endTime: string, gridStartMinutes: number) {
+function resolveDisplayEndMinutes(startTime: string, endTime: string): number {
   const startMinutes = appointmentStartMinutes(startTime);
-  const endMinutes = Math.max(startMinutes + 1, appointmentStartMinutes(endTime));
+  const clockEnd = appointmentStartMinutes(endTime);
+  if (clockEnd > startMinutes && startTime.slice(0, 10) === endTime.slice(0, 10)) {
+    return clockEnd;
+  }
+  const startMs = Date.parse(startTime);
+  const endMs = Date.parse(endTime);
+  const duration = Math.min(
+    Math.max(1, Math.round((endMs - startMs) / 60_000)),
+    24 * 60 - startMinutes,
+  );
+  return Math.min(24 * 60, Math.max(startMinutes + 1, startMinutes + duration));
+}
+
+function clampBlockToGrid(
+  startMinutes: number,
+  endMinutes: number,
+  gridStartMinutes: number,
+  gridEndMinutes = 24 * 60,
+) {
+  const maxStart = Math.max(gridStartMinutes, gridEndMinutes - 1);
+  const start = Math.min(maxStart, Math.max(gridStartMinutes, startMinutes));
+  const end = Math.min(gridEndMinutes, Math.max(start + 1, endMinutes));
+  return { startMinutes: start, endMinutes: end };
+}
+
+function appointmentBlockGeometry(startTime: string, endTime: string, gridStartMinutes: number) {
+  const rawStart = appointmentStartMinutes(startTime);
+  const rawEnd = resolveDisplayEndMinutes(startTime, endTime);
+  const { startMinutes, endMinutes } = clampBlockToGrid(rawStart, rawEnd, gridStartMinutes);
   const topRem = minutesToOffsetRem(startMinutes, gridStartMinutes);
-  const heightRem = minutesToOffsetRem(endMinutes, gridStartMinutes) - topRem;
+  const heightRem = Math.max(
+    SLOT_HEIGHT_REM / SLOT_MINUTES,
+    minutesToOffsetRem(endMinutes, gridStartMinutes) - topRem,
+  );
   return { topRem, heightRem, startMinutes, endMinutes };
 }
 
@@ -442,6 +473,34 @@ assert(
     { inclusive: true },
   ) === 11 * 60 + 30,
   'Sunday 11:30 is found from the top of that day',
+);
+
+const wrapGeometry = appointmentBlockGeometry(
+  '2026-09-16T09:00:00.000Z',
+  '2026-09-17T00:00:00.000Z',
+  0,
+);
+assert(
+  wrapGeometry.endMinutes === 24 * 60,
+  `next-day midnight paints as end of civil day (${wrapGeometry.endMinutes})`,
+);
+assert(
+  wrapGeometry.topRem + wrapGeometry.heightRem <= minutesToOffsetRem(24 * 60, 0) + 0.001,
+  'wrapped duration cannot overflow the day column',
+);
+
+const multiDayGeometry = appointmentBlockGeometry(
+  '2026-09-16T09:00:00.000Z',
+  '2026-09-18T09:00:00.000Z',
+  0,
+);
+assert(
+  multiDayGeometry.endMinutes === 24 * 60,
+  `multi-day saved end is clamped to midnight for display (${multiDayGeometry.endMinutes})`,
+);
+assert(
+  multiDayGeometry.heightRem < minutesToOffsetRem(24 * 60, 0),
+  'clamped block stays shorter than a full-day overlay from 9:00',
 );
 
 if (process.exitCode) {
