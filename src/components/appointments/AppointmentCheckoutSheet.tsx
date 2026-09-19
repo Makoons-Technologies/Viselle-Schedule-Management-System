@@ -92,6 +92,7 @@ export function AppointmentCheckoutSheet({
   const [cashConfirmOpen, setCashConfirmOpen] = useState(false);
   const [giftCardCodeInput, setGiftCardCodeInput] = useState('');
   const [appliedGiftCardCode, setAppliedGiftCardCode] = useState<string | undefined>();
+  const [applyMembershipPoints, setApplyMembershipPoints] = useState(true);
   const [rebookOpen, setRebookOpen] = useState(false);
   const [rebookDate, setRebookDate] = useState('');
   const [rebookTime, setRebookTime] = useState('10:00');
@@ -123,6 +124,7 @@ export function AppointmentCheckoutSheet({
       setCashConfirmOpen(false);
       setGiftCardCodeInput('');
       setAppliedGiftCardCode(undefined);
+      setApplyMembershipPoints(true);
       setRebookOpen(false);
       setReceiptOpen(false);
       setReceiptSaleIds([]);
@@ -144,11 +146,12 @@ export function AppointmentCheckoutSheet({
   });
 
   const previewQuery = useQuery({
-    queryKey: ['checkout-preview', orgId, appointment?.id, lines, tipCents, appliedGiftCardCode],
+    queryKey: ['checkout-preview', orgId, appointment?.id, lines, tipCents, appliedGiftCardCode, applyMembershipPoints],
     queryFn: () =>
       orgApi.previewCheckout(orgId, appointment!.id, {
         lines,
         tipCents,
+        applyMembershipPoints,
         ...(appliedGiftCardCode ? { giftCardCode: appliedGiftCardCode } : {}),
       }),
     enabled: open && !!appointment && lines.length > 0,
@@ -158,16 +161,19 @@ export function AppointmentCheckoutSheet({
     () => ({
       lines,
       tipCents,
+      applyMembershipPoints,
       ...(appliedGiftCardCode ? { giftCardCode: appliedGiftCardCode } : {}),
     }),
-    [lines, tipCents, appliedGiftCardCode],
+    [lines, tipCents, applyMembershipPoints, appliedGiftCardCode],
   );
 
   const subtotalCents = previewQuery.data?.subtotalCents ?? 0;
   const giftCardAppliedCents = previewQuery.data?.giftCardAppliedCents ?? 0;
+  const membershipPointsAppliedCents = previewQuery.data?.membershipPointsAppliedCents ?? 0;
   const dueCents = previewQuery.data?.totalCents ?? subtotalCents + tipCents;
   const totalCents = dueCents;
-  const coveredByGiftCard = giftCardAppliedCents > 0 && dueCents < 1;
+  const coveredByWallet = (giftCardAppliedCents > 0 || membershipPointsAppliedCents > 0) && dueCents < 1;
+  const coveredByGiftCard = coveredByWallet;
 
   useEffect(() => {
     if (typeof tipSelection === 'number' && subtotalCents > 0) {
@@ -227,6 +233,7 @@ export function AppointmentCheckoutSheet({
           {
             lines,
             tipCents,
+            applyMembershipPoints,
             giftCardCode: giftCard.code,
           },
           controller.signal,
@@ -524,6 +531,29 @@ export function AppointmentCheckoutSheet({
                 </section>
                 )}
 
+                {(previewQuery.data?.membershipPointsAvailable ?? 0) > 0 && (
+                  <section className="space-y-3">
+                    <h4 className={cn(sectionHeadingClass)}>Membership points</h4>
+                    <label className="flex items-start gap-3 rounded-lg border border-stone-200 bg-white px-3 py-2.5 text-sm dark:border-stone-700 dark:bg-stone-800">
+                      <input
+                        type="checkbox"
+                        className="mt-1"
+                        checked={applyMembershipPoints}
+                        onChange={(event) => setApplyMembershipPoints(event.target.checked)}
+                      />
+                      <span>
+                        Use {previewQuery.data?.membershipPointsAvailable} points
+                        {membershipPointsAppliedCents > 0
+                          ? ` · −${formatCurrency(membershipPointsAppliedCents)}`
+                          : ''}
+                        {previewQuery.data?.membershipPointsRemaining != null && applyMembershipPoints
+                          ? ` · ${previewQuery.data.membershipPointsRemaining} left after this sale`
+                          : ''}
+                      </span>
+                    </label>
+                  </section>
+                )}
+
                 <section className="space-y-3">
                   <h4 className={cn(sectionHeadingClass)}>Gift card</h4>
                   {appliedGiftCardCode ? (
@@ -611,6 +641,14 @@ export function AppointmentCheckoutSheet({
                       {formatCurrency(tipCents)}
                     </span>
                   </div>
+                  {membershipPointsAppliedCents > 0 && (
+                    <div className={cn('mt-2 flex justify-between', sectionMutedClass)}>
+                      <span>Membership points</span>
+                      <span className="tabular-nums text-stone-900 dark:text-stone-100">
+                        −{formatCurrency(membershipPointsAppliedCents)}
+                      </span>
+                    </div>
+                  )}
                   {giftCardAppliedCents > 0 && (
                     <div className={cn('mt-2 flex justify-between', sectionMutedClass)}>
                       <span>Gift card {appliedGiftCardCode}</span>
@@ -620,7 +658,7 @@ export function AppointmentCheckoutSheet({
                     </div>
                   )}
                   <div className="mt-3 flex justify-between border-t border-stone-200 pt-3 text-lg font-semibold dark:border-stone-700">
-                    <span>{giftCardAppliedCents > 0 ? 'Due' : 'Total'}</span>
+                    <span>{giftCardAppliedCents > 0 || membershipPointsAppliedCents > 0 ? 'Due' : 'Total'}</span>
                     <span className="tabular-nums">{formatCurrency(totalCents)}</span>
                   </div>
                 </section>

@@ -80,7 +80,7 @@ export function CommissionsPage() {
       <p className={cn('-mt-2', sectionMutedClass)}>
         {optedIn
           ? 'Who earned what this period. Sending a payout transfers the worksheet amount from the salon Stripe balance — not W-2 or 1099 payroll. Set each person\u2019s percent on Staff.'
-          : 'Who earned what this period. You pay staff outside Viselle. Commission is percent of service sales plus 100% of tips. Set each person\u2019s percent on Staff.'}
+          : 'Who earned what this period. You pay staff outside Viselle. Service sales go to the person who did the work. Retail stays with the salon. We still record who rang the customer out. Set each person\u2019s percent on Staff.'}
       </p>
 
       <Panel className="p-4 sm:p-5">
@@ -170,7 +170,7 @@ export function CommissionsPage() {
         <EmptyState
           icon={Percent}
           title="Nothing to split yet"
-          description="Paid visits in this range will show here. Tips go 100% to the person who took the sale."
+          description="Paid visits in this range will show here. Tips go to the person who did the service. Retail stays with the salon."
         />
       ) : (
         <Panel className="overflow-hidden">
@@ -184,9 +184,10 @@ export function CommissionsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>Sales</TableHead>
+                  <TableHead>Services</TableHead>
+                  <TableHead>Retail rang up</TableHead>
                   <TableHead>Tips</TableHead>
-                  <TableHead>Commission</TableHead>
+                  <TableHead>Payout</TableHead>
                   <TableHead>Visits</TableHead>
                 </TableRow>
               </TableHeader>
@@ -194,7 +195,8 @@ export function CommissionsPage() {
                 {rows.map((row) => (
                   <TableRow key={row.accountId}>
                     <TableCell className="font-medium">{row.name}</TableCell>
-                    <TableCell>{formatCurrency(row.salesCents)}</TableCell>
+                    <TableCell>{formatCurrency(row.serviceCents ?? row.salesCents)}</TableCell>
+                    <TableCell>{formatCurrency(row.retailRangUpCents ?? row.productCents ?? 0)}</TableCell>
                     <TableCell>{formatCurrency(row.tipCents)}</TableCell>
                     <TableCell className="font-medium">{formatCurrency(row.commissionCents)}</TableCell>
                     <TableCell>{row.saleCount}</TableCell>

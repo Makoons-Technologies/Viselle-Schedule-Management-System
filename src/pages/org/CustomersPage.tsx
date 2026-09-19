@@ -63,6 +63,7 @@ export function CustomersPage() {
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Phone</TableHead>
+                    <TableHead>Points</TableHead>
                     <TableHead>Since</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -84,6 +85,7 @@ export function CustomersPage() {
                       </TableCell>
                       <TableCell className="text-stone-500">{c.email ?? '—'}</TableCell>
                       <TableCell className="text-stone-500">{c.phone ?? '—'}</TableCell>
+                      <TableCell className="text-stone-500">{c.membershipPoints ?? 0}</TableCell>
                       <TableCell className="text-stone-500">{formatDate(c.createdAt)}</TableCell>
                     </TableRow>
                   ))}

@@ -50,7 +50,8 @@ import { AccountSettingsPage } from '@/pages/org/settings/AccountSettingsPage';
 import { PaymentsSettingsPage } from '@/pages/org/settings/PaymentsSettingsPage';
 import { StaffPermissionsSettingsPage } from '@/pages/org/settings/StaffPermissionsSettingsPage';
 import { HomepageEditorPage } from '@/pages/org/settings/HomepageEditorPage';
-import { PackagesPage } from '@/pages/org/settings/PackagesPage';
+import { MembershipsPage } from '@/pages/org/settings/MembershipsPage';
+import { ActivityPage } from '@/pages/org/settings/ActivityPage';
 import { CommissionsPage } from '@/pages/org/settings/CommissionsPage';
 import { FormsPage } from '@/pages/org/FormsPage';
 import { FormBuilderPage } from '@/pages/org/FormBuilderPage';
@@ -222,7 +223,8 @@ export const appRoutes = [
                                           { path: 'payments', element: <PaymentsSettingsPage /> },
                                           { path: 'staff-permissions', element: <StaffPermissionsSettingsPage /> },
                                           { path: 'homepage', element: <HomepageEditorPage /> },
-                                          { path: 'packages', element: <PackagesPage /> },
+                                          { path: 'memberships', element: <MembershipsPage /> },
+                                          { path: 'activity', element: <ActivityPage /> },
                                           { path: 'commissions', element: <CommissionsPage /> },
                                         ],
                                       },

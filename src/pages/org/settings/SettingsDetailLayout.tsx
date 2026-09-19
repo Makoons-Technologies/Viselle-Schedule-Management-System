@@ -7,7 +7,8 @@ import { useOrgNeedsBilling } from '@/hooks/useOrgNeedsBilling';
 
 const SETTINGS_TITLES: Record<string, string> = {
   homepage: 'Homepage',
-  packages: 'Packages',
+  memberships: 'Memberships',
+  activity: 'Activity',
   commissions: 'Commissions',
   general: 'General',
   plan: 'Plan',

@@ -60,6 +60,7 @@ export function BatchCheckoutSheet({ orgId, items, open, onOpenChange, onSuccess
   const [usedTerminalReader, setUsedTerminalReader] = useState(false);
   const [giftCardCodeInput, setGiftCardCodeInput] = useState('');
   const [appliedGiftCardCode, setAppliedGiftCardCode] = useState<string | undefined>();
+  const [applyMembershipPoints, setApplyMembershipPoints] = useState(true);
   const customTipInputRef = useRef<HTMLInputElement>(null);
   const giftCardInputRef = useRef<HTMLInputElement>(null);
   const pendingSaleIdsRef = useRef<string[]>([]);
@@ -79,6 +80,7 @@ export function BatchCheckoutSheet({ orgId, items, open, onOpenChange, onSuccess
       setUsedTerminalReader(false);
       setGiftCardCodeInput('');
       setAppliedGiftCardCode(undefined);
+      setApplyMembershipPoints(true);
       pendingSaleIdsRef.current = [];
     }
   }, [open, items]);
@@ -108,11 +110,12 @@ export function BatchCheckoutSheet({ orgId, items, open, onOpenChange, onSuccess
   });
 
   const previewQuery = useQuery({
-    queryKey: ['batch-checkout-preview', orgId, batchAppointments, tipCents, appliedGiftCardCode],
+    queryKey: ['batch-checkout-preview', orgId, batchAppointments, tipCents, appliedGiftCardCode, applyMembershipPoints],
     queryFn: () =>
       orgApi.previewBatchCheckout(orgId, {
         appointments: batchAppointments,
         tipCents,
+        applyMembershipPoints,
         ...(appliedGiftCardCode ? { giftCardCode: appliedGiftCardCode } : {}),
       }),
     enabled: open && items.length > 0,
@@ -120,9 +123,10 @@ export function BatchCheckoutSheet({ orgId, items, open, onOpenChange, onSuccess
 
   const subtotalCents = previewQuery.data?.subtotalCents ?? 0;
   const giftCardAppliedCents = previewQuery.data?.giftCardAppliedCents ?? 0;
-  const dueCents = previewQuery.data?.totalCents ?? Math.max(0, subtotalCents + tipCents - giftCardAppliedCents);
+  const membershipPointsAppliedCents = previewQuery.data?.membershipPointsAppliedCents ?? 0;
+  const dueCents = previewQuery.data?.totalCents ?? Math.max(0, subtotalCents + tipCents - giftCardAppliedCents - membershipPointsAppliedCents);
   const totalCents = dueCents;
-  const coveredByGiftCard = giftCardAppliedCents > 0 && dueCents < 1;
+  const coveredByGiftCard = (giftCardAppliedCents > 0 || membershipPointsAppliedCents > 0) && dueCents < 1;
 
   useEffect(() => {
     if (typeof tipSelection === 'number' && subtotalCents > 0) {
@@ -149,6 +153,7 @@ export function BatchCheckoutSheet({ orgId, items, open, onOpenChange, onSuccess
       orgApi.batchCheckoutCash(orgId, {
         appointments: batchAppointments,
         tipCents: 0,
+        applyMembershipPoints,
         ...(appliedGiftCardCode ? { giftCardCode: appliedGiftCardCode } : {}),
       }),
     onSuccess: (result) => {
@@ -177,6 +182,7 @@ export function BatchCheckoutSheet({ orgId, items, open, onOpenChange, onSuccess
         const preview = await orgApi.previewBatchCheckout(orgId, {
           appointments: batchAppointments,
           tipCents,
+          applyMembershipPoints,
           giftCardCode: giftCard.code,
         });
         return { giftCard, preview };
@@ -243,24 +249,26 @@ export function BatchCheckoutSheet({ orgId, items, open, onOpenChange, onSuccess
       appointments: batchAppointments,
       tipCents,
       mode: 'terminal',
+      applyMembershipPoints,
       ...(appliedGiftCardCode ? { giftCardCode: appliedGiftCardCode } : {}),
     });
     pendingSaleIdsRef.current = result.saleIds ?? [];
     setUsedTerminalReader(true);
     return result;
-  }, [orgId, batchAppointments, tipCents, appliedGiftCardCode]);
+  }, [orgId, batchAppointments, tipCents, applyMembershipPoints, appliedGiftCardCode]);
 
   const startOnlineCheckout = useCallback(async () => {
     const result = await orgApi.batchCheckoutCard(orgId, {
       appointments: batchAppointments,
       tipCents,
       mode: 'online',
+      applyMembershipPoints,
       ...(appliedGiftCardCode ? { giftCardCode: appliedGiftCardCode } : {}),
     });
     pendingSaleIdsRef.current = result.saleIds ?? [];
     setUsedTerminalReader(false);
     return result;
-  }, [orgId, batchAppointments, tipCents, appliedGiftCardCode]);
+  }, [orgId, batchAppointments, tipCents, applyMembershipPoints, appliedGiftCardCode]);
 
   const confirmPaymentIntent = useCallback(
     (paymentIntentId: string) => orgApi.confirmBatchCheckoutCard(orgId, paymentIntentId),
@@ -427,6 +435,26 @@ export function BatchCheckoutSheet({ orgId, items, open, onOpenChange, onSuccess
                     </section>
                   );
                 })}
+
+                {membershipPointsAppliedCents > 0 || applyMembershipPoints ? (
+                  <section className="space-y-3">
+                    <h4 className={cn(sectionHeadingClass)}>Membership points</h4>
+                    <label className="flex items-start gap-3 rounded-lg border border-stone-200 bg-white px-3 py-2.5 text-sm dark:border-stone-700 dark:bg-stone-800">
+                      <input
+                        type="checkbox"
+                        className="mt-1"
+                        checked={applyMembershipPoints}
+                        onChange={(event) => setApplyMembershipPoints(event.target.checked)}
+                      />
+                      <span>
+                        Use membership points on these visits
+                        {membershipPointsAppliedCents > 0
+                          ? ` · −${formatCurrency(membershipPointsAppliedCents)}`
+                          : ''}
+                      </span>
+                    </label>
+                  </section>
+                ) : null}
 
                 <section className="space-y-3">
                   <h4 className={cn(sectionHeadingClass)}>Gift card</h4>

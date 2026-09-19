@@ -4,7 +4,9 @@ import { Link, Navigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { UserCircle } from 'lucide-react';
 import { orgApi } from '@/lib/api';
+import { formatMembershipPoints } from '@/lib/membership-points';
 import { formatDateTime } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
 import { SettingsBackHeader } from '@/components/settings/SettingsBackHeader';
 import { LoadingState } from '@/components/common/LoadingState';
@@ -36,6 +38,9 @@ export function CustomerDetailPage() {
   const orgId = useOrgId();
   const { customerId } = useParams<{ customerId: string }>();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const canAddPoints = user?.role === 'org_owner' || user?.role === 'platform_owner';
+  const [addPoints, setAddPoints] = useState('');
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['customer', orgId, customerId],
@@ -73,6 +78,17 @@ export function CustomerDetailPage() {
       }),
     onSuccess: (result) => {
       toast.success('Customer updated');
+      queryClient.setQueryData(['customer', orgId, customerId], result);
+      queryClient.invalidateQueries({ queryKey: ['customers', orgId] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const addPointsMutation = useMutation({
+    mutationFn: () => orgApi.addCustomerMembershipPoints(orgId, customerId!, { points: Math.floor(Number(addPoints)) }),
+    onSuccess: (result) => {
+      toast.success(`Added ${formatMembershipPoints(Math.floor(Number(addPoints)))}`);
+      setAddPoints('');
       queryClient.setQueryData(['customer', orgId, customerId], result);
       queryClient.invalidateQueries({ queryKey: ['customers', orgId] });
     },
@@ -149,6 +165,43 @@ export function CustomerDetailPage() {
             </Button>
           </div>
         </form>
+      </Panel>
+
+      <Panel className="mt-6 p-4 sm:p-6">
+        <h2 className="text-sm font-semibold text-stone-900 dark:text-stone-100">Membership points</h2>
+        <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
+          {formatMembershipPoints(customer.membershipPoints ?? 0)} on this account. 1 point = $1 at checkout.
+        </p>
+        {canAddPoints ? (
+          <form
+            className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const points = Math.floor(Number(addPoints));
+              if (!Number.isFinite(points) || points < 1) {
+                toast.error('Enter how many points to add');
+                return;
+              }
+              addPointsMutation.mutate();
+            }}
+          >
+            <div className="space-y-1.5 sm:w-40">
+              <Label htmlFor="add-points">Add points</Label>
+              <Input
+                id="add-points"
+                inputMode="numeric"
+                value={addPoints}
+                onChange={(e) => setAddPoints(e.target.value)}
+                placeholder="25"
+              />
+            </div>
+            <Button type="submit" disabled={addPointsMutation.isPending}>
+              {addPointsMutation.isPending ? 'Adding…' : 'Add to account'}
+            </Button>
+          </form>
+        ) : (
+          <p className="mt-3 text-xs text-stone-400">Only the salon owner can add a custom point amount.</p>
+        )}
       </Panel>
 
       <div className="mt-6">

@@ -395,6 +395,7 @@ export interface Customer {
   email?: string | null;
   phone?: string | null;
   smsOptInAt?: string | null;
+  membershipPoints?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -502,6 +503,9 @@ export interface CheckoutPreview {
   giftCardAppliedCents?: number;
   giftCardCode?: string | null;
   giftCardRemainingCents?: number | null;
+  membershipPointsAppliedCents?: number;
+  membershipPointsRemaining?: number | null;
+  membershipPointsAvailable?: number | null;
   totalCents: number;
 }
 
@@ -523,6 +527,9 @@ export interface BatchCheckoutPreview {
   giftCardAppliedCents?: number;
   giftCardCode?: string | null;
   giftCardRemainingCents?: number | null;
+  membershipPointsAppliedCents?: number;
+  membershipPointsRemaining?: number | null;
+  membershipPointsAvailable?: number | null;
   totalCents: number;
 }
 
@@ -1042,10 +1049,58 @@ export interface CustomerPackage {
 export interface CommissionRow {
   accountId: string;
   name: string;
+  kind?: 'staff' | 'salon';
   salesCents: number;
+  serviceCents?: number;
+  productCents?: number;
+  retailRangUpCents?: number;
   tipCents: number;
   commissionCents: number;
   saleCount: number;
+}
+
+export interface MembershipPlan {
+  id: string;
+  organizationId: string;
+  name: string;
+  points: number;
+  visitsIncluded?: number;
+  priceCents: number;
+  interval: 'month' | 'year';
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CustomerMembershipStatus = 'active' | 'paused' | 'cancelled';
+
+export interface CustomerMembership {
+  id: string;
+  organizationId: string;
+  planId: string;
+  customerId: string;
+  status: CustomerMembershipStatus;
+  nextBillOn: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrgActivityEvent {
+  id: string;
+  organizationId: string;
+  actorUserId?: string | null;
+  actorEmail?: string | null;
+  actorRole?: string | null;
+  actorAccountId?: string | null;
+  method: string;
+  path: string;
+  action: string;
+  entityType?: string | null;
+  entityId?: string | null;
+  statusCode?: number | null;
+  summary?: string | null;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
 }
 
 export interface CommissionReport {

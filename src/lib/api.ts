@@ -76,8 +76,9 @@ import type {
   FormioSchema,
   OrgFormSubmission,
   GiftCard,
-  ServicePackage,
-  CustomerPackage,
+  MembershipPlan,
+  CustomerMembership,
+  OrgActivityEvent,
   CommissionReport,
   StaffPayoutPreview,
   StaffPayoutPreviewRow,
@@ -695,6 +696,14 @@ export const orgApi = {
     apiClient.get<{ customers: Customer[] }>(`/organizations/${orgId}/customers`).then((r) => r.data),
   getCustomer: (orgId: string, customerId: string) =>
     apiClient.get<{ customer: Customer }>(`/organizations/${orgId}/customers/${customerId}`).then((r) => r.data),
+  addCustomerMembershipPoints: (orgId: string, customerId: string, data: { points: number }) =>
+    apiClient
+      .post<{ customer: Customer }>(`/organizations/${orgId}/customers/${customerId}/membership-points`, data)
+      .then((r) => r.data),
+  listOrgActivity: (orgId: string, params?: { limit?: number; before?: string }) =>
+    apiClient
+      .get<{ events: OrgActivityEvent[] }>(`/organizations/${orgId}/activity`, { params })
+      .then((r) => r.data),
 
   getRevenueReport: (
     orgId: string,
@@ -817,7 +826,7 @@ export const orgApi = {
   previewCheckout: (
     orgId: string,
     appointmentId: string,
-    data: { lines: CheckoutLineInput[]; tipCents: number; giftCardCode?: string },
+    data: { lines: CheckoutLineInput[]; tipCents: number; giftCardCode?: string; applyMembershipPoints?: boolean },
     signal?: AbortSignal,
   ) =>
     apiClient
@@ -830,7 +839,7 @@ export const orgApi = {
   checkoutCash: (
     orgId: string,
     appointmentId: string,
-    data: { lines: CheckoutLineInput[]; tipCents: number; giftCardCode?: string },
+    data: { lines: CheckoutLineInput[]; tipCents: number; giftCardCode?: string; applyMembershipPoints?: boolean },
   ) =>
     apiClient
       .post<{ sale: { id: string } }>(`/organizations/${orgId}/appointments/${appointmentId}/checkout/cash`, data)
@@ -838,7 +847,13 @@ export const orgApi = {
   checkoutCard: (
     orgId: string,
     appointmentId: string,
-    data: { lines: CheckoutLineInput[]; tipCents: number; giftCardCode?: string; mode?: 'terminal' | 'online' },
+    data: {
+      lines: CheckoutLineInput[];
+      tipCents: number;
+      giftCardCode?: string;
+      applyMembershipPoints?: boolean;
+      mode?: 'terminal' | 'online';
+    },
   ) =>
     apiClient
       .post<{
@@ -858,14 +873,24 @@ export const orgApi = {
       .then((r) => r.data),
   previewBatchCheckout: (
     orgId: string,
-    data: { appointments: BatchCheckoutAppointmentInput[]; tipCents: number; giftCardCode?: string },
+    data: {
+      appointments: BatchCheckoutAppointmentInput[];
+      tipCents: number;
+      giftCardCode?: string;
+      applyMembershipPoints?: boolean;
+    },
   ) =>
     apiClient
       .post<BatchCheckoutPreview>(`/organizations/${orgId}/checkout/batch/preview`, data)
       .then((r) => r.data),
   batchCheckoutCash: (
     orgId: string,
-    data: { appointments: BatchCheckoutAppointmentInput[]; tipCents: number; giftCardCode?: string },
+    data: {
+      appointments: BatchCheckoutAppointmentInput[];
+      tipCents: number;
+      giftCardCode?: string;
+      applyMembershipPoints?: boolean;
+    },
   ) =>
     apiClient
       .post<{ paymentGroupId: string; saleIds: string[]; totalCents: number }>(
@@ -879,6 +904,7 @@ export const orgApi = {
       appointments: BatchCheckoutAppointmentInput[];
       tipCents: number;
       giftCardCode?: string;
+      applyMembershipPoints?: boolean;
       mode?: 'terminal' | 'online';
     },
   ) =>
@@ -1069,34 +1095,46 @@ export const orgApi = {
   voidGiftCard: (orgId: string, giftCardId: string) =>
     apiClient.post<{ giftCard: GiftCard }>(`/organizations/${orgId}/gift-cards/${giftCardId}/void`).then((r) => r.data),
 
-  listPackages: (orgId: string) =>
-    apiClient.get<{ packages: ServicePackage[] }>(`/organizations/${orgId}/packages`).then((r) => r.data),
-  createPackage: (
-    orgId: string,
-    data: { name: string; creditCents: number; priceCents: number },
-  ) => apiClient.post<{ package: ServicePackage }>(`/organizations/${orgId}/packages`, data).then((r) => r.data),
-  updatePackage: (orgId: string, packageId: string, data: Partial<ServicePackage>) =>
-    apiClient.patch<{ package: ServicePackage }>(`/organizations/${orgId}/packages/${packageId}`, data).then((r) => r.data),
-  listCustomerPackages: (orgId: string) =>
+  listMembershipPlans: (orgId: string) =>
+    apiClient.get<{ plans: MembershipPlan[] }>(`/organizations/${orgId}/membership-plans`).then((r) => r.data),
+  createMembershipPlan: (orgId: string, data: { name: string; points: number; priceCents: number }) =>
     apiClient
-      .get<{ customerPackages: CustomerPackage[] }>(`/organizations/${orgId}/customer-packages`)
+      .post<{ plan: MembershipPlan }>(`/organizations/${orgId}/membership-plans`, data)
       .then((r) => r.data),
-  sellPackage: (orgId: string, data: { packageId: string; customerId: string }) =>
+  updateMembershipPlan: (orgId: string, planId: string, data: Partial<MembershipPlan>) =>
     apiClient
-      .post<{ customerPackage: CustomerPackage }>(`/organizations/${orgId}/customer-packages`, data)
+      .patch<{ plan: MembershipPlan }>(`/organizations/${orgId}/membership-plans/${planId}`, data)
       .then((r) => r.data),
-  usePackageCredits: (orgId: string, customerPackageId: string, data: { amountCents: number }) =>
+  listCustomerMemberships: (orgId: string) =>
     apiClient
-      .post<{ customerPackage: CustomerPackage }>(
-        `/organizations/${orgId}/customer-packages/${customerPackageId}/use-credits`,
+      .get<{ memberships: CustomerMembership[] }>(`/organizations/${orgId}/customer-memberships`)
+      .then((r) => r.data),
+  subscribeMembership: (orgId: string, data: { planId: string; customerId: string; nextBillOn?: string }) =>
+    apiClient
+      .post<{ membership: CustomerMembership }>(`/organizations/${orgId}/customer-memberships`, data)
+      .then((r) => r.data),
+  changeMembershipPlan: (orgId: string, membershipId: string, data: { planId: string }) =>
+    apiClient
+      .post<{ membership: CustomerMembership }>(
+        `/organizations/${orgId}/customer-memberships/${membershipId}/change-plan`,
         data,
       )
       .then((r) => r.data),
-  usePackageVisit: (orgId: string, customerPackageId: string, data?: { amountCents: number }) =>
+  setMembershipStatus: (
+    orgId: string,
+    membershipId: string,
+    data: { status: CustomerMembership['status'] },
+  ) =>
     apiClient
-      .post<{ customerPackage: CustomerPackage }>(
-        `/organizations/${orgId}/customer-packages/${customerPackageId}/use-credits`,
-        data ?? { amountCents: 100 },
+      .post<{ membership: CustomerMembership }>(
+        `/organizations/${orgId}/customer-memberships/${membershipId}/status`,
+        data,
+      )
+      .then((r) => r.data),
+  renewMembershipYear: (orgId: string, membershipId: string) =>
+    apiClient
+      .post<{ membership: CustomerMembership }>(
+        `/organizations/${orgId}/customer-memberships/${membershipId}/renew-year`,
       )
       .then((r) => r.data),
 

@@ -12,7 +12,8 @@ import {
   Package,
   Percent,
   Repeat,
-  Ticket,
+  Award,
+  ClipboardList,
   Scissors,
   ScrollText,
   Shield,
@@ -74,8 +75,9 @@ export function getOrgSettingsHubGroups(
     groups.push({
       items: [
         { label: 'Homepage', to: `${orgBase}/settings/homepage`, icon: LayoutTemplate },
-        { label: 'Packages', to: `${orgBase}/settings/packages`, icon: Ticket },
+        { label: 'Memberships', to: `${orgBase}/settings/memberships`, icon: Award },
         { label: 'Commissions', to: `${orgBase}/settings/commissions`, icon: Percent },
+        { label: 'Activity', to: `${orgBase}/settings/activity`, icon: ClipboardList },
       ],
     });
 
