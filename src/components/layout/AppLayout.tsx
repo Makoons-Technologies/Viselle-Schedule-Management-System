@@ -9,11 +9,11 @@ import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
 import { MobileSidebar } from '@/components/layout/MobileSidebar';
 import { OrgTrialBanner } from '@/components/layout/OrgTrialBanner';
 import { Sidebar } from '@/components/layout/Sidebar';
-import { LoginWelcomeBanner } from '@/components/layout/LoginWelcomeBanner';
 import { Topbar } from '@/components/layout/Topbar';
 import { OrgOwnerTourPanel } from '@/components/onboarding/OrgOwnerTourPanel';
 import { useAuth } from '@/context/AuthContext';
 import { useAppShellViewport } from '@/hooks/useAppShellViewport';
+import { consumeStandaloneLoginWelcome } from '@/lib/login-welcome';
 import { cn } from '@/lib/utils';
 
 function AppLayoutContent() {
@@ -24,6 +24,10 @@ function AppLayoutContent() {
   const isCalendarRoute = /\/calendar\/?$/.test(location.pathname);
 
   useEffect(() => {
+    consumeStandaloneLoginWelcome();
+  }, []);
+
+  useEffect(() => {
     close();
   }, [location.pathname, close]);
 
@@ -31,7 +35,7 @@ function AppLayoutContent() {
     <div className="flex h-full min-h-0 flex-col overflow-hidden overscroll-none bg-stone-50 dark:bg-stone-900">
       {/*
         Logged-in shell drops viewport-fit=cover so iOS frost cannot sit on
-        the title. No reserved #root slab. Welcome back is in-flow (BEA-85).
+        the title. Welcome back is a sticky top Sonner toast.
       */}
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="app-shell-chrome sticky top-0 z-40 shrink-0" data-testid="app-shell-chrome">
@@ -55,7 +59,6 @@ function AppLayoutContent() {
                   : 'p-4 sm:px-6 sm:pt-6 desktop-shell:pb-6',
               )}
             >
-              <LoginWelcomeBanner />
               <Outlet />
             </main>
           </div>

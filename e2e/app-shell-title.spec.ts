@@ -145,7 +145,7 @@ test.describe('BEA-78 app-shell title paint', () => {
     expect(paint.rowHeight).toBe(56);
   });
 
-  test('standalone login welcome is in-flow and never mounts a Sonner toast', async ({ page }) => {
+  test('standalone login uses a sticky top Sonner Welcome back toast', async ({ page }) => {
     await emulateIosStandalonePwa(page);
     await page.addInitScript(() => {
       sessionStorage.setItem('viselle.a2hs-banner.dismissed', '1');
@@ -192,45 +192,23 @@ test.describe('BEA-78 app-shell title paint', () => {
       })
       .toBe(0);
 
-    // BEA-85 restage: Sonner position:fixed is the compositor trigger. Kill it.
-    await expect(page.locator('[data-sonner-toast]')).toHaveCount(0);
-    const banner = page.getByTestId('login-welcome-banner');
-    await expect(banner).toHaveText('Welcome back!');
+    await expect(page.getByTestId('login-welcome-banner')).toHaveCount(0);
+    const toast = page.locator('[data-sonner-toast]').filter({ hasText: 'Welcome back!' });
+    await expect(toast).toBeVisible();
 
-    const bannerPaint = await banner.evaluate((el) => {
-      const style = getComputedStyle(el);
-      const title = document.querySelector('[data-testid="app-shell-title"]');
-      const titleBox = title?.getBoundingClientRect();
+    const toastPaint = await toast.evaluate((el) => {
+      const toaster = el.closest('[data-sonner-toaster]');
+      const toasterStyle = toaster ? getComputedStyle(toaster) : null;
       return {
-        position: style.position,
-        transform: style.transform,
-        filter: style.filter,
-        backdropFilter: style.backdropFilter,
-        isolation: style.isolation,
-        willChange: style.willChange,
-        animationName: style.animationName,
-        bannerTop: el.getBoundingClientRect().top,
-        titleBottom: titleBox?.bottom ?? 0,
+        toastTop: el.getBoundingClientRect().top,
         inMain: Boolean(el.closest('main')),
+        toasterPosition: toasterStyle?.position ?? '',
+        toasterTop: toasterStyle?.top ?? '',
       };
     });
-
-    expect(bannerPaint.position).not.toBe('fixed');
-    expect(bannerPaint.position).not.toBe('absolute');
-    expect(bannerPaint.position).not.toBe('sticky');
-    expect(bannerPaint.transform).toBe('none');
-    expect(bannerPaint.filter).toMatch(/^(none)?$/);
-    expect(bannerPaint.backdropFilter === 'none' || bannerPaint.backdropFilter === '').toBeTruthy();
-    expect(bannerPaint.isolation).toMatch(/^(auto)?$/);
-    expect(bannerPaint.willChange).toMatch(/^(auto)?$/);
-    expect(bannerPaint.animationName === 'none' || bannerPaint.animationName === '').toBeTruthy();
-    expect(bannerPaint.inMain).toBe(true);
-    expect(bannerPaint.bannerTop).toBeGreaterThan(bannerPaint.titleBottom + 8);
-
-    expectCrispTitlePaint(await readTitlePaint(page));
-
-    await expect(banner).toHaveCount(0, { timeout: 8_000 });
-    await expect(page.locator('[data-sonner-toast]')).toHaveCount(0);
+    expect(toastPaint.inMain).toBe(false);
+    expect(toastPaint.toastTop).toBeLessThan(120);
+    expect(['fixed', 'sticky']).toContain(toastPaint.toasterPosition);
 
     expectCrispTitlePaint(await readTitlePaint(page));
 
@@ -263,7 +241,7 @@ test.describe('BEA-78 app-shell title paint', () => {
     await expect(page.locator('[data-sonner-toast]').filter({ hasText: 'Welcome back!' })).toBeVisible();
   });
 
-  test('styles neutralize sonner toast transform without touching chrome backdrop-filter', async ({ page }) => {
+  test('top toaster stays pinned without adding chrome backdrop-filter', async ({ page }) => {
     await emulateIosStandalonePwa(page);
     await page.addInitScript(() => {
       sessionStorage.setItem('viselle.a2hs-banner.dismissed', '1');
@@ -292,9 +270,9 @@ test.describe('BEA-78 app-shell title paint', () => {
       return texts;
     });
 
-    const sonnerToastRules = rules.filter((text) => text.includes('data-sonner-toast'));
-    expect(sonnerToastRules.some((text) => /transform:\s*none/i.test(text))).toBe(true);
-    expect(sonnerToastRules.some((text) => /transition:\s*none/i.test(text))).toBe(true);
+    const sonnerToasterRules = rules.filter((text) => text.includes('data-sonner-toaster'));
+    expect(sonnerToasterRules.some((text) => /top:\s*0/i.test(text))).toBe(true);
+    expect(sonnerToasterRules.some((text) => /transform:\s*none !important/i.test(text))).toBe(false);
 
     const chromeBackdrop = rules.filter((text) => {
       const sel = text.slice(0, text.indexOf('{') === -1 ? text.length : text.indexOf('{'));

@@ -1,0 +1,24 @@
+---
+description: Pin top-of-screen chrome and notifications with sticky or fixed top 0
+alwaysApply: true
+---
+
+# Sticky top chrome and notifications
+
+Anything that sits at the **top of the screen** stays pinned there.
+
+- Use `position: sticky; top: 0` (or `position: fixed; top: 0`) for headers, banners, and notifications.
+- Toasts and login alerts (Sonner) stay at the **top**. Keep enter/leave animation. Do not park them in `<main>` as in-flow copy.
+- Do not invent a reserved gap, frost slab, or `env(safe-area-inset-*)` pad to “make room” for top chrome.
+
+```tsx
+// ❌ BAD — notification scrolls away with page content
+<main>
+  <div>Welcome back!</div>
+  <Outlet />
+</main>
+
+// ✅ GOOD — pinned top toast
+<Toaster position="top-right" />
+<header className="sticky top-0 z-40">…</header>
+```

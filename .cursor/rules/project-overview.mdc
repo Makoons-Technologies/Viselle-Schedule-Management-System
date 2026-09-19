@@ -18,6 +18,7 @@ This repo is the **Viselle** frontend (React + Vite + TypeScript). The companion
 - Public marketing chrome: `MarketingHeader` / `MarketingFooter` in `src/components/marketing/MarketingLayout.tsx`.
 - Do not commit secrets (`.env`, `prod.env` with live keys). Use `.env.example` / `.env.staging.example` as templates only.
 - After meaningful UI/API client changes, run `npm run build`.
+- Top-of-screen chrome and notifications stay `sticky`/`fixed` at `top: 0` (see `sticky-top-chrome`).
 
 ## Related backend
 

@@ -185,45 +185,20 @@
   }
 
   /*
-   * BEA-78 / BEA-85 (Joseph 2026-09-03 and restage FAIL 2026-09-04).
-   *
-   * Sonner 2 still mounts a `position:fixed` toaster (CSS vars `--y`,
-   * `--front-toast-height`, enter/leave even when we force
-   * `transform:none`). On iOS standalone that overlay — top or bottom —
-   * promotes a layer while the app shell first paints; WebKit leaves
-   * "Viselle Platform" as a 1× bitmap. PR 50 neutralized transform and
-   * moved the toast off the title; Joseph's login path still smeared.
-   *
-   * Login-success in standalone PWA no longer uses Sonner (in-flow
-   * banner in `<main>`). These rules stay for other toasts. Do not add
-   * filter / transform / backdrop-filter / isolation / will-change to
-   * the chrome stack itself — even `none` is a compositor trigger.
+   * Top notifications stay pinned at the viewport top (fixed, not a
+   * full-width sticky slat). The empty toaster must not steal taps from
+   * the sandwich button — only the toast card is clickable.
    */
-  html.standalone-pwa [data-sonner-toaster],
+  [data-sonner-toaster].app-shell-toaster,
   html.app-shell [data-sonner-toaster] {
-    transition: none;
+    position: fixed;
+    top: 0;
+    z-index: 80;
+    pointer-events: none;
   }
 
-  html.standalone-pwa [data-sonner-toaster][data-x-position='center'],
-  html.app-shell [data-sonner-toaster][data-x-position='center'] {
-    transform: none;
-  }
-
-  html.standalone-pwa [data-sonner-toast],
-  html.standalone-pwa [data-sonner-toast][data-mounted='true'],
-  html.standalone-pwa [data-sonner-toast][data-removed='true'],
-  html.standalone-pwa [data-sonner-toast][data-swiping='true'],
-  html.standalone-pwa [data-sonner-toast][data-swipe-out='true'],
-  html.app-shell [data-sonner-toast],
-  html.app-shell [data-sonner-toast][data-mounted='true'],
-  html.app-shell [data-sonner-toast][data-removed='true'],
-  html.app-shell [data-sonner-toast][data-swiping='true'],
-  html.app-shell [data-sonner-toast][data-swipe-out='true'] {
-    --y: translateY(0);
-    transform: none !important;
-    animation: none !important;
-    transition: none !important;
-    will-change: auto;
+  [data-sonner-toast] {
+    pointer-events: auto;
   }
 
   /*

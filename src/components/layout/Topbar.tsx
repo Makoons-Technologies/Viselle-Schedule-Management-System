@@ -141,14 +141,16 @@ export function Topbar() {
       <div className="flex h-14 items-center justify-between gap-2 px-3 sm:h-16 sm:px-6">
         <div className="flex min-w-0 flex-1 items-center gap-2 overflow-visible sm:gap-4">
           <Button
+            type="button"
             variant="ghost"
             size="icon"
-            className="h-10 w-10 shrink-0 desktop-shell:hidden"
+            data-testid="app-shell-menu"
+            className="relative z-10 h-12 w-12 shrink-0 touch-manipulation desktop-shell:hidden"
             onClick={() => setMobileNavOpen(true)}
             title="Open menu"
             aria-label="Open menu"
           >
-            <Menu className="h-5 w-5" />
+            <Menu className="h-6 w-6" />
           </Button>
           <Button
             variant="ghost"

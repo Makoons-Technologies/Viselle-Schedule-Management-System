@@ -133,6 +133,11 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     // Topbar starts flush at webview y=0 — OS status bar owns the clock region.
     expect(top.position).toBe('sticky');
     expect(parseFloat(top.paddingTop) || 0).toBe(0);
+    const menu = page.getByTestId('app-shell-menu');
+    await expect(menu).toBeVisible();
+    const menuBox = await menu.boundingBox();
+    expect(menuBox?.width ?? 0).toBeGreaterThanOrEqual(48);
+    expect(menuBox?.height ?? 0).toBeGreaterThanOrEqual(48);
     expect(parseFloat(top.borderBottomWidth) || 0).toBe(0);
     expect(top.headerTop).toBeLessThan(2);
     expect(top.titleTop).toBeLessThan(24);
