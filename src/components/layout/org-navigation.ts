@@ -58,6 +58,7 @@ export function getOrgSettingsHubGroups(
     const teamItems: OrgNavLink[] = [
       { label: 'Organization', to: `${orgBase}/settings/org`, icon: Building2 },
       { label: 'Staff', to: `${orgBase}/staff`, icon: Users },
+      { label: 'Hours', to: `${orgBase}/availability`, icon: Clock },
     ];
     if (options.showStaffPermissions) {
       teamItems.push({ label: 'Staff permissions', to: `${orgBase}/settings/staff-permissions`, icon: Shield });
@@ -68,7 +69,6 @@ export function getOrgSettingsHubGroups(
       items: [
         { label: 'Services', to: `${orgBase}/settings/services`, icon: Scissors },
         { label: 'Products', to: `${orgBase}/settings/products`, icon: Package },
-        { label: 'Hours', to: `${orgBase}/availability`, icon: Clock },
       ],
     });
 
