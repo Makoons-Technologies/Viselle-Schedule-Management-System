@@ -70,12 +70,34 @@ export const APP_SHELL_STANDALONE_HEIGHT_FALLBACK = '-webkit-fill-available';
 
 const FIRST_SHELL_SESSION_KEY = 'viselle-pwa-first-shell-viewport';
 
+/** Temporary Windows inspect flag. `?force-pwa=0` turns it off. */
+export const FORCE_PWA_QUERY = 'force-pwa';
+export const FORCE_PWA_STORAGE_KEY = 'viselle-force-pwa';
+
 /** Largest keyboard-closed height seen this orientation. Survives iOS shrinking 100vh after the keyboard. */
 let rememberedClosedHeightPx = 0;
 let vhProbe: HTMLDivElement | null = null;
 
+/** Temporary: `?force-pwa` pretends this tab is the installed PWA. */
+export function isForcePwaEnabled(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has(FORCE_PWA_QUERY)) {
+      const off = params.get(FORCE_PWA_QUERY) === '0' || params.get(FORCE_PWA_QUERY) === 'false';
+      if (off) sessionStorage.removeItem(FORCE_PWA_STORAGE_KEY);
+      else sessionStorage.setItem(FORCE_PWA_STORAGE_KEY, '1');
+      return !off;
+    }
+    return sessionStorage.getItem(FORCE_PWA_STORAGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 export function isStandaloneWebApp(): boolean {
   if (typeof window === 'undefined') return false;
+  if (isForcePwaEnabled()) return true;
   const iosStandalone = Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
   return iosStandalone || window.matchMedia('(display-mode: standalone)').matches;
 }

@@ -156,8 +156,24 @@
         var KEYBOARD_CLOSE_DELAYS = [80, 200, 400, 600];
         var keyboardWasOpen = false;
 
+        function isForcePwaEnabled() {
+          try {
+            var params = new URLSearchParams(location.search);
+            if (params.has('force-pwa')) {
+              var off = params.get('force-pwa') === '0' || params.get('force-pwa') === 'false';
+              if (off) sessionStorage.removeItem('viselle-force-pwa');
+              else sessionStorage.setItem('viselle-force-pwa', '1');
+              return !off;
+            }
+            return sessionStorage.getItem('viselle-force-pwa') === '1';
+          } catch (e) {
+            return false;
+          }
+        }
+
         function isStandaloneWebApp() {
           return !!(
+            isForcePwaEnabled() ||
             navigator.standalone ||
             window.matchMedia('(display-mode: standalone)').matches
           );
