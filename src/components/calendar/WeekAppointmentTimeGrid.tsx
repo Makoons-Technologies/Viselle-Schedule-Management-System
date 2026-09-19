@@ -59,7 +59,7 @@ const CALENDAR_HSCROLL_CLASS =
 /** Far-right hit strip for overlap cycle arrows (~32px; tall targets stay tappable). */
 const STACK_RAIL_CLASS = 'w-8';
 
-/** Keeps Friday (and Sat) fully visible to the left of the week-next button. */
+/** End-of-row spacer so Friday can scroll fully left of the pinned next-week rail. */
 const WEEK_NAV_RAIL_CLASS = 'w-10 shrink-0';
 
 const MOVE_THRESHOLD_PX = 4;
@@ -754,32 +754,38 @@ export function WeekAppointmentTimeGrid({
     </div>
   );
 
+  const weekNextRail = showWeekNav ? (
+    <div className="pointer-events-none absolute inset-y-0 right-0 z-30 flex w-10 items-center justify-center border-l border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="pointer-events-auto h-8 w-8 shrink-0"
+        data-testid="calendar-week-next"
+        onClick={onWeekNext}
+        title="Next week"
+        aria-label="Next week"
+      >
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
+  ) : null;
+
   return (
     <>
     <div ref={chromeRef} className="sticky top-0 z-40 bg-stone-50 pt-2 dark:bg-stone-900">
       {toolbar ? <div className="mb-1.5">{toolbar}</div> : null}
-      <div
-        ref={headerScrollRef}
-        className={cn(
-          CALENDAR_HSCROLL_CLASS,
-          'relative rounded-t-xl border border-b-0 border-stone-200 bg-white shadow-sm [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden dark:border-stone-800 dark:bg-stone-900',
-        )}
-      >
-        {headerRow}
-        {showWeekNav ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="absolute right-0 top-1/2 z-30 h-8 w-10 -translate-y-1/2 rounded-none bg-stone-50/95 dark:bg-stone-800/95"
-            data-testid="calendar-week-next"
-            onClick={onWeekNext}
-            title="Next week"
-            aria-label="Next week"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        ) : null}
+      <div className="relative overflow-hidden rounded-t-xl border border-b-0 border-stone-200 bg-white shadow-sm dark:border-stone-800 dark:bg-stone-900">
+        <div
+          ref={headerScrollRef}
+          className={cn(
+            CALENDAR_HSCROLL_CLASS,
+            '[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
+          )}
+        >
+          {headerRow}
+        </div>
+        {weekNextRail}
       </div>
     </div>
     <div
