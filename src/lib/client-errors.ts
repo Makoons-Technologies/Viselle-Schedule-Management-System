@@ -1,3 +1,5 @@
+import { API_BASE_URL } from '@/lib/api';
+
 type ClientErrorSource = 'boundary' | 'window' | 'unhandledrejection' | 'manual';
 
 export type ClientErrorReport = {
@@ -28,7 +30,7 @@ function shouldSkip(key: string): boolean {
  */
 export function reportClientError(report: ClientErrorReport): void {
   try {
-    const base = import.meta.env.VITE_API_BASE_URL as string | undefined;
+    const base = API_BASE_URL;
     if (!base) return;
 
     const message = (report.message || 'Unknown error').slice(0, 500);

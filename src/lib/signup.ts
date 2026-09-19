@@ -1,10 +1,10 @@
 import axios from 'axios';
-import { ApiError, getFallbackRequestErrorMessage } from '@/lib/api';
+import { API_BASE_URL, ApiError, getFallbackRequestErrorMessage } from '@/lib/api';
 import { getPlanTier } from '@/lib/plan-features';
 import type { ResolvedTrialOffer, TrialCampaign, TrialPaymentMode } from '@/types/api';
 
 const signupClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL as string,
+  baseURL: API_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
 });
 

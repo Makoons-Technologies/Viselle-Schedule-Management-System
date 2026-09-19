@@ -111,8 +111,12 @@ export class ApiError extends Error {
   }
 }
 
+/** Local Vite proxies `/api` → :3001 when `.env` is missing. */
+export const API_BASE_URL =
+  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') || '/api/v1';
+
 export const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL as string,
+  baseURL: API_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
 });
 

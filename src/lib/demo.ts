@@ -1,12 +1,12 @@
 import axios from 'axios';
-import { ApiError, getFallbackRequestErrorMessage } from '@/lib/api';
+import { API_BASE_URL, ApiError, getFallbackRequestErrorMessage } from '@/lib/api';
 import type { DemoBooking, DemoSlot } from '@/types/api';
 
 /** Matches backend DEMO_HORIZON_DAYS — all bookable demo slots live within this window. */
 export const DEMO_BOOKING_HORIZON_DAYS = 14;
 
 const demoClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL as string,
+  baseURL: API_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
 });
 
