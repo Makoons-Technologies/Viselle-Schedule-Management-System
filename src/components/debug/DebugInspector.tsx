@@ -206,9 +206,9 @@ function DebugInspector() {
         onClick={() => (mode === 'pick' ? exitAll() : startPick())}
         className={cn(
           'debug-inspector-fab fixed z-[220] flex min-h-12 touch-manipulation items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold shadow-lg',
-          'right-[max(0.75rem,var(--safe-area-right,0px))]',
+          'right-3',
           'bottom-[calc(3.25rem+var(--app-shell-bottomnav-pad,0.5rem)+0.75rem)]',
-          'desktop-shell:bottom-[max(1.25rem,var(--safe-area-bottom,0px))]',
+          'desktop-shell:bottom-5',
           mode === 'pick'
             ? 'bg-sky-600 text-white hover:bg-sky-700'
             : 'bg-stone-900 text-white hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white',
@@ -224,7 +224,7 @@ function DebugInspector() {
           data-testid="debug-inspector-panel"
           role="dialog"
           aria-label="Element inspector"
-          className="debug-inspector-panel fixed inset-x-0 bottom-0 z-[221] flex max-h-[min(70dvh,32rem)] flex-col rounded-t-2xl border border-stone-200 bg-white shadow-2xl dark:border-stone-700 dark:bg-stone-950 desktop-shell:inset-x-auto desktop-shell:bottom-[max(1.25rem,var(--safe-area-bottom,0px))] desktop-shell:right-[max(1rem,var(--safe-area-right,0px))] desktop-shell:max-h-[min(80vh,40rem)] desktop-shell:w-[26rem] desktop-shell:rounded-2xl"
+          className="debug-inspector-panel fixed inset-x-0 bottom-0 z-[221] flex max-h-[min(70dvh,32rem)] flex-col rounded-t-2xl border border-stone-200 bg-white shadow-2xl dark:border-stone-700 dark:bg-stone-950 desktop-shell:inset-x-auto desktop-shell:bottom-5 desktop-shell:right-4 desktop-shell:max-h-[min(80vh,40rem)] desktop-shell:w-[26rem] desktop-shell:rounded-2xl"
         >
           <header className="flex shrink-0 items-start gap-3 border-b border-stone-200 px-4 pb-3 pt-3 dark:border-stone-800">
             <div className="min-w-0 flex-1">
@@ -249,7 +249,7 @@ function DebugInspector() {
             </button>
           </header>
 
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3 pb-[max(1rem,var(--safe-area-bottom,0px))]">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3 pb-4">
             <InspectorSection title="Breadcrumbs">
               <p className="break-all font-mono text-[11px] leading-5 text-stone-700 dark:text-stone-300">
                 {snapshot.breadcrumbs.join(' › ')}

@@ -34,7 +34,7 @@ function AppLayoutContent() {
         the title. No reserved #root slab. Welcome back is in-flow (BEA-85).
       */}
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="app-shell-chrome shrink-0" data-testid="app-shell-chrome">
+        <div className="app-shell-chrome sticky top-0 z-40 shrink-0" data-testid="app-shell-chrome">
           <ImpersonationBanner />
           <OrgTrialBanner />
           <AddToHomeScreenBanner />

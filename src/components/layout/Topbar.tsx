@@ -132,13 +132,13 @@ export function Topbar() {
     <>
     <header
       data-testid="app-shell-topbar"
-      className="app-shell-topbar shrink-0"
+      className="app-shell-topbar sticky top-0 z-40 shrink-0"
     >
       {/*
         Title row is a whole-pixel 56px box flush at y=0. No island pad,
         no under-clock paint, no #root band. No filter / transform / isolation.
       */}
-      <div className="flex h-14 items-center justify-between gap-2 px-safe-or-3 sm:h-16 sm:px-safe-or-6">
+      <div className="flex h-14 items-center justify-between gap-2 px-3 sm:h-16 sm:px-6">
         <div className="flex min-w-0 flex-1 items-center gap-2 overflow-visible sm:gap-4">
           <Button
             variant="ghost"

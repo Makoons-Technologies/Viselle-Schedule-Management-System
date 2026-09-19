@@ -59,7 +59,7 @@ export const SheetContent = forwardRef<HTMLDivElement, SheetContentProps>(
         // #root and is clipped by html.app-shell overflow — a blank overlay.
         className={cn(
           sheetVariants({ side }),
-          'z-[51] flex flex-col px-4 pt-safe-add-4 pb-safe-add-4 sm:px-6 sm:pt-safe-add-6 sm:pb-safe-add-6',
+          'z-[51] flex flex-col px-4 pt-4 pb-4 sm:px-6 sm:pt-6 sm:pb-6',
           className,
         )}
         {...props}
@@ -67,7 +67,7 @@ export const SheetContent = forwardRef<HTMLDivElement, SheetContentProps>(
         {children}
         <DialogPrimitive.Close
           className={cn(
-            'absolute right-4 top-[calc(1rem+var(--safe-area-top))] rounded-md p-1 text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800',
+            'absolute right-4 top-4 rounded-md p-1 text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800',
             closeClassName,
           )}
         >

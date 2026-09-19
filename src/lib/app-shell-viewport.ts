@@ -7,7 +7,7 @@ export const FIRST_SHELL_SETTLE_DELAYS_MS = [0, 16, 32, 64, 128, 250, 500, 1000]
 /** Matches CSS (`html.standalone-pwa`). `navigator.standalone` can be true when the media query is not. */
 export const STANDALONE_PWA_CLASS = 'standalone-pwa';
 
-/** Portrait iPhone home-indicator height when `env(safe-area-inset-bottom)` reports 0. */
+/** Literal portrait iPhone home-indicator pad. Not `env(safe-area-inset-*)`. */
 export const IOS_STANDALONE_HOME_INDICATOR_FALLBACK_PX = 34;
 
 /**
@@ -44,7 +44,7 @@ export const APP_SHELL_VIEWPORT_COVER =
 export const APP_SHELL_VIEWPORT_INSET =
   'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, interactive-widget=overlays-content';
 
-/** 0.5rem floor matching the old `pb-safe-or-2` content inset. */
+/** 0.5rem tab-bar pad when the webview is already inset. */
 export const APP_SHELL_BOTTOMNAV_CONTENT_PAD_PX = 8;
 
 /**
@@ -53,11 +53,8 @@ export const APP_SHELL_BOTTOMNAV_CONTENT_PAD_PX = 8;
  */
 export const APP_SHELL_BOTTOMNAV_CONTENT_HEIGHT_PX = 52;
 
-/**
- * Safari-in-tab only. WebKit drops `max()` when `env(safe-area-inset-bottom)`
- * is an argument (PR 46 FAIL). Standalone uses a literal pixel string instead.
- */
-export const APP_SHELL_BOTTOMNAV_PAD_STYLE = 'max(0.5rem, var(--safe-area-bottom))';
+/** Safari-in-tab tab-bar pad. Literal rem — no `env(safe-area-inset-*)`. */
+export const APP_SHELL_BOTTOMNAV_PAD_STYLE = '0.5rem';
 
 /**
  * CSS fallback for --app-height on iOS standalone. `100vh` is the SCREEN
@@ -208,9 +205,12 @@ export function measureCssFillAvailable(): number {
   return px;
 }
 
-/** Literal pixel pad for the tab bar. Never `max()`+`env()` — WebKit drops that. */
+/** Literal pixel pad for the tab bar. Never `env(safe-area-inset-*)`. */
 export function resolveBottomNavPadPx(): number {
-  return Math.max(APP_SHELL_BOTTOMNAV_CONTENT_PAD_PX, resolveSafeAreaBottomPx(measureCssEnvInset('bottom')));
+  if (isIosStandaloneWebApp() && !isAppShellFitInset()) {
+    return IOS_STANDALONE_HOME_INDICATOR_FALLBACK_PX;
+  }
+  return APP_SHELL_BOTTOMNAV_CONTENT_PAD_PX;
 }
 
 export function getStandaloneBottomNavPadCSSValue(): string {
@@ -283,22 +283,6 @@ export function setAppHeightCSSProperty(root: HTMLElement = document.documentEle
   root.style.setProperty('--app-shell-keyboard-inset', `${getKeyboardInsetPx()}px`);
 }
 
-/**
- * Measure live `env(safe-area-inset-*)`. iOS standalone can leave :root tokens at 0px
- * while 100vh still paints under the home indicator (BEA-83).
- */
-export function measureCssEnvInset(edge: 'top' | 'right' | 'bottom' | 'left'): number {
-  if (typeof document === 'undefined' || !document.body) return 0;
-  const el = document.createElement('div');
-  el.setAttribute('aria-hidden', 'true');
-  el.style.cssText =
-    `position:fixed;visibility:hidden;pointer-events:none;padding-${edge}:env(safe-area-inset-${edge},0px)`;
-  document.body.appendChild(el);
-  const px = parseFloat(getComputedStyle(el).getPropertyValue(`padding-${edge}`)) || 0;
-  el.remove();
-  return px;
-}
-
 export function isAppShellFitInset(root: HTMLElement = document.documentElement): boolean {
   return root.classList.contains(APP_SHELL_FIT_INSET_CLASS);
 }
@@ -319,13 +303,6 @@ export function applyAppShellViewportFit(
   root.classList.toggle(APP_SHELL_FIT_INSET_CLASS, !allowCover);
 }
 
-/** Home-indicator floor only when the page still uses `viewport-fit=cover`. */
-export function resolveSafeAreaBottomPx(measuredPx: number): number {
-  if (isIosStandaloneWebApp() && !isAppShellFitInset()) {
-    return Math.max(measuredPx, IOS_STANDALONE_HOME_INDICATOR_FALLBACK_PX);
-  }
-  return measuredPx;
-}
 
 /**
  * True when `100vh` (device screen) is taller than the layout webview by a
@@ -337,11 +314,6 @@ export function isStandaloneWebviewInsetBelowStatusBar(): boolean {
   const layoutH = measureLayoutViewportHeight();
   if (screenH < 400 || layoutH < 400) return false;
   return screenH - layoutH >= 40;
-}
-
-/** Toast / utility token only. Never applied as chrome or `#root` pad. */
-export function resolveSafeAreaTopPx(measuredPx: number): number {
-  return measuredPx;
 }
 
 /** `#root` / reserved-band pad — always 0. */
@@ -365,18 +337,11 @@ export function resolveAppShellThemeColor(options: {
 }
 
 export function setSafeAreaCSSProperties(root: HTMLElement = document.documentElement): void {
-  const topPx = resolveSafeAreaTopPx(measureCssEnvInset('top'));
-  const bottomPx = resolveSafeAreaBottomPx(measureCssEnvInset('bottom'));
-  const navPadPx = Math.max(APP_SHELL_BOTTOMNAV_CONTENT_PAD_PX, bottomPx);
   root.style.setProperty('--app-shell-safe-pad-top', APP_SHELL_ROOT_SAFE_PAD_TOP_CSS);
   root.style.setProperty('--app-shell-content-inset-top', APP_SHELL_CONTENT_INSET_TOP_CSS);
-  if (topPx > 0) {
-    root.style.setProperty('--safe-area-top', `${topPx}px`);
-  } else {
-    root.style.removeProperty('--safe-area-top');
-  }
-  root.style.setProperty('--safe-area-bottom', `${bottomPx}px`);
-  root.style.setProperty('--app-shell-bottomnav-pad', `${navPadPx}px`);
+  root.style.removeProperty('--safe-area-top');
+  root.style.removeProperty('--safe-area-bottom');
+  root.style.setProperty('--app-shell-bottomnav-pad', `${resolveBottomNavPadPx()}px`);
 }
 
 /**

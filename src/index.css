@@ -55,71 +55,9 @@
     linear-gradient(160deg, #2a0f1e 0%, #0f172a 55%, #1e1b4b 100%);
 }
 
-/*
- * Safe-area tokens for installed PWA / iOS Safari (viewport-fit=cover).
- * Components should use these utilities instead of nested env() in Tailwind
- * arbitrary classes — commas inside env()/max() are easy to drop.
- */
 :root {
-  --safe-area-top: env(safe-area-inset-top, 0px);
-  --safe-area-right: env(safe-area-inset-right, 0px);
-  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
-  --safe-area-left: env(safe-area-inset-left, 0px);
   --app-shell-safe-pad-top: 0px;
   --app-shell-content-inset-top: 0px;
-}
-
-@utility pt-safe {
-  padding-top: env(safe-area-inset-top, 0px);
-}
-@utility pr-safe {
-  padding-right: env(safe-area-inset-right, 0px);
-}
-@utility pb-safe {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-@utility pl-safe {
-  padding-left: env(safe-area-inset-left, 0px);
-}
-@utility px-safe {
-  padding-left: env(safe-area-inset-left, 0px);
-  padding-right: env(safe-area-inset-right, 0px);
-}
-@utility px-safe-or-2 {
-  padding-left: max(0.5rem, env(safe-area-inset-left, 0px), var(--safe-area-left));
-  padding-right: max(0.5rem, env(safe-area-inset-right, 0px), var(--safe-area-right));
-}
-@utility px-safe-or-3 {
-  padding-left: max(0.75rem, env(safe-area-inset-left, 0px), var(--safe-area-left));
-  padding-right: max(0.75rem, env(safe-area-inset-right, 0px), var(--safe-area-right));
-}
-@utility px-safe-or-6 {
-  padding-left: max(1.5rem, env(safe-area-inset-left, 0px), var(--safe-area-left));
-  padding-right: max(1.5rem, env(safe-area-inset-right, 0px), var(--safe-area-right));
-}
-@utility pb-safe-or-2 {
-  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px), var(--safe-area-bottom));
-}
-@utility pb-safe-or-3 {
-  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px), var(--safe-area-bottom));
-}
-@utility pt-safe-add-4 {
-  padding-top: calc(1rem + env(safe-area-inset-top, 0px));
-}
-@utility pt-safe-add-6 {
-  padding-top: calc(1.5rem + env(safe-area-inset-top, 0px));
-}
-@utility pb-safe-add-4 {
-  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
-}
-@utility pb-safe-add-6 {
-  padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
-}
-@utility p-safe-or-4 {
-  padding-top: max(1rem, env(safe-area-inset-top, 0px), var(--safe-area-top));
-  padding-right: max(1rem, env(safe-area-inset-right, 0px), var(--safe-area-right));
-  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px), var(--safe-area-bottom));
-  padding-left: max(1rem, env(safe-area-inset-left, 0px), var(--safe-area-left));
 }
 
 @layer base {
@@ -196,10 +134,25 @@
     background-color: #ffffff;
   }
 
+  /*
+   * Pin the logged-in header to the webview top. iOS PWA frosts whatever
+   * sits at y=0; a sticky opaque bar is that paint (no safe-area inset).
+   */
+  html.app-shell .app-shell-chrome,
+  html.app-shell .app-shell-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+  }
+
   html.dark.app-shell .app-shell-chrome,
   html.dark.app-shell .app-shell-topbar,
   html.dark.app-shell .app-shell-bottomnav {
     background-color: #1c1917;
+  }
+
+  html.app-shell.app-shell-impersonating .app-shell-chrome {
+    background-color: #f59e0b;
   }
 
   /* No empty padded band above the title — hide chrome when banners are absent. */
@@ -291,9 +244,7 @@
   }
 
   html.standalone-pwa .bg-marketing {
-    padding-top: env(safe-area-inset-top, 0px);
     background-color: #fafaf9;
-    background-clip: content-box;
   }
 
   @media (display-mode: standalone) {
@@ -310,9 +261,7 @@
     }
 
     .bg-marketing {
-      padding-top: env(safe-area-inset-top, 0px);
       background-color: #fafaf9;
-      background-clip: content-box;
     }
   }
 
@@ -416,8 +365,7 @@
  */
 html.app-shell .app-shell-bottomnav {
   box-sizing: border-box;
-  /* Safari-in-tab. Do not put env() inside this max() — WebKit drops it. */
-  padding-bottom: max(0.5rem, var(--safe-area-bottom));
+  padding-bottom: 0.5rem;
 }
 
 html.app-shell .app-shell-bottomnav-spacer {
@@ -425,7 +373,6 @@ html.app-shell .app-shell-bottomnav-spacer {
 }
 
 html.standalone-pwa.app-shell {
-  --safe-area-bottom: 34px;
   --app-shell-bottomnav-pad: 34px;
   --app-shell-keyboard-inset: 0px;
   --app-shell-safe-pad-top: 0px;
@@ -433,7 +380,6 @@ html.standalone-pwa.app-shell {
 }
 
 html.standalone-pwa.app-shell.app-shell-fit-inset {
-  --safe-area-bottom: 8px;
   --app-shell-bottomnav-pad: 8px;
 }
 
@@ -480,14 +426,12 @@ html.standalone-pwa.app-shell .app-shell-chrome {
   }
 
   html.app-shell {
-    --safe-area-bottom: 34px;
     --app-shell-bottomnav-pad: 34px;
     --app-shell-safe-pad-top: 0px;
     --app-shell-content-inset-top: 0px;
   }
 
   html.app-shell.app-shell-fit-inset {
-    --safe-area-bottom: 8px;
     --app-shell-bottomnav-pad: 8px;
   }
 

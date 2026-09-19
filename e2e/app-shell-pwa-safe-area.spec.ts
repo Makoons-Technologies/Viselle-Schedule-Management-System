@@ -115,6 +115,7 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
         node = node.parentElement;
       }
       return {
+        position: style.position,
         paddingTop: style.paddingTop,
         borderBottomWidth: style.borderBottomWidth,
         rowHeight: row?.getBoundingClientRect().height ?? 0,
@@ -130,6 +131,7 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     });
 
     // Topbar starts flush at webview y=0 — OS status bar owns the clock region.
+    expect(top.position).toBe('sticky');
     expect(parseFloat(top.paddingTop) || 0).toBe(0);
     expect(parseFloat(top.borderBottomWidth) || 0).toBe(0);
     expect(top.headerTop).toBeLessThan(2);
@@ -189,7 +191,8 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
 
     // Literal pixel pad — not env() inside max() (PR 46) and not a var-only hope.
     expect(parseFloat(bottom.paddingBottom)).toBeGreaterThanOrEqual(8);
-    expect(parseFloat(bottom.safeAreaBottom) || 0).toBeLessThanOrEqual(8);
+    expect(bottom.safeAreaBottom).toBe('');
+    expect(parseFloat(bottom.safeAreaBottom) || 0).toBe(0);
     expect(bottom.navPadVar).toBe('8px');
     expect(bottom.inlinePad).toBe('8px');
     expect(bottom.inlinePad).not.toContain('safe-area-inset-bottom');
@@ -263,6 +266,7 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     expect(joined).toMatch(/--app-shell-safe-pad-top:\s*0px/);
     expect(joined).toMatch(/--app-shell-content-inset-top:\s*0px/);
     expect(joined).not.toMatch(/--app-shell-content-inset-top:\s*env\(safe-area-inset-top/);
+    expect(joined).not.toMatch(/env\(\s*safe-area-inset/);
     expect(joined).not.toMatch(/padding-top:\s*calc\(0\.5rem \+ var\(--app-shell-content-inset-top/);
     expect(joined).not.toMatch(/#root[^{]*\{[^}]*padding-top:\s*var\(--app-shell-safe-pad-top/);
   });

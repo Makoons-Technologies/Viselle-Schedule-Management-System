@@ -472,7 +472,7 @@ export function AppointmentCheckoutSheet({
         onFocusOutside={preventSheetDismissWhileNested}
       >
         <div className="flex h-[100dvh] flex-col text-stone-900 dark:text-stone-100">
-          <SheetHeader className="shrink-0 border-b border-stone-200 px-6 pb-4 pr-14 pt-[max(1rem,var(--safe-area-top))] dark:border-stone-800">
+          <SheetHeader className="shrink-0 border-b border-stone-200 px-6 pb-4 pr-14 pt-4 dark:border-stone-800">
             <SheetTitle className="text-xl">Checkout</SheetTitle>
             <SheetDescription>{customerName}</SheetDescription>
             <CheckoutStepIndicator step={step} />
@@ -738,7 +738,7 @@ export function AppointmentCheckoutSheet({
           </div>
 
           {step !== 'tip' && (
-            <footer className="sticky bottom-0 z-10 shrink-0 border-t border-stone-200 bg-white px-6 pb-safe-or-3 pt-4 dark:border-stone-800 dark:bg-stone-900">
+            <footer className="sticky bottom-0 z-10 shrink-0 border-t border-stone-200 bg-white px-6 pb-3 pt-4 dark:border-stone-800 dark:bg-stone-900">
               <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
                 {previewQuery.data && (
                   <div className="text-sm tabular-nums text-stone-900 dark:text-stone-100">
@@ -790,7 +790,7 @@ export function AppointmentCheckoutSheet({
           )}
 
           {step === 'tip' && (
-            <footer className="sticky bottom-0 z-10 shrink-0 border-t border-stone-200 bg-white px-6 pb-safe-or-3 pt-4 dark:border-stone-800 dark:bg-stone-900">
+            <footer className="sticky bottom-0 z-10 shrink-0 border-t border-stone-200 bg-white px-6 pb-3 pt-4 dark:border-stone-800 dark:bg-stone-900">
               <Button type="button" variant="ghost" onClick={goBack} className="w-full sm:w-auto">
                 <ChevronLeft className="h-4 w-4" />
                 Back to order

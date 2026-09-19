@@ -828,7 +828,7 @@ export function WeekAppointmentTimeGrid({
       <Button
         type="button"
         size="icon"
-        className="fixed right-3 z-40 h-11 w-11 rounded-full shadow-lg bottom-[calc(5rem+var(--safe-area-bottom))] desktop-shell:bottom-6"
+        className="fixed right-3 z-40 h-11 w-11 rounded-full shadow-lg bottom-20 desktop-shell:bottom-6"
         aria-label={
           jumpDirection === 'up'
             ? "Go to next day's first appointment"

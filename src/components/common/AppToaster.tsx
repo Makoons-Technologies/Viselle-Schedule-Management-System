@@ -3,18 +3,11 @@ import { Toaster } from 'sonner';
 import { useTheme } from '@/context/ThemeContext';
 import { isStandaloneWebApp } from '@/lib/app-shell-viewport';
 
-/** Sonner 2 defaults to 16px and does not add env(safe-area-inset-*). */
-const TOAST_OFFSET = {
-  top: 'calc(var(--safe-area-top) + 12px)',
-  right: 'calc(var(--safe-area-right) + 12px)',
-  bottom: 'calc(var(--safe-area-bottom) + 12px)',
-  left: 'calc(var(--safe-area-left) + 12px)',
-} as const;
+const TOAST_OFFSET = 16;
 
 /**
- * Installed PWA: keep remaining Sonner toasts off the title row (BEA-83
- * tab pad). Login-success does not use Sonner in standalone — see
- * announceSignedInWelcome (BEA-85 restage).
+ * Installed PWA: keep remaining Sonner toasts off the tab bar.
+ * No env(safe-area-inset-*) — iOS frost work must not come back as toast pad.
  */
 const STANDALONE_TOAST_OFFSET = {
   top: '12px',
@@ -40,16 +33,14 @@ export function AppToaster() {
     return () => mq.removeEventListener('change', sync);
   }, []);
 
-  const offset = standalone ? STANDALONE_TOAST_OFFSET : TOAST_OFFSET;
-
   return (
     <Toaster
       className="app-shell-toaster"
       position={standalone ? 'bottom-center' : 'top-right'}
       richColors
       theme={resolvedColorMode}
-      offset={offset}
-      mobileOffset={offset}
+      offset={standalone ? STANDALONE_TOAST_OFFSET : TOAST_OFFSET}
+      mobileOffset={standalone ? STANDALONE_TOAST_OFFSET : TOAST_OFFSET}
       swipeDirections={standalone ? [] : undefined}
       toastOptions={{ className: 'z-[80] app-shell-toast' }}
       style={{ zIndex: 80 }}

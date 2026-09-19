@@ -331,7 +331,7 @@ export function BatchCheckoutSheet({ orgId, items, open, onOpenChange, onSuccess
         onFocusOutside={preventSheetDismissWhileNested}
       >
         <div className="flex h-[100dvh] flex-col text-stone-900 dark:text-stone-100">
-          <SheetHeader className="shrink-0 border-b border-stone-200 px-6 pb-4 pr-14 pt-[max(1rem,var(--safe-area-top))] dark:border-stone-800">
+          <SheetHeader className="shrink-0 border-b border-stone-200 px-6 pb-4 pr-14 pt-4 dark:border-stone-800">
             <SheetTitle className="text-xl">Batch checkout</SheetTitle>
             <SheetDescription>
               {items.length} appointment{items.length === 1 ? '' : 's'} · one combined payment
@@ -650,7 +650,7 @@ export function BatchCheckoutSheet({ orgId, items, open, onOpenChange, onSuccess
             )}
           </div>
 
-          <footer className="sticky bottom-0 z-10 shrink-0 border-t border-stone-200 bg-white px-6 pb-safe-or-3 pt-4 dark:border-stone-800 dark:bg-stone-900">
+          <footer className="sticky bottom-0 z-10 shrink-0 border-t border-stone-200 bg-white px-6 pb-3 pt-4 dark:border-stone-800 dark:bg-stone-900">
             {step === 'items' ? (
               <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
                 {previewQuery.data && (

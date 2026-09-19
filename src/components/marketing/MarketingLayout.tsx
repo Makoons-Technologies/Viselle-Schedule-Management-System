@@ -26,7 +26,7 @@ export function MarketingLegalLinks({ className }: { className?: string }) {
 
 export function MarketingHeader() {
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0f172a] px-safe pt-safe">
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0f172a]">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
         <Link to="/" className="flex shrink-0 items-center gap-2.5">
           <ViselleLogo size={36} />
@@ -72,7 +72,7 @@ export function MarketingHeader() {
 
 export function MarketingFooter() {
   return (
-    <footer className="border-t border-white/10 bg-[#0f172a]/70 px-safe py-10 pb-[calc(2.5rem+var(--safe-area-bottom))] text-white/60">
+    <footer className="border-t border-white/10 bg-[#0f172a]/70 py-10 text-white/60">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 sm:flex-row sm:px-6">
         <div className="flex items-center gap-3">
           <ViselleLogo size={28} />

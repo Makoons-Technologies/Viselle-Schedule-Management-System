@@ -34,7 +34,7 @@ interface BottomNavItem {
 }
 
 const bottomNavClassName =
-  'app-shell-bottomnav shrink-0 border-t border-stone-200 px-safe-or-2 pt-1 dark:border-stone-800 desktop-shell:hidden';
+  'app-shell-bottomnav shrink-0 border-t border-stone-200 px-2 pt-1 dark:border-stone-800 desktop-shell:hidden';
 
 function bottomNavPadStyle(): { paddingBottom: string } {
   // Standalone: literal `34px` inline. WebKit dropped max()+env() (PR 46) and
