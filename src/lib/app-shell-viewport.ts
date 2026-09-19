@@ -25,7 +25,7 @@ export const APP_SHELL_ROOT_SAFE_PAD_TOP_CSS = '0px';
 /** Opaque OS status bar + theme-color. Cached at PWA install. */
 export const APP_SHELL_STATUS_BAR_STYLE = 'default';
 
-/** Opaque app-shell chrome / theme-color. Marketing splash stays `#2a0f1e`. */
+/** Opaque app-shell chrome / theme-color. PWA splash matches the logged-in shell. */
 export const APP_SHELL_THEME_COLOR_LIGHT = '#ffffff';
 export const APP_SHELL_THEME_COLOR_DARK = '#1c1917';
 

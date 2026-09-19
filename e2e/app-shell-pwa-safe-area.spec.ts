@@ -215,10 +215,9 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     // The PR 46 pattern WebKit dropped on Joseph's iPhone.
     const maxWithEnv = rules.some(
       (text) =>
+        !text.trimStart().startsWith('@') &&
         text.includes('app-shell-bottomnav') &&
-        text.includes('max(') &&
-        text.includes('safe-area-inset-bottom') &&
-        text.includes('padding-bottom'),
+        /padding-bottom:\s*max\([^)]*safe-area-inset-bottom/.test(text),
     );
     expect(maxWithEnv).toBe(false);
 

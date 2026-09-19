@@ -5,8 +5,8 @@
     <link rel="icon" type="image/svg+xml" href="/viselle-logo.svg?v=20260811a" />
     <link rel="icon" type="image/png" href="/favicon.png?v=20260811a" sizes="48x48" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260811a" />
-    <link rel="manifest" href="/manifest.webmanifest?v=20260910c" />
-    <meta name="theme-color" content="#2a0f1e" />
+    <link rel="manifest" href="/manifest.webmanifest?v=20260919a" />
+    <meta name="theme-color" content="#ffffff" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -181,10 +181,16 @@
 
         if (isStandaloneWebApp()) {
           document.documentElement.classList.add('standalone-pwa');
+          var standaloneTheme = document.querySelector('meta[name="theme-color"]');
+          var standaloneDark = document.documentElement.classList.contains('dark');
+          if (standaloneTheme) {
+            standaloneTheme.setAttribute('content', standaloneDark ? '#1c1917' : '#ffffff');
+          }
+          document.documentElement.style.backgroundColor = standaloneDark ? '#1c1917' : '#fafaf9';
         }
 
         // Logged-in launch: drop viewport-fit=cover so iOS frost cannot sit on
-        // "Viselle Platform". Maroon `#2a0f1e` + cover is that frosted band.
+        // "Viselle Platform". A maroon splash + cover is that frosted band.
         function applyLoggedInShellThemeColor() {
           var host = (location.hostname || '').toLowerCase();
           var path = location.pathname || '';
