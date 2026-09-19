@@ -1,6 +1,6 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { addDays, format, parseISO, startOfDay } from 'date-fns';
-import { DoorOpen, ListChecks, Plus, SlidersHorizontal, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { ListChecks, Plus, SlidersHorizontal, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { Appointment } from '@/types/api';
@@ -24,6 +24,7 @@ import { RecurringEditScopeDialog } from '@/components/appointments/RecurringEdi
 import { WalkInDialog } from '@/components/appointments/WalkInDialog';
 import { StaffScheduleFilter } from '@/components/calendar/StaffScheduleFilter';
 import { MobileScheduleFilter } from '@/components/calendar/MobileScheduleFilter';
+import { CalendarNewChoiceDialog } from '@/components/calendar/CalendarNewChoiceDialog';
 import { WeekAppointmentTimeGrid } from '@/components/calendar/WeekAppointmentTimeGrid';
 import { appointmentDayKey, appointmentStartMinutes } from '@/components/calendar/week-time-grid';
 import { isCalendarSlotInHours } from '@/lib/availability';
@@ -90,6 +91,7 @@ export function CalendarPage() {
   } | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [walkInOpen, setWalkInOpen] = useState(false);
+  const [newChoiceOpen, setNewChoiceOpen] = useState(false);
   const [createDefaultDate, setCreateDefaultDate] = useState<string | undefined>(undefined);
   const [createDefaultMinutes, setCreateDefaultMinutes] = useState<number | undefined>(undefined);
   /** null = implicit first-load default: current user / previewed owner only. */
@@ -570,37 +572,18 @@ export function CalendarPage() {
             )
           )}
           {permissions.canCreateAppointments && (
-            <>
-              <TrialLockedControl locked={trialExpired}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 px-2"
-                  disabled={trialExpired}
-                  onClick={() => setWalkInOpen(true)}
-                  aria-label="Walk-in"
-                  title="Take a walk-in"
-                >
-                  <DoorOpen className="h-3.5 w-3.5" />
-                  Walk-in
-                </Button>
-              </TrialLockedControl>
-              <TrialLockedControl locked={trialExpired}>
-                <Button
-                  size="sm"
-                  className="h-8 px-2"
-                  disabled={trialExpired}
-                  onClick={() => {
-                    setCreateDefaultDate(undefined);
-                    setCreateDefaultMinutes(undefined);
-                    setCreateOpen(true);
-                  }}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  {isMobile ? 'New' : 'New Appointment'}
-                </Button>
-              </TrialLockedControl>
-            </>
+            <TrialLockedControl locked={trialExpired}>
+              <Button
+                size="sm"
+                className="h-8 px-2"
+                disabled={trialExpired}
+                onClick={() => setNewChoiceOpen(true)}
+                aria-label="New"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                New
+              </Button>
+            </TrialLockedControl>
           )}
           {isMobile && (
             <MobileScheduleFilter
@@ -848,6 +831,16 @@ export function CalendarPage() {
         onSelectScope={(scope) => {
           if (!pendingScheduleChange) return;
           rescheduleMutation.mutate({ ...pendingScheduleChange, scope });
+        }}
+      />
+      <CalendarNewChoiceDialog
+        open={newChoiceOpen}
+        onOpenChange={setNewChoiceOpen}
+        onWalkIn={() => setWalkInOpen(true)}
+        onSchedule={() => {
+          setCreateDefaultDate(undefined);
+          setCreateDefaultMinutes(undefined);
+          setCreateOpen(true);
         }}
       />
       <WalkInDialog
