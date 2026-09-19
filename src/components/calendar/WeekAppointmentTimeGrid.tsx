@@ -722,13 +722,13 @@ export function WeekAppointmentTimeGrid({
       className="flex border-b border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800"
       style={{ minWidth: `${gridMinWidthRem}rem` }}
     >
-      <div className="sticky left-0 z-20 flex w-16 shrink-0 items-center justify-center border-r border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800 sm:w-20">
+      <div className="sticky left-0 z-20 flex w-16 shrink-0 items-center justify-center border-r border-stone-200/50 bg-stone-50/45 dark:border-stone-700/50 dark:bg-stone-800/45 sm:w-20">
         {showWeekNav ? (
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="h-8 w-8 shrink-0"
+            className="h-8 w-8 shrink-0 bg-transparent hover:bg-stone-200/40 dark:hover:bg-stone-700/40"
             onClick={onWeekPrevious}
             data-testid="calendar-week-prev"
             title="Previous week"
@@ -755,12 +755,12 @@ export function WeekAppointmentTimeGrid({
   );
 
   const weekNextRail = showWeekNav ? (
-    <div className="pointer-events-none absolute inset-y-0 right-0 z-30 flex w-10 items-center justify-center border-l border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800">
+    <div className="pointer-events-none absolute inset-y-0 right-0 z-30 flex w-10 items-center justify-center border-l border-stone-200/50 bg-stone-50/45 dark:border-stone-700/50 dark:bg-stone-800/45">
       <Button
         type="button"
         variant="ghost"
         size="icon"
-        className="pointer-events-auto h-8 w-8 shrink-0"
+        className="pointer-events-auto h-8 w-8 shrink-0 bg-transparent hover:bg-stone-200/40 dark:hover:bg-stone-700/40"
         data-testid="calendar-week-next"
         onClick={onWeekNext}
         title="Next week"
