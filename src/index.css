@@ -135,6 +135,12 @@
     color-scheme: dark;
   }
 
+  /* Dark color-scheme makes iOS PWA frost the status bar even with style=default. */
+  html.standalone-pwa.app-shell,
+  html.dark.standalone-pwa.app-shell {
+    color-scheme: light;
+  }
+
   body {
     @apply bg-stone-50 text-stone-900 antialiased dark:bg-stone-950 dark:text-stone-100;
     font-family: var(--font-sans);

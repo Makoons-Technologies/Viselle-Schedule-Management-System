@@ -42,7 +42,6 @@ export function useAppShellViewport(impersonating = false) {
     const themeMeta = document.querySelector('meta[name="theme-color"]');
     const previousTheme = themeMeta?.getAttribute('content');
     const statusBarMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
-    const previousStatusBarStyle = statusBarMeta?.getAttribute('content');
     const syncThemeColor = () => {
       if (!themeMeta) return;
       const dark = document.documentElement.classList.contains('dark');
@@ -52,6 +51,7 @@ export function useAppShellViewport(impersonating = false) {
       );
     };
     syncThemeColor();
+    // Never black-translucent — iOS 17+ frosts the top edge and caches it at A2HS.
     statusBarMeta?.setAttribute('content', APP_SHELL_STATUS_BAR_STYLE);
 
     let keyboardWasOpen = false;
@@ -154,8 +154,8 @@ export function useAppShellViewport(impersonating = false) {
       document.documentElement.style.removeProperty('--app-shell-bottomnav-pad');
       document.documentElement.style.removeProperty('--app-shell-keyboard-inset');
       if (themeMeta && previousTheme) themeMeta.setAttribute('content', previousTheme);
-      if (statusBarMeta && previousStatusBarStyle) {
-        statusBarMeta.setAttribute('content', previousStatusBarStyle);
+      if (statusBarMeta) {
+        statusBarMeta.setAttribute('content', APP_SHELL_STATUS_BAR_STYLE);
       }
       for (const id of settleTimers) window.clearTimeout(id);
       vv?.removeEventListener('resize', onVisualViewportResize);
