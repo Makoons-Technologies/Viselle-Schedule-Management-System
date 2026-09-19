@@ -108,7 +108,7 @@ export interface ImpersonateOwnerResponse {
   organization: { id: string; name: string };
 }
 
-/** Public-booking first-visit no-show protection. Not POS, gift cards, or memberships. */
+/** Public-booking first-visit no-show protection. Not POS or gift cards. */
 export type FirstVisitPaymentMode = 'off' | 'deposit' | 'card_on_file';
 export type BookingPaymentMode = 'deposit' | 'card_on_file';
 
@@ -993,21 +993,6 @@ export interface OrgFormSubmission {
   createdAt: string;
 }
 
-export type WaitlistStatus = 'waiting' | 'offered' | 'booked' | 'cancelled';
-
-export interface WaitlistEntry {
-  id: string;
-  organizationId: string;
-  customerId: string;
-  serviceId?: string | null;
-  accountId?: string | null;
-  preferredDate?: string | null;
-  notes?: string | null;
-  status: WaitlistStatus;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export type GiftCardStatus = 'inactive' | 'active' | 'redeemed' | 'void';
 
 export interface GiftCard {
@@ -1050,31 +1035,6 @@ export interface CustomerPackage {
   remainingCreditCents: number;
   remainingVisits?: number;
   status: CustomerPackageStatus;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface MembershipPlan {
-  id: string;
-  organizationId: string;
-  name: string;
-  priceCents: number;
-  interval: 'month' | 'year';
-  visitsIncluded?: number | null;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export type CustomerMembershipStatus = 'active' | 'paused' | 'cancelled';
-
-export interface CustomerMembership {
-  id: string;
-  organizationId: string;
-  planId: string;
-  customerId: string;
-  status: CustomerMembershipStatus;
-  nextBillOn: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -75,14 +75,9 @@ import type {
   PublicOrgForm,
   FormioSchema,
   OrgFormSubmission,
-  WaitlistEntry,
-  WaitlistStatus,
   GiftCard,
   ServicePackage,
   CustomerPackage,
-  MembershipPlan,
-  CustomerMembership,
-  CustomerMembershipStatus,
   CommissionReport,
   StaffPayoutPreview,
   StaffPayoutPreviewRow,
@@ -1040,15 +1035,6 @@ export const orgApi = {
       .post<{ submission: OrgFormSubmission }>(`/public/forms/${shareToken}/submissions`, data)
       .then((r) => r.data),
 
-  listWaitlist: (orgId: string) =>
-    apiClient.get<{ entries: WaitlistEntry[] }>(`/organizations/${orgId}/waitlist`).then((r) => r.data),
-  addWaitlist: (
-    orgId: string,
-    data: { customerId: string; serviceId?: string; accountId?: string; preferredDate?: string; notes?: string },
-  ) => apiClient.post<{ entry: WaitlistEntry }>(`/organizations/${orgId}/waitlist`, data).then((r) => r.data),
-  updateWaitlist: (orgId: string, entryId: string, data: { status?: WaitlistStatus; notes?: string | null }) =>
-    apiClient.patch<{ entry: WaitlistEntry }>(`/organizations/${orgId}/waitlist/${entryId}`, data).then((r) => r.data),
-
   listGiftCards: (orgId: string, params?: { code?: string }) =>
     apiClient
       .get<{ giftCards: GiftCard[] }>(`/organizations/${orgId}/gift-cards`, {
@@ -1087,7 +1073,7 @@ export const orgApi = {
     apiClient.get<{ packages: ServicePackage[] }>(`/organizations/${orgId}/packages`).then((r) => r.data),
   createPackage: (
     orgId: string,
-    data: { name: string; serviceId?: string; creditCents: number; priceCents: number },
+    data: { name: string; creditCents: number; priceCents: number },
   ) => apiClient.post<{ package: ServicePackage }>(`/organizations/${orgId}/packages`, data).then((r) => r.data),
   updatePackage: (orgId: string, packageId: string, data: Partial<ServicePackage>) =>
     apiClient.patch<{ package: ServicePackage }>(`/organizations/${orgId}/packages/${packageId}`, data).then((r) => r.data),
@@ -1112,33 +1098,6 @@ export const orgApi = {
         `/organizations/${orgId}/customer-packages/${customerPackageId}/use-credits`,
         data ?? { amountCents: 100 },
       )
-      .then((r) => r.data),
-
-  listMembershipPlans: (orgId: string) =>
-    apiClient.get<{ plans: MembershipPlan[] }>(`/organizations/${orgId}/membership-plans`).then((r) => r.data),
-  createMembershipPlan: (
-    orgId: string,
-    data: { name: string; priceCents: number; interval?: 'month' | 'year'; visitsIncluded?: number | null },
-  ) => apiClient.post<{ plan: MembershipPlan }>(`/organizations/${orgId}/membership-plans`, data).then((r) => r.data),
-  updateMembershipPlan: (orgId: string, planId: string, data: Partial<MembershipPlan>) =>
-    apiClient
-      .patch<{ plan: MembershipPlan }>(`/organizations/${orgId}/membership-plans/${planId}`, data)
-      .then((r) => r.data),
-  listMemberships: (orgId: string) =>
-    apiClient.get<{ memberships: CustomerMembership[] }>(`/organizations/${orgId}/memberships`).then((r) => r.data),
-  subscribeMembership: (orgId: string, data: { planId: string; customerId: string; nextBillOn: string }) =>
-    apiClient.post<{ membership: CustomerMembership }>(`/organizations/${orgId}/memberships`, data).then((r) => r.data),
-  updateMembership: (
-    orgId: string,
-    membershipId: string,
-    data: { status?: CustomerMembershipStatus; nextBillOn?: string },
-  ) =>
-    apiClient
-      .patch<{ membership: CustomerMembership }>(`/organizations/${orgId}/memberships/${membershipId}`, data)
-      .then((r) => r.data),
-  recordMembershipBill: (orgId: string, membershipId: string) =>
-    apiClient
-      .post<{ membership: CustomerMembership }>(`/organizations/${orgId}/memberships/${membershipId}/record-bill`)
       .then((r) => r.data),
 
   getCommissions: (orgId: string, params: { from: string; to: string }) =>

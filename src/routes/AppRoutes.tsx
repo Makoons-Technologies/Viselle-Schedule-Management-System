@@ -51,9 +51,7 @@ import { PaymentsSettingsPage } from '@/pages/org/settings/PaymentsSettingsPage'
 import { StaffPermissionsSettingsPage } from '@/pages/org/settings/StaffPermissionsSettingsPage';
 import { HomepageEditorPage } from '@/pages/org/settings/HomepageEditorPage';
 import { PackagesPage } from '@/pages/org/settings/PackagesPage';
-import { MembershipsPage } from '@/pages/org/settings/MembershipsPage';
 import { CommissionsPage } from '@/pages/org/settings/CommissionsPage';
-import { WaitlistPage } from '@/pages/org/WaitlistPage';
 import { FormsPage } from '@/pages/org/FormsPage';
 import { FormBuilderPage } from '@/pages/org/FormBuilderPage';
 import { FormFillPage } from '@/pages/org/FormFillPage';
@@ -192,7 +190,6 @@ export const appRoutes = [
                           { path: 'appointments', element: <AppointmentsPage /> },
                           { path: 'customers', element: <CustomersPage /> },
                           { path: 'customers/:customerId', element: <CustomerDetailPage /> },
-                          { path: 'waitlist', element: <WaitlistPage /> },
                           { path: 'forms', element: <FormsPage /> },
                           { path: 'forms/:formId', element: <FormBuilderPage /> },
                           { path: 'forms/:formId/fill', element: <FormFillPage /> },
@@ -226,7 +223,6 @@ export const appRoutes = [
                                           { path: 'staff-permissions', element: <StaffPermissionsSettingsPage /> },
                                           { path: 'homepage', element: <HomepageEditorPage /> },
                                           { path: 'packages', element: <PackagesPage /> },
-                                          { path: 'memberships', element: <MembershipsPage /> },
                                           { path: 'commissions', element: <CommissionsPage /> },
                                         ],
                                       },

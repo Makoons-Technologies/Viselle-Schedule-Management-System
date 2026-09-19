@@ -25,9 +25,7 @@ import { useOrgWriteLocked } from '@/hooks/useOrgWriteLocked';
 import { getApiErrorMessage, orgApi } from '@/lib/api';
 import { CENTS_PER_CREDIT, creditValueHint, formatCredits, packageCreditCents, remainingPackageCreditCents } from '@/lib/credits';
 import { cn, formatCurrency } from '@/lib/utils';
-import type { Customer, CustomerPackage, Service, ServicePackage } from '@/types/api';
-
-const NONE = 'none';
+import type { Customer, CustomerPackage, ServicePackage } from '@/types/api';
 
 function centsFromDollars(dollars: string): number {
   return Math.round(Number(dollars) * 100);
@@ -49,7 +47,6 @@ export function PackagesPage() {
   const [useTarget, setUseTarget] = useState<CustomerPackage | null>(null);
   const [useAmount, setUseAmount] = useState('');
   const [name, setName] = useState('');
-  const [serviceId, setServiceId] = useState(NONE);
   const [credits, setCredits] = useState('100');
   const [price, setPrice] = useState('50');
 
@@ -68,24 +65,14 @@ export function PackagesPage() {
     queryFn: () => orgApi.listCustomers(orgId),
     enabled: !!orgId,
   });
-  const servicesQuery = useQuery({
-    queryKey: ['services', orgId],
-    queryFn: () => orgApi.listServices(orgId),
-    enabled: !!orgId,
-  });
 
   const packages = packagesQuery.data?.packages ?? [];
   const soldPacks = soldQuery.data?.customerPackages ?? [];
   const customers = customersQuery.data?.customers ?? [];
-  const services = servicesQuery.data?.services ?? [];
 
   const customersById = useMemo(
     () => Object.fromEntries((customersQuery.data?.customers ?? []).map((customer) => [customer.id, customer] as const)),
     [customersQuery.data?.customers],
-  );
-  const servicesById = useMemo(
-    () => Object.fromEntries((servicesQuery.data?.services ?? []).map((service) => [service.id, service] as const)),
-    [servicesQuery.data?.services],
   );
   const packagesById = useMemo(
     () => Object.fromEntries((packagesQuery.data?.packages ?? []).map((pack) => [pack.id, pack] as const)),
@@ -94,7 +81,6 @@ export function PackagesPage() {
 
   const resetCreate = () => {
     setName('');
-    setServiceId(NONE);
     setCredits('100');
     setPrice('50');
   };
@@ -112,7 +98,6 @@ export function PackagesPage() {
       if (!Number.isFinite(priceCents) || priceCents < 0) throw new Error('Enter a price');
       return orgApi.createPackage(orgId, {
         name: name.trim(),
-        serviceId: serviceId === NONE ? undefined : serviceId,
         creditCents,
         priceCents,
       });
@@ -168,11 +153,8 @@ export function PackagesPage() {
   });
 
   const openUseCredits = (sold: CustomerPackage) => {
-    const pack = packagesById[sold.packageId];
-    const service = pack?.serviceId ? servicesById[pack.serviceId] : undefined;
     const remaining = remainingPackageCreditCents(sold);
-    const suggested = service?.priceCents && service.priceCents <= remaining ? service.priceCents : remaining;
-    setUseAmount((suggested / CENTS_PER_CREDIT).toString());
+    setUseAmount((remaining / CENTS_PER_CREDIT).toString());
     setUseTarget(sold);
   };
 
@@ -222,7 +204,6 @@ export function PackagesPage() {
                 <PackageCard
                   key={pack.id}
                   pack={pack}
-                  service={pack.serviceId ? servicesById[pack.serviceId] : undefined}
                   trialLocked={trialLocked}
                   deactivating={deactivateMutation.isPending}
                   onSell={() => {
@@ -238,7 +219,6 @@ export function PackagesPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Package</TableHead>
-                    <TableHead>Service</TableHead>
                     <TableHead>Credits</TableHead>
                     <TableHead>Price</TableHead>
                     <TableHead>Status</TableHead>
@@ -249,9 +229,6 @@ export function PackagesPage() {
                   {packages.map((pack) => (
                     <TableRow key={pack.id}>
                       <TableCell className="font-medium">{pack.name}</TableCell>
-                      <TableCell className="text-stone-500">
-                        {pack.serviceId ? (servicesById[pack.serviceId]?.name ?? 'Service') : 'Any service'}
-                      </TableCell>
                       <TableCell>{formatCredits(packageCreditCents(pack))}</TableCell>
                       <TableCell>{formatCurrency(pack.priceCents)}</TableCell>
                       <TableCell>
@@ -399,24 +376,6 @@ export function PackagesPage() {
                 placeholder="100 credits"
                 required
               />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Service (optional)</Label>
-              <Select value={serviceId} onValueChange={setServiceId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Any service" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NONE}>Any service</SelectItem>
-                  {services
-                    .filter((service) => service.isActive)
-                    .map((service) => (
-                      <SelectItem key={service.id} value={service.id}>
-                        {service.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
@@ -572,14 +531,12 @@ export function PackagesPage() {
 
 function PackageCard({
   pack,
-  service,
   trialLocked,
   deactivating,
   onSell,
   onDeactivate,
 }: {
   pack: ServicePackage;
-  service: Service | undefined;
   trialLocked: boolean;
   deactivating: boolean;
   onSell: () => void;
@@ -593,7 +550,6 @@ function PackageCard({
           <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">
             {formatCredits(packageCreditCents(pack))} · {formatCurrency(pack.priceCents)}
           </p>
-          <p className="mt-1 text-sm text-stone-500">{service?.name ?? 'Any service'}</p>
         </div>
         <Badge variant={pack.isActive ? 'success' : 'secondary'} className="shrink-0">
           {pack.isActive ? 'On the menu' : 'Off the menu'}

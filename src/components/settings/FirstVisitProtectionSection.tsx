@@ -114,7 +114,7 @@ export function FirstVisitProtectionSection({
             <h3 className="font-semibold">First-visit no-show protection</h3>
             <p className={cn('mt-1', sectionMutedClass)}>
               Require a deposit or card on file when a new client books online. Returning clients,
-              gift cards, memberships, and in-person checkout are not part of this setting.
+              gift cards and in-person checkout are not part of this setting.
             </p>
           </div>
           <TrialLockedControl locked={trialExpired}>

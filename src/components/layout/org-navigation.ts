@@ -4,7 +4,6 @@ import {
   CalendarDays,
   Clock,
   CreditCard,
-  ClipboardList,
   FileText,
   Gift,
   Globe,
@@ -76,7 +75,6 @@ export function getOrgSettingsHubGroups(
       items: [
         { label: 'Homepage', to: `${orgBase}/settings/homepage`, icon: LayoutTemplate },
         { label: 'Packages', to: `${orgBase}/settings/packages`, icon: Ticket },
-        { label: 'Memberships', to: `${orgBase}/settings/memberships`, icon: Sparkles },
         { label: 'Commissions', to: `${orgBase}/settings/commissions`, icon: Percent },
       ],
     });
@@ -121,7 +119,6 @@ export function getOrgNavigation(
     { label: 'Calendar', to: `${orgBase}/calendar`, icon: CalendarDays },
     { label: 'Appointments', to: `${orgBase}/appointments`, icon: Calendar },
     { label: 'Customers', to: `${orgBase}/customers`, icon: UserCircle },
-    { label: 'Waitlist', to: `${orgBase}/waitlist`, icon: ClipboardList },
     { label: 'Forms', to: `${orgBase}/forms`, icon: FileText },
     { label: 'Gift cards', to: `${orgBase}/gift-cards`, icon: Gift },
   ];
