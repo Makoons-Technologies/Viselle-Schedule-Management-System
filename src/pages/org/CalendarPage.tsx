@@ -40,7 +40,6 @@ import {
   staffAccountsForFilter,
 } from '@/components/calendar/staff-schedule-filter';
 import { CalendarAppointmentChip } from '@/components/calendar/CalendarAppointmentChip';
-import { WeekCalendarNav } from '@/components/calendar/WeekCalendarNav';
 import { LoadingState } from '@/components/common/LoadingState';
 import { TrialLockedControl } from '@/components/common/TrialLockedControl';
 import { Button } from '@/components/ui/button';
@@ -513,12 +512,9 @@ export function CalendarPage() {
   const calendarToolbar = (
     <>
       <div className="flex w-full min-w-0 shrink-0 flex-nowrap items-center gap-1 overflow-hidden">
-        <WeekCalendarNav
-          compact
-          label={weekNavLabel}
-          onPrevious={() => changeWeek(addDays(weekStart, -7))}
-          onNext={() => changeWeek(addDays(weekStart, 7))}
-        />
+        <span className="min-w-0 shrink truncate text-xs font-semibold tabular-nums text-stone-700 dark:text-stone-200">
+          {weekNavLabel}
+        </span>
         <div className="ml-auto flex shrink-0 items-center gap-1">
           {isDayZoomed ? (
             <Button
@@ -681,6 +677,8 @@ export function CalendarPage() {
         onDayHeaderSelect={handleDayHeaderSelect}
         onDayHeaderRangeSelect={handleDayHeaderRangeSelect}
         onDayHeaderActivate={(dayKey) => applyDayZoom([dayKey])}
+        onWeekPrevious={() => changeWeek(addDays(weekStart, -7))}
+        onWeekNext={() => changeWeek(addDays(weekStart, 7))}
         focusSlot={focusSlot}
         interactionEnabled={interactionEnabled}
         onAppointmentScheduleChange={handleAppointmentScheduleChange}

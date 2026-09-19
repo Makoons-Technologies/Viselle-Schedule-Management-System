@@ -60,7 +60,7 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     userAgent: IPHONE_UA,
   });
 
-  test('standalone: webview-sized shell, fixed tab bar, literal 34px pad, no 100vh', async ({
+  test('standalone: webview-sized shell, fixed tab bar, literal grab-clearance pad, no 100vh', async ({
     page,
   }) => {
     await emulateIosStandalonePwa(page);
@@ -195,28 +195,28 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     expect(bottom.bottom).toBe('0px');
 
     // Literal pixel pad — not env() inside max() (PR 46) and not a var-only hope.
-    expect(parseFloat(bottom.paddingBottom)).toBeGreaterThanOrEqual(8);
+    expect(parseFloat(bottom.paddingBottom)).toBeGreaterThanOrEqual(24);
     expect(bottom.safeAreaBottom).toBe('');
     expect(parseFloat(bottom.safeAreaBottom) || 0).toBe(0);
-    expect(bottom.navPadVar).toBe('8px');
-    expect(bottom.inlinePad).toBe('8px');
+    expect(bottom.navPadVar).toBe('24px');
+    expect(bottom.inlinePad).toBe('24px');
     expect(bottom.inlinePad).not.toContain('safe-area-inset-bottom');
     expect(bottom.inlinePad).not.toContain('max(');
-    expect(bottom.iconBottom).toBeLessThanOrEqual(bottom.navBottom - 8 + 0.5);
-    expect(bottom.labelBottom).toBeLessThanOrEqual(bottom.navBottom - 8 + 0.5);
+    expect(bottom.iconBottom).toBeLessThanOrEqual(bottom.navBottom - 24 + 0.5);
+    expect(bottom.labelBottom).toBeLessThanOrEqual(bottom.navBottom - 24 + 0.5);
     expect(bottom.navBottom).toBeLessThanOrEqual(Math.min(bottom.viewportHeight, bottom.layoutHeight) + 0.5);
 
     const spacer = page.getByTestId('app-shell-bottomnav-spacer');
     await expect(spacer).toBeAttached();
     const spacerH = await spacer.evaluate((el) => el.getBoundingClientRect().height);
-    expect(spacerH).toBeGreaterThanOrEqual(52 + 8);
+    expect(spacerH).toBeGreaterThanOrEqual(52 + 24);
 
     const rules = await collectStyleRules(page);
     const joined = rules.join('\n');
-    expect(joined.includes('--app-shell-bottomnav-pad: 34px') || joined.includes('--app-shell-bottomnav-pad:34px')).toBe(
+    expect(joined.includes('--app-shell-bottomnav-pad: 50px') || joined.includes('--app-shell-bottomnav-pad:50px')).toBe(
       true,
     );
-    expect(joined).toMatch(/var\(--app-shell-bottomnav-pad,\s*34px\)/);
+    expect(joined).toMatch(/var\(--app-shell-bottomnav-pad,\s*50px\)/);
     expect(joined).toContain('-webkit-fill-available');
     expect(rules.some((text) => /height:\s*var\(--app-height,\s*100vh\)/.test(text))).toBe(false);
 
@@ -405,8 +405,8 @@ test.describe('BEA-83 PWA safe-area chrome', () => {
     const navPad = await page
       .getByTestId('app-shell-bottomnav')
       .evaluate((el) => getComputedStyle(el).paddingBottom);
-    // Non-PWA: no 34px iOS fallback; utility/content floor is 0.5rem.
-    expect(parseFloat(navPad)).toBe(8);
+    // Non-PWA: no 50px cover fallback; utility/content floor is 1.5rem.
+    expect(parseFloat(navPad)).toBe(24);
   });
 
   test('standalone: ImpersonationBanner paints from y=0; no reserved #root pad', async ({

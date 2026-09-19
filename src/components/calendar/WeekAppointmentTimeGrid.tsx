@@ -8,7 +8,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react';
 import type { Appointment } from '@/types/api';
 import {
   buildWeekTimeSlots,
@@ -58,6 +58,9 @@ const CALENDAR_HSCROLL_CLASS =
 
 /** Far-right hit strip for overlap cycle arrows (~32px; tall targets stay tappable). */
 const STACK_RAIL_CLASS = 'w-8';
+
+/** Keeps Friday (and Sat) fully visible to the left of the week-next button. */
+const WEEK_NAV_RAIL_CLASS = 'w-10 shrink-0';
 
 const MOVE_THRESHOLD_PX = 4;
 
@@ -130,6 +133,9 @@ interface WeekAppointmentTimeGridProps {
   focusSlot?: { dayKey: string; minutes: number; nonce: number } | null;
   /** Sticks above the day headers while the calendar scrolls. */
   toolbar?: ReactNode;
+  /** Week arrows sit on the header, not in the toolbar. */
+  onWeekPrevious?: () => void;
+  onWeekNext?: () => void;
   /** Desktop drag/resize. Parent should disable on mobile, select mode, trial lock, etc. */
   interactionEnabled?: boolean;
   onAppointmentScheduleChange?: (change: AppointmentScheduleChange) => void;
@@ -149,6 +155,8 @@ export function WeekAppointmentTimeGrid({
   isSlotInHours,
   focusSlot = null,
   toolbar,
+  onWeekPrevious,
+  onWeekNext,
   interactionEnabled = false,
   onAppointmentScheduleChange,
 }: WeekAppointmentTimeGridProps) {
@@ -679,6 +687,7 @@ export function WeekAppointmentTimeGrid({
     });
   };
 
+  const showWeekNav = Boolean(onWeekPrevious && onWeekNext);
   const columnMinWidthRem = isZoomed
     ? columns.length <= 1
       ? 18
@@ -686,7 +695,8 @@ export function WeekAppointmentTimeGrid({
         ? 12
         : 9
     : 6;
-  const gridMinWidthRem = 5 + columns.length * columnMinWidthRem;
+  const gridMinWidthRem =
+    5 + columns.length * columnMinWidthRem + (showWeekNav ? 2.5 : 0);
 
   const appointmentsForDay = (dayKey: string): Appointment[] => {
     const base = byDay.get(dayKey) ?? [];
@@ -712,7 +722,22 @@ export function WeekAppointmentTimeGrid({
       className="flex border-b border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800"
       style={{ minWidth: `${gridMinWidthRem}rem` }}
     >
-      <div className="sticky left-0 z-20 w-16 shrink-0 border-r border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800 sm:w-20" />
+      <div className="sticky left-0 z-20 flex w-16 shrink-0 items-center justify-center border-r border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800 sm:w-20">
+        {showWeekNav ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            onClick={onWeekPrevious}
+            data-testid="calendar-week-prev"
+            title="Previous week"
+            aria-label="Previous week"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+        ) : null}
+      </div>
       {columns.map((column) => (
         <DayHeader
           key={column.key}
@@ -725,6 +750,7 @@ export function WeekAppointmentTimeGrid({
           onDoubleClick={() => onDayHeaderActivate?.(column.key)}
         />
       ))}
+      {showWeekNav ? <div className={WEEK_NAV_RAIL_CLASS} aria-hidden /> : null}
     </div>
   );
 
@@ -736,10 +762,24 @@ export function WeekAppointmentTimeGrid({
         ref={headerScrollRef}
         className={cn(
           CALENDAR_HSCROLL_CLASS,
-          'rounded-t-xl border border-b-0 border-stone-200 bg-white shadow-sm [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden dark:border-stone-800 dark:bg-stone-900',
+          'relative rounded-t-xl border border-b-0 border-stone-200 bg-white shadow-sm [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden dark:border-stone-800 dark:bg-stone-900',
         )}
       >
         {headerRow}
+        {showWeekNav ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute right-0 top-1/2 z-30 h-8 w-10 -translate-y-1/2 rounded-none bg-stone-50/95 dark:bg-stone-800/95"
+            data-testid="calendar-week-next"
+            onClick={onWeekNext}
+            title="Next week"
+            aria-label="Next week"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        ) : null}
       </div>
     </div>
     <div
@@ -822,13 +862,14 @@ export function WeekAppointmentTimeGrid({
               />
             );
           })}
+          {showWeekNav ? <div className={WEEK_NAV_RAIL_CLASS} aria-hidden /> : null}
       </div>
     </div>
     {nextJumpTarget && jumpDirection && (
       <Button
         type="button"
         size="icon"
-        className="fixed right-3 z-40 h-11 w-11 rounded-full shadow-lg bottom-20 desktop-shell:bottom-6"
+        className="fixed right-3 z-40 h-11 w-11 rounded-full shadow-lg bottom-[calc(3.25rem+var(--app-shell-bottomnav-pad,1.5rem)+0.75rem)] desktop-shell:bottom-6"
         aria-label={
           jumpDirection === 'up'
             ? "Go to next day's first appointment"

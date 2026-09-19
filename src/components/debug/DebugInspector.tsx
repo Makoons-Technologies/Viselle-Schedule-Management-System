@@ -207,7 +207,7 @@ function DebugInspector() {
         className={cn(
           'debug-inspector-fab fixed z-[220] flex min-h-12 touch-manipulation items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold shadow-lg',
           'right-3',
-          'bottom-[calc(3.25rem+var(--app-shell-bottomnav-pad,0.5rem)+0.75rem)]',
+          'bottom-[calc(3.25rem+var(--app-shell-bottomnav-pad,1.5rem)+0.75rem)]',
           'desktop-shell:bottom-5',
           mode === 'pick'
             ? 'bg-sky-600 text-white hover:bg-sky-700'

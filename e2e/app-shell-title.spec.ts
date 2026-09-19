@@ -219,7 +219,7 @@ test.describe('BEA-78 app-shell title paint', () => {
       paddingBottom: (el as HTMLElement).style.paddingBottom,
     }));
     expect(navPad.position).toBe('fixed');
-    expect(navPad.paddingBottom).toBe('8px');
+    expect(navPad.paddingBottom).toBe('24px');
   });
 
   test('browser login still uses Sonner Welcome back (not the PWA in-flow banner)', async ({ page }) => {

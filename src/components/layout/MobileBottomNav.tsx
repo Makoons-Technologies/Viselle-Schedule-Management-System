@@ -37,8 +37,8 @@ const bottomNavClassName =
   'app-shell-bottomnav shrink-0 border-t border-stone-200 px-2 pt-1 dark:border-stone-800 desktop-shell:hidden';
 
 function bottomNavPadStyle(): { paddingBottom: string } {
-  // Standalone: literal `34px` inline. WebKit dropped max()+env() (PR 46) and
-  // a 34px CSS pad still sat off-screen while the shell was 100vh-too-tall
+  // Standalone: literal pixel pad inline. WebKit dropped max()+env() (PR 46) and
+  // a CSS pad still sat off-screen while the shell was 100vh-too-tall
   // (PR 47). A pixel string cannot be dropped, and the bar is position:fixed.
   if (typeof window !== 'undefined' && isStandaloneWebApp()) {
     return { paddingBottom: getStandaloneBottomNavPadCSSValue() };

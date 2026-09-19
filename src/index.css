@@ -335,12 +335,12 @@
  * 2. Pin the tab bar with `position: fixed; bottom: 0` so it tracks the
  *    layout viewport even if height is still wrong. Keyboard uses
  *    `--app-shell-keyboard-inset`.
- * 3. Literal 34px pad — no `max(env())`. WebKit drops that (PR 46).
+ * 3. Literal pad (50px cover / 24px inset) — no `max(env())`. WebKit drops that (PR 46).
  * 4. In-flow spacer so main content is not hidden behind the fixed bar.
  */
 html.app-shell .app-shell-bottomnav {
   box-sizing: border-box;
-  padding-bottom: 0.5rem;
+  padding-bottom: 1.5rem;
 }
 
 html.app-shell .app-shell-bottomnav-spacer {
@@ -348,14 +348,14 @@ html.app-shell .app-shell-bottomnav-spacer {
 }
 
 html.standalone-pwa.app-shell {
-  --app-shell-bottomnav-pad: 34px;
+  --app-shell-bottomnav-pad: 50px;
   --app-shell-keyboard-inset: 0px;
   --app-shell-safe-pad-top: 0px;
   --app-shell-content-inset-top: 0px;
 }
 
 html.standalone-pwa.app-shell.app-shell-fit-inset {
-  --app-shell-bottomnav-pad: 8px;
+  --app-shell-bottomnav-pad: 24px;
 }
 
 html.standalone-pwa.app-shell,
@@ -371,15 +371,15 @@ html.standalone-pwa.app-shell .app-shell-bottomnav {
   right: 0;
   bottom: var(--app-shell-keyboard-inset, 0px);
   z-index: 30;
-  /* Literal 34px fallback — do not wrap env() in max(). */
-  padding-bottom: 34px;
-  padding-bottom: var(--app-shell-bottomnav-pad, 34px);
+  /* Literal 50px fallback — do not wrap env() in max(). */
+  padding-bottom: 50px;
+  padding-bottom: var(--app-shell-bottomnav-pad, 50px);
 }
 
 html.standalone-pwa.app-shell .app-shell-bottomnav-spacer {
   display: block;
   flex-shrink: 0;
-  height: calc(3.25rem + var(--app-shell-bottomnav-pad, 34px));
+  height: calc(3.25rem + var(--app-shell-bottomnav-pad, 50px));
 }
 
 html.standalone-pwa.app-shell .app-shell-chrome {
@@ -401,13 +401,13 @@ html.standalone-pwa.app-shell .app-shell-chrome {
   }
 
   html.app-shell {
-    --app-shell-bottomnav-pad: 34px;
+    --app-shell-bottomnav-pad: 50px;
     --app-shell-safe-pad-top: 0px;
     --app-shell-content-inset-top: 0px;
   }
 
   html.app-shell.app-shell-fit-inset {
-    --app-shell-bottomnav-pad: 8px;
+    --app-shell-bottomnav-pad: 24px;
   }
 
   html.app-shell .app-shell-bottomnav {
@@ -416,14 +416,14 @@ html.standalone-pwa.app-shell .app-shell-chrome {
     right: 0;
     bottom: var(--app-shell-keyboard-inset, 0px);
     z-index: 30;
-    padding-bottom: 34px;
-    padding-bottom: var(--app-shell-bottomnav-pad, 34px);
+    padding-bottom: 50px;
+    padding-bottom: var(--app-shell-bottomnav-pad, 50px);
   }
 
   html.app-shell .app-shell-bottomnav-spacer {
     display: block;
     flex-shrink: 0;
-    height: calc(3.25rem + var(--app-shell-bottomnav-pad, 34px));
+    height: calc(3.25rem + var(--app-shell-bottomnav-pad, 50px));
   }
 
   html.app-shell .app-shell-chrome {

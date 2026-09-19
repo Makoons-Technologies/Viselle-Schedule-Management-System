@@ -10,6 +10,9 @@ export const STANDALONE_PWA_CLASS = 'standalone-pwa';
 /** Literal portrait iPhone home-indicator pad. Not `env(safe-area-inset-*)`. */
 export const IOS_STANDALONE_HOME_INDICATOR_FALLBACK_PX = 34;
 
+/** Extra lift so tab taps miss the iOS home-indicator grab zone. */
+export const APP_SHELL_BOTTOMNAV_GRAB_CLEARANCE_PX = 16;
+
 /**
  * Observed iPhone status-bar / Dynamic Island height. Never a `#root` pad,
  * chrome pad, or slab floor — that band is the frost / opaque gap.
@@ -44,8 +47,8 @@ export const APP_SHELL_VIEWPORT_COVER =
 export const APP_SHELL_VIEWPORT_INSET =
   'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, interactive-widget=overlays-content';
 
-/** 0.5rem tab-bar pad when the webview is already inset. */
-export const APP_SHELL_BOTTOMNAV_CONTENT_PAD_PX = 8;
+/** Tab-bar pad when the webview is already inset (includes grab clearance). */
+export const APP_SHELL_BOTTOMNAV_CONTENT_PAD_PX = 8 + APP_SHELL_BOTTOMNAV_GRAB_CLEARANCE_PX;
 
 /**
  * pt-1 (4px) + min-h-12 tab links (48px). Used with the home-indicator pad
@@ -54,7 +57,7 @@ export const APP_SHELL_BOTTOMNAV_CONTENT_PAD_PX = 8;
 export const APP_SHELL_BOTTOMNAV_CONTENT_HEIGHT_PX = 52;
 
 /** Safari-in-tab tab-bar pad. Literal rem — no `env(safe-area-inset-*)`. */
-export const APP_SHELL_BOTTOMNAV_PAD_STYLE = '0.5rem';
+export const APP_SHELL_BOTTOMNAV_PAD_STYLE = '1.5rem';
 
 /**
  * CSS fallback for --app-height on iOS standalone. `100vh` is the SCREEN
@@ -208,7 +211,7 @@ export function measureCssFillAvailable(): number {
 /** Literal pixel pad for the tab bar. Never `env(safe-area-inset-*)`. */
 export function resolveBottomNavPadPx(): number {
   if (isIosStandaloneWebApp() && !isAppShellFitInset()) {
-    return IOS_STANDALONE_HOME_INDICATOR_FALLBACK_PX;
+    return IOS_STANDALONE_HOME_INDICATOR_FALLBACK_PX + APP_SHELL_BOTTOMNAV_GRAB_CLEARANCE_PX;
   }
   return APP_SHELL_BOTTOMNAV_CONTENT_PAD_PX;
 }
@@ -217,7 +220,7 @@ export function getStandaloneBottomNavPadCSSValue(): string {
   if (typeof document !== 'undefined' && isAppShellFitInset()) {
     return `${APP_SHELL_BOTTOMNAV_CONTENT_PAD_PX}px`;
   }
-  return `${IOS_STANDALONE_HOME_INDICATOR_FALLBACK_PX}px`;
+  return `${IOS_STANDALONE_HOME_INDICATOR_FALLBACK_PX + APP_SHELL_BOTTOMNAV_GRAB_CLEARANCE_PX}px`;
 }
 
 export function getKeyboardInsetPx(): number {
